@@ -1,0 +1,22 @@
+//
+// Copyright 2014 Per Vices Corporation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+
+This folder contains the drivers and the HAL interface. The drivers consist of low level
+interfaces, such as UART, register read/write via memory mapping, I2C, etc. The framwork,
+or API, to the boards is located in the property manager. The property maanager is the
+API that is used to communicate with the state, properties of Crimson. If a configuration
+parameter is not located in the property_manager.h interface, it cannot be configured.

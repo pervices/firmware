@@ -1,0 +1,48 @@
+//
+// Copyright 2014 Per Vices Corporation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+
+#ifndef REGMAP_H_
+#define REGMAP_H_
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdint.h>
+#include "socal.h"
+#include "hps.h"
+
+#define ALT_LWFPGASLVS_SPAN ( ALT_LWH2F_OFST - ALT_LWFPGASLVS_OFST - 1 )
+
+typedef struct bits {
+	char** names;
+	uint8_t* spans;
+} bits_t;
+
+typedef struct reg {
+	uint32_t addr;
+	const char* name;
+	uint32_t def_val;
+	const char* perm;
+	bits_t field;
+} reg_t;
+
+inline size_t get_num_regs(void);
+const reg_t* get_reg_from_name(const char* name);
+const reg_t* get_reg_from_addr(uint32_t addr);
+void print_regs(int verbose);
+
+#endif

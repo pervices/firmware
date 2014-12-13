@@ -1,0 +1,27 @@
+#Ignore all output and generated files,
+#Recursively ignore the following compilable files;
+*.o
+*.a
+*.out
+*.lst
+*.map
+*.so
+*.bak
+*.orig
+*.swp
+*.swo
+*.eep
+*.elf
+*.lss
+*.sym
+*.cproject
+*.project
+*.settings*
+*/Debug/*
+.metadata/*
+RemoteSystemsTempFiles/*
+boot/.dep/*
+tags
+
+#Ignore hex (programming files) in this directory
+*.hex
