@@ -19,7 +19,7 @@ n wo tx_a/rf/board/led 0
 n rw tx_a/dsp/freq 2400
 n rw tx_a/dsp/gain 10
 n rw tx_a/dsp/interp 256
-y ro tx_a/dsp/rate 0
+n rw tx_a/dsp/rate 0
 n rw tx_a/dsp/nco_adj 0
 n rw tx_a/dsp/iqerr_gain 0
 n rw tx_a/dsp/iqerr_phase 0
@@ -62,7 +62,7 @@ n wo rx_a/rf/board/led 0
 n rw rx_a/dsp/freq 2400
 n rw rx_a/dsp/gain 10
 n rw rx_a/dsp/interp 0
-y ro rx_a/dsp/rate 0
+n rw rx_a/dsp/rate 0
 n rw rx_a/dsp/nco_adj 0
 n rw rx_a/dsp/iqerr_gain 0
 n rw rx_a/dsp/iqerr_phase 0
@@ -104,7 +104,7 @@ n wo tx_b/rf/board/led 0
 n rw tx_b/dsp/freq 2400
 n rw tx_b/dsp/gain 10
 n rw tx_b/dsp/interp 256
-y ro tx_b/dsp/rate 0
+n rw tx_b/dsp/rate 0
 n rw tx_b/dsp/nco_adj 0
 n rw tx_b/dsp/iqerr_gain 0
 n rw tx_b/dsp/iqerr_phase 0
@@ -147,7 +147,7 @@ n wo rx_b/rf/board/led 0
 n rw rx_b/dsp/freq 2400
 n rw rx_b/dsp/gain 10
 n rw rx_b/dsp/interp 0
-y ro rx_b/dsp/rate 0
+n rw rx_b/dsp/rate 0
 n rw rx_b/dsp/nco_adj 0
 n rw rx_b/dsp/iqerr_gain 0
 n rw rx_b/dsp/iqerr_phase 0
@@ -189,7 +189,7 @@ n wo tx_c/rf/board/led 0
 n rw tx_c/dsp/freq 2400
 n rw tx_c/dsp/gain 10
 n rw tx_c/dsp/interp 256
-y ro tx_c/dsp/rate 0
+n rw tx_c/dsp/rate 0
 n rw tx_c/dsp/nco_adj 0
 n rw tx_c/dsp/iqerr_gain 0
 n rw tx_c/dsp/iqerr_phase 0
@@ -232,7 +232,7 @@ n wo rx_c/rf/board/led 0
 n rw rx_c/dsp/freq 2400
 n rw rx_c/dsp/gain 10
 n rw rx_c/dsp/interp 0
-y ro rx_c/dsp/rate 0
+n rw rx_c/dsp/rate 0
 n rw rx_c/dsp/nco_adj 0
 n rw rx_c/dsp/iqerr_gain 0
 n rw rx_c/dsp/iqerr_phase 0
@@ -274,7 +274,7 @@ n wo tx_d/rf/board/led 0
 n rw tx_d/dsp/freq 2400
 n rw tx_d/dsp/gain 10
 n rw tx_d/dsp/interp 256
-y ro tx_d/dsp/rate 0
+n rw tx_d/dsp/rate 0
 n rw tx_d/dsp/nco_adj 0
 n rw tx_d/dsp/iqerr_gain 0
 n rw tx_d/dsp/iqerr_phase 0
@@ -317,7 +317,7 @@ n wo rx_d/rf/board/led 0
 n rw rx_d/dsp/freq 2400
 n rw rx_d/dsp/gain 10
 n rw rx_d/dsp/interp 0
-y ro rx_d/dsp/rate 0
+n rw rx_d/dsp/rate 0
 n rw rx_d/dsp/nco_adj 0
 n rw rx_d/dsp/iqerr_gain 0
 n rw rx_d/dsp/iqerr_phase 0

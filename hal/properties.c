@@ -157,7 +157,7 @@ static int set_tx_a_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_a_dsp_rate (const char* data) {
+static int set_tx_a_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -385,7 +385,7 @@ static int set_rx_a_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_a_dsp_rate (const char* data) {
+static int set_rx_a_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -607,7 +607,7 @@ static int set_tx_b_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_b_dsp_rate (const char* data) {
+static int set_tx_b_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -835,7 +835,7 @@ static int set_rx_b_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_b_dsp_rate (const char* data) {
+static int set_rx_b_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -1057,7 +1057,7 @@ static int set_tx_c_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_c_dsp_rate (const char* data) {
+static int set_tx_c_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -1285,7 +1285,7 @@ static int set_rx_c_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_c_dsp_rate (const char* data) {
+static int set_rx_c_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -1507,7 +1507,7 @@ static int set_tx_d_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_d_dsp_rate (const char* data) {
+static int set_tx_d_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -1735,7 +1735,7 @@ static int set_rx_d_dsp_interp (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_d_dsp_rate (const char* data) {
+static int set_rx_d_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -2010,7 +2010,7 @@ static prop_t property_table[] = {
 	{"tx_a/dsp/freq", get_invalid, set_tx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_a/dsp/gain", get_invalid, set_tx_a_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_a/dsp/interp", get_invalid, set_tx_a_dsp_interp, RW, NO_POLL, "256"},
-	{"tx_a/dsp/rate", get_tx_a_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"tx_a/dsp/rate", get_invalid, set_tx_a_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_a/dsp/nco_adj", get_invalid, set_tx_a_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_a/dsp/iqerr_gain", get_invalid, set_tx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_a/dsp/iqerr_phase", get_invalid, set_tx_a_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2052,7 +2052,7 @@ static prop_t property_table[] = {
 	{"rx_a/dsp/freq", get_invalid, set_rx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_a/dsp/interp", get_invalid, set_rx_a_dsp_interp, RW, NO_POLL, "0"},
-	{"rx_a/dsp/rate", get_rx_a_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_a/dsp/nco_adj", get_invalid, set_rx_a_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_a/dsp/iqerr_gain", get_invalid, set_rx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_a/dsp/iqerr_phase", get_invalid, set_rx_a_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2093,7 +2093,7 @@ static prop_t property_table[] = {
 	{"tx_b/dsp/freq", get_invalid, set_tx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_b/dsp/gain", get_invalid, set_tx_b_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_b/dsp/interp", get_invalid, set_tx_b_dsp_interp, RW, NO_POLL, "256"},
-	{"tx_b/dsp/rate", get_tx_b_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"tx_b/dsp/rate", get_invalid, set_tx_b_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_b/dsp/nco_adj", get_invalid, set_tx_b_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_b/dsp/iqerr_gain", get_invalid, set_tx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_b/dsp/iqerr_phase", get_invalid, set_tx_b_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2135,7 +2135,7 @@ static prop_t property_table[] = {
 	{"rx_b/dsp/freq", get_invalid, set_rx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_b/dsp/interp", get_invalid, set_rx_b_dsp_interp, RW, NO_POLL, "0"},
-	{"rx_b/dsp/rate", get_rx_b_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_b/dsp/nco_adj", get_invalid, set_rx_b_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_b/dsp/iqerr_gain", get_invalid, set_rx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_b/dsp/iqerr_phase", get_invalid, set_rx_b_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2176,7 +2176,7 @@ static prop_t property_table[] = {
 	{"tx_c/dsp/freq", get_invalid, set_tx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_c/dsp/gain", get_invalid, set_tx_c_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_c/dsp/interp", get_invalid, set_tx_c_dsp_interp, RW, NO_POLL, "256"},
-	{"tx_c/dsp/rate", get_tx_c_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"tx_c/dsp/rate", get_invalid, set_tx_c_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_c/dsp/nco_adj", get_invalid, set_tx_c_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_c/dsp/iqerr_gain", get_invalid, set_tx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_c/dsp/iqerr_phase", get_invalid, set_tx_c_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2218,7 +2218,7 @@ static prop_t property_table[] = {
 	{"rx_c/dsp/freq", get_invalid, set_rx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_c/dsp/interp", get_invalid, set_rx_c_dsp_interp, RW, NO_POLL, "0"},
-	{"rx_c/dsp/rate", get_rx_c_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_c/dsp/nco_adj", get_invalid, set_rx_c_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_c/dsp/iqerr_gain", get_invalid, set_rx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_c/dsp/iqerr_phase", get_invalid, set_rx_c_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2259,7 +2259,7 @@ static prop_t property_table[] = {
 	{"tx_d/dsp/freq", get_invalid, set_tx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_d/dsp/gain", get_invalid, set_tx_d_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_d/dsp/interp", get_invalid, set_tx_d_dsp_interp, RW, NO_POLL, "256"},
-	{"tx_d/dsp/rate", get_tx_d_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"tx_d/dsp/rate", get_invalid, set_tx_d_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_d/dsp/nco_adj", get_invalid, set_tx_d_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_d/dsp/iqerr_gain", get_invalid, set_tx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_d/dsp/iqerr_phase", get_invalid, set_tx_d_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2301,7 +2301,7 @@ static prop_t property_table[] = {
 	{"rx_d/dsp/freq", get_invalid, set_rx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_d/dsp/interp", get_invalid, set_rx_d_dsp_interp, RW, NO_POLL, "0"},
-	{"rx_d/dsp/rate", get_rx_d_dsp_rate, set_invalid, RO, POLL, "0"},
+	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_d/dsp/nco_adj", get_invalid, set_rx_d_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_d/dsp/iqerr_gain", get_invalid, set_rx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_d/dsp/iqerr_phase", get_invalid, set_rx_d_dsp_iqerr_phase, RW, NO_POLL, "0"},
