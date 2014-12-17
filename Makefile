@@ -38,7 +38,7 @@ OBJECTS = $(addprefix $(OUTDIR)/obj/,$(SOURCES:.c=.o))
 export CRIMSON_ROOTDIR = $(shell pwd)
 
 # Output Executable
-EXECUTABLE = $(addprefix $(OUTDIR)/bin/,crimson-server)
+EXECUTABLE = $(addprefix $(OUTDIR)/bin/,start-server)
 
 # Source Files
 SOURCES = server.c
