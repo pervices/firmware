@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
+#include <sys/time.h>
 #include "common.h"
 #include "comm_manager.h"
 #include "property_manager.h"
@@ -35,6 +36,21 @@
 #define ENET_DEV "eth0"
 #define UDP_COMMS_PORT 42820
 
+// timers for polling
+static struct timeval tstart;
+static struct timeval tend;
+
+// return 1 if timeout, 0 if not
+static uint8_t timeout(uint32_t timeout) {
+	gettimeofday(&tend, NULL);
+	if ( ((tend.tv_usec + 1000000 * tend.tv_sec)
+		- (tstart.tv_usec + 1000000 * tstart.tv_sec) - 26) > timeout)
+		return 1;
+	else
+		return 0;
+}
+
+// main loop
 int main(int argc, char *argv[]) {
 	int ret = 0;
 	cmd_t cmd;
@@ -53,12 +69,16 @@ int main(int argc, char *argv[]) {
 	// initialize the properties, which is implemented as a Linux file structure
 	init_property();
 
+	printf("Initialization successfully finished!\n");
 	while (1) {
 		// prevent busy wait, taking up too much CPU resources
 		usleep(1);
 
-		// poll for all status properties
-		//update_status_properties(); // TODO, uncomment
+		// poll for all status properties every 3s
+		if (timeout(3000000) == 1) {
+			//update_status_properties();
+			gettimeofday(&tstart, NULL);
+		}
 
 		// check for input commands from UDP
 		if (recv_udp_comm(udp_comms_fd, buffer, &received_bytes, UDP_PAYLOAD_LEN) >= 0) {

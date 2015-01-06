@@ -39,7 +39,9 @@ int parse_cmd(cmd_t* cmd, uint8_t* data) {
 	memset(cmd -> prop, 0, MAX_PATH_LEN);
 	memset(cmd -> data, 0, MAX_PROP_LEN);
 
+	#ifdef DEBUG
 	printf("Parsing: %s\n", data);
+	#endif
 
 	while (data[pos] != 0 || pos - start != 0) {
 		// if a deliminator is found
@@ -89,7 +91,9 @@ int parse_cmd(cmd_t* cmd, uint8_t* data) {
 		pos++;
 	}
 
+	#ifdef DEBUG
 	printf("Parsing: %i characters\n", pos);
+	#endif
 
 	// if command did not receive everything it expects
 	if (finish == 0) {

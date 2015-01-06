@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <pwd.h>
+#include <math.h>
+#include "comm_manager.h"
 #include "common.h"
 
 typedef enum {RW, RO, WO} perm_t;

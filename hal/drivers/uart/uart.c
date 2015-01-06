@@ -116,6 +116,11 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 int send_uart(int fd, uint8_t* data, uint16_t size) {
 	gettimeofday(&tstart, NULL);
 
+	// clear receive buffer first, for old data from previous commands
+	//uint8_t old_data[256];
+	//uint16_t old_size;
+	//while (recv_uart(fd, old_data, &old_size, 256) == RETURN_SUCCESS) { printf("Receiving old data\n"); };
+
 	/*int i;
 	printf("sending uart: ");
 	for (i = 0; i < size; i++) printf("%c", data[i]);

@@ -108,7 +108,9 @@ int get_gate (eth_t* eth, char* str, int size) {
 int establish_udp_connection(udp_dev_t* udp) {
 	int ret = 0;
 
+	#ifdef DEBUG
 	printf("Calling establish_eth_settings()\n");
+	#endif
 	// initialize ethernet parameters
 	ret = establish_eth_settings(udp -> eth);
 	if (ret < 0) return ret;

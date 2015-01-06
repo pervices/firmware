@@ -187,7 +187,9 @@ void check_property_inotifies(void) {
 		prop_t* prop = get_prop_from_wd(event -> wd);
 
 		if (event -> mask & IN_CLOSE_WRITE) {
+			#ifdef DEBUG
 			printf("Property located at %s has been modified, executing handler\n", prop -> path);
+			#endif
 			read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
 			prop -> set_handler(prop_data);
 		}

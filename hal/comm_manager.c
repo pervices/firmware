@@ -48,7 +48,9 @@ int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options) {
 
 	int ret = RETURN_SUCCESS;
 
+	#ifdef DEBUG
 	printf("Found file descriptor %i\n", *fd);
+	#endif
 
 	used_udp_devices[*fd] = USED_DEVICE;
 
@@ -62,7 +64,10 @@ int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options) {
 	mydev -> eth -> port = port;
 	mydev -> opt = options;
 
+	#ifdef DEBUG
 	printf("Calling establish_udp_connection()\n");
+	#endif
+
 	ret = establish_udp_connection(mydev);
 	if (ret < 0) {
 		close_udp_comm(*fd);
@@ -123,11 +128,15 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 	if (get_next_uart_fd(fd) < 0)
 		return RETURN_ERROR_INSUFFICIENT_RESOURCES;
 
+	#ifdef DEBUG
 	printf("Found file descriptor %i\n", *fd);
+	#endif
 
 	used_uart_devices[*fd] = USED_DEVICE;
 
+	#ifdef DEBUG
 	printf("Opening UART port: %s\n", dev);
+	#endif
 
 	// Allocate space for uart device
 	uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
@@ -138,7 +147,9 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 	}
 	int mydev = uart_devices[*fd];
 
+	#ifdef DEBUG
 	printf("Configuring UART\n");
+	#endif
 
 	set_uart_interface_attribs (mydev, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
 	set_uart_blocking (mydev, 0);               	 // set no blocking

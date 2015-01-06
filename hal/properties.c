@@ -18,7 +18,11 @@
 #include "mmap.h"
 #include "properties.h"
 
+#define BASE_SAMPLE_RATE 322.265625
+
 static int uart_fd = 0;
+static char buf[MAX_PROP_LEN] = {};
+static uint16_t rd_len;
 
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
@@ -129,13 +133,20 @@ static int set_tx_a_rf_board_test (const char* data) {
 
 static int get_tx_a_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c a -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -153,13 +164,17 @@ static int set_tx_a_dsp_gain (const char* data) {
 
 static int set_tx_a_dsp_interp (const char* data) {
 	// Insert MCU/MEM command
-
+	int rate;
+	sscanf(data, "%i", &rate);
+	write_hps_reg( "txa1", rate );
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "txa1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -357,13 +372,20 @@ static int set_rx_a_rf_board_test (const char* data) {
 
 static int get_rx_a_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -c a -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -387,7 +409,9 @@ static int set_rx_a_dsp_interp (const char* data) {
 
 static int set_rx_a_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "rxa1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -579,13 +603,20 @@ static int set_tx_b_rf_board_test (const char* data) {
 
 static int get_tx_b_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c b -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -609,7 +640,9 @@ static int set_tx_b_dsp_interp (const char* data) {
 
 static int set_tx_b_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "txb1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -807,13 +840,20 @@ static int set_rx_b_rf_board_test (const char* data) {
 
 static int get_rx_b_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -c b -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -837,7 +877,9 @@ static int set_rx_b_dsp_interp (const char* data) {
 
 static int set_rx_b_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "rxb1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -1029,13 +1071,20 @@ static int set_tx_c_rf_board_test (const char* data) {
 
 static int get_tx_c_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c c -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1059,7 +1108,9 @@ static int set_tx_c_dsp_interp (const char* data) {
 
 static int set_tx_c_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "txc1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -1257,13 +1308,20 @@ static int set_rx_c_rf_board_test (const char* data) {
 
 static int get_rx_c_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -c c -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1287,7 +1345,9 @@ static int set_rx_c_dsp_interp (const char* data) {
 
 static int set_rx_c_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "rxc1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -1479,13 +1539,20 @@ static int set_tx_d_rf_board_test (const char* data) {
 
 static int get_tx_d_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c d -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1509,7 +1576,9 @@ static int set_tx_d_dsp_interp (const char* data) {
 
 static int set_tx_d_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "txd1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -1707,13 +1776,20 @@ static int set_rx_d_rf_board_test (const char* data) {
 
 static int get_rx_d_rf_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -c d -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1737,7 +1813,9 @@ static int set_rx_d_dsp_interp (const char* data) {
 
 static int set_rx_d_dsp_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	double rate;
+	sscanf(data, "%lf", &rate);
+	write_hps_reg( "rxd1", (int)floor(BASE_SAMPLE_RATE / rate) );
 	return RETURN_SUCCESS;
 }
 
@@ -1887,13 +1965,20 @@ static int set_time_board_test (const char* data) {
 
 static int get_time_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 2 -m 'board -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_time_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 2 -m 'board -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1923,13 +2008,20 @@ static int set_fpga_board_test (const char* data) {
 
 static int get_fpga_board_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "board -t");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_board_led (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "board -l ");
+	strcat(buf, data);
+	strcat(buf, "\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 

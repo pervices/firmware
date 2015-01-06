@@ -23,7 +23,7 @@
 #include <string.h>
 
 // Define used for debugging
-#define DEBUG
+//#define DEBUG
 
 // Global return values
 #define RETURN_SUCCESS			0
