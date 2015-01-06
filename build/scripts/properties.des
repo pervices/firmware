@@ -6,7 +6,6 @@ y ro tx_a/rf/dac/temp 0
 n rw tx_a/rf/dac/iqerr_gain 0
 n rw tx_a/rf/dac/iqerr_phase 0
 n rw tx_a/rf/freq/val 2400
-y ro tx_a/rf/freq/band 1
 n rw tx_a/rf/freq/lna 0
 n rw tx_a/rf/freq/i_bias 0
 n rw tx_a/rf/freq/q_bias 0
@@ -50,7 +49,6 @@ n rw rx_a/rf/vga/atten1 0
 n rw rx_a/rf/vga/atten2 0
 n rw rx_a/rf/vga/atten3 0
 n rw rx_a/rf/freq/val 2400
-y ro rx_a/rf/freq/band 1
 n rw rx_a/rf/freq/lna 0
 n rw rx_a/rf/freq/varac 0
 n rw rx_a/rf/gain/val 10
@@ -61,7 +59,7 @@ y ro rx_a/rf/board/temp 20
 n wo rx_a/rf/board/led 0
 n rw rx_a/dsp/freq 2400
 n rw rx_a/dsp/gain 10
-n rw rx_a/dsp/interp 0
+n rw rx_a/dsp/decim 0
 n rw rx_a/dsp/rate 0
 n rw rx_a/dsp/nco_adj 0
 n rw rx_a/dsp/iqerr_gain 0
@@ -91,7 +89,6 @@ y ro tx_b/rf/dac/temp 0
 n rw tx_b/rf/dac/iqerr_gain 0
 n rw tx_b/rf/dac/iqerr_phase 0
 n rw tx_b/rf/freq/val 2400
-y ro tx_b/rf/freq/band 1
 n rw tx_b/rf/freq/lna 0
 n rw tx_b/rf/freq/i_bias 0
 n rw tx_b/rf/freq/q_bias 0
@@ -135,7 +132,6 @@ n rw rx_b/rf/vga/atten1 0
 n rw rx_b/rf/vga/atten2 0
 n rw rx_b/rf/vga/atten3 0
 n rw rx_b/rf/freq/val 2400
-y ro rx_b/rf/freq/band 1
 n rw rx_b/rf/freq/lna 0
 n rw rx_b/rf/freq/varac 0
 n rw rx_b/rf/gain/val 10
@@ -146,7 +142,7 @@ y ro rx_b/rf/board/temp 20
 n wo rx_b/rf/board/led 0
 n rw rx_b/dsp/freq 2400
 n rw rx_b/dsp/gain 10
-n rw rx_b/dsp/interp 0
+n rw rx_b/dsp/decim 0
 n rw rx_b/dsp/rate 0
 n rw rx_b/dsp/nco_adj 0
 n rw rx_b/dsp/iqerr_gain 0
@@ -176,7 +172,6 @@ y ro tx_c/rf/dac/temp 0
 n rw tx_c/rf/dac/iqerr_gain 0
 n rw tx_c/rf/dac/iqerr_phase 0
 n rw tx_c/rf/freq/val 2400
-y ro tx_c/rf/freq/band 1
 n rw tx_c/rf/freq/lna 0
 n rw tx_c/rf/freq/i_bias 0
 n rw tx_c/rf/freq/q_bias 0
@@ -220,7 +215,6 @@ n rw rx_c/rf/vga/atten1 0
 n rw rx_c/rf/vga/atten2 0
 n rw rx_c/rf/vga/atten3 0
 n rw rx_c/rf/freq/val 2400
-y ro rx_c/rf/freq/band 1
 n rw rx_c/rf/freq/lna 0
 n rw rx_c/rf/freq/varac 0
 n rw rx_c/rf/gain/val 10
@@ -231,7 +225,7 @@ y ro rx_c/rf/board/temp 20
 n wo rx_c/rf/board/led 0
 n rw rx_c/dsp/freq 2400
 n rw rx_c/dsp/gain 10
-n rw rx_c/dsp/interp 0
+n rw rx_c/dsp/decim 0
 n rw rx_c/dsp/rate 0
 n rw rx_c/dsp/nco_adj 0
 n rw rx_c/dsp/iqerr_gain 0
@@ -261,7 +255,6 @@ y ro tx_d/rf/dac/temp 0
 n rw tx_d/rf/dac/iqerr_gain 0
 n rw tx_d/rf/dac/iqerr_phase 0
 n rw tx_d/rf/freq/val 2400
-y ro tx_d/rf/freq/band 1
 n rw tx_d/rf/freq/lna 0
 n rw tx_d/rf/freq/i_bias 0
 n rw tx_d/rf/freq/q_bias 0
@@ -305,7 +298,6 @@ n rw rx_d/rf/vga/atten1 0
 n rw rx_d/rf/vga/atten2 0
 n rw rx_d/rf/vga/atten3 0
 n rw rx_d/rf/freq/val 2400
-y ro rx_d/rf/freq/band 1
 n rw rx_d/rf/freq/lna 0
 n rw rx_d/rf/freq/varac 0
 n rw rx_d/rf/gain/val 10
@@ -316,7 +308,7 @@ y ro rx_d/rf/board/temp 20
 n wo rx_d/rf/board/led 0
 n rw rx_d/dsp/freq 2400
 n rw rx_d/dsp/gain 10
-n rw rx_d/dsp/interp 0
+n rw rx_d/dsp/decim 0
 n rw rx_d/dsp/rate 0
 n rw rx_d/dsp/nco_adj 0
 n rw rx_d/dsp/iqerr_gain 0

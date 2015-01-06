@@ -18,7 +18,8 @@
 #include "mmap.h"
 #include "properties.h"
 
-#define BASE_SAMPLE_RATE 322.265625
+#define BASE_SAMPLE_RATE 322.265625	// MHz
+#define BASE_SAMPLE_FREQ 322265625	// Hz
 
 static int uart_fd = 0;
 static char buf[MAX_PROP_LEN] = {};
@@ -37,31 +38,46 @@ static int set_invalid (const char* data) {
 }
 static int set_tx_a_rf_dac_mixer (const char* data) {
 	// Insert MCU/MEM command
-
+	
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_dac_nco (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_dac_pap (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c a -p ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_dac_interp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c a -t ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_a_rf_dac_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c a -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
@@ -79,19 +95,21 @@ static int set_tx_a_rf_dac_iqerr_phase (const char* data) {
 
 static int set_tx_a_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_tx_a_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -164,9 +182,7 @@ static int set_tx_a_dsp_gain (const char* data) {
 
 static int set_tx_a_dsp_interp (const char* data) {
 	// Insert MCU/MEM command
-	int rate;
-	sscanf(data, "%i", &rate);
-	write_hps_reg( "txa1", rate );
+
 	return RETURN_SUCCESS;
 }
 
@@ -178,9 +194,12 @@ static int set_tx_a_dsp_rate (const char* data) {
 	return RETURN_SUCCESS;
 }
 
+// TODO need to support up/down convert
 static int set_tx_a_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "txa0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -198,7 +217,10 @@ static int set_tx_a_dsp_iqerr_phase (const char* data) {
 
 static int set_tx_a_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "txa4", &old_val);
+	write_hps_reg( "txa4", old_val |  0x2);
+	write_hps_reg( "txa4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -324,19 +346,21 @@ static int set_rx_a_rf_vga_atten3 (const char* data) {
 
 static int set_rx_a_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_rx_a_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -401,7 +425,7 @@ static int set_rx_a_dsp_gain (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_dsp_interp (const char* data) {
+static int set_rx_a_dsp_decim (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -417,7 +441,9 @@ static int set_rx_a_dsp_rate (const char* data) {
 
 static int set_rx_a_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "rxa0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -435,7 +461,10 @@ static int set_rx_a_dsp_iqerr_phase (const char* data) {
 
 static int set_rx_a_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val |  0x2);
+	write_hps_reg( "rxa4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -513,25 +542,40 @@ static int set_tx_b_rf_dac_mixer (const char* data) {
 
 static int set_tx_b_rf_dac_nco (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_dac_pap (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c b -p ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_dac_interp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c b -t ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_b_rf_dac_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c b -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
@@ -549,19 +593,21 @@ static int set_tx_b_rf_dac_iqerr_phase (const char* data) {
 
 static int set_tx_b_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_tx_b_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c b -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -648,7 +694,9 @@ static int set_tx_b_dsp_rate (const char* data) {
 
 static int set_tx_b_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "txb0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -666,7 +714,10 @@ static int set_tx_b_dsp_iqerr_phase (const char* data) {
 
 static int set_tx_b_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "txb4", &old_val);
+	write_hps_reg( "txb4", old_val |  0x2);
+	write_hps_reg( "txb4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -792,19 +843,21 @@ static int set_rx_b_rf_vga_atten3 (const char* data) {
 
 static int set_rx_b_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_rx_b_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -869,7 +922,7 @@ static int set_rx_b_dsp_gain (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_dsp_interp (const char* data) {
+static int set_rx_b_dsp_decim (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -885,7 +938,9 @@ static int set_rx_b_dsp_rate (const char* data) {
 
 static int set_rx_b_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "rxb0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -903,7 +958,10 @@ static int set_rx_b_dsp_iqerr_phase (const char* data) {
 
 static int set_rx_b_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "rxb4", &old_val);
+	write_hps_reg( "rxb4", old_val |  0x2);
+	write_hps_reg( "rxb4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -981,25 +1039,40 @@ static int set_tx_c_rf_dac_mixer (const char* data) {
 
 static int set_tx_c_rf_dac_nco (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 2 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_dac_pap (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c c -p ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_dac_interp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c c -t ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_c_rf_dac_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c c -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
@@ -1017,19 +1090,21 @@ static int set_tx_c_rf_dac_iqerr_phase (const char* data) {
 
 static int set_tx_c_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_tx_c_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c c -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1116,7 +1191,9 @@ static int set_tx_c_dsp_rate (const char* data) {
 
 static int set_tx_c_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "txc0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -1134,7 +1211,10 @@ static int set_tx_c_dsp_iqerr_phase (const char* data) {
 
 static int set_tx_c_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "txc4", &old_val);
+	write_hps_reg( "txc4", old_val |  0x2);
+	write_hps_reg( "txc4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -1260,19 +1340,21 @@ static int set_rx_c_rf_vga_atten3 (const char* data) {
 
 static int set_rx_c_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_rx_c_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1337,7 +1419,7 @@ static int set_rx_c_dsp_gain (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_dsp_interp (const char* data) {
+static int set_rx_c_dsp_decim (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -1353,7 +1435,9 @@ static int set_rx_c_dsp_rate (const char* data) {
 
 static int set_rx_c_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "rxc0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -1371,7 +1455,10 @@ static int set_rx_c_dsp_iqerr_phase (const char* data) {
 
 static int set_rx_c_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "rxc4", &old_val);
+	write_hps_reg( "rxc4", old_val |  0x2);
+	write_hps_reg( "rxc4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -1449,25 +1536,40 @@ static int set_tx_d_rf_dac_mixer (const char* data) {
 
 static int set_tx_d_rf_dac_nco (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_dac_pap (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c d -p ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_dac_interp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'dac -c d -t ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_d_rf_dac_temp (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'board -c d -t'");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
 }
 
@@ -1485,19 +1587,21 @@ static int set_tx_d_rf_dac_iqerr_phase (const char* data) {
 
 static int set_tx_d_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_tx_d_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c d -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1584,7 +1688,9 @@ static int set_tx_d_dsp_rate (const char* data) {
 
 static int set_tx_d_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "txd0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -1602,7 +1708,10 @@ static int set_tx_d_dsp_iqerr_phase (const char* data) {
 
 static int set_tx_d_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "txd4", &old_val);
+	write_hps_reg( "txd4", old_val |  0x2);
+	write_hps_reg( "txd4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -1728,19 +1837,21 @@ static int set_rx_d_rf_vga_atten3 (const char* data) {
 
 static int set_rx_d_rf_freq_val (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int get_rx_d_rf_freq_band (const char* data) {
-	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_freq_lna (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1805,7 +1916,7 @@ static int set_rx_d_dsp_gain (const char* data) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_dsp_interp (const char* data) {
+static int set_rx_d_dsp_decim (const char* data) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -1821,7 +1932,9 @@ static int set_rx_d_dsp_rate (const char* data) {
 
 static int set_rx_d_dsp_nco_adj (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	write_hps_reg( "rxd0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
 	return RETURN_SUCCESS;
 }
 
@@ -1839,7 +1952,10 @@ static int set_rx_d_dsp_iqerr_phase (const char* data) {
 
 static int set_rx_d_dsp_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	uint32_t old_val;
+	read_hps_reg(  "rxd4", &old_val);
+	write_hps_reg( "rxd4", old_val |  0x2);
+	write_hps_reg( "rxd4", old_val & ~0x2);
 	return RETURN_SUCCESS;
 }
 
@@ -2089,7 +2205,6 @@ static prop_t property_table[] = {
 	{"tx_a/rf/dac/iqerr_gain", get_invalid, set_tx_a_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/iqerr_phase", get_invalid, set_tx_a_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "2400"},
-	{"tx_a/rf/freq/band", get_tx_a_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -2132,7 +2247,6 @@ static prop_t property_table[] = {
 	{"rx_a/rf/vga/atten2", get_invalid, set_rx_a_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/atten3", get_invalid, set_rx_a_rf_vga_atten3, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "2400"},
-	{"rx_a/rf/freq/band", get_rx_a_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/varac", get_invalid, set_rx_a_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "10"},
@@ -2143,7 +2257,7 @@ static prop_t property_table[] = {
 	{"rx_a/rf/board/led", get_invalid, set_rx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_a/dsp/freq", get_invalid, set_rx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_a/dsp/interp", get_invalid, set_rx_a_dsp_interp, RW, NO_POLL, "0"},
+	{"rx_a/dsp/decim", get_invalid, set_rx_a_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_a/dsp/nco_adj", get_invalid, set_rx_a_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_a/dsp/iqerr_gain", get_invalid, set_rx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2172,7 +2286,6 @@ static prop_t property_table[] = {
 	{"tx_b/rf/dac/iqerr_gain", get_invalid, set_tx_b_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/iqerr_phase", get_invalid, set_tx_b_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "2400"},
-	{"tx_b/rf/freq/band", get_tx_b_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -2215,7 +2328,6 @@ static prop_t property_table[] = {
 	{"rx_b/rf/vga/atten2", get_invalid, set_rx_b_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/atten3", get_invalid, set_rx_b_rf_vga_atten3, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "2400"},
-	{"rx_b/rf/freq/band", get_rx_b_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/varac", get_invalid, set_rx_b_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "10"},
@@ -2226,7 +2338,7 @@ static prop_t property_table[] = {
 	{"rx_b/rf/board/led", get_invalid, set_rx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_b/dsp/freq", get_invalid, set_rx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_b/dsp/interp", get_invalid, set_rx_b_dsp_interp, RW, NO_POLL, "0"},
+	{"rx_b/dsp/decim", get_invalid, set_rx_b_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_b/dsp/nco_adj", get_invalid, set_rx_b_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_b/dsp/iqerr_gain", get_invalid, set_rx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2255,7 +2367,6 @@ static prop_t property_table[] = {
 	{"tx_c/rf/dac/iqerr_gain", get_invalid, set_tx_c_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/iqerr_phase", get_invalid, set_tx_c_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "2400"},
-	{"tx_c/rf/freq/band", get_tx_c_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -2298,7 +2409,6 @@ static prop_t property_table[] = {
 	{"rx_c/rf/vga/atten2", get_invalid, set_rx_c_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/atten3", get_invalid, set_rx_c_rf_vga_atten3, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "2400"},
-	{"rx_c/rf/freq/band", get_rx_c_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/varac", get_invalid, set_rx_c_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "10"},
@@ -2309,7 +2419,7 @@ static prop_t property_table[] = {
 	{"rx_c/rf/board/led", get_invalid, set_rx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_c/dsp/freq", get_invalid, set_rx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_c/dsp/interp", get_invalid, set_rx_c_dsp_interp, RW, NO_POLL, "0"},
+	{"rx_c/dsp/decim", get_invalid, set_rx_c_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_c/dsp/nco_adj", get_invalid, set_rx_c_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_c/dsp/iqerr_gain", get_invalid, set_rx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2338,7 +2448,6 @@ static prop_t property_table[] = {
 	{"tx_d/rf/dac/iqerr_gain", get_invalid, set_tx_d_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/iqerr_phase", get_invalid, set_tx_d_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "2400"},
-	{"tx_d/rf/freq/band", get_tx_d_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -2381,7 +2490,6 @@ static prop_t property_table[] = {
 	{"rx_d/rf/vga/atten2", get_invalid, set_rx_d_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/atten3", get_invalid, set_rx_d_rf_vga_atten3, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "2400"},
-	{"rx_d/rf/freq/band", get_rx_d_rf_freq_band, set_invalid, RO, POLL, "1"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/varac", get_invalid, set_rx_d_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "10"},
@@ -2392,7 +2500,7 @@ static prop_t property_table[] = {
 	{"rx_d/rf/board/led", get_invalid, set_rx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_d/dsp/freq", get_invalid, set_rx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_d/dsp/interp", get_invalid, set_rx_d_dsp_interp, RW, NO_POLL, "0"},
+	{"rx_d/dsp/decim", get_invalid, set_rx_d_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_d/dsp/nco_adj", get_invalid, set_rx_d_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_d/dsp/iqerr_gain", get_invalid, set_rx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
