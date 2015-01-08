@@ -40,7 +40,7 @@ static void write_to_file(const char* path, const char* data) {
 	fclose(fd);
 
 	#ifdef DEBUG
-	printf("wrote to file: %s\n", data);
+	printf("wrote to file: %s (%s)\n", path, data);
 	#endif
 }
 
@@ -60,7 +60,7 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	data[pos] = '\0';
 
 	#ifdef DEBUG
-	printf("read from file: %s\n", data);
+	printf("read from file: %s (%s)\n", path, data);
 	#endif
 }
 
