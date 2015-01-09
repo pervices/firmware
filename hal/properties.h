@@ -31,8 +31,8 @@ typedef enum {POLL, NO_POLL} poll_t;
 
 typedef struct prop {
 	const char* path;
-	int (*get_handler)(const char* data);
-	int (*set_handler)(const char* data);
+	int (*get_handler)(const char* data, char* ret);
+	int (*set_handler)(const char* data, char* ret);
 	perm_t permissions;
 	poll_t poll;
 	const char* def_val;	// default value

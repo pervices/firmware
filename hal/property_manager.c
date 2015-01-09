@@ -177,6 +177,7 @@ int init_property(void) {
 void check_property_inotifies(void) {
 	uint8_t buf[EVENT_BUF_LEN];
 	char prop_data[MAX_PROP_LEN];
+	char prop_ret[MAX_PROP_LEN];
 	char path[MAX_PATH_LEN];
 	ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 
@@ -190,8 +191,36 @@ void check_property_inotifies(void) {
 			#ifdef DEBUG
 			printf("Property located at %s has been modified, executing handler\n", prop -> path);
 			#endif
+
+			// empty out the buffers
+			memset(prop_data, 0, MAX_PROP_LEN);
+			memset(prop_ret,  0, MAX_PROP_LEN);
+
+			// read the change from the file
 			read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
-			prop -> set_handler(prop_data);
+			strcpy(prop_ret, prop_data);
+			prop -> set_handler(prop_data, prop_ret);
+
+			// if the return value didn't change, don't write to file again
+			if ( strcmp(prop_ret, prop_data) != 0) {
+				// temperarily remove property from inotify so the file update won't trigger another inotify event
+				if (inotify_rm_watch( inotify_fd, prop -> wd) < 0)
+					fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+				//#ifdef DEBUG
+				printf("Removed inotify, wd: %i\n", prop -> wd);
+				//#endif
+
+				// write output of set_handler to property
+				write_to_file(get_abs_path(prop, path), prop_ret);
+
+				// re-add property to inotify
+				prop -> wd = inotify_add_watch( inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
+				if (prop -> wd < 0)
+					fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+				//#ifdef DEBUG
+				printf("Re-added to inotify, wd: %i\n", prop -> wd);
+				//#endif
+			}
 		}
 
 		i += sizeof(struct inotify_event) + event -> len;
@@ -263,7 +292,7 @@ void update_status_properties(void) {
 	for (i = 0; i < get_num_prop(); i++) {
 		// if POLL and RO property
 		if  (get_prop(i) -> poll == POLL) {
-			get_prop(i) -> get_handler(buf);
+			get_prop(i) -> get_handler(buf, buf);
 			write_to_file(get_abs_path(get_prop(i), path), buf);
 		}
 	}
