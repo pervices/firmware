@@ -44,7 +44,7 @@ static int set_invalid (const char* data) {
 }
 static int set_tx_a_rf_dac_mixer (const char* data) {
 	// Insert MCU/MEM command
-	
+	// TODO: Need to implement in MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -89,13 +89,13 @@ static int get_tx_a_rf_dac_temp (const char* data) {
 
 static int set_tx_a_rf_dac_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_dac_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -121,37 +121,42 @@ static int set_tx_a_rf_freq_lna (const char* data) {
 
 static int set_tx_a_rf_freq_i_bias (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_freq_q_bias (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
+// TODO: make sure the range (0 -> -28 is within the boundaries of requirement
 static int set_tx_a_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -v ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_a_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -176,19 +181,13 @@ static int set_tx_a_rf_board_led (const char* data) {
 
 static int set_tx_a_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_a_dsp_interp (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -211,13 +210,13 @@ static int set_tx_a_dsp_nco_adj (const char* data) {
 
 static int set_tx_a_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -232,13 +231,13 @@ static int set_tx_a_dsp_rstreq (const char* data) {
 
 static int set_tx_a_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -252,67 +251,204 @@ static int set_tx_a_link_port (const char* data) {
 
 static int set_tx_a_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
+
+	// ENABLE
+	if (power > 0) {
+		// set current tx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "txa0", 0x0);
+		write_hps_reg( "txa1", 0xff);
+		write_hps_reg( "txa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set current TX to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_freq (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_bypass (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -b ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_gain1 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 10)	gain = 3;
+	else if (gain <= 14) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_gain2 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -h ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_gain3 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -i ");
+	sprintf(buf + strlen(buf), "%i", gain);	
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_pgain (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 6)	gain = 0;
+	else 			gain = 1;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -p ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_atten1 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -x ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_atten2 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -y ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_vga_atten3 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -z ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
@@ -338,31 +474,67 @@ static int set_rx_a_rf_freq_lna (const char* data) {
 
 static int set_rx_a_rf_freq_varac (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Victor is going to do math from Voltage -> Clk Cycles
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
+	// TODO: intelligent gain, maximize SNR
 
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+
+	// set the total VGA gain to 42 dB
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -g 3'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -h 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -i 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// attenuate 42 to desired amount
+	if (gain < 42) {
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c a -x ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c a -y ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c a -z ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int get_rx_a_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -387,19 +559,13 @@ static int set_rx_a_rf_board_led (const char* data) {
 
 static int set_rx_a_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_dsp_decim (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -421,13 +587,13 @@ static int set_rx_a_dsp_nco_adj (const char* data) {
 
 static int set_rx_a_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -442,13 +608,13 @@ static int set_rx_a_dsp_rstreq (const char* data) {
 
 static int set_rx_a_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -462,31 +628,110 @@ static int set_rx_a_link_port (const char* data) {
 
 static int set_rx_a_link_ip_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	uint8_t ip[4];
+	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
+	write_hps_reg( "rxa5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_link_mac_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW and register addition required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_a_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
 
+	// ENABLE
+	if (power > 0) {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "rxa0", 0x0);
+		write_hps_reg( "rxa1", 0xff);
+		write_hps_reg( "rxa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_dac_mixer (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Need to implement in MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -531,13 +776,13 @@ static int get_tx_b_rf_dac_temp (const char* data) {
 
 static int set_tx_b_rf_dac_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_dac_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -563,37 +808,42 @@ static int set_tx_b_rf_freq_lna (const char* data) {
 
 static int set_tx_b_rf_freq_i_bias (const char* data) {
 	// Insert MCU/MEM command
+	// TODO: MCU code
 
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_freq_q_bias (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c b -v ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_b_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -618,19 +868,13 @@ static int set_tx_b_rf_board_led (const char* data) {
 
 static int set_tx_b_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_b_dsp_interp (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -652,13 +896,13 @@ static int set_tx_b_dsp_nco_adj (const char* data) {
 
 static int set_tx_b_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -673,13 +917,13 @@ static int set_tx_b_dsp_rstreq (const char* data) {
 
 static int set_tx_b_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -693,67 +937,203 @@ static int set_tx_b_link_port (const char* data) {
 
 static int set_tx_b_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
 
+	// ENABLE
+	if (power > 0) {
+		// set current tx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "txa0", 0x0);
+		write_hps_reg( "txa1", 0xff);
+		write_hps_reg( "txa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set current TX to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_freq (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_bypass (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -b ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_gain1 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 10)	gain = 3;
+	else if (gain <= 14) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_gain2 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -h ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_gain3 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -i ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_pgain (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 6)	gain = 0;
+	else 			gain = 1;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -p ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_atten1 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -x ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_atten2 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -y ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_vga_atten3 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -z ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
@@ -779,31 +1159,68 @@ static int set_rx_b_rf_freq_lna (const char* data) {
 
 static int set_rx_b_rf_freq_varac (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Victor is going to do math from Voltage -> Clk Cycles
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
+	// TODO: intelligent gain, maximize SNR
+
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+
+	// set the total VGA gain to 42 dB
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -g 3'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -h 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -i 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// attenuate 42 to desired amount
+	if (gain < 42) {
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c b -x ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c b -y ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c b -z ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	}
 
 	return RETURN_SUCCESS;
 }
 
 static int get_rx_b_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -828,19 +1245,13 @@ static int set_rx_b_rf_board_led (const char* data) {
 
 static int set_rx_b_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_dsp_decim (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -862,13 +1273,13 @@ static int set_rx_b_dsp_nco_adj (const char* data) {
 
 static int set_rx_b_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -883,13 +1294,13 @@ static int set_rx_b_dsp_rstreq (const char* data) {
 
 static int set_rx_b_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -903,31 +1314,110 @@ static int set_rx_b_link_port (const char* data) {
 
 static int set_rx_b_link_ip_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	uint8_t ip[4];
+	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
+	write_hps_reg( "rxb5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_link_mac_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW and register addition required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_b_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
 
+	// ENABLE
+	if (power > 0) {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "rxa0", 0x0);
+		write_hps_reg( "rxa1", 0xff);
+		write_hps_reg( "rxa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_dac_mixer (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Need to implement in MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -972,13 +1462,13 @@ static int get_tx_c_rf_dac_temp (const char* data) {
 
 static int set_tx_c_rf_dac_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_dac_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -1004,37 +1494,41 @@ static int set_tx_c_rf_freq_lna (const char* data) {
 
 static int set_tx_c_rf_freq_i_bias (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_freq_q_bias (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c c -v ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_c_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -1059,19 +1553,13 @@ static int set_tx_c_rf_board_led (const char* data) {
 
 static int set_tx_c_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_c_dsp_interp (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -1093,13 +1581,13 @@ static int set_tx_c_dsp_nco_adj (const char* data) {
 
 static int set_tx_c_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -1114,13 +1602,13 @@ static int set_tx_c_dsp_rstreq (const char* data) {
 
 static int set_tx_c_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -1134,67 +1622,203 @@ static int set_tx_c_link_port (const char* data) {
 
 static int set_tx_c_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
 
+	// ENABLE
+	if (power > 0) {
+		// set current tx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "txa0", 0x0);
+		write_hps_reg( "txa1", 0xff);
+		write_hps_reg( "txa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set current TX to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_freq (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_bypass (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -b ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_gain1 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 10)	gain = 3;
+	else if (gain <= 14) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_gain2 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -h ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_gain3 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -i ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_pgain (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 6)	gain = 0;
+	else 			gain = 1;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -p ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_atten1 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -x ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_atten2 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -y ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_vga_atten3 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -z ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
@@ -1220,31 +1844,67 @@ static int set_rx_c_rf_freq_lna (const char* data) {
 
 static int set_rx_c_rf_freq_varac (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Victor is going to do math from Voltage -> Clk Cycles
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
+	// TODO: intelligent gain, maximize SNR
 
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+
+	// set the total VGA gain to 42 dB
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -g 3'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -h 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -i 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// attenuate 42 to desired amount
+	if (gain < 42) {
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c c -x ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c c -y ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c c -z ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int get_rx_c_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -1269,19 +1929,13 @@ static int set_rx_c_rf_board_led (const char* data) {
 
 static int set_rx_c_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_dsp_decim (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -1303,13 +1957,13 @@ static int set_rx_c_dsp_nco_adj (const char* data) {
 
 static int set_rx_c_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -1324,13 +1978,13 @@ static int set_rx_c_dsp_rstreq (const char* data) {
 
 static int set_rx_c_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -1344,31 +1998,110 @@ static int set_rx_c_link_port (const char* data) {
 
 static int set_rx_c_link_ip_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	uint8_t ip[4];
+	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
+	write_hps_reg( "rxc5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_link_mac_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW and register addition required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_c_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
 
+	// ENABLE
+	if (power > 0) {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "rxa0", 0x0);
+		write_hps_reg( "rxa1", 0xff);
+		write_hps_reg( "rxa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_dac_mixer (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Need to implement in MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -1413,13 +2146,13 @@ static int get_tx_d_rf_dac_temp (const char* data) {
 
 static int set_tx_d_rf_dac_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_dac_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -1445,37 +2178,41 @@ static int set_tx_d_rf_freq_lna (const char* data) {
 
 static int set_tx_d_rf_freq_i_bias (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_freq_q_bias (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 1 -m 'rf -c d -v ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int get_tx_d_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -1500,19 +2237,13 @@ static int set_tx_d_rf_board_led (const char* data) {
 
 static int set_tx_d_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_d_dsp_interp (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -1534,13 +2265,13 @@ static int set_tx_d_dsp_nco_adj (const char* data) {
 
 static int set_tx_d_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -1555,13 +2286,13 @@ static int set_tx_d_dsp_rstreq (const char* data) {
 
 static int set_tx_d_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -1575,67 +2306,203 @@ static int set_tx_d_link_port (const char* data) {
 
 static int set_tx_d_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
 
+	// ENABLE
+	if (power > 0) {
+		// set current tx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "txa0", 0x0);
+		write_hps_reg( "txa1", 0xff);
+		write_hps_reg( "txa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set current TX to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_freq (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -f ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_bypass (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -b ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_gain1 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 10)	gain = 3;
+	else if (gain <= 14) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_gain2 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -h ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_gain3 (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 13)	gain = 3;
+	else if (gain <= 16)	gain = 2;
+	else if (gain <= 19) 	gain = 1;
+	else 			gain = 0;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -i ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_pgain (const char* data) {
 	// Insert MCU/MEM command
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+	if 	(gain <= 6)	gain = 0;
+	else 			gain = 1;
 
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -p ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_atten1 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -x ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_atten2 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -y ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_vga_atten3 (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -z ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	return RETURN_SUCCESS;
 }
 
@@ -1661,31 +2528,67 @@ static int set_rx_d_rf_freq_lna (const char* data) {
 
 static int set_rx_d_rf_freq_varac (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Victor is going to do math from Voltage -> Clk Cycles
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_gain_val (const char* data) {
 	// Insert MCU/MEM command
+	// TODO: intelligent gain, maximize SNR
 
+	uint8_t gain;
+	sscanf(data, "%"SCNd8"", &gain);
+
+	// set the total VGA gain to 42 dB
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -g 3'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -h 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -i 2'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// attenuate 42 to desired amount
+	if (gain < 42) {
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c d -x ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c d -y ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'rf -c d -z ");
+		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		strcat(buf, "'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	}
 	return RETURN_SUCCESS;
 }
 
 static int get_rx_d_rf_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_rf_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -1710,19 +2613,13 @@ static int set_rx_d_rf_board_led (const char* data) {
 
 static int set_rx_d_dsp_freq (const char* data) {
 	// Insert MCU/MEM command
-
+        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_dsp_gain (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_dsp_decim (const char* data) {
-	// Insert MCU/MEM command
-
+	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -1744,13 +2641,13 @@ static int set_rx_d_dsp_nco_adj (const char* data) {
 
 static int set_rx_d_dsp_iqerr_gain (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_dsp_iqerr_phase (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -1765,13 +2662,13 @@ static int set_rx_d_dsp_rstreq (const char* data) {
 
 static int set_rx_d_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_link_iface (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
@@ -1785,25 +2682,104 @@ static int set_rx_d_link_port (const char* data) {
 
 static int set_rx_d_link_ip_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	uint8_t ip[4];
+	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
+	write_hps_reg( "rxd5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_link_mac_dest (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW and register addition required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_link_pay_len (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: FW support required
 	return RETURN_SUCCESS;
 }
 
 static int set_rx_d_pwr (const char* data) {
 	// Insert MCU/MEM command
+	uint32_t old_val;
+	uint8_t power;
+	sscanf(data, "%"SCNd8"", &power);
 
+	// ENABLE
+	if (power > 0) {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// reset DSP FPGA registers for current channel
+		write_hps_reg( "rxa0", 0x0);
+		write_hps_reg( "rxa1", 0xff);
+		write_hps_reg( "rxa4", 0x0);
+
+	// DISABLE
+	} else {
+		// set current rx board to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// set all ADC's to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// disable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1<<8));
+
+		// disable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1<<8));
+
+		// set all DACs to demo mode
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// send the sync pulse from the LMK
+		memset(buf, 0, MAX_PROP_LEN);
+		strcpy(buf, "fpga -o\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// enable all RX JESD lanes
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1<<8));
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1<<8));
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1<<8));
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1<<8));
+
+		// enable all TX JESD lanes
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1<<8));
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1<<8));
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1<<8));
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1<<8));
+	}
 	return RETURN_SUCCESS;
 }
 
@@ -1845,19 +2821,19 @@ static int set_time_source_ref (const char* data) {
 
 static int get_time_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_time_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_time_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -1882,25 +2858,25 @@ static int set_time_board_led (const char* data) {
 
 static int set_time_about_id (const char* data) {
 	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int get_fpga_board_status (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_board_dump (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_board_test (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -1925,43 +2901,27 @@ static int set_fpga_board_led (const char* data) {
 
 static int set_fpga_board_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	memset(buf, 0, MAX_PROP_LEN);
+	strcpy(buf, "fpga -r \r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_board_jesd_rstreq (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_about_id (const char* data) {
 	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_fpga_link_port (const char* data) {
-	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_fpga_link_ip (const char* data) {
-	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
-static int set_fpga_link_mac (const char* data) {
-	// Insert MCU/MEM command
-
+	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_link_rate (const char* data) {
 	// Insert MCU/MEM command
-
+	// TODO: Need to implement in FW
 	return RETURN_SUCCESS;
 }
 
@@ -2080,7 +3040,6 @@ static prop_t property_table[] = {
 	{"tx_a/rf/board/led", get_invalid, set_tx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_a/dsp/freq", get_invalid, set_tx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_a/dsp/gain", get_invalid, set_tx_a_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_a/dsp/interp", get_invalid, set_tx_a_dsp_interp, RW, NO_POLL, "256"},
 	{"tx_a/dsp/rate", get_invalid, set_tx_a_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_a/dsp/nco_adj", get_invalid, set_tx_a_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_a/dsp/iqerr_gain", get_invalid, set_tx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2115,7 +3074,6 @@ static prop_t property_table[] = {
 	{"rx_a/rf/board/led", get_invalid, set_rx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_a/dsp/freq", get_invalid, set_rx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_a/dsp/decim", get_invalid, set_rx_a_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_a/dsp/nco_adj", get_invalid, set_rx_a_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_a/dsp/iqerr_gain", get_invalid, set_rx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2151,7 +3109,6 @@ static prop_t property_table[] = {
 	{"tx_b/rf/board/led", get_invalid, set_tx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_b/dsp/freq", get_invalid, set_tx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_b/dsp/gain", get_invalid, set_tx_b_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_b/dsp/interp", get_invalid, set_tx_b_dsp_interp, RW, NO_POLL, "256"},
 	{"tx_b/dsp/rate", get_invalid, set_tx_b_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_b/dsp/nco_adj", get_invalid, set_tx_b_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_b/dsp/iqerr_gain", get_invalid, set_tx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2186,7 +3143,6 @@ static prop_t property_table[] = {
 	{"rx_b/rf/board/led", get_invalid, set_rx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_b/dsp/freq", get_invalid, set_rx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_b/dsp/decim", get_invalid, set_rx_b_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_b/dsp/nco_adj", get_invalid, set_rx_b_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_b/dsp/iqerr_gain", get_invalid, set_rx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2222,7 +3178,6 @@ static prop_t property_table[] = {
 	{"tx_c/rf/board/led", get_invalid, set_tx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_c/dsp/freq", get_invalid, set_tx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_c/dsp/gain", get_invalid, set_tx_c_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_c/dsp/interp", get_invalid, set_tx_c_dsp_interp, RW, NO_POLL, "256"},
 	{"tx_c/dsp/rate", get_invalid, set_tx_c_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_c/dsp/nco_adj", get_invalid, set_tx_c_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_c/dsp/iqerr_gain", get_invalid, set_tx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2257,7 +3212,6 @@ static prop_t property_table[] = {
 	{"rx_c/rf/board/led", get_invalid, set_rx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_c/dsp/freq", get_invalid, set_rx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_c/dsp/decim", get_invalid, set_rx_c_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_c/dsp/nco_adj", get_invalid, set_rx_c_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_c/dsp/iqerr_gain", get_invalid, set_rx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2293,7 +3247,6 @@ static prop_t property_table[] = {
 	{"tx_d/rf/board/led", get_invalid, set_tx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_d/dsp/freq", get_invalid, set_tx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_d/dsp/gain", get_invalid, set_tx_d_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_d/dsp/interp", get_invalid, set_tx_d_dsp_interp, RW, NO_POLL, "256"},
 	{"tx_d/dsp/rate", get_invalid, set_tx_d_dsp_rate, RW, NO_POLL, "0"},
 	{"tx_d/dsp/nco_adj", get_invalid, set_tx_d_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_d/dsp/iqerr_gain", get_invalid, set_tx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2328,7 +3281,6 @@ static prop_t property_table[] = {
 	{"rx_d/rf/board/led", get_invalid, set_rx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_d/dsp/freq", get_invalid, set_rx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_d/dsp/decim", get_invalid, set_rx_d_dsp_decim, RW, NO_POLL, "0"},
 	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "0"},
 	{"rx_d/dsp/nco_adj", get_invalid, set_rx_d_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_d/dsp/iqerr_gain", get_invalid, set_rx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
@@ -2373,9 +3325,6 @@ static prop_t property_table[] = {
 	{"fpga/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"fpga/link/port", get_invalid, set_fpga_link_port, RW, NO_POLL, "42820"},
-	{"fpga/link/ip", get_invalid, set_fpga_link_ip, RW, NO_POLL, "10.10.10.2"},
-	{"fpga/link/mac", get_invalid, set_fpga_link_mac, RW, NO_POLL, "aa:aa:aa:aa:aa:aa"},
 	{"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "161"},
 	{"fpga/link/loopback", get_invalid, set_fpga_link_loopback, RW, NO_POLL, "0"},
 	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
