@@ -206,9 +206,9 @@ void check_property_inotifies(void) {
 				// temperarily remove property from inotify so the file update won't trigger another inotify event
 				if (inotify_rm_watch( inotify_fd, prop -> wd) < 0)
 					fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
-				//#ifdef DEBUG
+				#ifdef DEBUG
 				printf("Removed inotify, wd: %i\n", prop -> wd);
-				//#endif
+				#endif
 
 				// write output of set_handler to property
 				write_to_file(get_abs_path(prop, path), prop_ret);
@@ -217,9 +217,9 @@ void check_property_inotifies(void) {
 				prop -> wd = inotify_add_watch( inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
 				if (prop -> wd < 0)
 					fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
-				//#ifdef DEBUG
+				#ifdef DEBUG
 				printf("Re-added to inotify, wd: %i\n", prop -> wd);
-				//#endif
+				#endif
 			}
 		}
 
