@@ -172,11 +172,29 @@ static int set_tx_a_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-// TODO need to support up/down convert
 static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "txa0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "txa4", &old_val);
+	write_hps_reg( "txa4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -503,8 +521,27 @@ static int set_rx_a_dsp_rate (const char* data, char* ret) {
 
 static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "rxa0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "rxa4", &old_val);
+	write_hps_reg( "rxa4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -771,8 +808,27 @@ static int set_tx_b_dsp_rate (const char* data, char* ret) {
 
 static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "txb0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "txb4", &old_val);
+	write_hps_reg( "txb4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -1099,8 +1155,27 @@ static int set_rx_b_dsp_rate (const char* data, char* ret) {
 
 static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "rxb0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "rxb4", &old_val);
+	write_hps_reg( "rxb4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -1366,8 +1441,27 @@ static int set_tx_c_dsp_rate (const char* data, char* ret) {
 
 static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "txc0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "txc4", &old_val);
+	write_hps_reg( "txc4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -1693,8 +1787,27 @@ static int set_rx_c_dsp_rate (const char* data, char* ret) {
 
 static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "rxc0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "rxc4", &old_val);
+	write_hps_reg( "rxc4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -1960,8 +2073,27 @@ static int set_tx_d_dsp_rate (const char* data, char* ret) {
 
 static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "txd0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "txd4", &old_val);
+	write_hps_reg( "txd4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -2287,8 +2419,27 @@ static int set_rx_d_dsp_rate (const char* data, char* ret) {
 
 static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint32_t old_val;
+	uint8_t direction;
+
+	// check for a minus or plus sign at the front
+	if (data[0] == '-') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 0;
+	} else if (data[0] == '+') {
+		sscanf(data + 1, "%"SCNd32"", &freq);
+		direction = 1;
+	} else {
+		sscanf(data, "%"SCNd32"", &freq);
+		direction = 1;
+	}
+
+	// write NCO adj
 	write_hps_reg( "rxd0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+
+	// write direction
+	read_hps_reg(  "rxd4", &old_val);
+	write_hps_reg( "rxd4", (old_val & ~(0x1 << 3) ) | (direction << 3));
 	return RETURN_SUCCESS;
 }
 
@@ -2594,7 +2745,7 @@ static int set_fpga_link_sfpa_pay_len (const char* data, char* ret) {
 	uint8_t pay_len;
 	sscanf(data, "%"SCNd8"", &pay_len);
 	read_hps_reg(  "net0", &old_val);
-	write_hps_reg( "net0",  (old_val & ~(0xffff << 16) ) | pay_len);
+	write_hps_reg( "net0",  (old_val & ~(0xffff << 16) ) | (pay_len << 16));
 	return RETURN_SUCCESS;
 }
 
@@ -2640,7 +2791,7 @@ static int set_fpga_link_sfpb_pay_len (const char* data, char* ret) {
 	uint8_t pay_len;
 	sscanf(data, "%"SCNd8"", &pay_len);
 	read_hps_reg(  "net15", &old_val);
-	write_hps_reg( "net15",  (old_val & ~(0xffff << 16) ) | pay_len);
+	write_hps_reg( "net15",  (old_val & ~(0xffff << 16) ) | (pay_len << 16));
 	return RETURN_SUCCESS;
 }
 
