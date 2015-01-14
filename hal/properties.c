@@ -211,12 +211,7 @@ static int set_tx_a_link_iface (const char* data, char* ret) {
 static int set_tx_a_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net13", port);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_a_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	write_hps_reg( "txa5", port);
 	return RETURN_SUCCESS;
 }
 
@@ -544,7 +539,7 @@ static int set_rx_a_link_iface (const char* data, char* ret) {
 static int set_rx_a_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net14", port);
+	write_hps_reg( "rxa8", port);
 	return RETURN_SUCCESS;
 }
 
@@ -556,12 +551,11 @@ static int set_rx_a_link_ip_dest (const char* data, char* ret) {
 }
 
 static int set_rx_a_link_mac_dest (const char* data, char* ret) {
-	// TODO: FW and register addition required
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	uint8_t mac[6];
+	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
+		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
+	write_hps_reg( "rxa6", (mac[0] << 8) | (mac[1]) );
+	write_hps_reg( "rxa7", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
 	return RETURN_SUCCESS;
 }
 
@@ -813,12 +807,7 @@ static int set_tx_b_link_iface (const char* data, char* ret) {
 static int set_tx_b_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net28", port);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_b_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	write_hps_reg( "txb5", port);
 	return RETURN_SUCCESS;
 }
 
@@ -1146,7 +1135,7 @@ static int set_rx_b_link_iface (const char* data, char* ret) {
 static int set_rx_b_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net29", port);
+	write_hps_reg( "rxb8", port);
 	return RETURN_SUCCESS;
 }
 
@@ -1158,12 +1147,11 @@ static int set_rx_b_link_ip_dest (const char* data, char* ret) {
 }
 
 static int set_rx_b_link_mac_dest (const char* data, char* ret) {
-	// TODO: FW and register addition required
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	uint8_t mac[6];
+	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
+		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
+	write_hps_reg( "rxb6", (mac[0] << 8) | (mac[1]) );
+	write_hps_reg( "rxb7", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
 	return RETURN_SUCCESS;
 }
 
@@ -1414,12 +1402,7 @@ static int set_tx_c_link_iface (const char* data, char* ret) {
 static int set_tx_c_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net13", port);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_c_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	write_hps_reg( "txc5", port);
 	return RETURN_SUCCESS;
 }
 
@@ -1746,7 +1729,7 @@ static int set_rx_c_link_iface (const char* data, char* ret) {
 static int set_rx_c_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net14", port);
+	write_hps_reg( "rxc8", port);
 	return RETURN_SUCCESS;
 }
 
@@ -1758,12 +1741,11 @@ static int set_rx_c_link_ip_dest (const char* data, char* ret) {
 }
 
 static int set_rx_c_link_mac_dest (const char* data, char* ret) {
-	// TODO: FW and register addition required
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	uint8_t mac[6];
+	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
+		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
+	write_hps_reg( "rxc6", (mac[0] << 8) | (mac[1]) );
+	write_hps_reg( "rxc7", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
 	return RETURN_SUCCESS;
 }
 
@@ -2014,12 +1996,7 @@ static int set_tx_d_link_iface (const char* data, char* ret) {
 static int set_tx_d_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net28", port);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_d_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	write_hps_reg( "txd5", port);
 	return RETURN_SUCCESS;
 }
 
@@ -2346,7 +2323,7 @@ static int set_rx_d_link_iface (const char* data, char* ret) {
 static int set_rx_d_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
-	write_hps_reg( "net29", port);
+	write_hps_reg( "rxd8", port);
 	return RETURN_SUCCESS;
 }
 
@@ -2358,12 +2335,11 @@ static int set_rx_d_link_ip_dest (const char* data, char* ret) {
 }
 
 static int set_rx_d_link_mac_dest (const char* data, char* ret) {
-	// TODO: FW and register addition required
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_link_pay_len (const char* data, char* ret) {
-	// TODO: FW support required
+	uint8_t mac[6];
+	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
+		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
+	write_hps_reg( "rxd6", (mac[0] << 8) | (mac[1]) );
+	write_hps_reg( "rxd7", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
 	return RETURN_SUCCESS;
 }
 
@@ -2613,6 +2589,15 @@ static int set_fpga_link_sfpa_ver (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_fpga_link_sfpa_pay_len (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t pay_len;
+	sscanf(data, "%"SCNd8"", &pay_len);
+	read_hps_reg(  "net0", &old_val);
+	write_hps_reg( "net0",  (old_val & ~(0xffff << 16) ) | pay_len);
+	return RETURN_SUCCESS;
+}
+
 static int set_fpga_link_sfpb_ip_addr (const char* data, char* ret) {
 	uint32_t ip[4];
 	if (ipver[1] == IPVER_IPV4) {
@@ -2647,6 +2632,15 @@ static int set_fpga_link_sfpb_ver (const char* data, char* ret) {
 	read_hps_reg(  "net15", &old_val);
 	if (ver > 0)	write_hps_reg( "net15", (old_val & ~(1 << 2) ) | (1 << 2));
 	else		write_hps_reg( "net15", (old_val & ~(1 << 2) ));
+	return RETURN_SUCCESS;
+}
+
+static int set_fpga_link_sfpb_pay_len (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t pay_len;
+	sscanf(data, "%"SCNd8"", &pay_len);
+	read_hps_reg(  "net15", &old_val);
+	write_hps_reg( "net15",  (old_val & ~(0xffff << 16) ) | pay_len);
 	return RETURN_SUCCESS;
 }
 
@@ -2689,7 +2683,6 @@ static prop_t property_table[] = {
 	{"tx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "10g"},
 	{"tx_a/link/port", get_invalid, set_tx_a_link_port, RW, NO_POLL, "42820"},
-	{"tx_a/link/pay_len", get_invalid, set_tx_a_link_pay_len, RW, NO_POLL, "1400"},
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/freq", get_invalid, set_rx_a_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/bypass", get_invalid, set_rx_a_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -2725,7 +2718,6 @@ static prop_t property_table[] = {
 	{"rx_a/link/port", get_invalid, set_rx_a_link_port, RW, NO_POLL, "42820"},
 	{"rx_a/link/ip_dest", get_invalid, set_rx_a_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_a/link/mac_dest", get_invalid, set_rx_a_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_a/link/pay_len", get_invalid, set_rx_a_link_pay_len, RW, NO_POLL, "1400"},
 	{"rx_a/pwr", get_invalid, set_rx_a_pwr, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/mixer", get_invalid, set_tx_b_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "1475.5"},
@@ -2758,7 +2750,6 @@ static prop_t property_table[] = {
 	{"tx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "10g"},
 	{"tx_b/link/port", get_invalid, set_tx_b_link_port, RW, NO_POLL, "42820"},
-	{"tx_b/link/pay_len", get_invalid, set_tx_b_link_pay_len, RW, NO_POLL, "1400"},
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/freq", get_invalid, set_rx_b_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/bypass", get_invalid, set_rx_b_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -2794,7 +2785,6 @@ static prop_t property_table[] = {
 	{"rx_b/link/port", get_invalid, set_rx_b_link_port, RW, NO_POLL, "42820"},
 	{"rx_b/link/ip_dest", get_invalid, set_rx_b_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_b/link/mac_dest", get_invalid, set_rx_b_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_b/link/pay_len", get_invalid, set_rx_b_link_pay_len, RW, NO_POLL, "1400"},
 	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/mixer", get_invalid, set_tx_c_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "1475.5"},
@@ -2827,7 +2817,6 @@ static prop_t property_table[] = {
 	{"tx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "10g"},
 	{"tx_c/link/port", get_invalid, set_tx_c_link_port, RW, NO_POLL, "42820"},
-	{"tx_c/link/pay_len", get_invalid, set_tx_c_link_pay_len, RW, NO_POLL, "1400"},
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/freq", get_invalid, set_rx_c_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/bypass", get_invalid, set_rx_c_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -2863,7 +2852,6 @@ static prop_t property_table[] = {
 	{"rx_c/link/port", get_invalid, set_rx_c_link_port, RW, NO_POLL, "42820"},
 	{"rx_c/link/ip_dest", get_invalid, set_rx_c_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_c/link/mac_dest", get_invalid, set_rx_c_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_c/link/pay_len", get_invalid, set_rx_c_link_pay_len, RW, NO_POLL, "1400"},
 	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/mixer", get_invalid, set_tx_d_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "1475.5"},
@@ -2896,7 +2884,6 @@ static prop_t property_table[] = {
 	{"tx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "10g"},
 	{"tx_d/link/port", get_invalid, set_tx_d_link_port, RW, NO_POLL, "42820"},
-	{"tx_d/link/pay_len", get_invalid, set_tx_d_link_pay_len, RW, NO_POLL, "1400"},
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/freq", get_invalid, set_rx_d_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/bypass", get_invalid, set_rx_d_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -2932,7 +2919,6 @@ static prop_t property_table[] = {
 	{"rx_d/link/port", get_invalid, set_rx_d_link_port, RW, NO_POLL, "42820"},
 	{"rx_d/link/ip_dest", get_invalid, set_rx_d_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_d/link/mac_dest", get_invalid, set_rx_d_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_d/link/pay_len", get_invalid, set_rx_d_link_pay_len, RW, NO_POLL, "1400"},
 	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "0"},
 	{"time/clk/rate", get_invalid, set_time_clk_rate, RW, NO_POLL, "322"},
 	{"time/clk/pps", get_invalid, set_time_clk_pps, RW, NO_POLL, "0"},
@@ -2967,9 +2953,11 @@ static prop_t property_table[] = {
 	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
 	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:aa:aa:aa:aa:aa"},
 	{"fpga/link/sfpa/ver", get_invalid, set_fpga_link_sfpa_ver, RW, NO_POLL, "0"},
+	{"fpga/link/sfpa/pay_len", get_invalid, set_fpga_link_sfpa_pay_len, RW, NO_POLL, "1400"},
 	{"fpga/link/sfpb/ip_addr", get_invalid, set_fpga_link_sfpb_ip_addr, RW, NO_POLL, "10.10.10.2"},
 	{"fpga/link/sfpb/mac_addr", get_invalid, set_fpga_link_sfpb_mac_addr, RW, NO_POLL, "aa:aa:aa:aa:aa:aa"},
 	{"fpga/link/sfpb/ver", get_invalid, set_fpga_link_sfpb_ver, RW, NO_POLL, "0"},
+	{"fpga/link/sfpb/pay_len", get_invalid, set_fpga_link_sfpb_pay_len, RW, NO_POLL, "1400"},
 	{"poll_en", get_invalid, set_poll_en, RW, NO_POLL, "1"}
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
