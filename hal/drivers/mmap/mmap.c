@@ -134,3 +134,21 @@ int write_hps_reg(const char* reg, uint32_t data) {
 	if (temp)	return reg_write( temp -> addr, &data, 1 );
 	else		return RETURN_ERROR_INVALID_REGISTER;
 }
+
+void list_hps_reg(uint8_t verbosity) {
+	print_regs(verbosity);
+}
+
+int dump_hps_reg(void) {
+	int ret;
+	uint32_t data, index;
+	for (index = 0; index < get_num_regs(); index++) {
+		const reg_t* temp = get_reg_from_index(index);
+		ret = reg_read( temp -> addr, &data, 1);
+		if (ret < 0) return ret;
+
+		printf("reg = %s\taddress = 0x%08x\tvalue = 0x%08x\n",
+			temp -> name, temp -> addr, data);
+	}
+	return RETURN_SUCCESS;
+}

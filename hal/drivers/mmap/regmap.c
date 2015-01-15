@@ -165,6 +165,12 @@ const reg_t* get_reg_from_addr(uint32_t addr) {
 	return NULL;
 }
 
+// returns the register of the matching register in the reg_table based on index
+// returns NULL if no match or error
+const reg_t* get_reg_from_index(uint32_t index) {
+	return (reg_table + index);
+}
+
 // prints out all of the register names and addresses, if verbose, print out bitfields
 void print_regs(int verbose) {
 	size_t i;

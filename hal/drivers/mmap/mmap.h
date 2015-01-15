@@ -39,4 +39,6 @@ int write_hps_addr(uint32_t addr, uint32_t data);
 int read_hps_reg(const char* reg, uint32_t* data);
 int write_hps_reg(const char* reg, uint32_t data);
 
+void list_hps_reg(uint8_t verbosity);
+int dump_hps_reg(void);
 #endif
