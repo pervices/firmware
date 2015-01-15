@@ -32,16 +32,17 @@ OUTDIR = $(CRIMSON_ROOTDIR)/out
 SHELL = /bin/sh
 
 # Object files are source files with .c replaced with .o
-OBJECTS = $(addprefix $(OUTDIR)/obj/,$(SOURCES:.c=.o))
+OBJECTS = $(addprefix $(OUTDIR)/obj/main/,$(SOURCES:.c=.o))
 
 # Root Directory
 export CRIMSON_ROOTDIR = $(shell pwd)
 
 # Output Executable
-EXECUTABLE = $(addprefix $(OUTDIR)/bin/,start-server)
+EXECUTABLE = $(addprefix $(OUTDIR)/bin/,$(SOURCES:.c=))
 
 # Source Files
-SOURCES = server.c
+SOURCES = server.c mem.c
+TARGETS = $(SOURCES:.c=)
 
 # Includes
 INCLUDES += -I$(OUTDIR)/inc
@@ -54,11 +55,14 @@ SUBDIRS += common hal parser
 all: MAKE_OUTDIR MAKE_SUBDIR $(SOURCES) $(EXECUTABLE)
 
 # Links all the object files together for output
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(LDFLAGS) $(wildcard $(OUTDIR)/obj/*) -o $@
+define AUTO_TARGET
+$(addprefix $(OUTDIR)/bin/,$(1)): $(OBJECTS)
+	$(CC) $(LDFLAGS) $$(wildcard $(OUTDIR)/obj/*.o) $(addprefix $(OUTDIR)/obj/main/,$(1)).o -o $(addprefix $(OUTDIR)/bin/,$(1))
+endef
+$(foreach TARGET, $(TARGETS), $(eval $(call AUTO_TARGET, $(TARGET)) ))
 
 # Generates all of the object files from the source files
-$(OUTDIR)/obj/%.o: %.c
+$(OUTDIR)/obj/main/%.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
 	@cp $< $(OUTDIR)/src
 
@@ -69,6 +73,7 @@ MAKE_SUBDIR:
 # Generates the output directory
 MAKE_OUTDIR:
 	@mkdir -p $(OUTDIR)/obj
+	@mkdir -p $(OUTDIR)/obj/main
 	@mkdir -p $(OUTDIR)/inc
 	@mkdir -p $(OUTDIR)/src
 	@mkdir -p $(OUTDIR)/bin
