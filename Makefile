@@ -41,7 +41,7 @@ export CRIMSON_ROOTDIR = $(shell pwd)
 EXECUTABLE = $(addprefix $(OUTDIR)/bin/,$(SOURCES:.c=))
 
 # Source Files
-SOURCES = server.c mem.c
+SOURCES = server.c mem.c mcu.c
 TARGETS = $(SOURCES:.c=)
 
 # Includes
