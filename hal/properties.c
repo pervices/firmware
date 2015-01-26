@@ -18,8 +18,7 @@
 #include "mmap.h"
 #include "properties.h"
 
-#define BASE_SAMPLE_RATE 322.265625	// MHz
-#define BASE_SAMPLE_FREQ 322265625	// Hz
+#define BASE_SAMPLE_RATE 322265625.0	// SPS
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
@@ -72,7 +71,7 @@ static int set_tx_a_rf_dac_interp (const char* data, char* ret) {
 }
 
 static int get_tx_a_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c a -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -139,7 +138,7 @@ static int set_tx_a_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_tx_a_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c a -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -190,7 +189,7 @@ static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txa0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "txa0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
@@ -218,6 +217,14 @@ static int set_tx_a_dsp_rstreq (const char* data, char* ret) {
 
 static int set_tx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_a_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "txa4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | 0x10);
+	else				write_hps_reg( "txa4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -486,7 +493,7 @@ static int set_rx_a_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_rx_a_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c a -t'");
+	strcpy(buf, "fwd -b 0 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -537,7 +544,7 @@ static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxa0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "rxa0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
@@ -565,6 +572,14 @@ static int set_rx_a_dsp_rstreq (const char* data, char* ret) {
 
 static int set_rx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_a_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "rxa4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | 0x10);
+	else				write_hps_reg( "rxa4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -706,7 +721,7 @@ static int set_tx_b_rf_dac_interp (const char* data, char* ret) {
 }
 
 static int get_tx_b_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c b -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -773,7 +788,7 @@ static int set_tx_b_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_tx_b_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c b -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -824,7 +839,7 @@ static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txb0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "txb0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
@@ -852,6 +867,14 @@ static int set_tx_b_dsp_rstreq (const char* data, char* ret) {
 
 static int set_tx_b_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_b_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "txb4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | 0x10);
+	else				write_hps_reg( "txb4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -1120,7 +1143,7 @@ static int set_rx_b_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_rx_b_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c b -t'");
+	strcpy(buf, "fwd -b 0 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -1171,7 +1194,7 @@ static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxb0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "rxb0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
@@ -1199,6 +1222,14 @@ static int set_rx_b_dsp_rstreq (const char* data, char* ret) {
 
 static int set_rx_b_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_b_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "rxb4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | 0x10);
+	else				write_hps_reg( "rxb4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -1340,7 +1371,7 @@ static int set_tx_c_rf_dac_interp (const char* data, char* ret) {
 }
 
 static int get_tx_c_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c c -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -1406,7 +1437,7 @@ static int set_tx_c_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_tx_c_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c c -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -1457,7 +1488,7 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txc0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "txc0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
@@ -1485,6 +1516,14 @@ static int set_tx_c_dsp_rstreq (const char* data, char* ret) {
 
 static int set_tx_c_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_c_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "txc4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | 0x10);
+	else				write_hps_reg( "txc4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -1752,7 +1791,7 @@ static int set_rx_c_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_rx_c_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c c -t'");
+	strcpy(buf, "fwd -b 0 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -1803,7 +1842,7 @@ static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxc0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "rxc0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
@@ -1831,6 +1870,14 @@ static int set_rx_c_dsp_rstreq (const char* data, char* ret) {
 
 static int set_rx_c_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_c_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "rxc4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | 0x10);
+	else				write_hps_reg( "rxc4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -1972,7 +2019,7 @@ static int set_tx_d_rf_dac_interp (const char* data, char* ret) {
 }
 
 static int get_tx_d_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c d -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -2038,7 +2085,7 @@ static int set_tx_d_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_tx_d_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c d -t'");
+	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -2089,7 +2136,7 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txd0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "txd0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
@@ -2117,6 +2164,14 @@ static int set_tx_d_dsp_rstreq (const char* data, char* ret) {
 
 static int set_tx_d_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_d_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "txd4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | 0x10);
+	else				write_hps_reg( "txd4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -2384,7 +2439,7 @@ static int set_rx_d_rf_board_test (const char* data, char* ret) {
 }
 
 static int get_rx_d_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c d -t'");
+	strcpy(buf, "fwd -b 0 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -2435,7 +2490,7 @@ static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxd0", (freq * pow(2,32)) / BASE_SAMPLE_FREQ);
+	write_hps_reg( "rxd0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
@@ -2463,6 +2518,14 @@ static int set_rx_d_dsp_rstreq (const char* data, char* ret) {
 
 static int set_rx_d_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_d_link_enable (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "rxd4", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | 0x10);
+	else				write_hps_reg( "rxd4", old_val & ~0x10);
 	return RETURN_SUCCESS;
 }
 
@@ -2574,12 +2637,6 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_clk_rate (const char* data, char* ret) {
-	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
 static int set_time_clk_pps (const char* data, char* ret) {
 	// Insert MCU/MEM command
 
@@ -2587,6 +2644,24 @@ static int set_time_clk_pps (const char* data, char* ret) {
 }
 
 static int set_time_clk_cur_time (const char* data, char* ret) {
+	// test by reading it before writing to it
+	//uint32_t intpart, fracpart;
+	//read_hps_reg( "res_ro0", &intpart);
+	//read_hps_reg( "res_ro1", &fracpart);
+	//printf("Time is: %lf seconds\n", (double)intpart + ((double)fracpart / 100000000) );
+
+	double time;
+	sscanf(data, "%lf", &time);
+	write_hps_reg( "res_rw1", (uint32_t)time);
+	write_hps_reg( "res_rw2", time - (uint32_t)time);
+
+	// toggle the set register
+	write_hps_reg( "res_rw3", 1);
+	write_hps_reg( "res_rw3", 0);
+	return RETURN_SUCCESS;
+}
+
+static int set_time_source_rate (const char* data, char* ret) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
@@ -2604,9 +2679,14 @@ static int set_time_source_sync (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+// 10 MHz clock
 static int set_time_source_ref (const char* data, char* ret) {
-	// Insert MCU/MEM command
-
+	if (strcmp(data, "external") == 0) {
+		strcpy(buf, "fwd -b 2 -m 'clk -t 1'\r");
+	} else if (strcmp(data, "internal") == 0) {
+		strcpy(buf, "fwd -b 2 -m 'clk -t 0'\r");
+	}
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2626,7 +2706,7 @@ static int set_time_board_test (const char* data, char* ret) {
 }
 
 static int get_time_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 2 -m 'board -t'");
+	strcpy(buf, "fwd -b 2 -m 'board -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
 	return RETURN_SUCCESS;
@@ -2822,7 +2902,7 @@ static prop_t property_table[] = {
 	{"tx_a/rf/board/led", get_invalid, set_tx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_a/dsp/freq", get_invalid, set_tx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_a/dsp/gain", get_invalid, set_tx_a_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_a/dsp/rate", get_invalid, set_tx_a_dsp_rate, RW, NO_POLL, "0"},
+	{"tx_a/dsp/rate", get_invalid, set_tx_a_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_a/dsp/nco_adj", get_invalid, set_tx_a_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_a/dsp/iqerr_gain", get_invalid, set_tx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_a/dsp/iqerr_phase", get_invalid, set_tx_a_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2832,8 +2912,9 @@ static prop_t property_table[] = {
 	{"tx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "10g"},
-	{"tx_a/link/port", get_invalid, set_tx_a_link_port, RW, NO_POLL, "42820"},
+	{"tx_a/link/enable", get_invalid, set_tx_a_link_enable, RW, NO_POLL, "1"},
+	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "sfpa"},
+	{"tx_a/link/port", get_invalid, set_tx_a_link_port, RW, NO_POLL, "42824"},
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/freq", get_invalid, set_rx_a_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/bypass", get_invalid, set_rx_a_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -2855,7 +2936,7 @@ static prop_t property_table[] = {
 	{"rx_a/rf/board/led", get_invalid, set_rx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_a/dsp/freq", get_invalid, set_rx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "0"},
+	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_a/dsp/nco_adj", get_invalid, set_rx_a_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_a/dsp/iqerr_gain", get_invalid, set_rx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_a/dsp/iqerr_phase", get_invalid, set_rx_a_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2865,7 +2946,8 @@ static prop_t property_table[] = {
 	{"rx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_a/link/iface", get_invalid, set_rx_a_link_iface, RW, NO_POLL, "10g"},
+	{"rx_a/link/enable", get_invalid, set_rx_a_link_enable, RW, NO_POLL, "1"},
+	{"rx_a/link/iface", get_invalid, set_rx_a_link_iface, RW, NO_POLL, "sfpa"},
 	{"rx_a/link/port", get_invalid, set_rx_a_link_port, RW, NO_POLL, "42820"},
 	{"rx_a/link/ip_dest", get_invalid, set_rx_a_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_a/link/mac_dest", get_invalid, set_rx_a_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
@@ -2889,7 +2971,7 @@ static prop_t property_table[] = {
 	{"tx_b/rf/board/led", get_invalid, set_tx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_b/dsp/freq", get_invalid, set_tx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_b/dsp/gain", get_invalid, set_tx_b_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_b/dsp/rate", get_invalid, set_tx_b_dsp_rate, RW, NO_POLL, "0"},
+	{"tx_b/dsp/rate", get_invalid, set_tx_b_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_b/dsp/nco_adj", get_invalid, set_tx_b_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_b/dsp/iqerr_gain", get_invalid, set_tx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_b/dsp/iqerr_phase", get_invalid, set_tx_b_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2899,8 +2981,9 @@ static prop_t property_table[] = {
 	{"tx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "10g"},
-	{"tx_b/link/port", get_invalid, set_tx_b_link_port, RW, NO_POLL, "42820"},
+	{"tx_b/link/enable", get_invalid, set_tx_b_link_enable, RW, NO_POLL, "1"},
+	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "sfpb"},
+	{"tx_b/link/port", get_invalid, set_tx_b_link_port, RW, NO_POLL, "42825"},
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/freq", get_invalid, set_rx_b_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/bypass", get_invalid, set_rx_b_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -2922,7 +3005,7 @@ static prop_t property_table[] = {
 	{"rx_b/rf/board/led", get_invalid, set_rx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_b/dsp/freq", get_invalid, set_rx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "0"},
+	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_b/dsp/nco_adj", get_invalid, set_rx_b_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_b/dsp/iqerr_gain", get_invalid, set_rx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_b/dsp/iqerr_phase", get_invalid, set_rx_b_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2932,8 +3015,9 @@ static prop_t property_table[] = {
 	{"rx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_b/link/iface", get_invalid, set_rx_b_link_iface, RW, NO_POLL, "10g"},
-	{"rx_b/link/port", get_invalid, set_rx_b_link_port, RW, NO_POLL, "42820"},
+	{"rx_b/link/enable", get_invalid, set_rx_b_link_enable, RW, NO_POLL, "1"},
+	{"rx_b/link/iface", get_invalid, set_rx_b_link_iface, RW, NO_POLL, "sfpb"},
+	{"rx_b/link/port", get_invalid, set_rx_b_link_port, RW, NO_POLL, "42821"},
 	{"rx_b/link/ip_dest", get_invalid, set_rx_b_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_b/link/mac_dest", get_invalid, set_rx_b_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "0"},
@@ -2956,7 +3040,7 @@ static prop_t property_table[] = {
 	{"tx_c/rf/board/led", get_invalid, set_tx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_c/dsp/freq", get_invalid, set_tx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_c/dsp/gain", get_invalid, set_tx_c_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_c/dsp/rate", get_invalid, set_tx_c_dsp_rate, RW, NO_POLL, "0"},
+	{"tx_c/dsp/rate", get_invalid, set_tx_c_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_c/dsp/nco_adj", get_invalid, set_tx_c_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_c/dsp/iqerr_gain", get_invalid, set_tx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_c/dsp/iqerr_phase", get_invalid, set_tx_c_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2966,8 +3050,9 @@ static prop_t property_table[] = {
 	{"tx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "10g"},
-	{"tx_c/link/port", get_invalid, set_tx_c_link_port, RW, NO_POLL, "42820"},
+	{"tx_c/link/enable", get_invalid, set_tx_c_link_enable, RW, NO_POLL, "1"},
+	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "sfpa"},
+	{"tx_c/link/port", get_invalid, set_tx_c_link_port, RW, NO_POLL, "42826"},
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/freq", get_invalid, set_rx_c_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/bypass", get_invalid, set_rx_c_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -2989,7 +3074,7 @@ static prop_t property_table[] = {
 	{"rx_c/rf/board/led", get_invalid, set_rx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_c/dsp/freq", get_invalid, set_rx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "0"},
+	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_c/dsp/nco_adj", get_invalid, set_rx_c_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_c/dsp/iqerr_gain", get_invalid, set_rx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_c/dsp/iqerr_phase", get_invalid, set_rx_c_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -2999,8 +3084,9 @@ static prop_t property_table[] = {
 	{"rx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_c/link/iface", get_invalid, set_rx_c_link_iface, RW, NO_POLL, "10g"},
-	{"rx_c/link/port", get_invalid, set_rx_c_link_port, RW, NO_POLL, "42820"},
+	{"rx_c/link/enable", get_invalid, set_rx_c_link_enable, RW, NO_POLL, "1"},
+	{"rx_c/link/iface", get_invalid, set_rx_c_link_iface, RW, NO_POLL, "sfpa"},
+	{"rx_c/link/port", get_invalid, set_rx_c_link_port, RW, NO_POLL, "42822"},
 	{"rx_c/link/ip_dest", get_invalid, set_rx_c_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_c/link/mac_dest", get_invalid, set_rx_c_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "0"},
@@ -3023,7 +3109,7 @@ static prop_t property_table[] = {
 	{"tx_d/rf/board/led", get_invalid, set_tx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_d/dsp/freq", get_invalid, set_tx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_d/dsp/gain", get_invalid, set_tx_d_dsp_gain, RW, NO_POLL, "10"},
-	{"tx_d/dsp/rate", get_invalid, set_tx_d_dsp_rate, RW, NO_POLL, "0"},
+	{"tx_d/dsp/rate", get_invalid, set_tx_d_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_d/dsp/nco_adj", get_invalid, set_tx_d_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"tx_d/dsp/iqerr_gain", get_invalid, set_tx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_d/dsp/iqerr_phase", get_invalid, set_tx_d_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -3033,8 +3119,9 @@ static prop_t property_table[] = {
 	{"tx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "10g"},
-	{"tx_d/link/port", get_invalid, set_tx_d_link_port, RW, NO_POLL, "42820"},
+	{"tx_d/link/enable", get_invalid, set_tx_d_link_enable, RW, NO_POLL, "1"},
+	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "sfpb"},
+	{"tx_d/link/port", get_invalid, set_tx_d_link_port, RW, NO_POLL, "42827"},
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/freq", get_invalid, set_rx_d_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/bypass", get_invalid, set_rx_d_rf_vga_bypass, RW, NO_POLL, "1"},
@@ -3056,7 +3143,7 @@ static prop_t property_table[] = {
 	{"rx_d/rf/board/led", get_invalid, set_rx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_d/dsp/freq", get_invalid, set_rx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
-	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "0"},
+	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_d/dsp/nco_adj", get_invalid, set_rx_d_dsp_nco_adj, RW, NO_POLL, "0"},
 	{"rx_d/dsp/iqerr_gain", get_invalid, set_rx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_d/dsp/iqerr_phase", get_invalid, set_rx_d_dsp_iqerr_phase, RW, NO_POLL, "0"},
@@ -3066,14 +3153,15 @@ static prop_t property_table[] = {
 	{"rx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_d/link/iface", get_invalid, set_rx_d_link_iface, RW, NO_POLL, "10g"},
-	{"rx_d/link/port", get_invalid, set_rx_d_link_port, RW, NO_POLL, "42820"},
+	{"rx_d/link/enable", get_invalid, set_rx_d_link_enable, RW, NO_POLL, "1"},
+	{"rx_d/link/iface", get_invalid, set_rx_d_link_iface, RW, NO_POLL, "sfpb"},
+	{"rx_d/link/port", get_invalid, set_rx_d_link_port, RW, NO_POLL, "42823"},
 	{"rx_d/link/ip_dest", get_invalid, set_rx_d_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
 	{"rx_d/link/mac_dest", get_invalid, set_rx_d_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "0"},
-	{"time/clk/rate", get_invalid, set_time_clk_rate, RW, NO_POLL, "322"},
 	{"time/clk/pps", get_invalid, set_time_clk_pps, RW, NO_POLL, "0"},
-	{"time/clk/cur_time", get_invalid, set_time_clk_cur_time, RW, NO_POLL, "0"},
+	{"time/clk/cur_time", get_invalid, set_time_clk_cur_time, RW, NO_POLL, "0.0"},
+	{"time/source/rate", get_invalid, set_time_source_rate, RW, NO_POLL, "10000000"},
 	{"time/source/vco", get_invalid, set_time_source_vco, RW, NO_POLL, "internal"},
 	{"time/source/sync", get_invalid, set_time_source_sync, RW, NO_POLL, "internal"},
 	{"time/source/ref", get_invalid, set_time_source_ref, RW, NO_POLL, "internal"},
@@ -3105,7 +3193,7 @@ static prop_t property_table[] = {
 	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:aa:aa:aa:aa:aa"},
 	{"fpga/link/sfpa/ver", get_invalid, set_fpga_link_sfpa_ver, RW, NO_POLL, "0"},
 	{"fpga/link/sfpa/pay_len", get_invalid, set_fpga_link_sfpa_pay_len, RW, NO_POLL, "1400"},
-	{"fpga/link/sfpb/ip_addr", get_invalid, set_fpga_link_sfpb_ip_addr, RW, NO_POLL, "10.10.10.2"},
+	{"fpga/link/sfpb/ip_addr", get_invalid, set_fpga_link_sfpb_ip_addr, RW, NO_POLL, "10.10.10.3"},
 	{"fpga/link/sfpb/mac_addr", get_invalid, set_fpga_link_sfpb_mac_addr, RW, NO_POLL, "aa:aa:aa:aa:aa:aa"},
 	{"fpga/link/sfpb/ver", get_invalid, set_fpga_link_sfpb_ver, RW, NO_POLL, "0"},
 	{"fpga/link/sfpb/pay_len", get_invalid, set_fpga_link_sfpb_pay_len, RW, NO_POLL, "1400"},
