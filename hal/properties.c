@@ -166,8 +166,8 @@ static int set_tx_a_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "txa1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -521,8 +521,8 @@ static int set_rx_a_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "rxa1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -816,8 +816,8 @@ static int set_tx_b_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "txb1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -1171,8 +1171,8 @@ static int set_rx_b_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "rxb1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -1465,8 +1465,8 @@ static int set_tx_c_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "txc1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -1819,8 +1819,8 @@ static int set_rx_c_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "rxc1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -2113,8 +2113,8 @@ static int set_tx_d_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "txd1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -2467,8 +2467,8 @@ static int set_rx_d_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
 	write_hps_reg( "rxd1", (int)floor(BASE_SAMPLE_RATE / rate) );
-	memset(ret, 0, MAX_PROP_LEN);
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
+	//memset(ret, 0, MAX_PROP_LEN);
+	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
 }
 
@@ -3189,12 +3189,12 @@ static prop_t property_table[] = {
 	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "161"},
 	{"fpga/link/loopback", get_invalid, set_fpga_link_loopback, RW, NO_POLL, "0"},
-	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
-	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:aa:aa:aa:aa:aa"},
+	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.10"},
+	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:00:00:00:00:00"},
 	{"fpga/link/sfpa/ver", get_invalid, set_fpga_link_sfpa_ver, RW, NO_POLL, "0"},
 	{"fpga/link/sfpa/pay_len", get_invalid, set_fpga_link_sfpa_pay_len, RW, NO_POLL, "1400"},
-	{"fpga/link/sfpb/ip_addr", get_invalid, set_fpga_link_sfpb_ip_addr, RW, NO_POLL, "10.10.10.3"},
-	{"fpga/link/sfpb/mac_addr", get_invalid, set_fpga_link_sfpb_mac_addr, RW, NO_POLL, "aa:aa:aa:aa:aa:aa"},
+	{"fpga/link/sfpb/ip_addr", get_invalid, set_fpga_link_sfpb_ip_addr, RW, NO_POLL, "10.10.11.10"},
+	{"fpga/link/sfpb/mac_addr", get_invalid, set_fpga_link_sfpb_mac_addr, RW, NO_POLL, "aa:00:00:00:00:01"},
 	{"fpga/link/sfpb/ver", get_invalid, set_fpga_link_sfpb_ver, RW, NO_POLL, "0"},
 	{"fpga/link/sfpb/pay_len", get_invalid, set_fpga_link_sfpb_pay_len, RW, NO_POLL, "1400"},
 	{"poll_en", get_invalid, set_poll_en, RW, NO_POLL, "1"}

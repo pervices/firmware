@@ -34,7 +34,7 @@
 #include "parser.h"
 
 #define ENET_DEV "eth0"
-#define UDP_COMMS_PORT 42820
+#define UDP_COMMS_PORT 42799
 
 // timers for polling
 static struct timeval tstart;
