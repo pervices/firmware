@@ -22,10 +22,25 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
+#define PWR_ON	1
+#define PWR_OFF	0
+
+#define FREQ_XOVER_PNT 500000000	// 500 MHz is the crossover frequency for high and low band
+
 // static global variables
 static int uart_fd = 0;
 static char buf[MAX_PROP_LEN] = {};
 static uint16_t rd_len;
+
+// by default the board is powered off
+static uint8_t rxa_power = PWR_OFF;
+static uint8_t rxb_power = PWR_OFF;
+static uint8_t rxc_power = PWR_OFF;
+static uint8_t rxd_power = PWR_OFF;
+static uint8_t txa_power = PWR_OFF;
+static uint8_t txb_power = PWR_OFF;
+static uint8_t txc_power = PWR_OFF;
+static uint8_t txd_power = PWR_OFF;
 
 // state variables
 static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
@@ -87,11 +102,19 @@ static int set_tx_a_rf_dac_iqerr_phase (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -228,6 +251,14 @@ static int set_tx_a_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_tx_a_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x04);
+	else				write_hps_reg( "res_rw0", old_val & ~0x04);
+	return RETURN_SUCCESS;
+}
+
 static int set_tx_a_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -245,77 +276,55 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current tx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && txa_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && txa_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 1 -m 'board -c a -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "txa0", 0x0);
-		write_hps_reg( "txa1", 0xff);
-		write_hps_reg( "txa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set all ADC's to demo mode
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set current TX to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & (~0x2));
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | 0x100);
+
+		txa_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 1 -m 'board -c a -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | 0x2);
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & (~0x100));
+
+		txa_power = PWR_OFF;
 	}
 
 	return RETURN_SUCCESS;
@@ -416,11 +425,19 @@ static int set_rx_a_rf_vga_atten3 (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -583,6 +600,14 @@ static int set_rx_a_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_rx_a_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x01);
+	else				write_hps_reg( "res_rw0", old_val & ~0x01);
+	return RETURN_SUCCESS;
+}
+
 static int set_rx_a_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -616,77 +641,55 @@ static int set_rx_a_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current rx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && rxa_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && rxa_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 0 -m 'board -c a -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "rxa0", 0x0);
-		write_hps_reg( "rxa1", 0xff);
-		write_hps_reg( "rxa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set current rx board to demo mode
-		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// set all ADC's to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & (~0x2));
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x100);
+
+		rxa_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | 0x2);
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & (~0x100));
+
+		rxa_power = PWR_OFF;
 	}
 	return RETURN_SUCCESS;
 }
@@ -737,11 +740,19 @@ static int set_tx_b_rf_dac_iqerr_phase (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c b -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -878,6 +889,14 @@ static int set_tx_b_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_tx_b_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x40);
+	else				write_hps_reg( "res_rw0", old_val & ~0x40);
+	return RETURN_SUCCESS;
+}
+
 static int set_tx_b_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -895,78 +914,57 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current tx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && txb_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && txb_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 1 -m 'board -c b -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "txa0", 0x0);
-		write_hps_reg( "txa1", 0xff);
-		write_hps_reg( "txa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set all ADC's to demo mode
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set current TX to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & (~0x2));
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | 0x100);
+
+		txb_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 1 -m 'board -c b -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | 0x2);
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & (~0x100));
+
+		txb_power = PWR_OFF;
 	}
+
 	return RETURN_SUCCESS;
 }
 
@@ -1065,11 +1063,19 @@ static int set_rx_b_rf_vga_atten3 (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -1233,6 +1239,14 @@ static int set_rx_b_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_rx_b_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x10);
+	else				write_hps_reg( "res_rw0", old_val & ~0x10);
+	return RETURN_SUCCESS;
+}
+
 static int set_rx_b_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -1266,77 +1280,55 @@ static int set_rx_b_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current rx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && rxb_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && rxb_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 0 -m 'board -c b -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "rxa0", 0x0);
-		write_hps_reg( "rxa1", 0xff);
-		write_hps_reg( "rxa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set current rx board to demo mode
-		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// set all ADC's to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & (~0x2));
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x100);
+
+		rxb_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 0 -m 'board -c b -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | 0x2);
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & (~0x100));
+
+		rxb_power = PWR_OFF;
 	}
 	return RETURN_SUCCESS;
 }
@@ -1387,11 +1379,19 @@ static int set_tx_c_rf_dac_iqerr_phase (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c c -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -1527,6 +1527,14 @@ static int set_tx_c_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_tx_c_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x08);
+	else				write_hps_reg( "res_rw0", old_val & ~0x08);
+	return RETURN_SUCCESS;
+}
+
 static int set_tx_c_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -1544,78 +1552,57 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current tx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && txc_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && txc_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 1 -m 'board -c c -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "txa0", 0x0);
-		write_hps_reg( "txa1", 0xff);
-		write_hps_reg( "txa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set all ADC's to demo mode
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set current TX to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & (~0x2));
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | 0x100);
+
+		txc_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 1 -m 'board -c c -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | 0x2);
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & (~0x100));
+
+		txc_power = PWR_OFF;
 	}
+
 	return RETURN_SUCCESS;
 }
 
@@ -1714,11 +1701,19 @@ static int set_rx_c_rf_vga_atten3 (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -1881,6 +1876,14 @@ static int set_rx_c_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_rx_c_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x02);
+	else				write_hps_reg( "res_rw0", old_val & ~0x02);
+	return RETURN_SUCCESS;
+}
+
 static int set_rx_c_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -1914,77 +1917,55 @@ static int set_rx_c_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current rx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && rxc_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && rxc_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 0 -m 'board -c c -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "rxa0", 0x0);
-		write_hps_reg( "rxa1", 0xff);
-		write_hps_reg( "rxa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set current rx board to demo mode
-		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// set all ADC's to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & (~0x2));
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x100);
+
+		rxc_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 0 -m 'board -c c -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | 0x2);
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & (~0x100));
+
+		rxc_power = PWR_OFF;
 	}
 	return RETURN_SUCCESS;
 }
@@ -2035,11 +2016,19 @@ static int set_tx_d_rf_dac_iqerr_phase (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c d -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -2175,6 +2164,14 @@ static int set_tx_d_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_tx_d_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x80);
+	else				write_hps_reg( "res_rw0", old_val & ~0x80);
+	return RETURN_SUCCESS;
+}
+
 static int set_tx_d_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -2192,77 +2189,55 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current tx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && txd_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && txd_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 1 -m 'board -c d -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "txa0", 0x0);
-		write_hps_reg( "txa1", 0xff);
-		write_hps_reg( "txa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set all ADC's to demo mode
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set current TX to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & (~0x2));
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | 0x100);
+
+		txd_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 1 -m 'board -c d -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | 0x2);
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & (~0x100));
+
+		txd_power = PWR_OFF;
 	}
 	return RETURN_SUCCESS;
 }
@@ -2362,11 +2337,19 @@ static int set_rx_d_rf_vga_atten3 (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// check which band it resides on
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
+
 	return RETURN_SUCCESS;
 }
 
@@ -2529,6 +2512,14 @@ static int set_rx_d_link_enable (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_rx_d_link_vita_en (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg(  "res_rw0", &old_val);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x20);
+	else				write_hps_reg( "res_rw0", old_val & ~0x20);
+	return RETURN_SUCCESS;
+}
+
 static int set_rx_d_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
@@ -2562,77 +2553,55 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 	uint8_t power;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// ENABLE
-	if (power > 0) {
-		// set current rx board to demo mode
+	// check it power is already enabled
+	if (power >= PWR_ON  && rxd_power == PWR_ON)  return RETURN_SUCCESS;
+	if (power == PWR_OFF && rxd_power == PWR_OFF) return RETURN_SUCCESS;
+
+	// power on
+	if (power >= PWR_ON) {
+		// put the board in a known state prior to putting it in demo
+		// (equivalent to resetting the board)
+		strcpy(buf, "fwd -b 0 -m 'board -c d -i'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// put the board in demo mode, (need to send it 2 times, errata)
 		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// reset DSP FPGA registers for current channel
-		write_hps_reg( "rxa0", 0x0);
-		write_hps_reg( "rxa1", 0xff);
-		write_hps_reg( "rxa4", 0x0);
-
-	// DISABLE
-	} else {
-		// set current rx board to demo mode
-		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// set all ADC's to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'power -c 15 -a 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// disable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val & ~(1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val & ~(1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val & ~(1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val & ~(1<<8));
-
-		// disable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val & ~(1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val & ~(1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val & ~(1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val & ~(1<<8));
-
-		// set all DACs to demo mode
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 1 -m 'power -c 15 -d 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// send the sync pulse from the LMK
-		memset(buf, 0, MAX_PROP_LEN);
+		// re-send JESD sync
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable all RX JESD lanes
-		read_hps_reg(  "rxa4", &old_val);
-		write_hps_reg( "rxa4", old_val | (1<<8));
-		read_hps_reg(  "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | (1<<8));
-		read_hps_reg(  "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | (1<<8));
-		read_hps_reg(  "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | (1<<8));
+		// enable the DSP cores
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & (~0x2));
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & (~0x2));
 
-		// enable all TX JESD lanes
-		read_hps_reg(  "txa4", &old_val);
-		write_hps_reg( "txa4", old_val | (1<<8));
-		read_hps_reg(  "txb4", &old_val);
-		write_hps_reg( "txb4", old_val | (1<<8));
-		read_hps_reg(  "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | (1<<8));
-		read_hps_reg(  "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | (1<<8));
+		// enable 10G transmission
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x100);
+
+		rxd_power = PWR_ON;
+
+	// power off
+	} else {
+		// mute the board
+		strcpy(buf, "fwd -b 0 -m 'board -c d -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+		// diable the DSP cores
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | 0x2);
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & (~0x100));
+
+		rxd_power = PWR_OFF;
 	}
 	return RETURN_SUCCESS;
 }
@@ -2883,6 +2852,7 @@ static int set_poll_en (const char* data, char* ret) {
 
 // Beginning of property table
 static prop_t property_table[] = {
+	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "1"},
 	{"tx_a/rf/dac/mixer", get_invalid, set_tx_a_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "1475.5"},
 	{"tx_a/rf/dac/pap", get_invalid, set_tx_a_rf_dac_pap, RW, NO_POLL, "0"},
@@ -2894,7 +2864,7 @@ static prop_t property_table[] = {
 	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "10"},
+	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "1"},
 	{"tx_a/rf/board/status", get_tx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_a/rf/board/dump", get_invalid, set_tx_a_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_a/rf/board/test", get_invalid, set_tx_a_rf_board_test, WO, NO_POLL, "0"},
@@ -2913,9 +2883,10 @@ static prop_t property_table[] = {
 	{"tx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_a/link/enable", get_invalid, set_tx_a_link_enable, RW, NO_POLL, "1"},
+	{"tx_a/link/vita_en", get_invalid, set_tx_a_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_a/link/port", get_invalid, set_tx_a_link_port, RW, NO_POLL, "42824"},
-	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
+	{"rx_a/pwr", get_invalid, set_rx_a_pwr, RW, NO_POLL, "1"},
 	{"rx_a/rf/vga/freq", get_invalid, set_rx_a_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/bypass", get_invalid, set_rx_a_rf_vga_bypass, RW, NO_POLL, "1"},
 	{"rx_a/rf/vga/gain1", get_invalid, set_rx_a_rf_vga_gain1, RW, NO_POLL, "9"},
@@ -2947,11 +2918,12 @@ static prop_t property_table[] = {
 	{"rx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_a/link/enable", get_invalid, set_rx_a_link_enable, RW, NO_POLL, "1"},
+	{"rx_a/link/vita_en", get_invalid, set_rx_a_link_vita_en, RW, NO_POLL, "1"},
 	{"rx_a/link/iface", get_invalid, set_rx_a_link_iface, RW, NO_POLL, "sfpa"},
 	{"rx_a/link/port", get_invalid, set_rx_a_link_port, RW, NO_POLL, "42820"},
-	{"rx_a/link/ip_dest", get_invalid, set_rx_a_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
+	{"rx_a/link/ip_dest", get_invalid, set_rx_a_link_ip_dest, RW, NO_POLL, "10.10.10.10"},
 	{"rx_a/link/mac_dest", get_invalid, set_rx_a_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_a/pwr", get_invalid, set_rx_a_pwr, RW, NO_POLL, "0"},
+	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "1"},
 	{"tx_b/rf/dac/mixer", get_invalid, set_tx_b_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "1475.5"},
 	{"tx_b/rf/dac/pap", get_invalid, set_tx_b_rf_dac_pap, RW, NO_POLL, "0"},
@@ -2963,7 +2935,7 @@ static prop_t property_table[] = {
 	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "10"},
+	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "1"},
 	{"tx_b/rf/board/status", get_tx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_b/rf/board/dump", get_invalid, set_tx_b_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_b/rf/board/test", get_invalid, set_tx_b_rf_board_test, WO, NO_POLL, "0"},
@@ -2982,9 +2954,10 @@ static prop_t property_table[] = {
 	{"tx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_b/link/enable", get_invalid, set_tx_b_link_enable, RW, NO_POLL, "1"},
+	{"tx_b/link/vita_en", get_invalid, set_tx_b_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_b/link/port", get_invalid, set_tx_b_link_port, RW, NO_POLL, "42825"},
-	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
+	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "1"},
 	{"rx_b/rf/vga/freq", get_invalid, set_rx_b_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/bypass", get_invalid, set_rx_b_rf_vga_bypass, RW, NO_POLL, "1"},
 	{"rx_b/rf/vga/gain1", get_invalid, set_rx_b_rf_vga_gain1, RW, NO_POLL, "9"},
@@ -3016,11 +2989,12 @@ static prop_t property_table[] = {
 	{"rx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_b/link/enable", get_invalid, set_rx_b_link_enable, RW, NO_POLL, "1"},
+	{"rx_b/link/vita_en", get_invalid, set_rx_b_link_vita_en, RW, NO_POLL, "1"},
 	{"rx_b/link/iface", get_invalid, set_rx_b_link_iface, RW, NO_POLL, "sfpb"},
 	{"rx_b/link/port", get_invalid, set_rx_b_link_port, RW, NO_POLL, "42821"},
-	{"rx_b/link/ip_dest", get_invalid, set_rx_b_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
+	{"rx_b/link/ip_dest", get_invalid, set_rx_b_link_ip_dest, RW, NO_POLL, "10.10.11.10"},
 	{"rx_b/link/mac_dest", get_invalid, set_rx_b_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "0"},
+	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "1"},
 	{"tx_c/rf/dac/mixer", get_invalid, set_tx_c_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "1475.5"},
 	{"tx_c/rf/dac/pap", get_invalid, set_tx_c_rf_dac_pap, RW, NO_POLL, "0"},
@@ -3032,7 +3006,7 @@ static prop_t property_table[] = {
 	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "10"},
+	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "1"},
 	{"tx_c/rf/board/status", get_tx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_c/rf/board/dump", get_invalid, set_tx_c_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_c/rf/board/test", get_invalid, set_tx_c_rf_board_test, WO, NO_POLL, "0"},
@@ -3051,9 +3025,10 @@ static prop_t property_table[] = {
 	{"tx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_c/link/enable", get_invalid, set_tx_c_link_enable, RW, NO_POLL, "1"},
+	{"tx_c/link/vita_en", get_invalid, set_tx_c_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_c/link/port", get_invalid, set_tx_c_link_port, RW, NO_POLL, "42826"},
-	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
+	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "1"},
 	{"rx_c/rf/vga/freq", get_invalid, set_rx_c_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/bypass", get_invalid, set_rx_c_rf_vga_bypass, RW, NO_POLL, "1"},
 	{"rx_c/rf/vga/gain1", get_invalid, set_rx_c_rf_vga_gain1, RW, NO_POLL, "9"},
@@ -3085,11 +3060,12 @@ static prop_t property_table[] = {
 	{"rx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_c/link/enable", get_invalid, set_rx_c_link_enable, RW, NO_POLL, "1"},
+	{"rx_c/link/vita_en", get_invalid, set_rx_c_link_vita_en, RW, NO_POLL, "1"},
 	{"rx_c/link/iface", get_invalid, set_rx_c_link_iface, RW, NO_POLL, "sfpa"},
 	{"rx_c/link/port", get_invalid, set_rx_c_link_port, RW, NO_POLL, "42822"},
-	{"rx_c/link/ip_dest", get_invalid, set_rx_c_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
+	{"rx_c/link/ip_dest", get_invalid, set_rx_c_link_ip_dest, RW, NO_POLL, "10.10.10.10"},
 	{"rx_c/link/mac_dest", get_invalid, set_rx_c_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "0"},
+	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "1"},
 	{"tx_d/rf/dac/mixer", get_invalid, set_tx_d_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "1475.5"},
 	{"tx_d/rf/dac/pap", get_invalid, set_tx_d_rf_dac_pap, RW, NO_POLL, "0"},
@@ -3101,7 +3077,7 @@ static prop_t property_table[] = {
 	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "10"},
+	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "1"},
 	{"tx_d/rf/board/status", get_tx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_d/rf/board/dump", get_invalid, set_tx_d_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_d/rf/board/test", get_invalid, set_tx_d_rf_board_test, WO, NO_POLL, "0"},
@@ -3120,9 +3096,10 @@ static prop_t property_table[] = {
 	{"tx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"tx_d/link/enable", get_invalid, set_tx_d_link_enable, RW, NO_POLL, "1"},
+	{"tx_d/link/vita_en", get_invalid, set_tx_d_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_d/link/port", get_invalid, set_tx_d_link_port, RW, NO_POLL, "42827"},
-	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
+	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "1"},
 	{"rx_d/rf/vga/freq", get_invalid, set_rx_d_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/bypass", get_invalid, set_rx_d_rf_vga_bypass, RW, NO_POLL, "1"},
 	{"rx_d/rf/vga/gain1", get_invalid, set_rx_d_rf_vga_gain1, RW, NO_POLL, "9"},
@@ -3154,11 +3131,11 @@ static prop_t property_table[] = {
 	{"rx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"rx_d/link/enable", get_invalid, set_rx_d_link_enable, RW, NO_POLL, "1"},
+	{"rx_d/link/vita_en", get_invalid, set_rx_d_link_vita_en, RW, NO_POLL, "1"},
 	{"rx_d/link/iface", get_invalid, set_rx_d_link_iface, RW, NO_POLL, "sfpb"},
 	{"rx_d/link/port", get_invalid, set_rx_d_link_port, RW, NO_POLL, "42823"},
-	{"rx_d/link/ip_dest", get_invalid, set_rx_d_link_ip_dest, RW, NO_POLL, "10.10.10.1"},
+	{"rx_d/link/ip_dest", get_invalid, set_rx_d_link_ip_dest, RW, NO_POLL, "10.10.11.10"},
 	{"rx_d/link/mac_dest", get_invalid, set_rx_d_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
-	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "0"},
 	{"time/clk/pps", get_invalid, set_time_clk_pps, RW, NO_POLL, "0"},
 	{"time/clk/cur_time", get_invalid, set_time_clk_cur_time, RW, NO_POLL, "0.0"},
 	{"time/source/rate", get_invalid, set_time_source_rate, RW, NO_POLL, "10000000"},
@@ -3189,11 +3166,11 @@ static prop_t property_table[] = {
 	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "161"},
 	{"fpga/link/loopback", get_invalid, set_fpga_link_loopback, RW, NO_POLL, "0"},
-	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.10"},
+	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
 	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:00:00:00:00:00"},
 	{"fpga/link/sfpa/ver", get_invalid, set_fpga_link_sfpa_ver, RW, NO_POLL, "0"},
 	{"fpga/link/sfpa/pay_len", get_invalid, set_fpga_link_sfpa_pay_len, RW, NO_POLL, "1400"},
-	{"fpga/link/sfpb/ip_addr", get_invalid, set_fpga_link_sfpb_ip_addr, RW, NO_POLL, "10.10.11.10"},
+	{"fpga/link/sfpb/ip_addr", get_invalid, set_fpga_link_sfpb_ip_addr, RW, NO_POLL, "10.10.11.2"},
 	{"fpga/link/sfpb/mac_addr", get_invalid, set_fpga_link_sfpb_mac_addr, RW, NO_POLL, "aa:00:00:00:00:01"},
 	{"fpga/link/sfpb/ver", get_invalid, set_fpga_link_sfpb_ver, RW, NO_POLL, "0"},
 	{"fpga/link/sfpb/pay_len", get_invalid, set_fpga_link_sfpb_pay_len, RW, NO_POLL, "1400"},
