@@ -19,14 +19,15 @@
 
 #define TIMEOUT 100000	// us, 0.1 seconds
 
-static struct timeval tstart;
+static struct timeval tprev;	// time since previous UART command
+static struct timeval tstart;	// time since the beginning of a UART send attempt
 static struct timeval tend;
 
 // return 1 if timeout, 0 if not
-static uint8_t timeout(void) {
+static uint8_t timeout(struct timeval* t, long int time) {
 	gettimeofday(&tend, NULL);
 	if ( ((tend.tv_usec + 1000000 * tend.tv_sec)
-		- (tstart.tv_usec + 1000000 * tstart.tv_sec) - 26) > TIMEOUT)
+		- (t->tv_usec + 1000000 * t->tv_sec) - 26) > time)
 		return 1;
 	else
 		return 0;
@@ -34,6 +35,8 @@ static uint8_t timeout(void) {
 
 int set_uart_interface_attribs (int fd, int speed, int parity)
 {
+	gettimeofday(&tprev, NULL);	// on config, reset the prev timer
+
         struct termios tty;
         memset (&tty, 0, sizeof tty);
         if (tcgetattr (fd, &tty) != 0)
@@ -95,7 +98,7 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 	gettimeofday(&tstart, NULL);
 
 	int rd_len = 0;
-	while (!rd_len && !timeout()) {
+	while (!rd_len && !timeout(&tstart, TIMEOUT)) {
 		rd_len += read(fd, data, max_size);
 	}
 
@@ -104,7 +107,7 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 	for (i = 0; i < rd_len; i++) printf("%c", data[i]);
 	printf("\n");*/
 
-	if (timeout()) {
+	if (timeout(&tstart, TIMEOUT)) {
 		printf("%s(): timedout\n", __func__);
 		return RETURN_ERROR_UART_TIMEOUT;
 	}
@@ -126,12 +129,19 @@ int send_uart(int fd, uint8_t* data, uint16_t size) {
 	for (i = 0; i < size; i++) printf("%c", data[i]);
 	printf("\n");*/
 
+	#ifdef DEBUG
+	printf("%s(): %s\n", __func__, data);
+	#endif
+
+	while (!timeout(&tprev, TIMEOUT >> 1)){}
+
 	int wr_len = 0;
-	while (wr_len != size && !timeout()) {
+	while (wr_len != size && !timeout(&tstart, TIMEOUT)) {
 		wr_len += write(fd, data + wr_len, size - wr_len);
 	}
 
-	if (timeout()) {
+	gettimeofday(&tprev, NULL);
+	if (timeout(&tstart, TIMEOUT)) {
 		printf("%s(): timedout\n", __func__);
 		return RETURN_ERROR_UART_TIMEOUT;
 	}
