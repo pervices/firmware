@@ -130,8 +130,8 @@ static void build_tree(void) {
 	size_t i;
 	for (i = 0; i < get_num_prop(); i++) {
 		make_prop(get_prop(i));
-		init_prop_val(get_prop(i));
 		add_prop_to_inotify(get_prop(i));
+		init_prop_val(get_prop(i));
 	}
 
 	#ifdef DEBUG
