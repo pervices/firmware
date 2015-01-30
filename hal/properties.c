@@ -188,7 +188,7 @@ static int set_tx_a_dsp_gain (const char* data, char* ret) {
 static int set_tx_a_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "txa1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "txa1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -246,8 +246,8 @@ static int set_tx_a_about_id (const char* data, char* ret) {
 static int set_tx_a_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txa4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | 0x10);
-	else				write_hps_reg( "txa4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | 0x100);
+	else				write_hps_reg( "txa4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -461,32 +461,32 @@ static int set_rx_a_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd8"", &gain);
 
 	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -g 3'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -g 3'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -h 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -i 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -p 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// attenuate 42 to desired amount
 	if (gain < 42) {
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c a -x ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c a -x ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c a -y ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c a -y ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c a -z ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c a -z ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -537,7 +537,7 @@ static int set_rx_a_dsp_gain (const char* data, char* ret) {
 static int set_rx_a_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "rxa1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "rxa1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -595,8 +595,8 @@ static int set_rx_a_about_id (const char* data, char* ret) {
 static int set_rx_a_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxa4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | 0x10);
-	else				write_hps_reg( "rxa4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | 0x100);
+	else				write_hps_reg( "rxa4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -826,7 +826,7 @@ static int set_tx_b_dsp_gain (const char* data, char* ret) {
 static int set_tx_b_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "txb1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "txb1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -884,8 +884,8 @@ static int set_tx_b_about_id (const char* data, char* ret) {
 static int set_tx_b_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txb4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | 0x10);
-	else				write_hps_reg( "txb4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | 0x100);
+	else				write_hps_reg( "txb4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -1099,32 +1099,32 @@ static int set_rx_b_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd8"", &gain);
 
 	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -g 3'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -g 3'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -h 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -i 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -p 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// attenuate 42 to desired amount
 	if (gain < 42) {
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c b -x ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c b -x ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c b -y ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c b -y ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c b -z ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c b -z ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1176,7 +1176,7 @@ static int set_rx_b_dsp_gain (const char* data, char* ret) {
 static int set_rx_b_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "rxb1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "rxb1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -1234,8 +1234,8 @@ static int set_rx_b_about_id (const char* data, char* ret) {
 static int set_rx_b_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxb4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | 0x10);
-	else				write_hps_reg( "rxb4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | 0x100);
+	else				write_hps_reg( "rxb4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -1464,7 +1464,7 @@ static int set_tx_c_dsp_gain (const char* data, char* ret) {
 static int set_tx_c_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "txc1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "txc1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -1522,8 +1522,8 @@ static int set_tx_c_about_id (const char* data, char* ret) {
 static int set_tx_c_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txc4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | 0x10);
-	else				write_hps_reg( "txc4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | 0x100);
+	else				write_hps_reg( "txc4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -1737,32 +1737,32 @@ static int set_rx_c_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd8"", &gain);
 
 	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -g 3'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -g 3'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -h 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -i 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -p 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// attenuate 42 to desired amount
 	if (gain < 42) {
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c c -x ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c c -x ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c c -y ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c c -y ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c c -z ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c c -z ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1813,7 +1813,7 @@ static int set_rx_c_dsp_gain (const char* data, char* ret) {
 static int set_rx_c_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "rxc1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "rxc1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -1871,8 +1871,8 @@ static int set_rx_c_about_id (const char* data, char* ret) {
 static int set_rx_c_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxc4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | 0x10);
-	else				write_hps_reg( "rxc4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | 0x100);
+	else				write_hps_reg( "rxc4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -2101,7 +2101,7 @@ static int set_tx_d_dsp_gain (const char* data, char* ret) {
 static int set_tx_d_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "txd1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "txd1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -2159,8 +2159,8 @@ static int set_tx_d_about_id (const char* data, char* ret) {
 static int set_tx_d_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txd4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | 0x10);
-	else				write_hps_reg( "txd4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | 0x100);
+	else				write_hps_reg( "txd4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -2373,32 +2373,32 @@ static int set_rx_d_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd8"", &gain);
 
 	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -g 3'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -g 3'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -h 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -i 2'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -p 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// attenuate 42 to desired amount
 	if (gain < 42) {
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c d -x ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c d -x ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c d -y ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c d -y ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'rf -c d -z ");
+		strcpy(buf, "fwd -b 0 -m 'vga -c d -z ");
 		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2449,7 +2449,7 @@ static int set_rx_d_dsp_gain (const char* data, char* ret) {
 static int set_rx_d_dsp_rate (const char* data, char* ret) {
 	double rate;
 	sscanf(data, "%lf", &rate);
-	write_hps_reg( "rxd1", (int)floor(BASE_SAMPLE_RATE / rate) );
+	write_hps_reg( "rxd1", (int)floor(BASE_SAMPLE_RATE / rate) - 1);
 	//memset(ret, 0, MAX_PROP_LEN);
 	//sprintf(ret, "%lf", BASE_SAMPLE_RATE/((int)floor(BASE_SAMPLE_RATE / rate)) );
 	return RETURN_SUCCESS;
@@ -2507,8 +2507,8 @@ static int set_rx_d_about_id (const char* data, char* ret) {
 static int set_rx_d_link_enable (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxd4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | 0x10);
-	else				write_hps_reg( "rxd4", old_val & ~0x10);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | 0x100);
+	else				write_hps_reg( "rxd4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -2784,17 +2784,17 @@ static int set_fpga_link_sfpa_ver (const char* data, char* ret) {
 	uint8_t ver;
 	sscanf(data, "%"SCNd8"", &ver);
 	read_hps_reg(  "net0", &old_val);
-	if (ver > 0)	write_hps_reg( "net0", (old_val & ~(1 << 2) ) | (1 << 2));
-	else		write_hps_reg( "net0", (old_val & ~(1 << 2) ));
+	if (ver > 0)	write_hps_reg( "net0", (old_val | 0x4));
+	else		write_hps_reg( "net0", (old_val & ~(0x4) ));
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_link_sfpa_pay_len (const char* data, char* ret) {
 	uint32_t old_val;
-	uint8_t pay_len;
-	sscanf(data, "%"SCNd8"", &pay_len);
+	uint32_t pay_len;
+	sscanf(data, "%"SCNd32"", &pay_len);
 	read_hps_reg(  "net0", &old_val);
-	write_hps_reg( "net0",  (old_val & ~(0xffff << 16) ) | (pay_len << 16));
+	write_hps_reg( "net0",  (old_val & ~(0xffff0000) ) | (pay_len << 16));
 	return RETURN_SUCCESS;
 }
 
@@ -2837,10 +2837,10 @@ static int set_fpga_link_sfpb_ver (const char* data, char* ret) {
 
 static int set_fpga_link_sfpb_pay_len (const char* data, char* ret) {
 	uint32_t old_val;
-	uint8_t pay_len;
-	sscanf(data, "%"SCNd8"", &pay_len);
+	uint32_t pay_len;
+	sscanf(data, "%"SCNd32"", &pay_len);
 	read_hps_reg(  "net15", &old_val);
-	write_hps_reg( "net15",  (old_val & ~(0xffff << 16) ) | (pay_len << 16));
+	write_hps_reg( "net15",  (old_val & ~(0xffff0000) ) | (pay_len << 16));
 	return RETURN_SUCCESS;
 }
 
@@ -2860,7 +2860,7 @@ static prop_t property_table[] = {
 	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_a/rf/dac/iqerr_gain", get_invalid, set_tx_a_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/iqerr_phase", get_invalid, set_tx_a_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
-	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "2400"},
+	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -2896,7 +2896,7 @@ static prop_t property_table[] = {
 	{"rx_a/rf/vga/atten1", get_invalid, set_rx_a_rf_vga_atten1, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/atten2", get_invalid, set_rx_a_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/atten3", get_invalid, set_rx_a_rf_vga_atten3, RW, NO_POLL, "0"},
-	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "2400"},
+	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/varac", get_invalid, set_rx_a_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "10"},
@@ -2931,7 +2931,7 @@ static prop_t property_table[] = {
 	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_b/rf/dac/iqerr_gain", get_invalid, set_tx_b_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/iqerr_phase", get_invalid, set_tx_b_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
-	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "2400"},
+	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -2967,7 +2967,7 @@ static prop_t property_table[] = {
 	{"rx_b/rf/vga/atten1", get_invalid, set_rx_b_rf_vga_atten1, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/atten2", get_invalid, set_rx_b_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/atten3", get_invalid, set_rx_b_rf_vga_atten3, RW, NO_POLL, "0"},
-	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "2400"},
+	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/varac", get_invalid, set_rx_b_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "10"},
@@ -3002,7 +3002,7 @@ static prop_t property_table[] = {
 	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_c/rf/dac/iqerr_gain", get_invalid, set_tx_c_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/iqerr_phase", get_invalid, set_tx_c_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
-	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "2400"},
+	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -3038,7 +3038,7 @@ static prop_t property_table[] = {
 	{"rx_c/rf/vga/atten1", get_invalid, set_rx_c_rf_vga_atten1, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/atten2", get_invalid, set_rx_c_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/atten3", get_invalid, set_rx_c_rf_vga_atten3, RW, NO_POLL, "0"},
-	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "2400"},
+	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/varac", get_invalid, set_rx_c_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "10"},
@@ -3073,7 +3073,7 @@ static prop_t property_table[] = {
 	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_d/rf/dac/iqerr_gain", get_invalid, set_tx_d_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/iqerr_phase", get_invalid, set_tx_d_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
-	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "2400"},
+	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "0"},
@@ -3109,7 +3109,7 @@ static prop_t property_table[] = {
 	{"rx_d/rf/vga/atten1", get_invalid, set_rx_d_rf_vga_atten1, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/atten2", get_invalid, set_rx_d_rf_vga_atten2, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/atten3", get_invalid, set_rx_d_rf_vga_atten3, RW, NO_POLL, "0"},
-	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "2400"},
+	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/varac", get_invalid, set_rx_d_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "10"},
