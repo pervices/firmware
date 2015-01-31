@@ -17,7 +17,7 @@
 
 #include "uart.h"
 
-#define TIMEOUT 100000	// us, 0.1 seconds
+#define TIMEOUT 20000	// us, 0.02 seconds
 
 static struct timeval tprev;	// time since previous UART command
 static struct timeval tstart;	// time since the beginning of a UART send attempt
