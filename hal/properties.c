@@ -18,7 +18,8 @@
 #include "mmap.h"
 #include "properties.h"
 
-#define BASE_SAMPLE_RATE 322265625.0	// SPS
+//#define BASE_SAMPLE_RATE 322265625.0	// SPS
+#define BASE_SAMPLE_RATE 257812500.0	// SPS
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
@@ -104,14 +105,16 @@ static int set_tx_a_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_a_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
 	else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
 
@@ -427,14 +430,16 @@ static int set_rx_a_rf_vga_atten3 (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
 
@@ -742,14 +747,16 @@ static int set_tx_b_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_b_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
 	else				strcpy(buf, "fwd -b 1 -m 'rf -c b -b 0'\r");
 
@@ -1065,14 +1072,16 @@ static int set_rx_b_rf_vga_atten3 (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_b_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
 
@@ -1381,14 +1390,16 @@ static int set_tx_c_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_c_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
 	else				strcpy(buf, "fwd -b 1 -m 'rf -c c -b 0'\r");
 
@@ -1703,14 +1714,16 @@ static int set_rx_c_rf_vga_atten3 (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_c_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
 
@@ -2018,14 +2031,16 @@ static int set_tx_d_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_d_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
 	else				strcpy(buf, "fwd -b 1 -m 'rf -c d -b 0'\r");
 
@@ -2339,14 +2354,16 @@ static int set_rx_d_rf_vga_atten3 (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_d_rf_freq_val (const char* data, char* ret) {
+	uint32_t freq;
+	sscanf(data, "%"SCNd32"", &freq);
+
+	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// check which band it resides on
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
 
