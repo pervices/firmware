@@ -17,7 +17,12 @@
 
 #include "uart.h"
 
-#define TIMEOUT 20000	// us, 0.02 seconds
+
+// Maximum before a UART command is considered a fail
+#define TIMEOUT 1000000	// us, 1.0 seconds
+
+// Minimum time between UART commands
+#define TIME_INTERVAL 35000 // us, 0.035 seconds
 
 static struct timeval tprev;	// time since previous UART command
 static struct timeval tstart;	// time since the beginning of a UART send attempt
@@ -133,7 +138,7 @@ int send_uart(int fd, uint8_t* data, uint16_t size) {
 	printf("%s(): %s\n", __func__, data);
 	#endif
 
-	while (!timeout(&tprev, TIMEOUT >> 1)){}
+	while (!timeout(&tprev, TIME_INTERVAL)){}
 
 	int wr_len = 0;
 	while (wr_len != size && !timeout(&tstart, TIMEOUT)) {
