@@ -19,6 +19,7 @@
 #include "properties.h"
 #include "comm_manager.h"
 #include "property_manager.h"
+#include "mmap.h"	// shouldn't need to include this, this is here for errata fixing
 
 #define EVENT_SIZE 	(sizeof(struct inotify_event))
 #define EVENT_BUF_LEN 	( 1024 * (EVENT_SIZE + 16) )
@@ -134,6 +135,9 @@ static void build_tree(void) {
 		init_prop_val(get_prop(i));
 	}
 
+	// force property initofy check (writing of defaults) after init
+	check_property_inotifies();
+
 	#ifdef DEBUG
 	printf("Last wd val: %i\n", get_prop(i-1) -> wd);
 	printf("Done building tree\n");
@@ -170,6 +174,24 @@ int init_property(void) {
 	pass_uart_fd(uart_comm_fd);
 
 	build_tree();
+
+	// This is for errata fixing, remove [this] and [#include "mmap.h"] when fixed.
+	char buf[MAX_PROP_LEN] = {};
+	strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 0 -m 'board -c a -i'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -f 900200'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fpga -o\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	write_hps_reg( "rxa4", 0x102);
+	write_hps_reg( "rxa4", 0x100);
+
 	return RETURN_SUCCESS;
 }
 

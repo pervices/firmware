@@ -63,10 +63,10 @@ static int set_tx_a_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
+	//strcat(buf, data);
+	//strcat(buf, "'\r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -141,8 +141,11 @@ static int set_tx_a_rf_freq_q_bias (const char* data, char* ret) {
 
 // TODO: make sure the range (0 -> -28 is within the boundaries of requirement
 static int set_tx_a_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -v ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", (gain * -1));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -285,6 +288,10 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 1 -m 'board -c a -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 1 -m 'board -c a -i'\r");
@@ -301,8 +308,10 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | 0x2);
 		write_hps_reg( "txa4", old_val & (~0x2));
 		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x2);
 		write_hps_reg( "rxa4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -652,6 +661,10 @@ static int set_rx_a_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 0 -m 'board -c a -i'\r");
@@ -668,8 +681,10 @@ static int set_rx_a_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | 0x2);
 		write_hps_reg( "txa4", old_val & (~0x2));
 		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x2);
 		write_hps_reg( "rxa4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -705,10 +720,10 @@ static int set_tx_b_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
+	//strcat(buf, data);
+	//strcat(buf, "'\r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -783,8 +798,11 @@ static int set_tx_b_rf_freq_q_bias (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -v ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", (gain * -1));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -927,6 +945,10 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 1 -m 'board -c b -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 1 -m 'board -c b -i'\r");
@@ -943,8 +965,10 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | 0x2);
 		write_hps_reg( "txb4", old_val & (~0x2));
 		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x2);
 		write_hps_reg( "rxb4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -1295,6 +1319,10 @@ static int set_rx_b_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 0 -m 'board -c b -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 0 -m 'board -c b -i'\r");
@@ -1311,8 +1339,10 @@ static int set_rx_b_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | 0x2);
 		write_hps_reg( "txb4", old_val & (~0x2));
 		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x2);
 		write_hps_reg( "rxb4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -1348,10 +1378,10 @@ static int set_tx_c_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 2 -n ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//strcpy(buf, "fwd -b 1 -m 'dac -c c -e 2 -n ");
+	//strcat(buf, data);
+	//strcat(buf, "'\r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1425,8 +1455,11 @@ static int set_tx_c_rf_freq_q_bias (const char* data, char* ret) {
 }
 
 static int set_tx_c_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -v ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", (gain * -1));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -1569,6 +1602,10 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 1 -m 'board -c c -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 1 -m 'board -c c -i'\r");
@@ -1585,8 +1622,10 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | 0x2);
 		write_hps_reg( "txc4", old_val & (~0x2));
 		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x2);
 		write_hps_reg( "rxc4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -1936,6 +1975,10 @@ static int set_rx_c_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 0 -m 'board -c c -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 0 -m 'board -c c -i'\r");
@@ -1952,8 +1995,10 @@ static int set_rx_c_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | 0x2);
 		write_hps_reg( "txc4", old_val & (~0x2));
 		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x2);
 		write_hps_reg( "rxc4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -1989,10 +2034,10 @@ static int set_tx_d_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
+	//strcat(buf, data);
+	//strcat(buf, "'\r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2066,8 +2111,11 @@ static int set_tx_d_rf_freq_q_bias (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -v ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", (gain * -1));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -2210,6 +2258,10 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 1 -m 'board -c d -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 1 -m 'board -c d -i'\r");
@@ -2226,8 +2278,10 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | 0x2);
 		write_hps_reg( "txd4", old_val & (~0x2));
 		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x2);
 		write_hps_reg( "rxd4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -2576,6 +2630,10 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
+		// set the board to mute
+		strcpy(buf, "fwd -b 0 -m 'board -c d -m'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 		// put the board in a known state prior to putting it in demo
 		// (equivalent to resetting the board)
 		strcpy(buf, "fwd -b 0 -m 'board -c d -i'\r");
@@ -2592,8 +2650,10 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 
 		// enable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | 0x2);
 		write_hps_reg( "txd4", old_val & (~0x2));
 		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x2);
 		write_hps_reg( "rxd4", old_val & (~0x2));
 
 		// enable 10G transmission
@@ -2881,7 +2941,7 @@ static prop_t property_table[] = {
 	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "1"},
+	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "-1"},
 	{"tx_a/rf/board/status", get_tx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_a/rf/board/dump", get_invalid, set_tx_a_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_a/rf/board/test", get_invalid, set_tx_a_rf_board_test, WO, NO_POLL, "0"},
@@ -2916,7 +2976,7 @@ static prop_t property_table[] = {
 	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/varac", get_invalid, set_rx_a_rf_freq_varac, RW, NO_POLL, "0"},
-	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "10"},
+	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_a/rf/board/status", get_rx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_a/rf/board/dump", get_invalid, set_rx_a_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_a/rf/board/test", get_invalid, set_rx_a_rf_board_test, WO, NO_POLL, "0"},
@@ -2952,7 +3012,7 @@ static prop_t property_table[] = {
 	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "1"},
+	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "-1"},
 	{"tx_b/rf/board/status", get_tx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_b/rf/board/dump", get_invalid, set_tx_b_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_b/rf/board/test", get_invalid, set_tx_b_rf_board_test, WO, NO_POLL, "0"},
@@ -2987,7 +3047,7 @@ static prop_t property_table[] = {
 	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/varac", get_invalid, set_rx_b_rf_freq_varac, RW, NO_POLL, "0"},
-	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "10"},
+	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_b/rf/board/status", get_rx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_b/rf/board/dump", get_invalid, set_rx_b_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_b/rf/board/test", get_invalid, set_rx_b_rf_board_test, WO, NO_POLL, "0"},
@@ -3023,7 +3083,7 @@ static prop_t property_table[] = {
 	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "1"},
+	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "-1"},
 	{"tx_c/rf/board/status", get_tx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_c/rf/board/dump", get_invalid, set_tx_c_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_c/rf/board/test", get_invalid, set_tx_c_rf_board_test, WO, NO_POLL, "0"},
@@ -3058,7 +3118,7 @@ static prop_t property_table[] = {
 	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/varac", get_invalid, set_rx_c_rf_freq_varac, RW, NO_POLL, "0"},
-	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "10"},
+	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_c/rf/board/status", get_rx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_c/rf/board/dump", get_invalid, set_rx_c_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_c/rf/board/test", get_invalid, set_rx_c_rf_board_test, WO, NO_POLL, "0"},
@@ -3094,7 +3154,7 @@ static prop_t property_table[] = {
 	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "1"},
+	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "-1"},
 	{"tx_d/rf/board/status", get_tx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_d/rf/board/dump", get_invalid, set_tx_d_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_d/rf/board/test", get_invalid, set_tx_d_rf_board_test, WO, NO_POLL, "0"},
@@ -3129,7 +3189,7 @@ static prop_t property_table[] = {
 	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/varac", get_invalid, set_rx_d_rf_freq_varac, RW, NO_POLL, "0"},
-	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "10"},
+	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_d/rf/board/status", get_rx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_d/rf/board/dump", get_invalid, set_rx_d_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_d/rf/board/test", get_invalid, set_rx_d_rf_board_test, WO, NO_POLL, "0"},
