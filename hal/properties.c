@@ -471,37 +471,37 @@ static int set_rx_a_rf_freq_varac (const char* data, char* ret) {
 static int set_rx_a_rf_gain_val (const char* data, char* ret) {
 	// TODO: intelligent gain, maximize SNR
 
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
+	int gain;
+	sscanf(data, "%i", &gain);
 
-	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -g 3'\r");
+	// set the total VGA gain to 66 dB
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -g 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -h 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -i 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -p 1'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// attenuate 42 to desired amount
-	if (gain < 42) {
+	// attenuate 66 to desired amount
+	if (gain < 66) {
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c a -x ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c a -y ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c a -z ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
@@ -1128,37 +1128,37 @@ static int set_rx_b_rf_freq_varac (const char* data, char* ret) {
 static int set_rx_b_rf_gain_val (const char* data, char* ret) {
 	// TODO: intelligent gain, maximize SNR
 
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
+	int gain;
+	sscanf(data, "%i", &gain);
 
-	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -g 3'\r");
+	// set the total VGA gain to 66 dB
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -g 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -h 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -i 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -p 1'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// attenuate 42 to desired amount
-	if (gain < 42) {
+	// attenuate 66 to desired amount
+	if (gain < 66) {
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c b -x ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c b -y ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c b -z ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
@@ -1785,37 +1785,37 @@ static int set_rx_c_rf_freq_varac (const char* data, char* ret) {
 static int set_rx_c_rf_gain_val (const char* data, char* ret) {
 	// TODO: intelligent gain, maximize SNR
 
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
+	int gain;
+	sscanf(data, "%i", &gain);
 
-	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -g 3'\r");
+	// set the total VGA gain to 66 dB
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -g 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -h 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -i 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -p 1'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// attenuate 42 to desired amount
-	if (gain < 42) {
+	// attenuate 66 to desired amount
+	if (gain < 66) {
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c c -x ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c c -y ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c c -z ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
@@ -2440,37 +2440,37 @@ static int set_rx_d_rf_freq_varac (const char* data, char* ret) {
 static int set_rx_d_rf_gain_val (const char* data, char* ret) {
 	// TODO: intelligent gain, maximize SNR
 
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
+	int gain;
+	sscanf(data, "%i", &gain);
 
-	// set the total VGA gain to 42 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -g 3'\r");
+	// set the total VGA gain to 66 dB
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -g 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -h 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -h 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -i 2'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -i 0'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -p 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -p 1'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// attenuate 42 to desired amount
-	if (gain < 42) {
+	// attenuate 66 to desired amount
+	if (gain < 66) {
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c d -x ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c d -y ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c d -z ");
-		sprintf(buf + strlen(buf), "%i", (42-gain)/3);
+		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
@@ -2966,13 +2966,13 @@ static prop_t property_table[] = {
 	{"rx_a/pwr", get_invalid, set_rx_a_pwr, RW, NO_POLL, "1"},
 	{"rx_a/rf/vga/freq", get_invalid, set_rx_a_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_a/rf/vga/bypass", get_invalid, set_rx_a_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_a/rf/vga/gain1", get_invalid, set_rx_a_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_a/rf/vga/gain2", get_invalid, set_rx_a_rf_vga_gain2, RW, NO_POLL, "12"},
-	{"rx_a/rf/vga/gain3", get_invalid, set_rx_a_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_a/rf/vga/pgain", get_invalid, set_rx_a_rf_vga_pgain, RW, NO_POLL, "3"},
-	{"rx_a/rf/vga/atten1", get_invalid, set_rx_a_rf_vga_atten1, RW, NO_POLL, "0"},
-	{"rx_a/rf/vga/atten2", get_invalid, set_rx_a_rf_vga_atten2, RW, NO_POLL, "0"},
-	{"rx_a/rf/vga/atten3", get_invalid, set_rx_a_rf_vga_atten3, RW, NO_POLL, "0"},
+	{"rx_a/rf/vga/gain1", get_invalid, set_rx_a_rf_vga_gain1, RW, NO_POLL, "15"},
+	{"rx_a/rf/vga/gain2", get_invalid, set_rx_a_rf_vga_gain2, RW, NO_POLL, "21"},
+	{"rx_a/rf/vga/gain3", get_invalid, set_rx_a_rf_vga_gain3, RW, NO_POLL, "21"},
+	{"rx_a/rf/vga/pgain", get_invalid, set_rx_a_rf_vga_pgain, RW, NO_POLL, "9"},
+	{"rx_a/rf/vga/atten1", get_invalid, set_rx_a_rf_vga_atten1, RW, NO_POLL, "10"},
+	{"rx_a/rf/vga/atten2", get_invalid, set_rx_a_rf_vga_atten2, RW, NO_POLL, "10"},
+	{"rx_a/rf/vga/atten3", get_invalid, set_rx_a_rf_vga_atten3, RW, NO_POLL, "10"},
 	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/varac", get_invalid, set_rx_a_rf_freq_varac, RW, NO_POLL, "0"},
@@ -3037,13 +3037,13 @@ static prop_t property_table[] = {
 	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "1"},
 	{"rx_b/rf/vga/freq", get_invalid, set_rx_b_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_b/rf/vga/bypass", get_invalid, set_rx_b_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_b/rf/vga/gain1", get_invalid, set_rx_b_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_b/rf/vga/gain2", get_invalid, set_rx_b_rf_vga_gain2, RW, NO_POLL, "12"},
-	{"rx_b/rf/vga/gain3", get_invalid, set_rx_b_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_b/rf/vga/pgain", get_invalid, set_rx_b_rf_vga_pgain, RW, NO_POLL, "3"},
-	{"rx_b/rf/vga/atten1", get_invalid, set_rx_b_rf_vga_atten1, RW, NO_POLL, "0"},
-	{"rx_b/rf/vga/atten2", get_invalid, set_rx_b_rf_vga_atten2, RW, NO_POLL, "0"},
-	{"rx_b/rf/vga/atten3", get_invalid, set_rx_b_rf_vga_atten3, RW, NO_POLL, "0"},
+	{"rx_b/rf/vga/gain1", get_invalid, set_rx_b_rf_vga_gain1, RW, NO_POLL, "15"},
+	{"rx_b/rf/vga/gain2", get_invalid, set_rx_b_rf_vga_gain2, RW, NO_POLL, "21"},
+	{"rx_b/rf/vga/gain3", get_invalid, set_rx_b_rf_vga_gain3, RW, NO_POLL, "21"},
+	{"rx_b/rf/vga/pgain", get_invalid, set_rx_b_rf_vga_pgain, RW, NO_POLL, "9"},
+	{"rx_b/rf/vga/atten1", get_invalid, set_rx_b_rf_vga_atten1, RW, NO_POLL, "10"},
+	{"rx_b/rf/vga/atten2", get_invalid, set_rx_b_rf_vga_atten2, RW, NO_POLL, "10"},
+	{"rx_b/rf/vga/atten3", get_invalid, set_rx_b_rf_vga_atten3, RW, NO_POLL, "10"},
 	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/varac", get_invalid, set_rx_b_rf_freq_varac, RW, NO_POLL, "0"},
@@ -3108,13 +3108,13 @@ static prop_t property_table[] = {
 	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "1"},
 	{"rx_c/rf/vga/freq", get_invalid, set_rx_c_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_c/rf/vga/bypass", get_invalid, set_rx_c_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_c/rf/vga/gain1", get_invalid, set_rx_c_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_c/rf/vga/gain2", get_invalid, set_rx_c_rf_vga_gain2, RW, NO_POLL, "12"},
-	{"rx_c/rf/vga/gain3", get_invalid, set_rx_c_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_c/rf/vga/pgain", get_invalid, set_rx_c_rf_vga_pgain, RW, NO_POLL, "3"},
-	{"rx_c/rf/vga/atten1", get_invalid, set_rx_c_rf_vga_atten1, RW, NO_POLL, "0"},
-	{"rx_c/rf/vga/atten2", get_invalid, set_rx_c_rf_vga_atten2, RW, NO_POLL, "0"},
-	{"rx_c/rf/vga/atten3", get_invalid, set_rx_c_rf_vga_atten3, RW, NO_POLL, "0"},
+	{"rx_c/rf/vga/gain1", get_invalid, set_rx_c_rf_vga_gain1, RW, NO_POLL, "15"},
+	{"rx_c/rf/vga/gain2", get_invalid, set_rx_c_rf_vga_gain2, RW, NO_POLL, "21"},
+	{"rx_c/rf/vga/gain3", get_invalid, set_rx_c_rf_vga_gain3, RW, NO_POLL, "21"},
+	{"rx_c/rf/vga/pgain", get_invalid, set_rx_c_rf_vga_pgain, RW, NO_POLL, "9"},
+	{"rx_c/rf/vga/atten1", get_invalid, set_rx_c_rf_vga_atten1, RW, NO_POLL, "10"},
+	{"rx_c/rf/vga/atten2", get_invalid, set_rx_c_rf_vga_atten2, RW, NO_POLL, "10"},
+	{"rx_c/rf/vga/atten3", get_invalid, set_rx_c_rf_vga_atten3, RW, NO_POLL, "10"},
 	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/varac", get_invalid, set_rx_c_rf_freq_varac, RW, NO_POLL, "0"},
@@ -3179,13 +3179,13 @@ static prop_t property_table[] = {
 	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "1"},
 	{"rx_d/rf/vga/freq", get_invalid, set_rx_d_rf_vga_freq, RW, NO_POLL, "0"},
 	{"rx_d/rf/vga/bypass", get_invalid, set_rx_d_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_d/rf/vga/gain1", get_invalid, set_rx_d_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_d/rf/vga/gain2", get_invalid, set_rx_d_rf_vga_gain2, RW, NO_POLL, "12"},
-	{"rx_d/rf/vga/gain3", get_invalid, set_rx_d_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_d/rf/vga/pgain", get_invalid, set_rx_d_rf_vga_pgain, RW, NO_POLL, "3"},
-	{"rx_d/rf/vga/atten1", get_invalid, set_rx_d_rf_vga_atten1, RW, NO_POLL, "0"},
-	{"rx_d/rf/vga/atten2", get_invalid, set_rx_d_rf_vga_atten2, RW, NO_POLL, "0"},
-	{"rx_d/rf/vga/atten3", get_invalid, set_rx_d_rf_vga_atten3, RW, NO_POLL, "0"},
+	{"rx_d/rf/vga/gain1", get_invalid, set_rx_d_rf_vga_gain1, RW, NO_POLL, "15"},
+	{"rx_d/rf/vga/gain2", get_invalid, set_rx_d_rf_vga_gain2, RW, NO_POLL, "21"},
+	{"rx_d/rf/vga/gain3", get_invalid, set_rx_d_rf_vga_gain3, RW, NO_POLL, "21"},
+	{"rx_d/rf/vga/pgain", get_invalid, set_rx_d_rf_vga_pgain, RW, NO_POLL, "9"},
+	{"rx_d/rf/vga/atten1", get_invalid, set_rx_d_rf_vga_atten1, RW, NO_POLL, "10"},
+	{"rx_d/rf/vga/atten2", get_invalid, set_rx_d_rf_vga_atten2, RW, NO_POLL, "10"},
+	{"rx_d/rf/vga/atten3", get_invalid, set_rx_d_rf_vga_atten3, RW, NO_POLL, "10"},
 	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/varac", get_invalid, set_rx_d_rf_freq_varac, RW, NO_POLL, "0"},

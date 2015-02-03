@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <unistd.h>
 #include "common.h"
 #include "properties.h"
 #include "comm_manager.h"
@@ -133,6 +134,9 @@ static void build_tree(void) {
 		make_prop(get_prop(i));
 		add_prop_to_inotify(get_prop(i));
 		init_prop_val(get_prop(i));
+		#ifdef DEBUG
+		printf("made prop: %s wd: %i\n", get_prop(i) -> path, get_prop(i) -> wd);
+		#endif
 	}
 
 	// force property initofy check (writing of defaults) after init
@@ -191,6 +195,24 @@ int init_property(void) {
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 	write_hps_reg( "rxa4", 0x102);
 	write_hps_reg( "rxa4", 0x100);
+
+	strcpy(buf, "fwd -b 1 -m 'board -c a -m'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'board -c a -i'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -f 945200'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fpga -o\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
