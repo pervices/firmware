@@ -64,6 +64,10 @@ static int reg_write(uint32_t addr, uint32_t* data, uint32_t bytes_to_write) {
 	if (addr < ALT_LWFPGASLVS_OFST || addr >= ALT_LWFPGASLVS_OFST + ALT_LWFPGASLVS_SPAN)
 		return RETURN_ERROR_ADDR_OUT_OF_RANGE;
 
+	#ifdef DEBUG
+	printf("%s(): addr: 0x%08x data: 0x%08x\n", __func__, addr, *data);
+	#endif
+
 	int fd, i;
 	void* virtual_base;
 
@@ -129,6 +133,10 @@ int read_hps_reg(const char* reg, uint32_t* data) {
 
 int write_hps_reg(const char* reg, uint32_t data) {
 	if (!reg) return RETURN_ERROR_PARAM;
+
+	#ifdef DEBUG
+	printf("%s(): %s: 0x%08x\n", __func__, reg, data);
+	#endif
 
 	const reg_t* temp = get_reg_from_name(reg);
 	if (temp)	return reg_write( temp -> addr, &data, 1 );
