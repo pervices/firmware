@@ -63,10 +63,10 @@ static int set_tx_a_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -720,10 +720,10 @@ static int set_tx_b_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 3 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1378,10 +1378,10 @@ static int set_tx_c_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c c -e 2 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2034,10 +2034,10 @@ static int set_tx_d_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2931,7 +2931,7 @@ static int set_poll_en (const char* data, char* ret) {
 static prop_t property_table[] = {
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "1"},
 	{"tx_a/rf/dac/mixer", get_invalid, set_tx_a_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "1475.5"},
+	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15"},
 	{"tx_a/rf/dac/pap", get_invalid, set_tx_a_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/interp", get_invalid, set_tx_a_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
@@ -3002,7 +3002,7 @@ static prop_t property_table[] = {
 	{"rx_a/link/mac_dest", get_invalid, set_rx_a_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "1"},
 	{"tx_b/rf/dac/mixer", get_invalid, set_tx_b_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "1475.5"},
+	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15"},
 	{"tx_b/rf/dac/pap", get_invalid, set_tx_b_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/interp", get_invalid, set_tx_b_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
@@ -3073,7 +3073,7 @@ static prop_t property_table[] = {
 	{"rx_b/link/mac_dest", get_invalid, set_rx_b_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "1"},
 	{"tx_c/rf/dac/mixer", get_invalid, set_tx_c_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "1475.5"},
+	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15"},
 	{"tx_c/rf/dac/pap", get_invalid, set_tx_c_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/interp", get_invalid, set_tx_c_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
@@ -3144,7 +3144,7 @@ static prop_t property_table[] = {
 	{"rx_c/link/mac_dest", get_invalid, set_rx_c_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "1"},
 	{"tx_d/rf/dac/mixer", get_invalid, set_tx_d_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "1475.5"},
+	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15"},
 	{"tx_d/rf/dac/pap", get_invalid, set_tx_d_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/interp", get_invalid, set_tx_d_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},

@@ -211,6 +211,9 @@ int init_property(void) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f 945200'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n 15'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
 	strcpy(buf, "fpga -o\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 
