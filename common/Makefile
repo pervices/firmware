@@ -37,7 +37,7 @@ all: MAKE_OUTDIR MAKE_SUBDIR $(SOURCES) $(OBJECTS)
 # Generates all of the object files from the source files
 $(OUTDIR)/obj/%.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
-	@cp $< $(OUTDIR)/src
+	@cp -f $< $(OUTDIR)/src
 
 # Recursive build of all the sub_directories
 MAKE_SUBDIR:
@@ -45,7 +45,7 @@ MAKE_SUBDIR:
 
 # Copies header files over
 MAKE_OUTDIR:
-	@cp *.h $(OUTDIR)/inc
+	@cp -f *.h $(OUTDIR)/inc
 
 # If not building from root
 else

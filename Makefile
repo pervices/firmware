@@ -64,7 +64,7 @@ $(foreach TARGET, $(TARGETS), $(eval $(call AUTO_TARGET, $(TARGET)) ))
 # Generates all of the object files from the source files
 $(OUTDIR)/obj/main/%.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
-	@cp $< $(OUTDIR)/src
+	@cp -f $< $(OUTDIR)/src
 
 # Recursive build of all the sub_directories
 MAKE_SUBDIR:
