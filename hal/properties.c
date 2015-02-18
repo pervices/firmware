@@ -28,6 +28,9 @@
 
 #define FREQ_XOVER_PNT 500000000	// 500 MHz is the crossover frequency for high and low band
 
+// define this if DAC NCO is mixed to 15MHz, this removes mixing artifacts
+#define DSP_NCO_OFFSET
+
 // static global variables
 static int uart_fd = 0;
 static char buf[MAX_PROP_LEN] = {};
@@ -107,6 +110,10 @@ static int set_tx_a_rf_dac_iqerr_phase (const char* data, char* ret) {
 static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
 	sscanf(data, "%"SCNd32"", &freq);
+
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
@@ -808,6 +815,10 @@ static int set_tx_b_rf_dac_iqerr_phase (const char* data, char* ret) {
 static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
 	sscanf(data, "%"SCNd32"", &freq);
+
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
@@ -1511,6 +1522,10 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
 	sscanf(data, "%"SCNd32"", &freq);
 
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
@@ -2210,6 +2225,10 @@ static int set_tx_d_rf_dac_iqerr_phase (const char* data, char* ret) {
 static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
 	sscanf(data, "%"SCNd32"", &freq);
+
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
