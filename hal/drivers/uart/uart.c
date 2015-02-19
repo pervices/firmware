@@ -112,8 +112,12 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 	for (i = 0; i < rd_len; i++) printf("%c", data[i]);
 	printf("\n");*/
 
+	// if nothing to be read
+	if (rd_len < 0) rd_len = 0;
+
 	if (timeout(&tstart, TIMEOUT)) {
 		printf("%s(): timedout\n", __func__);
+		*size = rd_len;
 		return RETURN_ERROR_UART_TIMEOUT;
 	}
 
@@ -125,14 +129,7 @@ int send_uart(int fd, uint8_t* data, uint16_t size) {
 	gettimeofday(&tstart, NULL);
 
 	// clear receive buffer first, for old data from previous commands
-	//uint8_t old_data[256];
-	//uint16_t old_size;
-	//while (recv_uart(fd, old_data, &old_size, 256) == RETURN_SUCCESS) { printf("Receiving old data\n"); };
-
-	/*int i;
-	printf("sending uart: ");
-	for (i = 0; i < size; i++) printf("%c", data[i]);
-	printf("\n");*/
+	flush_uart(fd);
 
 	#ifdef DEBUG
 	printf("%s(): %s\n", __func__, data);
@@ -152,4 +149,12 @@ int send_uart(int fd, uint8_t* data, uint16_t size) {
 	}
 
 	return RETURN_SUCCESS;
+}
+
+int flush_uart(int fd) {
+	// flushes UART on HPS side
+	if( tcflush(fd, TCIOFLUSH) == 0)
+		return RETURN_SUCCESS;
+	else
+		return RETURN_ERROR_UART_FLUSH;
 }

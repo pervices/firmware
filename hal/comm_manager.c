@@ -181,3 +181,9 @@ int send_uart_comm(int fd, uint8_t* data, uint16_t size) {
 	int mydev = uart_devices[fd];
 	return send_uart(mydev, data, size);
 }
+
+int flush_uart_comm(int fd) {
+	if (fd < 0) return RETURN_ERROR_PARAM;
+	int mydev = uart_devices[fd];
+	return flush_uart(mydev);
+}

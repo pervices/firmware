@@ -41,6 +41,7 @@
 #define RETURN_ERROR_INVALID_REGISTER	-12
 #define RETURN_ERROR_ADDR_OUT_OF_RANGE	-13
 #define RETURN_ERROR_INSUFFICIENT_RESOURCES	-99
+#define RETURN_ERROR_UART_FLUSH		-14
 
 // General purpose temp buffer size
 #define BUF_SIZE 	( 100 )

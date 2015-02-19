@@ -61,9 +61,9 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	while(data[pos] != '\n' && data[pos] != '\0') pos++;
 	data[pos] = '\0';
 
-	#ifdef DEBUG
+	//#ifdef DEBUG
 	printf("read from file: %s (%s)\n", path, data);
-	#endif
+	//#endif
 }
 
 // Helper function to make properties
@@ -323,6 +323,7 @@ int set_property(const char* prop, const char* data) {
 
 	write_to_file(get_abs_path(temp, path), data);
 	check_property_inotifies();
+
 	return RETURN_SUCCESS;
 }
 

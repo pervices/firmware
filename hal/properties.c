@@ -33,6 +33,8 @@
 
 // static global variables
 static int uart_fd = 0;
+static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = {};
+static uint16_t uart_ret_size = 0;
 static char buf[MAX_PROP_LEN] = {};
 static uint16_t rd_len;
 
@@ -217,12 +219,12 @@ static int set_tx_a_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "txa1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x04);
+		write_hps_reg( "res_rw0", old_val | 0x1000);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "txa1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x04);
+		write_hps_reg( "res_rw0", old_val & ~0x1000);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 
@@ -289,8 +291,8 @@ static int set_tx_a_link_enable (const char* data, char* ret) {
 static int set_tx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "res_rw0", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x04);
-	else				write_hps_reg( "res_rw0", old_val & ~0x04);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x0c);
+	else				write_hps_reg( "res_rw0", old_val & ~0x0c);
 	return RETURN_SUCCESS;
 }
 
@@ -469,6 +471,7 @@ static int set_rx_a_rf_vga_atten3 (const char* data, char* ret) {
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
+	int i;
 	sscanf(data, "%"SCNd32"", &freq);
 
 	// write kHz to MCU cmd
@@ -476,6 +479,14 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the actual frequency
+	memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
+	recv_uart_comm(uart_fd, uart_ret_buf, &uart_ret_size, MAX_UART_RET_LEN);
+	//printf("Received from UART %"PRIu16" bytes: ", uart_ret_size);
+	//for (i = 0; i < uart_ret_size; i++)
+	//	printf("%c", uart_ret_buf[i]);
+	//printf("\n\n\n");
 
 	// check which band it resides on
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
@@ -596,12 +607,12 @@ static int set_rx_a_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "rxa1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x01);
+		write_hps_reg( "res_rw0", old_val | 0x100);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "rxa1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x01);
+		write_hps_reg( "res_rw0", old_val & ~0x100);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 
@@ -922,12 +933,12 @@ static int set_tx_b_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "txb1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x40);
+		write_hps_reg( "res_rw0", old_val | 0x2000);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "txb1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x40);
+		write_hps_reg( "res_rw0", old_val & ~0x2000);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 
@@ -994,8 +1005,8 @@ static int set_tx_b_link_enable (const char* data, char* ret) {
 static int set_tx_b_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "res_rw0", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x40);
-	else				write_hps_reg( "res_rw0", old_val & ~0x40);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0xc0);
+	else				write_hps_reg( "res_rw0", old_val & ~0xc0);
 	return RETURN_SUCCESS;
 }
 
@@ -1302,12 +1313,12 @@ static int set_rx_b_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "rxb1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x10);
+		write_hps_reg( "res_rw0", old_val | 0x200);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "rxb1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x10);
+		write_hps_reg( "res_rw0", old_val & ~0x200);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 
@@ -1627,12 +1638,12 @@ static int set_tx_c_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "txc1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x08);
+		write_hps_reg( "res_rw0", old_val | 0x4000);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "txc1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x08);
+		write_hps_reg( "res_rw0", old_val & ~0x4000);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 
@@ -1699,8 +1710,8 @@ static int set_tx_c_link_enable (const char* data, char* ret) {
 static int set_tx_c_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "res_rw0", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x08);
-	else				write_hps_reg( "res_rw0", old_val & ~0x08);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x0c);
+	else				write_hps_reg( "res_rw0", old_val & ~0x0c);
 	return RETURN_SUCCESS;
 }
 
@@ -2006,12 +2017,12 @@ static int set_rx_c_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "rxc1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x02);
+		write_hps_reg( "res_rw0", old_val | 0x400);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "rxc1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x02);
+		write_hps_reg( "res_rw0", old_val & ~0x400);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 
@@ -2331,12 +2342,12 @@ static int set_tx_d_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "txd1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x80);
+		write_hps_reg( "res_rw0", old_val | 0x8000);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "txd1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x80);
+		write_hps_reg( "res_rw0", old_val & ~0x8000);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 
@@ -2403,8 +2414,8 @@ static int set_tx_d_link_enable (const char* data, char* ret) {
 static int set_tx_d_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "res_rw0", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0x80);
-	else				write_hps_reg( "res_rw0", old_val & ~0x80);
+	if (strcmp(data, "1") == 0)	write_hps_reg( "res_rw0", old_val | 0xc0);
+	else				write_hps_reg( "res_rw0", old_val & ~0xc0);
 	return RETURN_SUCCESS;
 }
 
@@ -2709,12 +2720,12 @@ static int set_rx_d_dsp_rate (const char* data, char* ret) {
 	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(adj_rate_err) < fabs(base_rate_err)) {
 		write_hps_reg( "rxd1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val | 0x20);
+		write_hps_reg( "res_rw0", old_val | 0x800);
 		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
 	} else {
 		write_hps_reg( "rxd1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
-		write_hps_reg( "res_rw0", old_val & ~0x20);
+		write_hps_reg( "res_rw0", old_val & ~0x800);
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
 	}
 

@@ -25,6 +25,7 @@
 #include <string.h>
 
 #define UDP_PAYLOAD_LEN 1472
+#define MAX_UART_RET_LEN 256
 
 int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options);
 int close_udp_comm(int fd);
@@ -36,5 +37,6 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options);
 int close_uart_comm(int fd);
 int recv_uart_comm(int fd, uint8_t* data, uint16_t* size, uint16_t max_size);
 int send_uart_comm(int fd, uint8_t* data, uint16_t size);
+int flush_uart_comm(int fd);	// flushes UART on MCU side
 
 #endif
