@@ -208,11 +208,11 @@ static int set_tx_a_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -220,12 +220,12 @@ static int set_tx_a_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txa1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x1000);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "txa1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x1000);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
@@ -471,7 +471,7 @@ static int set_rx_a_rf_vga_atten3 (const char* data, char* ret) {
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
-	int i;
+	//int i;
 	sscanf(data, "%"SCNd32"", &freq);
 
 	// write kHz to MCU cmd
@@ -596,11 +596,11 @@ static int set_rx_a_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -608,12 +608,12 @@ static int set_rx_a_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxa1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x100);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "rxa1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x100);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
@@ -922,11 +922,11 @@ static int set_tx_b_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -934,12 +934,12 @@ static int set_tx_b_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txb1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x2000);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "txb1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x2000);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
@@ -1302,11 +1302,11 @@ static int set_rx_b_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -1314,12 +1314,12 @@ static int set_rx_b_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxb1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x200);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "rxb1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x200);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
@@ -1627,11 +1627,11 @@ static int set_tx_c_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -1639,12 +1639,12 @@ static int set_tx_c_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txc1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x4000);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "txc1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x4000);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
@@ -2006,11 +2006,11 @@ static int set_rx_c_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -2018,12 +2018,12 @@ static int set_rx_c_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxc1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x400);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "rxc1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x400);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
@@ -2331,11 +2331,11 @@ static int set_tx_d_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -2343,12 +2343,12 @@ static int set_tx_d_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txd1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x8000);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "txd1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x8000);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
@@ -2709,11 +2709,11 @@ static int set_rx_d_dsp_rate (const char* data, char* ret) {
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
+	base_decim = (int)floor(BASE_SAMPLE_RATE / rate);
+	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim)) - rate;
 
-	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate) - 1;
-	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim + 1)) - rate;
+	adj_decim = (int)floor(ADJ_SAMPLE_RATE / rate);
+	adj_rate_err = (ADJ_SAMPLE_RATE / (double)(adj_decim)) - rate;
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
@@ -2721,12 +2721,12 @@ static int set_rx_d_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxd1", adj_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val | 0x800);
-		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim + 1));
+		sprintf(ret, "%lf", ADJ_SAMPLE_RATE/(adj_decim));
 	} else {
 		write_hps_reg( "rxd1", base_decim);
 		read_hps_reg(  "res_rw0", &old_val);
 		write_hps_reg( "res_rw0", old_val & ~0x800);
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim));
 	}
 
 	return RETURN_SUCCESS;
