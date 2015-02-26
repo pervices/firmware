@@ -183,16 +183,22 @@ int init_property(void) {
 	char buf[MAX_PROP_LEN] = {};
 	strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
 	strcpy(buf, "fwd -b 0 -m 'board -c a -i'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
 	strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
 	strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f 900200'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
 	strcpy(buf, "fpga -o\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
 	write_hps_reg( "rxa4", 0x102);
 	write_hps_reg( "rxa4", 0x100);
 
