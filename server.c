@@ -68,11 +68,8 @@ int main(int argc, char *argv[]) {
 	int i = 0;
 	cmd_t cmd;
 
-	printf("There are %i udp ports.\n", num_udp_ports);
-
 	// Initialize network communications for each port
 	for( i = 0; i < num_udp_ports; i++) {
-		printf("Initializing port: %i\n", port_nums[i]);
 		if ( init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0 ) {
 			printf("ERROR: %s, cannot initialize network %s\n", __func__, ENET_DEV);
 			return RETURN_ERROR_COMM_INIT;
