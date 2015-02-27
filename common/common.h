@@ -93,4 +93,18 @@ typedef struct indata {
 	char* data;		// write data if operation is a SET
 } indata_t;
 
+// UDP ports
+typedef enum {
+	UDP_MGMT_PORT = 42799,
+	UDP_RXA_PORT  = 42800,
+	UDP_RXB_PORT  = 42801,
+	UDP_RXC_PORT  = 42802,
+	UDP_RXD_PORT  = 42803,
+	UDP_TXA_PORT  = 42804,
+	UDP_TXB_PORT  = 42805,
+	UDP_TXC_PORT  = 42806,
+	UDP_TXD_PORT  = 42807,
+	num_udp_ports = 9
+} udp_port_t;
+
 #endif /* COMMON_H_ */

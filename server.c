@@ -34,7 +34,6 @@
 #include "parser.h"
 
 #define ENET_DEV "eth0"
-#define UDP_COMMS_PORT 42799
 
 // timers for polling
 static struct timeval tstart;
@@ -50,16 +49,34 @@ static uint8_t timeout(uint32_t timeout) {
 		return 0;
 }
 
+// comm ports
+int comm_fds[num_udp_ports] = {0};
+int port_nums[num_udp_ports] = {
+	UDP_MGMT_PORT,
+	UDP_RXA_PORT,
+	UDP_RXB_PORT,
+	UDP_RXC_PORT,
+	UDP_RXD_PORT,
+	UDP_TXA_PORT,
+	UDP_TXB_PORT,
+	UDP_TXC_PORT,
+	UDP_TXD_PORT };
+
 // main loop
 int main(int argc, char *argv[]) {
 	int ret = 0;
+	int i = 0;
 	cmd_t cmd;
 
-	// Initialize network communications
-	int udp_comms_fd;
-	if ( init_udp_comm(&udp_comms_fd, ENET_DEV, UDP_COMMS_PORT, 0) < 0 ) {
-		printf("ERROR: %s, cannot initialize network %s\n", __func__, ENET_DEV);
-		return RETURN_ERROR_COMM_INIT;
+	printf("There are %i udp ports.\n", num_udp_ports);
+
+	// Initialize network communications for each port
+	for( i = 0; i < num_udp_ports; i++) {
+		printf("Initializing port: %i\n", port_nums[i]);
+		if ( init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0 ) {
+			printf("ERROR: %s, cannot initialize network %s\n", __func__, ENET_DEV);
+			return RETURN_ERROR_COMM_INIT;
+		}
 	}
 
 	// Buffer used for read/write
@@ -69,7 +86,11 @@ int main(int argc, char *argv[]) {
 	// initialize the properties, which is implemented as a Linux file structure
 	init_property();
 
-	printf("Initialization successfully finished!\n");
+	// let the user know the server is ready to receive commands
+	printf("- Crimson server is up.\n");
+
+	i = 0;
+	// main loop, look for commands, if exists, service it and respond
 	while (1) {
 		// prevent busy wait, taking up too much CPU resources
 		usleep(1);
@@ -81,7 +102,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// check for input commands from UDP
-		if (recv_udp_comm(udp_comms_fd, buffer, &received_bytes, UDP_PAYLOAD_LEN) >= 0) {
+		if (recv_udp_comm(comm_fds[i], buffer, &received_bytes, UDP_PAYLOAD_LEN) >= 0) {
 			parse_cmd(&cmd, buffer);
 
 			// Debug print
@@ -101,13 +122,20 @@ int main(int argc, char *argv[]) {
 			}
 			build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
 
-			send_udp_comm(udp_comms_fd, buffer, strlen((char*)buffer));
+			send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
 		}
 
 		// check if any files/properties have been modified through shell
 		check_property_inotifies();
+
+		// increment to service the other ports
+		i = (i + 1) % num_udp_ports;
 	}
-	close_udp_comm(udp_comms_fd);
+
+	// close the file descriptors
+	for( i = 0; i < num_udp_ports; i++) {
+		close_udp_comm(comm_fds[i]);
+	}
 
 	return ret;
 }
