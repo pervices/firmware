@@ -291,8 +291,8 @@ static int set_tx_a_link_enable (const char* data, char* ret) {
 static int set_tx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txa4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | (1 << 16));
-	else				write_hps_reg( "txa4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | (1 << 14));
+	else				write_hps_reg( "txa4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
@@ -679,8 +679,8 @@ static int set_rx_a_link_enable (const char* data, char* ret) {
 static int set_rx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxa4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | (1 << 16));
-	else				write_hps_reg( "rxa4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | (1 << 14));
+	else				write_hps_reg( "rxa4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
@@ -1005,8 +1005,8 @@ static int set_tx_b_link_enable (const char* data, char* ret) {
 static int set_tx_b_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txb4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | (1 << 16));
-	else				write_hps_reg( "txb4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | (1 << 14));
+	else				write_hps_reg( "txb4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
@@ -1385,8 +1385,8 @@ static int set_rx_b_link_enable (const char* data, char* ret) {
 static int set_rx_b_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxb4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | (1 << 16));
-	else				write_hps_reg( "rxb4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | (1 << 14));
+	else				write_hps_reg( "rxb4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
@@ -1710,8 +1710,8 @@ static int set_tx_c_link_enable (const char* data, char* ret) {
 static int set_tx_c_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txc4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | (1 << 16));
-	else				write_hps_reg( "txc4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | (1 << 14));
+	else				write_hps_reg( "txc4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
@@ -2089,8 +2089,8 @@ static int set_rx_c_link_enable (const char* data, char* ret) {
 static int set_rx_c_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxc4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | (1 << 16));
-	else				write_hps_reg( "rxc4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | (1 << 14));
+	else				write_hps_reg( "rxc4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
@@ -2414,8 +2414,8 @@ static int set_tx_d_link_enable (const char* data, char* ret) {
 static int set_tx_d_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txd4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | (1 << 16));
-	else				write_hps_reg( "txd4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | (1 << 14));
+	else				write_hps_reg( "txd4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
@@ -2792,8 +2792,8 @@ static int set_rx_d_link_enable (const char* data, char* ret) {
 static int set_rx_d_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxd4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | (1 << 16));
-	else				write_hps_reg( "rxd4", old_val & ~(1 << 16));
+	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | (1 << 14));
+	else				write_hps_reg( "rxd4", old_val & ~(1 << 14));
 	return RETURN_SUCCESS;
 }
 
