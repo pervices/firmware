@@ -103,12 +103,12 @@ int main(int argc, char *argv[]) {
 			parse_cmd(&cmd, buffer);
 
 			// Debug print
-			/*printf("Recevied:\n");
-			printf("Seq:    %"PRIu32"\n", cmd.seq);
-			printf("Op:     %i\n", cmd.op);
-			printf("Status: %i\n", cmd.status);
-			printf("Prop:   %s\n", cmd.prop);
-			printf("Data:   %s\n", cmd.data);*/
+			/*printf("\tRecevied:\n");
+			printf("\tSeq:    %"PRIu32"\n", cmd.seq);
+			printf("\tOp:     %i\n", cmd.op);
+			printf("\tStatus: %i\n", cmd.status);
+			printf("\tProp:   %s\n", cmd.prop);
+			printf("\tData:   %s\n", cmd.data);*/
 
 			if (cmd.op == OP_GET) {
 				//printf("Getting property\n");
@@ -120,6 +120,7 @@ int main(int argc, char *argv[]) {
 			build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
 
 			send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
+			//printf("\tSent()\n");
 		}
 
 		// check if any files/properties have been modified through shell
