@@ -61,9 +61,9 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	while(data[pos] != '\n' && data[pos] != '\0') pos++;
 	data[pos] = '\0';
 
-	//#ifdef DEBUG
+	#ifdef DEBUG
 	printf("read from file: %s (%s)\n", path, data);
-	//#endif
+	#endif
 }
 
 // Helper function to make properties
@@ -199,8 +199,11 @@ int init_property(void) {
 	strcpy(buf, "fpga -o\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 	usleep(1000000);
-	write_hps_reg( "rxa4", 0x102);
-	write_hps_reg( "rxa4", 0x100);
+
+	uint32_t old_val;
+	read_hps_reg ( "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val | 0x2);
+	write_hps_reg( "rxa4", old_val & (~0x2));
 
 	strcpy(buf, "fwd -b 1 -m 'board -c a -m'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
