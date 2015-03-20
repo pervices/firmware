@@ -107,4 +107,10 @@ typedef enum {
 	num_udp_ports = 9
 } udp_port_t;
 
+// Boolean datatype
+typedef enum {
+	FALSE,
+	TRUE
+} boolean;
+
 #endif /* COMMON_H_ */
