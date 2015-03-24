@@ -26,10 +26,7 @@
 #define PWR_ON	1
 #define PWR_OFF	0
 
-#define FREQ_XOVER_PNT 500000000	// 500 MHz is the crossover frequency for high and low band
-
-// define this if DAC NCO is mixed to 15MHz, this removes mixing artifacts
-#define DSP_NCO_OFFSET
+#define FREQ_XOVER_PNT 100000000	// 100 MHz is the crossover frequency for high and low band
 
 // static global variables
 static int uart_fd = 0;
