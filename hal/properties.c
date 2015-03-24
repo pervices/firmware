@@ -529,19 +529,23 @@ static int set_rx_a_rf_gain_val (const char* data, char* ret) {
 
 	// attenuate 66 to desired amount
 	if (gain < 66) {
+		int atten1 = (66-gain)/3;
+		int atten2 = (66-gain)/3;
+		int atten3 = (66-gain) - atten1 - atten2;
+
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c a -x ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten1);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c a -y ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten2);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c a -z ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
@@ -1234,19 +1238,23 @@ static int set_rx_b_rf_gain_val (const char* data, char* ret) {
 
 	// attenuate 66 to desired amount
 	if (gain < 66) {
+		int atten1 = (66-gain)/3;
+		int atten2 = (66-gain)/3;
+		int atten3 = (66-gain) - atten1 - atten2;
+
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c b -x ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten1);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c b -y ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten2);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c b -z ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
@@ -1939,19 +1947,23 @@ static int set_rx_c_rf_gain_val (const char* data, char* ret) {
 
 	// attenuate 66 to desired amount
 	if (gain < 66) {
+		int atten1 = (66-gain)/3;
+		int atten2 = (66-gain)/3;
+		int atten3 = (66-gain) - atten1 - atten2;
+
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c c -x ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten1);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c c -y ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten2);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c c -z ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
@@ -2642,19 +2654,23 @@ static int set_rx_d_rf_gain_val (const char* data, char* ret) {
 
 	// attenuate 66 to desired amount
 	if (gain < 66) {
+		int atten1 = (66-gain)/3;
+		int atten2 = (66-gain)/3;
+		int atten3 = (66-gain) - atten1 - atten2;
+
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c d -x ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten1);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c d -y ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten2);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 		memset(buf, 0, MAX_PROP_LEN);
 		strcpy(buf, "fwd -b 0 -m 'vga -c d -z ");
-		sprintf(buf + strlen(buf), "%i", (66-gain)/3);
+		sprintf(buf + strlen(buf), "%i", atten3);
 		strcat(buf, "'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	}
