@@ -43,6 +43,10 @@
 #define RETURN_ERROR_INSUFFICIENT_RESOURCES	-99
 #define RETURN_ERROR_UART_FLUSH		-14
 
+// server options
+#define SERVER_DEBUG_OPT	(1 << 0)
+#define SERVER_RESVD_OPT	(1 << 1)
+
 // define this if DAC NCO is mixed to 15MHz, this removes mixing artifacts
 #define DSP_NCO_OFFSET
 

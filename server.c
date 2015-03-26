@@ -49,6 +49,9 @@ static uint8_t timeout(uint32_t timeout) {
 		return 0;
 }
 
+// execution options
+uint8_t options = 0;
+
 // comm ports
 int comm_fds[num_udp_ports] = {0};
 int port_nums[num_udp_ports] = {
@@ -68,6 +71,12 @@ int main(int argc, char *argv[]) {
 	int i = 0;
 	cmd_t cmd;
 
+	// check for an argument for debug mode
+	if (argc >= 2) {
+		if (strcmp(argv[1], "-d") == 0)
+			options |= SERVER_DEBUG_OPT;
+	}
+
 	// Initialize network communications for each port
 	for( i = 0; i < num_udp_ports; i++) {
 		if ( init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0 ) {
@@ -81,7 +90,7 @@ int main(int argc, char *argv[]) {
 	uint16_t received_bytes = 0;
 
 	// initialize the properties, which is implemented as a Linux file structure
-	init_property();
+	init_property(options);
 
 	// let the user know the server is ready to receive commands
 	printf("- Crimson server is up.\n");

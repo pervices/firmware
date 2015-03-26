@@ -31,6 +31,9 @@ static int uart_comm_fd;
 // Inotify's file descriptor
 static int inotify_fd;
 
+// Options passed from server.c
+static uint8_t _options = 0;
+
 // Helper function to write to property
 static void write_to_file(const char* path, const char* data) {
 	FILE* fd;
@@ -41,9 +44,8 @@ static void write_to_file(const char* path, const char* data) {
 	fprintf(fd, "%s", data);
 	fclose(fd);
 
-	#ifdef DEBUG
-	printf("wrote to file: %s (%s)\n", path, data);
-	#endif
+	if (_options & SERVER_DEBUG_OPT)
+		printf("wrote to file: %s (%s)\n", path, data);
 }
 
 // Helper function to read to property
@@ -61,9 +63,8 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	while(data[pos] != '\n' && data[pos] != '\0') pos++;
 	data[pos] = '\0';
 
-	#ifdef DEBUG
-	printf("read from file: %s (%s)\n", path, data);
-	#endif
+	if (_options & SERVER_DEBUG_OPT)
+		printf("read from file: %s (%s)\n", path, data);
 }
 
 // Helper function to make properties
@@ -149,11 +150,14 @@ static void build_tree(void) {
 }
 
 // Initialize handler functions
-int init_property(void) {
+int init_property(uint8_t options) {
 	// uart transactions
 	#ifdef DEBUG
 	printf("Initializing UART\n");
 	#endif
+
+	// saqve the options
+	_options = options;
 
 	if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
 		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_DEV);
@@ -177,9 +181,11 @@ int init_property(void) {
 	// pass the uart handler to the property handlers
 	pass_uart_fd(uart_comm_fd);
 
+	printf("- Building the property tree...\n");
 	build_tree();
 
 	// This is for errata fixing, remove [this] and [#include "mmap.h"] when fixed.
+	printf("- Initializing the radio chain...\n");
 	char buf[MAX_PROP_LEN] = {};
 	strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
