@@ -21,6 +21,7 @@
 #include "comm_manager.h"
 #include "property_manager.h"
 #include "mmap.h"	// shouldn't need to include this, this is here for errata fixing
+#include "uart.h"
 
 #define EVENT_SIZE 	(sizeof(struct inotify_event))
 #define EVENT_BUF_LEN 	( 1024 * (EVENT_SIZE + 16) )
@@ -44,8 +45,9 @@ static void write_to_file(const char* path, const char* data) {
 	fprintf(fd, "%s", data);
 	fclose(fd);
 
-	if (_options & SERVER_DEBUG_OPT)
-		printf("wrote to file: %s (%s)\n", path, data);
+	#ifdef DEBUG
+	printf("wrote to file: %s (%s)\n", path, data);
+	#endif
 }
 
 // Helper function to read to property
@@ -63,8 +65,9 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	while(data[pos] != '\n' && data[pos] != '\0') pos++;
 	data[pos] = '\0';
 
-	if (_options & SERVER_DEBUG_OPT)
-		printf("read from file: %s (%s)\n", path, data);
+	#ifdef DEBUG
+	printf("read from file: %s (%s)\n", path, data);
+	#endif
 }
 
 // Helper function to make properties
@@ -201,8 +204,10 @@ int init_property(uint8_t options) {
 	printf("Initializing UART\n");
 	#endif
 
-	// saqve the options
+	// save the options
 	_options = options;
+	set_uart_debug_opt(options);
+	set_mem_debug_opt(options);
 
 	if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
 		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_DEV);

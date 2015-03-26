@@ -34,5 +34,6 @@ void set_uart_blocking (int fd, int should_block);
 int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size);
 int send_uart(int fd, uint8_t* data, uint16_t size);
 int flush_uart(int fd);
+void set_uart_debug_opt(uint8_t options);
 
 #endif

@@ -41,4 +41,6 @@ int write_hps_reg(const char* reg, uint32_t data);
 
 void list_hps_reg(uint8_t verbosity);
 int dump_hps_reg(void);
+void set_mem_debug_opt(uint8_t options);
+
 #endif

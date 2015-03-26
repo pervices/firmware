@@ -21,6 +21,13 @@
 // Standard for linux
 #define MEM_DEV 	"/dev/mem"
 
+// Options passed from server.c
+static uint8_t _options = 0;
+
+void set_mem_debug_opt(uint8_t options) {
+	_options = options;
+}
+
 static int reg_read(uint32_t addr, uint32_t* data, uint32_t bytes_to_read) {
 	int fd, i;
 	void* virtual_base;
@@ -131,9 +138,8 @@ int read_hps_reg(const char* reg, uint32_t* data) {
 int write_hps_reg(const char* reg, uint32_t data) {
 	if (!reg) return RETURN_ERROR_PARAM;
 
-	//#ifdef DEBUG
-	printf("%s(): %s: 0x%08x\n", __func__, reg, data);
-	//#endif
+	if (_options & SERVER_DEBUG_OPT)
+		printf("%s(): %s: 0x%08x\n", __func__, reg, data);
 
 	const reg_t* temp = get_reg_from_name(reg);
 	if (temp)	return reg_write( temp -> addr, &data, 1 );

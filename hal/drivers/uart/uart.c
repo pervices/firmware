@@ -28,6 +28,13 @@ static struct timeval tprev;	// time since previous UART command
 static struct timeval tstart;	// time since the beginning of a UART send attempt
 static struct timeval tend;
 
+// Options passed from server.c
+static uint8_t _options = 0;
+
+void set_uart_debug_opt(uint8_t options) {
+	_options = options;
+}
+
 // return 1 if timeout, 0 if not
 static uint8_t timeout(struct timeval* t, long int time) {
 	gettimeofday(&tend, NULL);
@@ -131,9 +138,8 @@ int send_uart(int fd, uint8_t* data, uint16_t size) {
 	// clear receive buffer first, for old data from previous commands
 	flush_uart(fd);
 
-	#ifdef DEBUG
-	printf("%s(): %s\n", __func__, data);
-	#endif
+	if (_options & SERVER_DEBUG_OPT)
+		printf("%s(): %s\n", __func__, data);
 
 	while (!timeout(&tprev, TIME_INTERVAL)){}
 
