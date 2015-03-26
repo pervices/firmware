@@ -114,15 +114,15 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	freq -= 15000000;	// 15MHz offset
 	#endif
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
@@ -471,6 +471,10 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	//int i;
 	sscanf(data, "%"SCNd32"", &freq);
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
@@ -484,10 +488,6 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	//for (i = 0; i < uart_ret_size; i++)
 	//	printf("%c", uart_ret_buf[i]);
 	//printf("\n\n\n");
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
@@ -832,15 +832,15 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	freq -= 15000000;	// 15MHz offset
 	#endif
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c b -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c b -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
@@ -1188,15 +1188,15 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
 	sscanf(data, "%"SCNd32"", &freq);
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
@@ -1542,15 +1542,15 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	freq -= 15000000;	// 15MHz offset
 	#endif
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c c -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c c -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
@@ -1897,15 +1897,15 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
 	sscanf(data, "%"SCNd32"", &freq);
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
@@ -2250,15 +2250,15 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	freq -= 15000000;	// 15MHz offset
 	#endif
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
+	else				strcpy(buf, "fwd -b 1 -m 'rf -c d -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c d -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
@@ -2604,15 +2604,15 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
 	sscanf(data, "%"SCNd32"", &freq);
 
+	// check which band it resides on
+	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
+	else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
 
 	return RETURN_SUCCESS;
 }
