@@ -10,14 +10,6 @@
 #define ARG_REG_DUMP	"rd"
 #define ARG_REG_LIST	"rl"
 
-#define MEM_READ	(0)
-#define MEM_WRITE	(1)
-#define MEM_DUMP	(2)
-#define REG_READ	(3)
-#define REG_WRITE	(4)
-#define REG_DUMP	(5)
-#define REG_LIST	(6)
-
 int main(int argc, char *argv[]) {
 	char* reg;			// register
 	uint32_t addr, value;		// r/w address, and value if applicable
