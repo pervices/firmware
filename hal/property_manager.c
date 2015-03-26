@@ -149,6 +149,51 @@ static void build_tree(void) {
 	#endif
 }
 
+static void init_radio_chain(void) {
+	char buf[MAX_PROP_LEN] = {};
+	uint32_t old_val;
+
+	strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 0 -m 'board -c a -i'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -f 900200'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fpga -o\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+
+	read_hps_reg ( "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val | 0x2);
+	write_hps_reg( "rxa4", old_val & (~0x2));
+
+	strcpy(buf, "fwd -b 1 -m 'board -c a -m'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'board -c a -i'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -f 945200'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	#ifdef DSP_NCO_OFFSET
+	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n 15'\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	usleep(1000000);
+	#endif
+	strcpy(buf, "fpga -o\r");
+	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+}
+
 // Initialize handler functions
 int init_property(uint8_t options) {
 	// uart transactions
@@ -186,53 +231,7 @@ int init_property(uint8_t options) {
 
 	// This is for errata fixing, remove [this] and [#include "mmap.h"] when fixed.
 	printf("- Initializing the radio chain...\n");
-	char buf[MAX_PROP_LEN] = {};
-	strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 0 -m 'board -c a -i'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -f 900200'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fpga -o\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-
-	uint32_t old_val;
-	read_hps_reg ( "rxa4", &old_val);
-	write_hps_reg( "rxa4", old_val | 0x2);
-	write_hps_reg( "rxa4", old_val & (~0x2));
-
-	strcpy(buf, "fwd -b 1 -m 'board -c a -m'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 1 -m 'board -c a -i'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	strcpy(buf, "fwd -b 1 -m 'rf -c a -f 945200'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	#ifdef DSP_NCO_OFFSET
-	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n 15'\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
-	usleep(1000000);
-	#endif
-	strcpy(buf, "fpga -o\r");
-	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+	init_radio_chain();
 
 	return RETURN_SUCCESS;
 }
