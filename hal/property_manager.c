@@ -156,6 +156,12 @@ static void init_radio_chain(void) {
 	char buf[MAX_PROP_LEN] = {};
 	uint32_t old_val;
 
+	// disable channels in DSP
+	read_hps_reg ( "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val & ~(0x100));
+	read_hps_reg ( "txa4", &old_val);
+	write_hps_reg( "txa4", old_val & ~(0x100));
+
 	strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 	usleep(1000000);
@@ -195,6 +201,12 @@ static void init_radio_chain(void) {
 	#endif
 	strcpy(buf, "fpga -o\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+
+	// re-enable channels in DSP
+	read_hps_reg ( "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val | 0x100);
+	read_hps_reg ( "txa4", &old_val);
+	write_hps_reg( "txa4", old_val | 0x100);
 }
 
 // Initialize handler functions
