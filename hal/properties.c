@@ -370,101 +370,6 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_vga_freq (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -f ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_bypass (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -b ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_gain1 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 10)	gain = 3;
-	else if (gain <= 14) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_gain2 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -h ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_gain3 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -i ");
-	sprintf(buf + strlen(buf), "%i", gain);	
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_pgain (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 6)	gain = 0;
-	else 			gain = 1;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -p ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_atten1 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -x ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_atten2 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -y ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_rf_vga_atten3 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -z ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
@@ -506,46 +411,10 @@ static int set_rx_a_rf_freq_varac (const char* data, char* ret) {
 }
 
 static int set_rx_a_rf_gain_val (const char* data, char* ret) {
-	// TODO: intelligent gain, maximize SNR
-
-	int gain;
-	sscanf(data, "%i", &gain);
-
-	// set the total VGA gain to 66 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -g 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c a -g ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -h 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -i 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// attenuate 66 to desired amount
-	if (gain < 66) {
-		int atten1 = (66-gain)/3;
-		int atten2 = (66-gain)/3;
-		int atten3 = (66-gain) - atten1 - atten2;
-
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c a -x ");
-		sprintf(buf + strlen(buf), "%i", atten1);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c a -y ");
-		sprintf(buf + strlen(buf), "%i", atten2);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c a -z ");
-		sprintf(buf + strlen(buf), "%i", atten3);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	}
 	return RETURN_SUCCESS;
 }
 
@@ -1088,101 +957,6 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_vga_freq (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -f ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_bypass (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -b ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_gain1 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 10)	gain = 3;
-	else if (gain <= 14) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_gain2 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -h ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_gain3 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -i ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_pgain (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 6)	gain = 0;
-	else 			gain = 1;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -p ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_atten1 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -x ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_atten2 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -y ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_rf_vga_atten3 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -z ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
@@ -1215,47 +989,10 @@ static int set_rx_b_rf_freq_varac (const char* data, char* ret) {
 }
 
 static int set_rx_b_rf_gain_val (const char* data, char* ret) {
-	// TODO: intelligent gain, maximize SNR
-
-	int gain;
-	sscanf(data, "%i", &gain);
-
-	// set the total VGA gain to 66 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -g 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c b -g ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -h 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -i 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// attenuate 66 to desired amount
-	if (gain < 66) {
-		int atten1 = (66-gain)/3;
-		int atten2 = (66-gain)/3;
-		int atten3 = (66-gain) - atten1 - atten2;
-
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c b -x ");
-		sprintf(buf + strlen(buf), "%i", atten1);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c b -y ");
-		sprintf(buf + strlen(buf), "%i", atten2);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c b -z ");
-		sprintf(buf + strlen(buf), "%i", atten3);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	}
-
 	return RETURN_SUCCESS;
 }
 
@@ -1797,101 +1534,6 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_vga_freq (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -f ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_bypass (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -b ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_gain1 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 10)	gain = 3;
-	else if (gain <= 14) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_gain2 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -h ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_gain3 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -i ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_pgain (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 6)	gain = 0;
-	else 			gain = 1;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -p ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_atten1 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -x ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_atten2 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -y ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_rf_vga_atten3 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -z ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
@@ -1924,46 +1566,10 @@ static int set_rx_c_rf_freq_varac (const char* data, char* ret) {
 }
 
 static int set_rx_c_rf_gain_val (const char* data, char* ret) {
-	// TODO: intelligent gain, maximize SNR
-
-	int gain;
-	sscanf(data, "%i", &gain);
-
-	// set the total VGA gain to 66 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -g 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c c -g ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -h 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -i 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// attenuate 66 to desired amount
-	if (gain < 66) {
-		int atten1 = (66-gain)/3;
-		int atten2 = (66-gain)/3;
-		int atten3 = (66-gain) - atten1 - atten2;
-
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c c -x ");
-		sprintf(buf + strlen(buf), "%i", atten1);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c c -y ");
-		sprintf(buf + strlen(buf), "%i", atten2);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c c -z ");
-		sprintf(buf + strlen(buf), "%i", atten3);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	}
 	return RETURN_SUCCESS;
 }
 
@@ -2504,101 +2110,6 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_vga_freq (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -f ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_bypass (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -b ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_gain1 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 10)	gain = 3;
-	else if (gain <= 14) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_gain2 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -h ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_gain3 (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 13)	gain = 3;
-	else if (gain <= 16)	gain = 2;
-	else if (gain <= 19) 	gain = 1;
-	else 			gain = 0;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -i ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_pgain (const char* data, char* ret) {
-	uint8_t gain;
-	sscanf(data, "%"SCNd8"", &gain);
-	if 	(gain <= 6)	gain = 0;
-	else 			gain = 1;
-
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -p ");
-	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_atten1 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -x ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_atten2 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -y ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_rf_vga_atten3 (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -z ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	return RETURN_SUCCESS;
-}
-
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
@@ -2631,46 +2142,10 @@ static int set_rx_d_rf_freq_varac (const char* data, char* ret) {
 }
 
 static int set_rx_d_rf_gain_val (const char* data, char* ret) {
-	// TODO: intelligent gain, maximize SNR
-
-	int gain;
-	sscanf(data, "%i", &gain);
-
-	// set the total VGA gain to 66 dB
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -g 0'\r");
+	strcpy(buf, "fwd -b 0 -m 'vga -c d -g ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -h 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -i 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	memset(buf, 0, MAX_PROP_LEN);
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	// attenuate 66 to desired amount
-	if (gain < 66) {
-		int atten1 = (66-gain)/3;
-		int atten2 = (66-gain)/3;
-		int atten3 = (66-gain) - atten1 - atten2;
-
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c d -x ");
-		sprintf(buf + strlen(buf), "%i", atten1);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c d -y ");
-		sprintf(buf + strlen(buf), "%i", atten2);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		memset(buf, 0, MAX_PROP_LEN);
-		strcpy(buf, "fwd -b 0 -m 'vga -c d -z ");
-		sprintf(buf + strlen(buf), "%i", atten3);
-		strcat(buf, "'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	}
 	return RETURN_SUCCESS;
 }
 
@@ -3183,15 +2658,6 @@ static prop_t property_table[] = {
 	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_a/link/port", get_invalid, set_tx_a_link_port, RW, NO_POLL, "42824"},
 	{"rx_a/pwr", get_invalid, set_rx_a_pwr, RW, NO_POLL, "1"},
-	{"rx_a/rf/vga/freq", get_invalid, set_rx_a_rf_vga_freq, RW, NO_POLL, "0"},
-	{"rx_a/rf/vga/bypass", get_invalid, set_rx_a_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_a/rf/vga/gain1", get_invalid, set_rx_a_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_a/rf/vga/gain2", get_invalid, set_rx_a_rf_vga_gain2, RW, NO_POLL, "15"},
-	{"rx_a/rf/vga/gain3", get_invalid, set_rx_a_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_a/rf/vga/pgain", get_invalid, set_rx_a_rf_vga_pgain, RW, NO_POLL, "9"},
-	{"rx_a/rf/vga/atten1", get_invalid, set_rx_a_rf_vga_atten1, RW, NO_POLL, "18"},
-	{"rx_a/rf/vga/atten2", get_invalid, set_rx_a_rf_vga_atten2, RW, NO_POLL, "18"},
-	{"rx_a/rf/vga/atten3", get_invalid, set_rx_a_rf_vga_atten3, RW, NO_POLL, "18"},
 	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/varac", get_invalid, set_rx_a_rf_freq_varac, RW, NO_POLL, "0"},
@@ -3254,15 +2720,6 @@ static prop_t property_table[] = {
 	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_b/link/port", get_invalid, set_tx_b_link_port, RW, NO_POLL, "42825"},
 	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "0"},
-	{"rx_b/rf/vga/freq", get_invalid, set_rx_b_rf_vga_freq, RW, NO_POLL, "0"},
-	{"rx_b/rf/vga/bypass", get_invalid, set_rx_b_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_b/rf/vga/gain1", get_invalid, set_rx_b_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_b/rf/vga/gain2", get_invalid, set_rx_b_rf_vga_gain2, RW, NO_POLL, "15"},
-	{"rx_b/rf/vga/gain3", get_invalid, set_rx_b_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_b/rf/vga/pgain", get_invalid, set_rx_b_rf_vga_pgain, RW, NO_POLL, "9"},
-	{"rx_b/rf/vga/atten1", get_invalid, set_rx_b_rf_vga_atten1, RW, NO_POLL, "18"},
-	{"rx_b/rf/vga/atten2", get_invalid, set_rx_b_rf_vga_atten2, RW, NO_POLL, "18"},
-	{"rx_b/rf/vga/atten3", get_invalid, set_rx_b_rf_vga_atten3, RW, NO_POLL, "18"},
 	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/varac", get_invalid, set_rx_b_rf_freq_varac, RW, NO_POLL, "0"},
@@ -3325,15 +2782,6 @@ static prop_t property_table[] = {
 	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_c/link/port", get_invalid, set_tx_c_link_port, RW, NO_POLL, "42826"},
 	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "0"},
-	{"rx_c/rf/vga/freq", get_invalid, set_rx_c_rf_vga_freq, RW, NO_POLL, "0"},
-	{"rx_c/rf/vga/bypass", get_invalid, set_rx_c_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_c/rf/vga/gain1", get_invalid, set_rx_c_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_c/rf/vga/gain2", get_invalid, set_rx_c_rf_vga_gain2, RW, NO_POLL, "15"},
-	{"rx_c/rf/vga/gain3", get_invalid, set_rx_c_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_c/rf/vga/pgain", get_invalid, set_rx_c_rf_vga_pgain, RW, NO_POLL, "9"},
-	{"rx_c/rf/vga/atten1", get_invalid, set_rx_c_rf_vga_atten1, RW, NO_POLL, "18"},
-	{"rx_c/rf/vga/atten2", get_invalid, set_rx_c_rf_vga_atten2, RW, NO_POLL, "18"},
-	{"rx_c/rf/vga/atten3", get_invalid, set_rx_c_rf_vga_atten3, RW, NO_POLL, "18"},
 	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/varac", get_invalid, set_rx_c_rf_freq_varac, RW, NO_POLL, "0"},
@@ -3396,15 +2844,6 @@ static prop_t property_table[] = {
 	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_d/link/port", get_invalid, set_tx_d_link_port, RW, NO_POLL, "42827"},
 	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "0"},
-	{"rx_d/rf/vga/freq", get_invalid, set_rx_d_rf_vga_freq, RW, NO_POLL, "0"},
-	{"rx_d/rf/vga/bypass", get_invalid, set_rx_d_rf_vga_bypass, RW, NO_POLL, "1"},
-	{"rx_d/rf/vga/gain1", get_invalid, set_rx_d_rf_vga_gain1, RW, NO_POLL, "9"},
-	{"rx_d/rf/vga/gain2", get_invalid, set_rx_d_rf_vga_gain2, RW, NO_POLL, "15"},
-	{"rx_d/rf/vga/gain3", get_invalid, set_rx_d_rf_vga_gain3, RW, NO_POLL, "12"},
-	{"rx_d/rf/vga/pgain", get_invalid, set_rx_d_rf_vga_pgain, RW, NO_POLL, "9"},
-	{"rx_d/rf/vga/atten1", get_invalid, set_rx_d_rf_vga_atten1, RW, NO_POLL, "18"},
-	{"rx_d/rf/vga/atten2", get_invalid, set_rx_d_rf_vga_atten2, RW, NO_POLL, "18"},
-	{"rx_d/rf/vga/atten3", get_invalid, set_rx_d_rf_vga_atten3, RW, NO_POLL, "18"},
 	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/varac", get_invalid, set_rx_d_rf_freq_varac, RW, NO_POLL, "0"},
