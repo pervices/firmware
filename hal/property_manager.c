@@ -177,6 +177,11 @@ static void init_radio_chain(void) {
 	strcpy(buf, "fpga -o\r");
 	send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 	usleep(1000000);
+	#ifdef DSP_NCO_OFFSET
+	write_hps_reg( "rxa0", 199911205);	// hardcoded 15 MHz
+	read_hps_reg ( "rxa4", &old_val);	// direction
+	write_hps_reg( "rxa4", old_val | 0x2000);
+	#endif
 
 	read_hps_reg ( "rxa4", &old_val);
 	write_hps_reg( "rxa4", old_val | 0x2);

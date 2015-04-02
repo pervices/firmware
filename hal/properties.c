@@ -373,12 +373,15 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint32_t freq;
-	//int i;
 	sscanf(data, "%"SCNd32"", &freq);
 
 	// check which band it resides on
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
+
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
@@ -389,6 +392,8 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	// read back the actual frequency
 	memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
 	recv_uart_comm(uart_fd, uart_ret_buf, &uart_ret_size, MAX_UART_RET_LEN);
+	
+	//int i;
 	//printf("Received from UART %"PRIu16" bytes: ", uart_ret_size);
 	//for (i = 0; i < uart_ret_size; i++)
 	//	printf("%c", uart_ret_buf[i]);
@@ -965,6 +970,10 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	// check which band it resides on
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
+
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
@@ -1543,6 +1552,10 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
 
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
+
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
@@ -2118,6 +2131,10 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	// check which band it resides on
 	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
 	else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
+
+	#ifdef DSP_NCO_OFFSET
+	freq -= 15000000;	// 15MHz offset
+	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
