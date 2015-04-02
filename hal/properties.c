@@ -65,10 +65,10 @@ static int set_tx_a_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -246,7 +246,7 @@ static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txa0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "txa0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
@@ -512,7 +512,7 @@ static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxa0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "rxa0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
@@ -657,10 +657,10 @@ static int set_tx_b_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c b -e 3 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 3 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -838,7 +838,7 @@ static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txb0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "txb0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
@@ -1094,7 +1094,7 @@ static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxb0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "rxb0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
@@ -1239,10 +1239,10 @@ static int set_tx_c_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1419,7 +1419,7 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txc0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "txc0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
@@ -1675,7 +1675,7 @@ static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxc0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "rxc0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
@@ -1820,10 +1820,10 @@ static int set_tx_d_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
-	//strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
-	//strcat(buf, data);
-	//strcat(buf, "'\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2000,7 +2000,7 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txd0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "txd0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
@@ -2255,7 +2255,7 @@ static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxd0", (freq * pow(2,32)) / RESAMP_SAMPLE_RATE);
+	write_hps_reg( "rxd0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
 
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
