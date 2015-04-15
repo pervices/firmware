@@ -32,7 +32,7 @@ SUBDIRS +=
 
 OBJECTS = $(addprefix $(OUTDIR)/obj/,$(SOURCES:.c=.o))
 
-all: MAKE_OUTDIR MAKE_SUBDIR $(SOURCES) $(OBJECTS)
+all: MAKE_SUBDIR $(OBJECTS)
 
 # Generates all of the object files from the source files
 $(OUTDIR)/obj/%.o: %.c
@@ -40,7 +40,7 @@ $(OUTDIR)/obj/%.o: %.c
 	@cp -f $< $(OUTDIR)/src
 
 # Recursive build of all the sub_directories
-MAKE_SUBDIR:
+MAKE_SUBDIR: MAKE_OUTDIR
 	@$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile;)
 
 # Copies header files over

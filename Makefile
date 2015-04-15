@@ -52,7 +52,7 @@ INCLUDES += -I$(OUTDIR)/inc
 # Build order is: left --> right
 SUBDIRS += common hal parser
 
-all: MAKE_OUTDIR MAKE_SUBDIR $(SOURCES) $(EXECUTABLE)
+all: $(EXECUTABLE)
 
 # Links all the object files together for output
 define AUTO_TARGET
@@ -62,12 +62,12 @@ endef
 $(foreach TARGET, $(TARGETS), $(eval $(call AUTO_TARGET, $(TARGET)) ))
 
 # Generates all of the object files from the source files
-$(OUTDIR)/obj/main/%.o: %.c
+$(OUTDIR)/obj/main/%.o: %.c | MAKE_SUBDIR
 	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
 	@cp -f $< $(OUTDIR)/src
 
 # Recursive build of all the sub_directories
-MAKE_SUBDIR:
+MAKE_SUBDIR: MAKE_OUTDIR
 	$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile;)
 
 # Generates the output directory
