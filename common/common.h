@@ -54,6 +54,7 @@
 #define BUF_SIZE 	( 100 )
 #define MAX_PATH_LEN	( 1024 )
 #define MAX_PROP_LEN	( 1024 )
+#define MAX_UART_LEN	( 8192 )
 
 // macro for string comparison
 #define EQUAL_STR(VAR, STR)		(strncmp(VAR, STR, strlen(STR)) == 0)

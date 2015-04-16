@@ -26,18 +26,26 @@
 
 #define ARG_MCU_SILENT	"-s"
 #define ARG_MCU_CONSOLE	"-c"
-#define ARG_MCU_FLUSH	"-f"
+#define ARG_MCU_FWD	"-f"
 #define ARG_MCU_TIMEOUT	"-t"
 
 #define DEFAULT_TIMEOUT 100	// 100 milliseconds
 
 static int uart_comm_fd;
-static char buf[MAX_PROP_LEN] = {};
+static char buf[MAX_UART_LEN] = {};
 static boolean silent = FALSE;
 static boolean console = FALSE;
-static boolean flush = FALSE;
+static boolean fwd = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
 static uint16_t buf_size;
+
+static int contains (const char* str, char letter, int size) {
+	int i = 0, cnt = 0;
+	for (i = 0; i < size; i++) {
+		if (str[i] == letter) cnt++;
+	}
+	return cnt;
+}
 
 int main(int argc, char *argv[]) {
 	// initialize the comm port
@@ -58,9 +66,9 @@ int main(int argc, char *argv[]) {
 		} else if (strcmp(argv[i], ARG_MCU_CONSOLE) == 0) {
 			console = TRUE;
 
-		// if argument to flush prior to executing the transaction
-		} else if (strcmp(argv[i], ARG_MCU_FLUSH) == 0) {
-			flush = TRUE;
+		// if argument to specify this is a forward command
+		} else if (strcmp(argv[i], ARG_MCU_FWD) == 0) {
+			fwd = TRUE;
 
 		// if argument to reconfigure the timeout
 		} else if (strcmp(argv[i], ARG_MCU_TIMEOUT) == 0 && (i != argc - 1)) {
@@ -71,24 +79,43 @@ int main(int argc, char *argv[]) {
 		} else {
 			printf("Usage: mcu [%s] [%s] [%s] [%s milliseconds]\n",
 				ARG_MCU_SILENT, ARG_MCU_CONSOLE,
-				ARG_MCU_FLUSH, ARG_MCU_TIMEOUT);
+				ARG_MCU_FWD, ARG_MCU_TIMEOUT);
 			return 0;
 		}
 	}
 
-	// if flush, clear out the serial port
-	if (flush) flush_uart_comm(uart_comm_fd);
 
+	// initiate UART transaction
 	do {
 		// read in the input from stdin
-		fgets(buf, MAX_PROP_LEN, stdin);
+		fgets(buf, MAX_UART_LEN, stdin);
 		strcat(buf, "\r");
 		send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 
 		// if not silent, read the output
 		if (!silent) {
-			memset(buf, 0, MAX_PROP_LEN);
-			recv_uart_comm(uart_comm_fd, (uint8_t*)buf, &buf_size, MAX_PROP_LEN);
+			memset(buf, 0, MAX_UART_LEN);
+			uint16_t total_bytes = 0, cur_bytes = 0;
+
+			while (( contains(buf, '>', total_bytes) < 1 && fwd == FALSE) ||
+				(contains(buf, '>', total_bytes) < 2 && fwd == TRUE )) {
+			   if (recv_uart_comm(uart_comm_fd, ((uint8_t*)buf) + total_bytes,
+			   		&cur_bytes, MAX_UART_LEN - total_bytes)) {
+				return 0;
+			   }
+			   total_bytes += cur_bytes;
+			}
+
+			// if fwd, remove everything prior to the second message
+			if (fwd == TRUE) {
+				uint16_t pos = 0, real_size = 0;
+				while (buf[pos] != '>') pos++;
+				pos++;
+				real_size = total_bytes - pos;
+				memcpy(buf, buf + pos, real_size);
+				memset(buf + real_size, 0, MAX_UART_LEN - real_size);
+			}
+
 			printf("%s\n", buf);
 		}
 	} while (console);
