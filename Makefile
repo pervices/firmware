@@ -38,7 +38,7 @@ OBJECTS = $(addprefix $(OUTDIR)/obj/main/,$(SOURCES:.c=.o))
 export CRIMSON_ROOTDIR = $(shell pwd)
 
 # Output Executable
-EXECUTABLE = $(addprefix $(OUTDIR)/bin/,$(SOURCES:.c=))
+EXECS = $(addprefix $(OUTDIR)/bin/,$(SOURCES:.c=))
 
 # Source Files
 SOURCES = server.c mem.c mcu.c
@@ -52,7 +52,10 @@ INCLUDES += -I$(OUTDIR)/inc
 # Build order is: left --> right
 SUBDIRS += common hal parser
 
-all: $(EXECUTABLE)
+all: $(EXECS)
+
+install: $(EXECS)
+	$(foreach EXEC, $(EXECS), install -m 0755 $(EXEC) /usr/bin;)
 
 # Links all the object files together for output
 define AUTO_TARGET
