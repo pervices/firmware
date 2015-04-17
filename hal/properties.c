@@ -151,7 +151,7 @@ static int set_tx_a_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%i", &gain);
 
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -v ");
-	sprintf(buf + strlen(buf), "%i", (gain * -1));
+	sprintf(buf + strlen(buf), "%i", (28-gain));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -743,7 +743,7 @@ static int set_tx_b_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%i", &gain);
 
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -v ");
-	sprintf(buf + strlen(buf), "%i", (gain * -1));
+	sprintf(buf + strlen(buf), "%i", (28-gain));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -1324,7 +1324,7 @@ static int set_tx_c_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%i", &gain);
 
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -v ");
-	sprintf(buf + strlen(buf), "%i", (gain * -1));
+	sprintf(buf + strlen(buf), "%i", (28-gain));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -1905,7 +1905,7 @@ static int set_tx_d_rf_gain_val (const char* data, char* ret) {
 	sscanf(data, "%i", &gain);
 
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -v ");
-	sprintf(buf + strlen(buf), "%i", (gain * -1));
+	sprintf(buf + strlen(buf), "%i", (28-gain));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -2652,7 +2652,7 @@ static prop_t property_table[] = {
 	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "-1"},
+	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_a/rf/board/status", get_tx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_a/rf/board/dump", get_invalid, set_tx_a_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_a/rf/board/test", get_invalid, set_tx_a_rf_board_test, WO, NO_POLL, "0"},
@@ -2714,7 +2714,7 @@ static prop_t property_table[] = {
 	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "-1"},
+	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_b/rf/board/status", get_tx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_b/rf/board/dump", get_invalid, set_tx_b_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_b/rf/board/test", get_invalid, set_tx_b_rf_board_test, WO, NO_POLL, "0"},
@@ -2776,7 +2776,7 @@ static prop_t property_table[] = {
 	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "-1"},
+	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_c/rf/board/status", get_tx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_c/rf/board/dump", get_invalid, set_tx_c_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_c/rf/board/test", get_invalid, set_tx_c_rf_board_test, WO, NO_POLL, "0"},
@@ -2838,7 +2838,7 @@ static prop_t property_table[] = {
 	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "0"},
-	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "-1"},
+	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_d/rf/board/status", get_tx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_d/rf/board/dump", get_invalid, set_tx_d_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_d/rf/board/test", get_invalid, set_tx_d_rf_board_test, WO, NO_POLL, "0"},
