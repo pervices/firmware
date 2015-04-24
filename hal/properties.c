@@ -115,8 +115,8 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	#endif
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
+	//else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
@@ -129,6 +129,14 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 
 static int set_tx_a_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_a_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -376,8 +384,8 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd32"", &freq);
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
+	//else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -404,6 +412,14 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 
 static int set_rx_a_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_a_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -450,6 +466,17 @@ static int set_rx_a_rf_board_led (const char* data, char* ret) {
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_a_dsp_signed (const char* data, char* ret) {
+   uint32_t old_val, sign;
+   sscanf(data, "%u", &sign);
+   sign = sign ? 0 : 1;
+
+	read_hps_reg( "rxa4", &old_val);
+   old_val &= ~(1 << 4);
+	write_hps_reg( "rxa4", old_val | (sign << 4));
 	return RETURN_SUCCESS;
 }
 
@@ -707,8 +734,8 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	#endif
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c b -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
+	//else				strcpy(buf, "fwd -b 1 -m 'rf -c b -b 0'\r");
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
@@ -721,6 +748,14 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 
 static int set_tx_b_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_b_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 1 -m 'rf -c b -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -968,8 +1003,8 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd32"", &freq);
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
+	//else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -986,6 +1021,14 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 
 static int set_rx_b_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_b_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1032,6 +1075,17 @@ static int set_rx_b_rf_board_led (const char* data, char* ret) {
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_b_dsp_signed (const char* data, char* ret) {
+   uint32_t old_val, sign;
+   sscanf(data, "%u", &sign);
+   sign = sign ? 0 : 1;
+
+	read_hps_reg( "rxb4", &old_val);
+   old_val &= ~(1 << 4);
+	write_hps_reg( "rxb4", old_val | (sign << 4));
 	return RETURN_SUCCESS;
 }
 
@@ -1289,8 +1343,8 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	#endif
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c c -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
+	//else				strcpy(buf, "fwd -b 1 -m 'rf -c c -b 0'\r");
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
@@ -1303,6 +1357,14 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 
 static int set_tx_c_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_c_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 1 -m 'rf -c c -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1549,8 +1611,8 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd32"", &freq);
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
+	//else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -1567,6 +1629,14 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 
 static int set_rx_c_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_c_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1613,6 +1683,17 @@ static int set_rx_c_rf_board_led (const char* data, char* ret) {
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_c_dsp_signed (const char* data, char* ret) {
+   uint32_t old_val, sign;
+   sscanf(data, "%u", &sign);
+   sign = sign ? 0 : 1;
+
+	read_hps_reg( "rxc4", &old_val);
+   old_val &= ~(1 << 4);
+	write_hps_reg( "rxc4", old_val | (sign << 4));
 	return RETURN_SUCCESS;
 }
 
@@ -1870,8 +1951,8 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	#endif
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
-	else				strcpy(buf, "fwd -b 1 -m 'rf -c d -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
+	//else				strcpy(buf, "fwd -b 1 -m 'rf -c d -b 0'\r");
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
@@ -1884,6 +1965,14 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 
 static int set_tx_d_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_tx_d_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 1 -m 'rf -c d -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2129,8 +2218,8 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	sscanf(data, "%"SCNd32"", &freq);
 
 	// check which band it resides on
-	if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
-	else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
+	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
+	//else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -2147,6 +2236,14 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 
 static int set_rx_d_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -l ");
+	strcat(buf, data);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_d_rf_freq_band (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2193,6 +2290,17 @@ static int set_rx_d_rf_board_led (const char* data, char* ret) {
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_rx_d_dsp_signed (const char* data, char* ret) {
+   uint32_t old_val, sign;
+   sscanf(data, "%u", &sign);
+   sign = sign ? 0 : 1;
+
+	read_hps_reg( "rxd4", &old_val);
+   old_val &= ~(1 << 4);
+	write_hps_reg( "rxd4", old_val | (sign << 4));
 	return RETURN_SUCCESS;
 }
 
@@ -2528,11 +2636,6 @@ static int set_fpga_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_rate (const char* data, char* ret) {
-	// TODO: Need to implement in FW
-	return RETURN_SUCCESS;
-}
-
 static int set_fpga_link_loopback (const char* data, char* ret) {
 	uint32_t enable;
 	sscanf(data, "%"SCNd32"", &enable);
@@ -2632,6 +2735,21 @@ static int set_fpga_link_sfpb_pay_len (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_fpga_link_net_dhcp_en (const char* data, char* ret) {
+
+	return RETURN_SUCCESS;
+}
+
+static int set_fpga_link_net_hostname (const char* data, char* ret) {
+
+	return RETURN_SUCCESS;
+}
+
+static int set_fpga_link_net_ip_addr (const char* data, char* ret) {
+
+	return RETURN_SUCCESS;
+}
+
 static int set_poll_en (const char* data, char* ret) {
 	// Insert MCU/MEM command
 
@@ -2650,6 +2768,7 @@ static prop_t property_table[] = {
 	{"tx_a/rf/dac/iqerr_phase", get_invalid, set_tx_a_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
+	{"tx_a/rf/freq/band", get_invalid, set_tx_a_rf_freq_band, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "0"},
 	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "14"},
@@ -2677,6 +2796,7 @@ static prop_t property_table[] = {
 	{"rx_a/pwr", get_invalid, set_rx_a_pwr, RW, NO_POLL, "1"},
 	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
+	{"rx_a/rf/freq/band", get_invalid, set_rx_a_rf_freq_band, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/varac", get_invalid, set_rx_a_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_a/rf/board/status", get_rx_a_rf_board_status, set_invalid, RO, POLL, "off"},
@@ -2684,6 +2804,7 @@ static prop_t property_table[] = {
 	{"rx_a/rf/board/test", get_invalid, set_rx_a_rf_board_test, WO, NO_POLL, "0"},
 	{"rx_a/rf/board/temp", get_rx_a_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_a/rf/board/led", get_invalid, set_rx_a_rf_board_led, WO, NO_POLL, "0"},
+	{"rx_a/dsp/signed", get_invalid, set_rx_a_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_a/dsp/freq", get_invalid, set_rx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "1258850"},
@@ -2712,6 +2833,7 @@ static prop_t property_table[] = {
 	{"tx_b/rf/dac/iqerr_phase", get_invalid, set_tx_b_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
+	{"tx_b/rf/freq/band", get_invalid, set_tx_b_rf_freq_band, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "0"},
 	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "14"},
@@ -2739,6 +2861,7 @@ static prop_t property_table[] = {
 	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
+	{"rx_b/rf/freq/band", get_invalid, set_rx_b_rf_freq_band, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/varac", get_invalid, set_rx_b_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_b/rf/board/status", get_rx_b_rf_board_status, set_invalid, RO, POLL, "off"},
@@ -2746,6 +2869,7 @@ static prop_t property_table[] = {
 	{"rx_b/rf/board/test", get_invalid, set_rx_b_rf_board_test, WO, NO_POLL, "0"},
 	{"rx_b/rf/board/temp", get_rx_b_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_b/rf/board/led", get_invalid, set_rx_b_rf_board_led, WO, NO_POLL, "0"},
+	{"rx_b/dsp/signed", get_invalid, set_rx_b_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_b/dsp/freq", get_invalid, set_rx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "1258850"},
@@ -2774,6 +2898,7 @@ static prop_t property_table[] = {
 	{"tx_c/rf/dac/iqerr_phase", get_invalid, set_tx_c_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
+	{"tx_c/rf/freq/band", get_invalid, set_tx_c_rf_freq_band, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "0"},
 	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "14"},
@@ -2801,6 +2926,7 @@ static prop_t property_table[] = {
 	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
+	{"rx_c/rf/freq/band", get_invalid, set_rx_c_rf_freq_band, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/varac", get_invalid, set_rx_c_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_c/rf/board/status", get_rx_c_rf_board_status, set_invalid, RO, POLL, "off"},
@@ -2808,6 +2934,7 @@ static prop_t property_table[] = {
 	{"rx_c/rf/board/test", get_invalid, set_rx_c_rf_board_test, WO, NO_POLL, "0"},
 	{"rx_c/rf/board/temp", get_rx_c_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_c/rf/board/led", get_invalid, set_rx_c_rf_board_led, WO, NO_POLL, "0"},
+	{"rx_c/dsp/signed", get_invalid, set_rx_c_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_c/dsp/freq", get_invalid, set_rx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "1258850"},
@@ -2836,6 +2963,7 @@ static prop_t property_table[] = {
 	{"tx_d/rf/dac/iqerr_phase", get_invalid, set_tx_d_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "945200000"},
 	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
+	{"tx_d/rf/freq/band", get_invalid, set_tx_d_rf_freq_band, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "0"},
 	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "14"},
@@ -2863,6 +2991,7 @@ static prop_t property_table[] = {
 	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "900200000"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
+	{"rx_d/rf/freq/band", get_invalid, set_rx_d_rf_freq_band, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/varac", get_invalid, set_rx_d_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_d/rf/board/status", get_rx_d_rf_board_status, set_invalid, RO, POLL, "off"},
@@ -2870,6 +2999,7 @@ static prop_t property_table[] = {
 	{"rx_d/rf/board/test", get_invalid, set_rx_d_rf_board_test, WO, NO_POLL, "0"},
 	{"rx_d/rf/board/temp", get_rx_d_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_d/rf/board/led", get_invalid, set_rx_d_rf_board_led, WO, NO_POLL, "0"},
+	{"rx_d/dsp/signed", get_invalid, set_rx_d_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_d/dsp/freq", get_invalid, set_rx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "1258850"},
@@ -2916,7 +3046,6 @@ static prop_t property_table[] = {
 	{"fpga/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "161"},
 	{"fpga/link/loopback", get_invalid, set_fpga_link_loopback, RW, NO_POLL, "0"},
 	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
 	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:00:00:00:00:00"},
@@ -2926,6 +3055,9 @@ static prop_t property_table[] = {
 	{"fpga/link/sfpb/mac_addr", get_invalid, set_fpga_link_sfpb_mac_addr, RW, NO_POLL, "aa:00:00:00:00:01"},
 	{"fpga/link/sfpb/ver", get_invalid, set_fpga_link_sfpb_ver, RW, NO_POLL, "0"},
 	{"fpga/link/sfpb/pay_len", get_invalid, set_fpga_link_sfpb_pay_len, RW, NO_POLL, "1400"},
+	{"fpga/link/net/dhcp_en", get_invalid, set_fpga_link_net_dhcp_en, RW, NO_POLL, "0"},
+	{"fpga/link/net/hostname", get_invalid, set_fpga_link_net_hostname, RW, NO_POLL, "crimson"},
+	{"fpga/link/net/ip_addr", get_invalid, set_fpga_link_net_ip_addr, RW, NO_POLL, "192.168.10.2"},
 	{"poll_en", get_invalid, set_poll_en, RW, NO_POLL, "1"}
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
