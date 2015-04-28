@@ -252,8 +252,8 @@ int init_property(uint8_t options) {
 	build_tree();
 
 	// This is for errata fixing, remove [this] and [#include "mmap.h"] when fixed.
-	printf("- Initializing the radio chain...\n");
-	init_radio_chain();
+	//printf("- Initializing the radio chain...\n");
+	//init_radio_chain();
 
 	return RETURN_SUCCESS;
 }
