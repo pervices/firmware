@@ -38,6 +38,7 @@ static boolean console = FALSE;
 static boolean fwd = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
 static uint16_t buf_size;
+static char fwd_board = 0;
 
 static int contains (const char* str, char letter, int size) {
 	int i = 0, cnt = 0;
@@ -67,8 +68,21 @@ int main(int argc, char *argv[]) {
 			console = TRUE;
 
 		// if argument to specify this is a forward command
-		} else if (strcmp(argv[i], ARG_MCU_FWD) == 0) {
+		} else if (strcmp(argv[i], ARG_MCU_FWD) == 0  && (i != argc - 1)) {
 			fwd = TRUE;
+         i++;
+         if (argv[i][0] == 't') {
+            fwd_board = '1';
+         } else if (argv[i][0] == 'r') {
+            fwd_board = '0';
+         } else if (argv[i][0] == 's') {
+            fwd_board = '2';
+         } else {
+			   printf("Usage: mcu [%s] [%s] [%s [t|r|s]] [%s milliseconds]\n",
+				   ARG_MCU_SILENT, ARG_MCU_CONSOLE,
+				   ARG_MCU_FWD, ARG_MCU_TIMEOUT);
+            return 0;
+         }
 
 		// if argument to reconfigure the timeout
 		} else if (strcmp(argv[i], ARG_MCU_TIMEOUT) == 0 && (i != argc - 1)) {
@@ -77,19 +91,26 @@ int main(int argc, char *argv[]) {
 
 		// usage menu
 		} else {
-			printf("Usage: mcu [%s] [%s] [%s] [%s milliseconds]\n",
+			printf("Usage: mcu [%s] [%s] [%s [t|r|s]] [%s milliseconds]\n",
 				ARG_MCU_SILENT, ARG_MCU_CONSOLE,
 				ARG_MCU_FWD, ARG_MCU_TIMEOUT);
 			return 0;
 		}
 	}
 
-
 	// initiate UART transaction
 	do {
-		// read in the input from stdin
-		fgets(buf, MAX_UART_LEN, stdin);
-		strcat(buf, "\r");
+      // read in the input from stdin      
+      if (fwd == TRUE) {
+         strcpy(buf, "fwd -b   -m '");
+         buf[7] = fwd_board;
+		   fgets(buf + 13, MAX_UART_LEN, stdin);
+         strcat(buf, "'\r");
+      } else {
+		   fgets(buf, MAX_UART_LEN, stdin);
+   		strcat(buf, "\r");
+      }
+
 		send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
 
 		// if not silent, read the output
