@@ -242,13 +242,13 @@ static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -256,7 +256,7 @@ static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
-	write_hps_reg( "txa4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "txa4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -539,13 +539,13 @@ static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -553,7 +553,7 @@ static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
-	write_hps_reg( "rxa4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "rxa4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -893,13 +893,13 @@ static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -907,7 +907,7 @@ static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
-	write_hps_reg( "txb4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "txb4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -1182,13 +1182,13 @@ static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -1196,7 +1196,7 @@ static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
-	write_hps_reg( "rxb4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "rxb4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -1535,13 +1535,13 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -1549,7 +1549,7 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
-	write_hps_reg( "txc4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "txc4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -1810,13 +1810,13 @@ static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -1824,7 +1824,7 @@ static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
-	write_hps_reg( "rxc4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "rxc4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -2165,13 +2165,13 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -2179,7 +2179,7 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
-	write_hps_reg( "txd4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "txd4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -2440,13 +2440,13 @@ static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 0;
+		direction = 1;
 	} else if (data[0] == '+') {
 		sscanf(data + 1, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	} else {
 		sscanf(data, "%"SCNd32"", &freq);
-		direction = 1;
+		direction = 0;
 	}
 
 	// write NCO adj
@@ -2454,7 +2454,7 @@ static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
-	write_hps_reg( "rxd4", (old_val & ~(0x1 << 3) ) | (direction << 3));
+	write_hps_reg( "rxd4", (old_val & ~(0x1 << 13) ) | (direction << 13));
 	return RETURN_SUCCESS;
 }
 
@@ -2910,7 +2910,7 @@ static prop_t property_table[] = {
 	{"rx_a/dsp/freq", get_invalid, set_rx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "1258850"},
-	{"rx_a/dsp/nco_adj", get_invalid, set_rx_a_dsp_nco_adj, RW, NO_POLL, "15000000"},
+	{"rx_a/dsp/nco_adj", get_invalid, set_rx_a_dsp_nco_adj, RW, NO_POLL, "-15000000"},
 	{"rx_a/dsp/iqerr_gain", get_invalid, set_rx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_a/dsp/iqerr_phase", get_invalid, set_rx_a_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_a/dsp/rstreq", get_invalid, set_rx_a_dsp_rstreq, WO, NO_POLL, "0"},
@@ -2976,7 +2976,7 @@ static prop_t property_table[] = {
 	{"rx_b/dsp/freq", get_invalid, set_rx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "1258850"},
-	{"rx_b/dsp/nco_adj", get_invalid, set_rx_b_dsp_nco_adj, RW, NO_POLL, "15000000"},
+	{"rx_b/dsp/nco_adj", get_invalid, set_rx_b_dsp_nco_adj, RW, NO_POLL, "-15000000"},
 	{"rx_b/dsp/iqerr_gain", get_invalid, set_rx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_b/dsp/iqerr_phase", get_invalid, set_rx_b_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_b/dsp/rstreq", get_invalid, set_rx_b_dsp_rstreq, WO, NO_POLL, "0"},
@@ -3042,7 +3042,7 @@ static prop_t property_table[] = {
 	{"rx_c/dsp/freq", get_invalid, set_rx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "1258850"},
-	{"rx_c/dsp/nco_adj", get_invalid, set_rx_c_dsp_nco_adj, RW, NO_POLL, "15000000"},
+	{"rx_c/dsp/nco_adj", get_invalid, set_rx_c_dsp_nco_adj, RW, NO_POLL, "-15000000"},
 	{"rx_c/dsp/iqerr_gain", get_invalid, set_rx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_c/dsp/iqerr_phase", get_invalid, set_rx_c_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_c/dsp/rstreq", get_invalid, set_rx_c_dsp_rstreq, WO, NO_POLL, "0"},
@@ -3108,7 +3108,7 @@ static prop_t property_table[] = {
 	{"rx_d/dsp/freq", get_invalid, set_rx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "1258850"},
-	{"rx_d/dsp/nco_adj", get_invalid, set_rx_d_dsp_nco_adj, RW, NO_POLL, "15000000"},
+	{"rx_d/dsp/nco_adj", get_invalid, set_rx_d_dsp_nco_adj, RW, NO_POLL, "-15000000"},
 	{"rx_d/dsp/iqerr_gain", get_invalid, set_rx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
 	{"rx_d/dsp/iqerr_phase", get_invalid, set_rx_d_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_d/dsp/rstreq", get_invalid, set_rx_d_dsp_rstreq, WO, NO_POLL, "0"},
