@@ -330,6 +330,12 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
       usleep(500000);
 
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
+
       // set all active DAC's to demo mode
       for (i = 0; i < NUM_CHANNELS; i++) {
          if (tx_power[i] == PWR_ON) {
@@ -650,6 +656,12 @@ static int set_rx_a_pwr (const char* data, char* ret) {
 		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
       usleep(500000);
+
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
 
       // set all active DAC's to demo mode
       for (i = 0; i < NUM_CHANNELS; i++) {
@@ -981,6 +993,12 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
       usleep(500000);
 
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
+
       // set all active DAC's to demo mode
       for (i = 0; i < NUM_CHANNELS; i++) {
          if (tx_power[i] == PWR_ON) {
@@ -1293,6 +1311,12 @@ static int set_rx_b_pwr (const char* data, char* ret) {
 		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
       usleep(500000);
+
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
 
       // set all active DAC's to demo mode
       for (i = 0; i < NUM_CHANNELS; i++) {
@@ -1607,6 +1631,7 @@ static int set_tx_c_link_port (const char* data, char* ret) {
 static int set_tx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
+   uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
@@ -1615,37 +1640,56 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
-		// set the board to mute
-		strcpy(buf, "fwd -b 1 -m 'board -c c -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		tx_power[2] = PWR_ON;
 
-		// put the board in a known state prior to putting it in demo
-		// (equivalent to resetting the board)
-		strcpy(buf, "fwd -b 1 -m 'board -c c -i'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// put the board in demo mode, (need to send it 2 times, errata)
+      // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+      usleep(500000);
 
-		// re-send JESD sync
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
+
+      // set all active DAC's to demo mode
+      for (i = 0; i < NUM_CHANNELS; i++) {
+         if (tx_power[i] == PWR_ON) {
+	         strcpy(buf, "fwd -b 1 -m 'power -c ");
+            strcat(buf, chan_letter[i]);
+         	strcat(buf, " -d 1'\r");
+   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+         }
+      }
+
+      // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable the DSP cores
-		read_hps_reg ( "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | 0x2);
-		write_hps_reg( "txc4", old_val & (~0x2));
-		read_hps_reg ( "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | 0x2);
-		write_hps_reg( "rxc4", old_val & (~0x2));
+		// enable active dsp channels, and reset the DSP
+      for(i = 0; i < NUM_CHANNELS; i++) {
+         if (tx_power[i] == PWR_ON) {
+            read_hps_reg ( reg4[i+4], &old_val);
+	         write_hps_reg( reg4[i+4], old_val | 0x100);
+        		read_hps_reg ( reg4[i+4], &old_val);
+   		   write_hps_reg( reg4[i+4], old_val | 0x2);
+	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
+         }
+         if (rx_power[i] == PWR_ON) {
+      		read_hps_reg ( reg4[i], &old_val);
+		      write_hps_reg( reg4[i], old_val | 0x100);
+        		read_hps_reg ( reg4[i], &old_val);
+   		   write_hps_reg( reg4[i], old_val | 0x2);
+	      	write_hps_reg( reg4[i], old_val & (~0x2));
+         }
+      }
 
-		// enable 10G transmission
-		read_hps_reg ( "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | 0x100);
-
-		tx_power[2] = PWR_ON;
+	   #ifdef DSP_NCO_OFFSET
+   	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n 15'\r");
+   	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   	usleep(500000);
+   	#endif
 
 	// power off
 	} else {
@@ -1921,6 +1965,12 @@ static int set_rx_c_pwr (const char* data, char* ret) {
 		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
       usleep(500000);
+
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
 
       // set all active DAC's to demo mode
       for (i = 0; i < NUM_CHANNELS; i++) {
@@ -2237,6 +2287,7 @@ static int set_tx_d_link_port (const char* data, char* ret) {
 static int set_tx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
+   uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
@@ -2245,37 +2296,56 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 
 	// power on
 	if (power >= PWR_ON) {
-		// set the board to mute
-		strcpy(buf, "fwd -b 1 -m 'board -c d -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		tx_power[3] = PWR_ON;
 
-		// put the board in a known state prior to putting it in demo
-		// (equivalent to resetting the board)
-		strcpy(buf, "fwd -b 1 -m 'board -c d -i'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-		// put the board in demo mode, (need to send it 2 times, errata)
+      // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+      usleep(500000);
 
-		// re-send JESD sync
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
+
+      // set all active DAC's to demo mode
+      for (i = 0; i < NUM_CHANNELS; i++) {
+         if (tx_power[i] == PWR_ON) {
+	         strcpy(buf, "fwd -b 1 -m 'power -c ");
+            strcat(buf, chan_letter[i]);
+         	strcat(buf, " -d 1'\r");
+   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+         }
+      }
+
+      // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-		// enable the DSP cores
-		read_hps_reg ( "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | 0x2);
-		write_hps_reg( "txd4", old_val & (~0x2));
-		read_hps_reg ( "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | 0x2);
-		write_hps_reg( "rxd4", old_val & (~0x2));
+		// enable active dsp channels, and reset the DSP
+      for(i = 0; i < NUM_CHANNELS; i++) {
+         if (tx_power[i] == PWR_ON) {
+            read_hps_reg ( reg4[i+4], &old_val);
+	         write_hps_reg( reg4[i+4], old_val | 0x100);
+        		read_hps_reg ( reg4[i+4], &old_val);
+   		   write_hps_reg( reg4[i+4], old_val | 0x2);
+	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
+         }
+         if (rx_power[i] == PWR_ON) {
+      		read_hps_reg ( reg4[i], &old_val);
+		      write_hps_reg( reg4[i], old_val | 0x100);
+        		read_hps_reg ( reg4[i], &old_val);
+   		   write_hps_reg( reg4[i], old_val | 0x2);
+	      	write_hps_reg( reg4[i], old_val & (~0x2));
+         }
+      }
 
-		// enable 10G transmission
-		read_hps_reg ( "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | 0x100);
-
-		tx_power[3] = PWR_ON;
+	   #ifdef DSP_NCO_OFFSET
+   	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 0 -n 15'\r");
+   	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   	usleep(500000);
+   	#endif
 
 	// power off
 	} else {
@@ -2551,6 +2621,12 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
       usleep(500000);
+
+		// disable dsp channels
+      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+         read_hps_reg ( reg4[i], &old_val);
+		   write_hps_reg( reg4[i], old_val & ~0x100);
+      }
 
       // set all active DAC's to demo mode
       for (i = 0; i < NUM_CHANNELS; i++) {
