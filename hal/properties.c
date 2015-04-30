@@ -1046,8 +1046,6 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 		// diable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
 		write_hps_reg( "txb4", old_val | 0x2);
-		read_hps_reg ( "rxb4", &old_val);
-		write_hps_reg( "rxb4", old_val | 0x2);
 
 		// disable 10G transmission
 		read_hps_reg ( "txb4", &old_val);
@@ -1700,8 +1698,6 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 		// diable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
 		write_hps_reg( "txc4", old_val | 0x2);
-		read_hps_reg ( "rxc4", &old_val);
-		write_hps_reg( "rxc4", old_val | 0x2);
 
 		// disable 10G transmission
 		read_hps_reg ( "txc4", &old_val);
@@ -2017,8 +2013,6 @@ static int set_rx_c_pwr (const char* data, char* ret) {
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
-		read_hps_reg ( "txc4", &old_val);
-		write_hps_reg( "txc4", old_val | 0x2);
 		read_hps_reg ( "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val | 0x2);
 
@@ -2356,8 +2350,6 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 		// diable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
 		write_hps_reg( "txd4", old_val | 0x2);
-		read_hps_reg ( "rxd4", &old_val);
-		write_hps_reg( "rxd4", old_val | 0x2);
 
 		// disable 10G transmission
 		read_hps_reg ( "txd4", &old_val);
@@ -2673,8 +2665,6 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
-		read_hps_reg ( "txd4", &old_val);
-		write_hps_reg( "txd4", old_val | 0x2);
 		read_hps_reg ( "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val | 0x2);
 
