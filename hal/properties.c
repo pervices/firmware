@@ -42,6 +42,8 @@ static uint8_t rx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 static uint8_t tx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 const static char* chan_letter[] = {"a", "b", "c", "d"};
 const static char* reg4[] = {"rxa4", "rxb4", "rxc4", "rxd4", "txa4", "txb4", "txc4", "txd4"};
+static int i_bias[] = {17, 17, 17, 17};
+static int q_bias[] = {17, 17, 17, 17};
 
 // state variables
 static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
@@ -142,12 +144,24 @@ static int set_tx_a_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_tx_a_rf_freq_i_bias (const char* data, char* ret) {
-	// TODO: MCU code
+   sscanf(data, "%i", &(i_bias[0]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c a -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[0]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[0]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_a_rf_freq_q_bias (const char* data, char* ret) {
-	// TODO: MCU code
+   sscanf(data, "%i", &(q_bias[0]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c a -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[0]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[0]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -805,13 +819,24 @@ static int set_tx_b_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_freq_i_bias (const char* data, char* ret) {
-	// TODO: MCU code
-
+   sscanf(data, "%i", &(i_bias[1]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c b -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[1]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[1]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_b_rf_freq_q_bias (const char* data, char* ret) {
-	// TODO: MCU code
+   sscanf(data, "%i", &(q_bias[1]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c b -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[1]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[1]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1458,12 +1483,24 @@ static int set_tx_c_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_tx_c_rf_freq_i_bias (const char* data, char* ret) {
-	// TODO: MCU code
+   sscanf(data, "%i", &(i_bias[2]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c c -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[2]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[2]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_c_rf_freq_q_bias (const char* data, char* ret) {
-	// TODO: MCU code
+   sscanf(data, "%i", &(q_bias[2]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c c -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[2]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[2]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2110,12 +2147,24 @@ static int set_tx_d_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_freq_i_bias (const char* data, char* ret) {
-	// TODO: MCU code
+   sscanf(data, "%i", &(i_bias[3]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c d -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[3]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[3]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_tx_d_rf_freq_q_bias (const char* data, char* ret) {
-	// TODO: MCU code
+   sscanf(data, "%i", &(q_bias[3]));
+   strcpy(buf, "fwd -b 1 -m 'rf -c d -i ");
+   sprintf(buf + strlen(buf), "%i", i_bias[3]);
+   strcat(buf, " -q ");
+   sprintf(buf + strlen(buf), "%i", q_bias[3]);
+   strcat(buf, " -m'\r");
+   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2945,8 +2994,8 @@ static prop_t property_table[] = {
 	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/band", get_invalid, set_tx_a_rf_freq_band, RW, NO_POLL, "1"},
-	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "0"},
-	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "0"},
+	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "17"},
+	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_a/board/status", get_tx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_a/board/dump", get_invalid, set_tx_a_rf_board_dump, WO, NO_POLL, "0"},
@@ -3011,8 +3060,8 @@ static prop_t property_table[] = {
 	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/band", get_invalid, set_tx_b_rf_freq_band, RW, NO_POLL, "1"},
-	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "0"},
-	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "0"},
+	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "17"},
+	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_b/board/status", get_tx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_b/board/dump", get_invalid, set_tx_b_rf_board_dump, WO, NO_POLL, "0"},
@@ -3077,8 +3126,8 @@ static prop_t property_table[] = {
 	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/band", get_invalid, set_tx_c_rf_freq_band, RW, NO_POLL, "1"},
-	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "0"},
-	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "0"},
+	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "17"},
+	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_c/board/status", get_tx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_c/board/dump", get_invalid, set_tx_c_rf_board_dump, WO, NO_POLL, "0"},
@@ -3143,8 +3192,8 @@ static prop_t property_table[] = {
 	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/band", get_invalid, set_tx_d_rf_freq_band, RW, NO_POLL, "1"},
-	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "0"},
-	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "0"},
+	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "17"},
+	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "14"},
 	{"tx_d/board/status", get_tx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_d/board/dump", get_invalid, set_tx_d_rf_board_dump, WO, NO_POLL, "0"},
