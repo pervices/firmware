@@ -726,7 +726,7 @@ static int set_tx_b_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 3 -n ");
+	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2031,7 +2031,7 @@ static int set_tx_d_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 3 -n ");
+	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 1 -n ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2708,14 +2708,22 @@ static int set_time_source_rate (const char* data, char* ret) {
 }
 
 static int set_time_source_vco (const char* data, char* ret) {
-	// Insert MCU/MEM command
-
+	if (strcmp(data, "external") == 0) {
+		strcpy(buf, "fwd -b 2 -m 'clk -v 1'\r");
+	} else if (strcmp(data, "internal") == 0) {
+		strcpy(buf, "fwd -b 2 -m 'clk -v 0'\r");
+	}
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int set_time_source_sync (const char* data, char* ret) {
-	// Insert MCU/MEM command
-
+	if (strcmp(data, "external") == 0) {
+		strcpy(buf, "fwd -b 2 -m 'clk -n 1'\r");
+	} else if (strcmp(data, "internal") == 0) {
+		strcpy(buf, "fwd -b 2 -m 'clk -n 0'\r");
+	}
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
