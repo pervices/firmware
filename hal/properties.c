@@ -1604,7 +1604,7 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txc0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "txc0", (freq * pow(2,32)) / (BASE_SAMPLE_RATE / 4));
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
@@ -2268,7 +2268,7 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txd0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "txd0", (freq * pow(2,32)) / (BASE_SAMPLE_RATE / 4));
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
