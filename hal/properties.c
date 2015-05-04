@@ -2869,6 +2869,11 @@ static int set_fpga_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int set_fpga_link_rate (const char* data, char* ret) {
+   // TODO: Need to implement in FW
+	return RETURN_SUCCESS;
+}
+
 static int set_fpga_link_sfpa_ip_addr (const char* data, char* ret) {
 	uint32_t ip[4];
 	if (ipver[0] == IPVER_IPV4) {
@@ -3275,6 +3280,7 @@ static prop_t property_table[] = {
 	{"fpga/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+   {"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "1250000000"},      // BPS (10G/8)
 	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
 	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:00:00:00:00:00"},
 	{"fpga/link/sfpa/ver", get_invalid, set_fpga_link_sfpa_ver, RW, NO_POLL, "0"},
