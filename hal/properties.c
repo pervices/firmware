@@ -107,8 +107,8 @@ static int set_tx_a_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_a_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -120,7 +120,7 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -410,8 +410,8 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
@@ -423,7 +423,7 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -782,8 +782,8 @@ static int set_tx_b_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_b_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -795,7 +795,7 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1084,8 +1084,8 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_b_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
@@ -1097,7 +1097,7 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1446,8 +1446,8 @@ static int set_tx_c_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_c_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -1459,7 +1459,7 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1748,8 +1748,8 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_c_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
@@ -1761,7 +1761,7 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2110,8 +2110,8 @@ static int set_tx_d_rf_dac_iqerr_phase (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_d_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	#ifdef DSP_NCO_OFFSET
 	freq -= 15000000;	// 15MHz offset
@@ -2123,7 +2123,7 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2411,8 +2411,8 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 
 /* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_d_rf_freq_val (const char* data, char* ret) {
-	uint32_t freq;
-	sscanf(data, "%"SCNd32"", &freq);
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
 
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
@@ -2424,7 +2424,7 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", freq / 1000);
+	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
