@@ -48,6 +48,34 @@ static int q_bias[] = {17, 17, 17, 17};
 // state variables
 static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
 
+// helper function to find the optimal value for the sample rate blocks
+static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err) {
+   uint16_t tot_factor = floor(base_rate / rate);
+   uint16_t max_factor = 256;
+   uint16_t min_factor = 1;
+
+   // error bounds check
+   if (tot_factor > max_factor * max_factor || tot_factor < min_factor * min_factor)
+      return 0xffff;
+
+   double min_error = rate;
+   uint16_t optimal = 0;
+
+   uint32_t val = 0;
+   for (;val <= 0xffff; val++) {
+      uint16_t first  = (((val >> 0) & 0xff) + 1);
+      uint16_t second = (((val >> 8) & 0xff) + 1);
+      double error  = fabs( (base_rate / (double)(first * second)) - rate);
+      if (error < min_error) {
+         optimal = val;
+         min_error = error;
+      }
+   }
+
+   if (err) *err = min_error;
+   return optimal;
+}
+
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
 static int get_invalid (const char* data, char* ret) {
@@ -218,31 +246,28 @@ static int set_tx_a_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_tx_a_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "txa1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "txa1", resamp_factor);
 		read_hps_reg(  "txa4", &old_val);
 		write_hps_reg( "txa4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "txa1", base_decim);
+		write_hps_reg( "txa1", base_factor);
 		read_hps_reg(  "txa4", &old_val);
 		write_hps_reg( "txa4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
@@ -521,31 +546,28 @@ static int set_rx_a_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_rx_a_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "rxa1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "rxa1", resamp_factor);
 		read_hps_reg(  "rxa4", &old_val);
 		write_hps_reg( "rxa4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "rxa1", base_decim);
+		write_hps_reg( "rxa1", base_factor);
 		read_hps_reg(  "rxa4", &old_val);
 		write_hps_reg( "rxa4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
@@ -892,31 +914,28 @@ static int set_tx_b_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_tx_b_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "txb1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "txb1", resamp_factor);
 		read_hps_reg(  "txb4", &old_val);
 		write_hps_reg( "txb4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "txb1", base_decim);
+		write_hps_reg( "txb1", base_factor);
 		read_hps_reg(  "txb4", &old_val);
 		write_hps_reg( "txb4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
@@ -1185,31 +1204,28 @@ static int set_rx_b_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_rx_b_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "rxb1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "rxb1", resamp_factor);
 		read_hps_reg(  "rxb4", &old_val);
 		write_hps_reg( "rxb4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "rxb1", base_decim);
+		write_hps_reg( "rxb1", base_factor);
 		read_hps_reg(  "rxb4", &old_val);
 		write_hps_reg( "rxb4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
@@ -1556,31 +1572,28 @@ static int set_tx_c_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_tx_c_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "txc1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "txc1", resamp_factor);
 		read_hps_reg(  "txc4", &old_val);
 		write_hps_reg( "txc4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "txc1", base_decim);
+		write_hps_reg( "txc1", base_factor);
 		read_hps_reg(  "txc4", &old_val);
 		write_hps_reg( "txc4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
@@ -1849,31 +1862,28 @@ static int set_rx_c_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_rx_c_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "rxc1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "rxc1", resamp_factor);
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "rxc1", base_decim);
+		write_hps_reg( "rxc1", base_factor);
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
@@ -2220,31 +2230,28 @@ static int set_tx_d_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_tx_d_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "txd1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "txd1", resamp_factor);
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "txd1", base_decim);
+		write_hps_reg( "txd1", base_factor);
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
@@ -2513,31 +2520,28 @@ static int set_rx_d_dsp_gain (const char* data, char* ret) {
 }
 
 static int set_rx_d_dsp_rate (const char* data, char* ret) {
-	double rate;
-	double base_rate_err, resamp_rate_err;
 	uint32_t old_val;
-	int base_decim, resamp_decim;
+   uint16_t base_factor, resamp_factor;
+   double base_err, resamp_err;
+	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base and adj rates
-	base_decim = (int)floor(BASE_SAMPLE_RATE / rate) - 1;
-	base_rate_err = (BASE_SAMPLE_RATE / (double)(base_decim + 1)) - rate;
-
-	resamp_decim = (int)floor(RESAMP_SAMPLE_RATE / rate) - 1;
-	resamp_rate_err = (RESAMP_SAMPLE_RATE / (double)(resamp_decim + 1)) - rate;
+   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate depending on which one is closer
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && fabs(resamp_rate_err) < fabs(base_rate_err)) {
-		write_hps_reg( "rxd1", resamp_decim);
+	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+		write_hps_reg( "rxd1", resamp_factor);
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(resamp_decim + 1));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
 	} else {
-		write_hps_reg( "rxd1", base_decim);
+		write_hps_reg( "rxd1", base_factor);
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(base_decim + 1));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
 	}
 
 	return RETURN_SUCCESS;
