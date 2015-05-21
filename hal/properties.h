@@ -23,6 +23,9 @@
 #include <stdio.h>
 #include <pwd.h>
 #include <math.h>
+#include <sys/ioctl.h>
+#include <arpa/inet.h>
+#include <net/if.h>
 #include "comm_manager.h"
 #include "common.h"
 

@@ -2975,12 +2975,35 @@ static int set_fpga_link_net_dhcp_en (const char* data, char* ret) {
 }
 
 static int set_fpga_link_net_hostname (const char* data, char* ret) {
+	// write to the file
+	char name[MAX_PROP_LEN] = {0};
+	char command[MAX_PROP_LEN] = {0};
+	sscanf(data, "%s", name);
+
+	strcpy(command, "echo ");
+	strcat(command, name);
+	strcat(command, " > /etc/hostname");
+	system(command);
 
 	return RETURN_SUCCESS;
 }
 
 static int set_fpga_link_net_ip_addr (const char* data, char* ret) {
+	// ensure that it is a valid IP address
+	char ip_address[MAX_PROP_LEN] = {0};
+	char command[MAX_PROP_LEN] = {0};
+	sscanf(data, "%s", ip_address);
 
+	struct sockaddr_in sa;
+	if (!inet_pton(AF_INET, ip_address, &(sa.sin_addr))) {
+		return RETURN_ERROR_PARAM;
+	}
+
+	// write to the file
+	strcpy(command, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/");
+	strcat(command, ip_address);
+	strcat(command,	"/ /etc/init.d/mcu_init.sh");
+	system(command);
 	return RETURN_SUCCESS;
 }
 
@@ -3284,7 +3307,7 @@ static prop_t property_table[] = {
 	{"fpga/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
 	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-   {"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "1250000000"},      // BPS (10G/8)
+	{"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "1250000000"},      // BPS (10G/8)
 	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
 	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:00:00:00:00:00"},
 	{"fpga/link/sfpa/ver", get_invalid, set_fpga_link_sfpa_ver, RW, NO_POLL, "0"},

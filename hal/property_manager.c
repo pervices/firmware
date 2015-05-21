@@ -121,6 +121,12 @@ static void init_prop_val(prop_t* prop) {
 	char path [MAX_PATH_LEN];
 	memset(path, 0, MAX_PATH_LEN);
 
+	// exceptions for values that must persist through hard resets
+	if (	strcmp(prop -> path, "fpga/link/net/hostname") == 0 ||
+		strcmp(prop -> path, "fpga/link/net/ip_addr") == 0 ) {
+		return;
+	}
+
 	// if not WO property
 	if  (prop -> permissions != WO) {
 		write_to_file(get_abs_path(prop, path), prop -> def_val);
