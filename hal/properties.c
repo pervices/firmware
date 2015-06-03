@@ -23,6 +23,9 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
+#define FWD_CMD 	1
+#define NO_FWD_CMD	0
+
 #define PWR_ON	1
 #define PWR_OFF	0
 
@@ -47,6 +50,46 @@ static int q_bias[] = {17, 17, 17, 17};
 
 // state variables
 static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
+
+// helper function to check if the buffer contains a character, strstr() won't work because no NULL terminator
+static int contains (uint8_t* buf, size_t len, uint8_t ch) {
+	int i = 0;
+	for (i = 0; i < len; i++) {
+		if (buf[i] == ch) return 1;
+	}
+	return 0;
+}
+
+// helper function to read back from UART after a UART command
+static int read_uart(int fwd) {
+	int counter = 0;
+
+	// read uart return messages
+	memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
+	counter = 0;
+	while (counter == 0 || !contains(uart_ret_buf, counter, '>')) { 
+		recv_uart_comm(uart_fd, uart_ret_buf + counter, &uart_ret_size, MAX_UART_RET_LEN - counter);
+		counter += uart_ret_size;
+		if (counter > MAX_UART_RET_LEN) break;
+	}
+
+	// uart command is forwarded, discard the first read
+	if (fwd) {
+		memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
+		counter = 0;
+		while (counter == 0 || !contains(uart_ret_buf, counter, '>')) { 
+			recv_uart_comm(uart_fd, uart_ret_buf + counter, &uart_ret_size, MAX_UART_RET_LEN - counter);
+			counter += uart_ret_size;
+			if (counter > MAX_UART_RET_LEN) break;
+		}
+	}
+
+	// add null terminator
+	uart_ret_buf[counter] = '\0';
+	//printf("%s\n", uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
 
 // helper function to find the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err) {
@@ -151,6 +194,18 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -452,15 +507,17 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// read back the actual frequency
-	memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
-	recv_uart_comm(uart_fd, uart_ret_buf, &uart_ret_size, MAX_UART_RET_LEN);
-	
-	//int i;
-	//printf("Received from UART %"PRIu16" bytes: ", uart_ret_size);
-	//for (i = 0; i < uart_ret_size; i++)
-	//	printf("%c", uart_ret_buf[i]);
-	//printf("\n\n\n");
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -821,6 +878,18 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1119,6 +1188,18 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -1479,6 +1560,18 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1777,6 +1870,18 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -2137,6 +2242,18 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2434,6 +2551,18 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
