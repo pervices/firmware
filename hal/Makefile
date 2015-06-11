@@ -20,7 +20,7 @@ ifdef CRIMSON_ROOTDIR
 
 #CC = $(CRIMSON_ROOTDIR)/build/gcc/bin/arm-linux-gnueabihf-gcc
 CC = arm-linux-gnueabihf-gcc
-CFLAGS = -c -O0 -g3 -Wall -c -fmessage-length=0
+CFLAGS = -c -O0 -g3 -Wall -c -fmessage-length=0 -DVERSION=\"$(DATE_VERSION)--$(GIT_VERSION)\"
 LDFLAGS = -lm
 OUTDIR = $(CRIMSON_ROOTDIR)/out
 SHELL = /bin/sh
@@ -31,6 +31,16 @@ SOURCES = comm_manager.c properties.c property_manager.c
 SUBDIRS += drivers
 
 OBJECTS = $(addprefix $(OUTDIR)/obj/,$(SOURCES:.c=.o))
+
+#Git revision (to be included in all source files).
+#Note that the use of the --long flag below means that
+#The commit hash shall be prefixed with 'g', indicating
+#that the commit comes from the git repo. (This is useful
+#if we need to integrate with other SCM software).
+GIT_VERSION := $(shell git describe --abbrev=8 --dirty --always --long)
+
+# Point in time when the code was compiled.
+DATE_VERSION := $(shell date "+%F-%T")
 
 all: $(OBJECTS)
 

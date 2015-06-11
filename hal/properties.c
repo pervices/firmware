@@ -100,14 +100,6 @@ static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_dac_pap (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c a -p ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_a_rf_dac_interp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'dac -c a -t ");
 	strcat(buf, data);
@@ -769,14 +761,6 @@ static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_dac_pap (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c b -p ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_b_rf_dac_interp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'dac -c b -t ");
 	strcat(buf, data);
@@ -1427,14 +1411,6 @@ static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_dac_pap (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c c -p ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_c_rf_dac_interp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'dac -c c -t ");
 	strcat(buf, data);
@@ -2079,14 +2055,6 @@ static int set_tx_d_rf_dac_mixer (const char* data, char* ret) {
 
 static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 1 -n ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_d_rf_dac_pap (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c d -p ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -3018,7 +2986,6 @@ static prop_t property_table[] = {
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/mixer", get_invalid, set_tx_a_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_a/rf/dac/pap", get_invalid, set_tx_a_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/interp", get_invalid, set_tx_a_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_a/rf/dac/iqerr_gain", get_invalid, set_tx_a_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
@@ -3043,9 +3010,9 @@ static prop_t property_table[] = {
 	{"tx_a/dsp/rstreq", get_invalid, set_tx_a_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_a/about/id", get_invalid, set_tx_a_about_id, RW, NO_POLL, "001"},
 	{"tx_a/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"tx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"tx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_a/link/enable", get_invalid, set_tx_a_link_enable, RW, NO_POLL, "1"},
 	{"tx_a/link/vita_en", get_invalid, set_tx_a_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "sfpa"},
@@ -3072,9 +3039,9 @@ static prop_t property_table[] = {
 	{"rx_a/dsp/loopback", get_invalid, set_rx_a_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_a/about/id", get_invalid, set_rx_a_about_id, RW, NO_POLL, "001"},
 	{"rx_a/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"rx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"rx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_a/link/enable", get_invalid, set_rx_a_link_enable, RW, NO_POLL, "1"},
 	{"rx_a/link/vita_en", get_invalid, set_rx_a_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_a/link/iface", get_invalid, set_rx_a_link_iface, RW, NO_POLL, "sfpa"},
@@ -3084,7 +3051,6 @@ static prop_t property_table[] = {
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/mixer", get_invalid, set_tx_b_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_b/rf/dac/pap", get_invalid, set_tx_b_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/interp", get_invalid, set_tx_b_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_b/rf/dac/iqerr_gain", get_invalid, set_tx_b_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
@@ -3109,9 +3075,9 @@ static prop_t property_table[] = {
 	{"tx_b/dsp/rstreq", get_invalid, set_tx_b_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_b/about/id", get_invalid, set_tx_b_about_id, RW, NO_POLL, "001"},
 	{"tx_b/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"tx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"tx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_b/link/enable", get_invalid, set_tx_b_link_enable, RW, NO_POLL, "0"},
 	{"tx_b/link/vita_en", get_invalid, set_tx_b_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "sfpb"},
@@ -3138,9 +3104,9 @@ static prop_t property_table[] = {
 	{"rx_b/dsp/loopback", get_invalid, set_rx_b_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_b/about/id", get_invalid, set_rx_b_about_id, RW, NO_POLL, "001"},
 	{"rx_b/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"rx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"rx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_b/link/enable", get_invalid, set_rx_b_link_enable, RW, NO_POLL, "0"},
 	{"rx_b/link/vita_en", get_invalid, set_rx_b_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_b/link/iface", get_invalid, set_rx_b_link_iface, RW, NO_POLL, "sfpb"},
@@ -3150,7 +3116,6 @@ static prop_t property_table[] = {
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/mixer", get_invalid, set_tx_c_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_c/rf/dac/pap", get_invalid, set_tx_c_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/interp", get_invalid, set_tx_c_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_c/rf/dac/iqerr_gain", get_invalid, set_tx_c_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
@@ -3175,9 +3140,9 @@ static prop_t property_table[] = {
 	{"tx_c/dsp/rstreq", get_invalid, set_tx_c_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_c/about/id", get_invalid, set_tx_c_about_id, RW, NO_POLL, "001"},
 	{"tx_c/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"tx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"tx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_c/link/enable", get_invalid, set_tx_c_link_enable, RW, NO_POLL, "0"},
 	{"tx_c/link/vita_en", get_invalid, set_tx_c_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "sfpa"},
@@ -3204,9 +3169,9 @@ static prop_t property_table[] = {
 	{"rx_c/dsp/loopback", get_invalid, set_rx_c_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_c/about/id", get_invalid, set_rx_c_about_id, RW, NO_POLL, "001"},
 	{"rx_c/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"rx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"rx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_c/link/enable", get_invalid, set_rx_c_link_enable, RW, NO_POLL, "0"},
 	{"rx_c/link/vita_en", get_invalid, set_rx_c_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_c/link/iface", get_invalid, set_rx_c_link_iface, RW, NO_POLL, "sfpa"},
@@ -3216,7 +3181,6 @@ static prop_t property_table[] = {
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/mixer", get_invalid, set_tx_d_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_d/rf/dac/pap", get_invalid, set_tx_d_rf_dac_pap, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/interp", get_invalid, set_tx_d_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_d/rf/dac/iqerr_gain", get_invalid, set_tx_d_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
@@ -3241,9 +3205,9 @@ static prop_t property_table[] = {
 	{"tx_d/dsp/rstreq", get_invalid, set_tx_d_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_d/about/id", get_invalid, set_tx_d_about_id, RW, NO_POLL, "001"},
 	{"tx_d/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"tx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"tx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"tx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"tx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_d/link/enable", get_invalid, set_tx_d_link_enable, RW, NO_POLL, "0"},
 	{"tx_d/link/vita_en", get_invalid, set_tx_d_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "sfpb"},
@@ -3270,9 +3234,9 @@ static prop_t property_table[] = {
 	{"rx_d/dsp/loopback", get_invalid, set_rx_d_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_d/about/id", get_invalid, set_rx_d_about_id, RW, NO_POLL, "001"},
 	{"rx_d/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"rx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"rx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"rx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"rx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_d/link/enable", get_invalid, set_rx_d_link_enable, RW, NO_POLL, "0"},
 	{"rx_d/link/vita_en", get_invalid, set_rx_d_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_d/link/iface", get_invalid, set_rx_d_link_iface, RW, NO_POLL, "sfpb"},
@@ -3292,9 +3256,9 @@ static prop_t property_table[] = {
 	{"time/board/led", get_invalid, set_time_board_led, WO, NO_POLL, "0"},
 	{"time/about/id", get_invalid, set_time_about_id, RW, NO_POLL, "001"},
 	{"time/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"time/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"time/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"time/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"time/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"time/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"time/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"fpga/board/status", get_fpga_board_status, set_invalid, RO, POLL, "on"},
 	{"fpga/board/dump", get_invalid, set_fpga_board_dump, WO, NO_POLL, "0"},
 	{"fpga/board/test", get_invalid, set_fpga_board_test, WO, NO_POLL, "0"},
@@ -3304,9 +3268,9 @@ static prop_t property_table[] = {
 	{"fpga/board/jesd_sync", get_invalid, set_fpga_board_jesd_sync, WO, NO_POLL, "0"},
 	{"fpga/about/id", get_invalid, set_fpga_about_id, RW, NO_POLL, "001"},
 	{"fpga/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
-	{"fpga/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"fpga/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
-	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, "12-12-2014"},
+	{"fpga/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"fpga/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
+	{"fpga/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"fpga/link/rate", get_invalid, set_fpga_link_rate, RW, NO_POLL, "1250000000"},      // BPS (10G/8)
 	{"fpga/link/sfpa/ip_addr", get_invalid, set_fpga_link_sfpa_ip_addr, RW, NO_POLL, "10.10.10.2"},
 	{"fpga/link/sfpa/mac_addr", get_invalid, set_fpga_link_sfpa_mac_addr, RW, NO_POLL, "aa:00:00:00:00:00"},
