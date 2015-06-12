@@ -47,9 +47,6 @@
 #define SERVER_DEBUG_OPT	(1 << 0)
 #define SERVER_RESVD_OPT	(1 << 1)
 
-// define this if DAC NCO is mixed to 15MHz, this removes mixing artifacts
-//#define DSP_NCO_OFFSET
-
 // General purpose temp buffer size
 #define BUF_SIZE 	( 100 )
 #define MAX_PATH_LEN	( 1024 )

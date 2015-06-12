@@ -130,10 +130,6 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
-
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
 	//else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
@@ -399,12 +395,6 @@ static int set_tx_a_pwr (const char* data, char* ret) {
          }
       }
 
-	   #ifdef DSP_NCO_OFFSET
-   	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n 15'\r");
-   	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-   	usleep(500000);
-   	#endif
-
 	// power off
 	} else {
 		// mute the board
@@ -433,10 +423,6 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
 	//else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
-
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
@@ -723,12 +709,6 @@ static int set_rx_a_pwr (const char* data, char* ret) {
          }
       }
 
-   	#ifdef DSP_NCO_OFFSET
-   	write_hps_reg( "rxa0", 199911205);	// hardcoded 15 MHz
-   	read_hps_reg ( "rxa4", &old_val);	// direction
-   	write_hps_reg( "rxa4", old_val | 0x2000);
-   	#endif
-
 	// power off
 	} else {
 		rx_power[0] = PWR_OFF;
@@ -790,10 +770,6 @@ static int set_tx_b_rf_dac_iqerr_phase (const char* data, char* ret) {
 static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
-
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
 
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
@@ -1059,12 +1035,6 @@ static int set_tx_b_pwr (const char* data, char* ret) {
          }
       }
 
-	   #ifdef DSP_NCO_OFFSET
-   	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 0 -n 15'\r");
-   	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-   	usleep(500000);
-   	#endif
-
 	// power off
 	} else {
 		// mute the board
@@ -1093,10 +1063,6 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
 	//else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
-
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
@@ -1373,12 +1339,6 @@ static int set_rx_b_pwr (const char* data, char* ret) {
          }
       }
 
-   	#ifdef DSP_NCO_OFFSET
-   	write_hps_reg( "rxb0", 199911205);	// hardcoded 15 MHz
-   	read_hps_reg ( "rxb4", &old_val);	// direction
-   	write_hps_reg( "rxb4", old_val | 0x2000);
-   	#endif
-
 	// power off
 	} else {
 		rx_power[1] = PWR_OFF;
@@ -1440,10 +1400,6 @@ static int set_tx_c_rf_dac_iqerr_phase (const char* data, char* ret) {
 static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
-
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
 
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
@@ -1709,12 +1665,6 @@ static int set_tx_c_pwr (const char* data, char* ret) {
          }
       }
 
-	   #ifdef DSP_NCO_OFFSET
-   	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n 15'\r");
-   	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-   	usleep(500000);
-   	#endif
-
 	// power off
 	} else {
 		// mute the board
@@ -1743,10 +1693,6 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
 	//else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
-
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
@@ -2023,12 +1969,6 @@ static int set_rx_c_pwr (const char* data, char* ret) {
          }
       }
 
-   	#ifdef DSP_NCO_OFFSET
-   	write_hps_reg( "rxc0", 199911205);	// hardcoded 15 MHz
-   	read_hps_reg ( "rxc4", &old_val);	// direction
-   	write_hps_reg( "rxc4", old_val | 0x2000);
-   	#endif
-
 	// power off
 	} else {
 		// mute the board
@@ -2090,10 +2030,6 @@ static int set_tx_d_rf_dac_iqerr_phase (const char* data, char* ret) {
 static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
-
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
 
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
@@ -2359,12 +2295,6 @@ static int set_tx_d_pwr (const char* data, char* ret) {
          }
       }
 
-	   #ifdef DSP_NCO_OFFSET
-   	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 0 -n 15'\r");
-   	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-   	usleep(500000);
-   	#endif
-
 	// power off
 	} else {
 		// mute the board
@@ -2392,10 +2322,6 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	// check which band it resides on
 	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
 	//else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
-
-	#ifdef DSP_NCO_OFFSET
-	freq -= 15000000;	// 15MHz offset
-	#endif
 
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
@@ -2672,12 +2598,6 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 	      	write_hps_reg( reg4[i], old_val & (~0x2));
          }
       }
-
-   	#ifdef DSP_NCO_OFFSET
-   	write_hps_reg( "rxd0", 199911205);	// hardcoded 15 MHz
-   	read_hps_reg ( "rxd4", &old_val);	// direction
-   	write_hps_reg( "rxd4", old_val | 0x2000);
-   	#endif
 
 	// power off
 	} else {
