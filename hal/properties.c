@@ -310,14 +310,6 @@ static int set_tx_a_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "txa4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | 0x100);
-	else				write_hps_reg( "txa4", old_val & ~0x100);
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txa4", &old_val);
@@ -431,8 +423,8 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// read back the actual frequency
-	memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
-	recv_uart_comm(uart_fd, uart_ret_buf, &uart_ret_size, MAX_UART_RET_LEN);
+	//memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
+	//recv_uart_comm(uart_fd, uart_ret_buf, &uart_ret_size, MAX_UART_RET_LEN);
 	
 	//int i;
 	//printf("Received from UART %"PRIu16" bytes: ", uart_ret_size);
@@ -605,14 +597,6 @@ static int set_rx_a_dsp_loopback (const char* data, char* ret) {
 
 static int set_rx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "rxa4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | 0x100);
-	else				write_hps_reg( "rxa4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -950,14 +934,6 @@ static int set_tx_b_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "txb4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | 0x100);
-	else				write_hps_reg( "txb4", old_val & ~0x100);
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_b_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txb4", &old_val);
@@ -1235,14 +1211,6 @@ static int set_rx_b_dsp_loopback (const char* data, char* ret) {
 
 static int set_rx_b_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "rxb4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | 0x100);
-	else				write_hps_reg( "rxb4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -1580,14 +1548,6 @@ static int set_tx_c_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "txc4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | 0x100);
-	else				write_hps_reg( "txc4", old_val & ~0x100);
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_c_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txc4", &old_val);
@@ -1865,14 +1825,6 @@ static int set_rx_c_dsp_loopback (const char* data, char* ret) {
 
 static int set_rx_c_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "rxc4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | 0x100);
-	else				write_hps_reg( "rxc4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -2210,14 +2162,6 @@ static int set_tx_d_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "txd4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | 0x100);
-	else				write_hps_reg( "txd4", old_val & ~0x100);
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_d_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txd4", &old_val);
@@ -2495,14 +2439,6 @@ static int set_rx_d_dsp_loopback (const char* data, char* ret) {
 
 static int set_rx_d_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_link_enable (const char* data, char* ret) {
-	uint32_t old_val;
-	read_hps_reg(  "rxd4", &old_val);
-	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | 0x100);
-	else				write_hps_reg( "rxd4", old_val & ~0x100);
 	return RETURN_SUCCESS;
 }
 
@@ -2933,7 +2869,6 @@ static prop_t property_table[] = {
 	{"tx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"tx_a/link/enable", get_invalid, set_tx_a_link_enable, RW, NO_POLL, "1"},
 	{"tx_a/link/vita_en", get_invalid, set_tx_a_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_a/link/port", get_invalid, set_tx_a_link_port, RW, NO_POLL, "42824"},
@@ -2962,7 +2897,6 @@ static prop_t property_table[] = {
 	{"rx_a/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_a/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_a/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"rx_a/link/enable", get_invalid, set_rx_a_link_enable, RW, NO_POLL, "1"},
 	{"rx_a/link/vita_en", get_invalid, set_rx_a_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_a/link/iface", get_invalid, set_rx_a_link_iface, RW, NO_POLL, "sfpa"},
 	{"rx_a/link/port", get_invalid, set_rx_a_link_port, RW, NO_POLL, "42820"},
@@ -2998,7 +2932,6 @@ static prop_t property_table[] = {
 	{"tx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"tx_b/link/enable", get_invalid, set_tx_b_link_enable, RW, NO_POLL, "0"},
 	{"tx_b/link/vita_en", get_invalid, set_tx_b_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_b/link/port", get_invalid, set_tx_b_link_port, RW, NO_POLL, "42825"},
@@ -3027,7 +2960,6 @@ static prop_t property_table[] = {
 	{"rx_b/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_b/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_b/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"rx_b/link/enable", get_invalid, set_rx_b_link_enable, RW, NO_POLL, "0"},
 	{"rx_b/link/vita_en", get_invalid, set_rx_b_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_b/link/iface", get_invalid, set_rx_b_link_iface, RW, NO_POLL, "sfpb"},
 	{"rx_b/link/port", get_invalid, set_rx_b_link_port, RW, NO_POLL, "42821"},
@@ -3063,7 +2995,6 @@ static prop_t property_table[] = {
 	{"tx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"tx_c/link/enable", get_invalid, set_tx_c_link_enable, RW, NO_POLL, "0"},
 	{"tx_c/link/vita_en", get_invalid, set_tx_c_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_c/link/port", get_invalid, set_tx_c_link_port, RW, NO_POLL, "42826"},
@@ -3092,7 +3023,6 @@ static prop_t property_table[] = {
 	{"rx_c/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_c/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_c/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"rx_c/link/enable", get_invalid, set_rx_c_link_enable, RW, NO_POLL, "0"},
 	{"rx_c/link/vita_en", get_invalid, set_rx_c_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_c/link/iface", get_invalid, set_rx_c_link_iface, RW, NO_POLL, "sfpa"},
 	{"rx_c/link/port", get_invalid, set_rx_c_link_port, RW, NO_POLL, "42822"},
@@ -3128,7 +3058,6 @@ static prop_t property_table[] = {
 	{"tx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"tx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"tx_d/link/enable", get_invalid, set_tx_d_link_enable, RW, NO_POLL, "0"},
 	{"tx_d/link/vita_en", get_invalid, set_tx_d_link_vita_en, RW, NO_POLL, "0"},
 	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_d/link/port", get_invalid, set_tx_d_link_port, RW, NO_POLL, "42827"},
@@ -3157,7 +3086,6 @@ static prop_t property_table[] = {
 	{"rx_d/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_d/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"rx_d/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"rx_d/link/enable", get_invalid, set_rx_d_link_enable, RW, NO_POLL, "0"},
 	{"rx_d/link/vita_en", get_invalid, set_rx_d_link_vita_en, RW, NO_POLL, "0"},
 	{"rx_d/link/iface", get_invalid, set_rx_d_link_iface, RW, NO_POLL, "sfpb"},
 	{"rx_d/link/port", get_invalid, set_rx_d_link_port, RW, NO_POLL, "42823"},

@@ -246,6 +246,29 @@ void check_property_inotifies(void) {
 				printf("Re-added to inotify, wd: %i\n", prop -> wd);
 				#endif
 			}
+
+			// if the property was enabling power, re-write all the rf configurations that have been
+			// adjusted due to the power on sequencing (matches string *****pwr )
+			if ( strstr(prop -> path, "pwr") && prop_data[0] >= '1' ) {
+
+				// need to wait for fpga -o to finish executing
+				sleep(3);
+
+				char board[5] = {0};
+				memcpy(board, prop -> path, 4);
+				int k = 0;
+				for (k = 0; k < get_num_prop(); k++) {
+					if (strstr(get_prop(k) -> path, board) && get_prop(k) -> permissions == RW ) {
+						// empty out the buffers
+						memset(prop_data, 0, MAX_PROP_LEN);
+						memset(prop_ret,  0, MAX_PROP_LEN);
+
+						read_from_file(get_abs_path(get_prop(k), path), prop_data, MAX_PROP_LEN);
+						//printf("-- prop: %s val: %s\n", get_prop(k) -> path, prop_data);
+						get_prop(k) -> set_handler(prop_data, prop_ret);
+					}
+				}
+			}
 		}
 
 		i += sizeof(struct inotify_event) + event -> len;
