@@ -23,6 +23,9 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
+#define FWD_CMD 	1
+#define NO_FWD_CMD	0
+
 #define PWR_ON	1
 #define PWR_OFF	0
 
@@ -47,6 +50,46 @@ static int q_bias[] = {17, 17, 17, 17};
 
 // state variables
 static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
+
+// helper function to check if the buffer contains a character, strstr() won't work because no NULL terminator
+static int contains (uint8_t* buf, size_t len, uint8_t ch) {
+	int i = 0;
+	for (i = 0; i < len; i++) {
+		if (buf[i] == ch) return 1;
+	}
+	return 0;
+}
+
+// helper function to read back from UART after a UART command
+static int read_uart(int fwd) {
+	int counter = 0;
+
+	// read uart return messages
+	memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
+	counter = 0;
+	while (counter == 0 || !contains(uart_ret_buf, counter, '>')) {
+		recv_uart_comm(uart_fd, uart_ret_buf + counter, &uart_ret_size, MAX_UART_RET_LEN - counter);
+		counter += uart_ret_size;
+		if (counter > MAX_UART_RET_LEN) break;
+	}
+
+	// uart command is forwarded, discard the first read
+	if (fwd) {
+		memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
+		counter = 0;
+		while (counter == 0 || !contains(uart_ret_buf, counter, '>')) {
+			recv_uart_comm(uart_fd, uart_ret_buf + counter, &uart_ret_size, MAX_UART_RET_LEN - counter);
+			counter += uart_ret_size;
+			if (counter > MAX_UART_RET_LEN) break;
+		}
+	}
+
+	// add null terminator
+	uart_ret_buf[counter] = '\0';
+	//printf("%s\n", uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
 
 // helper function to find the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err) {
@@ -100,14 +143,6 @@ static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_dac_interp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c a -t ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int get_tx_a_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -130,15 +165,25 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b 1'\r");
-	//else				strcpy(buf, "fwd -b 1 -m 'rf -c a -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -412,25 +457,25 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b 1'\r");
-	//else				strcpy(buf, "fwd -b 0 -m 'rf -c a -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// read back the actual frequency
-	//memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
-	//recv_uart_comm(uart_fd, uart_ret_buf, &uart_ret_size, MAX_UART_RET_LEN);
-	
-	//int i;
-	//printf("Received from UART %"PRIu16" bytes: ", uart_ret_size);
-	//for (i = 0; i < uart_ret_size; i++)
-	//	printf("%c", uart_ret_buf[i]);
-	//printf("\n\n\n");
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -725,14 +770,6 @@ static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_dac_interp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c b -t ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int get_tx_b_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -755,15 +792,25 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b 1'\r");
-	//else				strcpy(buf, "fwd -b 1 -m 'rf -c b -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -1036,15 +1083,25 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b 1'\r");
-	//else				strcpy(buf, "fwd -b 0 -m 'rf -c b -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -1339,14 +1396,6 @@ static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_dac_interp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c c -t ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int get_tx_c_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1369,15 +1418,25 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b 1'\r");
-	//else				strcpy(buf, "fwd -b 1 -m 'rf -c c -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -1650,15 +1709,25 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b 1'\r");
-	//else				strcpy(buf, "fwd -b 0 -m 'rf -c c -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -1953,14 +2022,6 @@ static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_dac_interp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'dac -c d -t ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int get_tx_d_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1983,15 +2044,25 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b 1'\r");
-	//else				strcpy(buf, "fwd -b 1 -m 'rf -c d -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -2263,15 +2334,25 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// check which band it resides on
-	//if (freq > FREQ_XOVER_PNT) 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b 1'\r");
-	//else				strcpy(buf, "fwd -b 0 -m 'rf -c d -b 0'\r");
-
 	// write kHz to MCU cmd
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
 	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// read back the frequency
+	read_uart(FWD_CMD);
+
+	// parse the return message (hardcoded)
+	int i = 0;
+	uint64_t div;
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
+	while (uart_ret_buf[i++] != ':'){}
+	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+
+	if ((freq / div) != 0)
+		sprintf(ret, "%"PRId64"", freq / div);
 
 	return RETURN_SUCCESS;
 }
@@ -2842,7 +2923,6 @@ static prop_t property_table[] = {
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/mixer", get_invalid, set_tx_a_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_a/rf/dac/interp", get_invalid, set_tx_a_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_a/rf/dac/iqerr_gain", get_invalid, set_tx_a_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/iqerr_phase", get_invalid, set_tx_a_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
@@ -2905,7 +2985,6 @@ static prop_t property_table[] = {
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/mixer", get_invalid, set_tx_b_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_b/rf/dac/interp", get_invalid, set_tx_b_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_b/rf/dac/iqerr_gain", get_invalid, set_tx_b_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/iqerr_phase", get_invalid, set_tx_b_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
@@ -2968,7 +3047,6 @@ static prop_t property_table[] = {
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/mixer", get_invalid, set_tx_c_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_c/rf/dac/interp", get_invalid, set_tx_c_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_c/rf/dac/iqerr_gain", get_invalid, set_tx_c_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/iqerr_phase", get_invalid, set_tx_c_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
@@ -3031,7 +3109,6 @@ static prop_t property_table[] = {
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/mixer", get_invalid, set_tx_d_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15"},
-	{"tx_d/rf/dac/interp", get_invalid, set_tx_d_rf_dac_interp, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_d/rf/dac/iqerr_gain", get_invalid, set_tx_d_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/iqerr_phase", get_invalid, set_tx_d_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
