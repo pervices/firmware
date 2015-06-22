@@ -171,15 +171,23 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
@@ -463,15 +471,23 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
@@ -798,15 +814,23 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
@@ -1089,15 +1113,23 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
@@ -1424,15 +1456,23 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
@@ -1715,15 +1755,23 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
@@ -2050,15 +2098,23 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
@@ -2340,15 +2396,23 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+	// workaround: if >= 3000000000UL  (3 GHz) just return
+	if (freq >= 3000000000UL)
+		return RETURN_SUCCESS;
+
 	// read back the frequency
 	read_uart(FWD_CMD);
 
 	// parse the return message (hardcoded)
 	int i = 0;
 	uint64_t div;
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':'){}
+	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
+	if (i >= MAX_UART_RET_LEN)
+		return RETURN_SUCCESS;
 	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
 
 	if ((freq / div) != 0)
