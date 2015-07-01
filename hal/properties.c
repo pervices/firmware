@@ -23,6 +23,9 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
+#define DSP_NCO_CONST ((double)13.3274136700121212121)	// (2^32) / (322265625)
+#define DAC_NCO_CONST ((double)218356.345569478593939)	// (2^48) / (4*322265625)
+
 #define FWD_CMD 	1
 #define NO_FWD_CMD	0
 
@@ -136,10 +139,20 @@ static int set_tx_a_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
+	freq *= DAC_NCO_CONST;
+
 	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 	return RETURN_SUCCESS;
 }
 
@@ -332,7 +345,7 @@ static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txa0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "txa0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
@@ -622,7 +635,7 @@ static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxa0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "rxa0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
@@ -779,10 +792,20 @@ static int set_tx_b_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
+	freq *= DAC_NCO_CONST;
+
 	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 	return RETURN_SUCCESS;
 }
 
@@ -974,7 +997,7 @@ static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txb0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "txb0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
@@ -1264,7 +1287,7 @@ static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxb0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "rxb0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
@@ -1421,10 +1444,20 @@ static int set_tx_c_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
+	freq *= DAC_NCO_CONST;
+
 	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 	return RETURN_SUCCESS;
 }
 
@@ -1616,7 +1649,7 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txc0", (freq * pow(2,32)) / (BASE_SAMPLE_RATE / 4));
+	write_hps_reg( "txc0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
@@ -1906,7 +1939,7 @@ static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxc0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "rxc0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
@@ -2063,10 +2096,20 @@ static int set_tx_d_rf_dac_mixer (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
+	uint64_t freq;
+	sscanf(data, "%"SCNd64"", &freq);
+	freq *= DAC_NCO_CONST;
+
 	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 1 -n ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 	return RETURN_SUCCESS;
 }
 
@@ -2258,7 +2301,7 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "txd0", (freq * pow(2,32)) / (BASE_SAMPLE_RATE / 4));
+	write_hps_reg( "txd0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
@@ -2548,7 +2591,7 @@ static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxd0", (freq * pow(2,32)) / BASE_SAMPLE_RATE);
+	write_hps_reg( "rxd0", freq * DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
@@ -2986,7 +3029,7 @@ static int set_poll_en (const char* data, char* ret) {
 static prop_t property_table[] = {
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/mixer", get_invalid, set_tx_a_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15"},
+	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_a/rf/dac/iqerr_gain", get_invalid, set_tx_a_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/iqerr_phase", get_invalid, set_tx_a_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
@@ -3048,7 +3091,7 @@ static prop_t property_table[] = {
 	{"rx_a/link/mac_dest", get_invalid, set_rx_a_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/mixer", get_invalid, set_tx_b_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15"},
+	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_b/rf/dac/iqerr_gain", get_invalid, set_tx_b_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/iqerr_phase", get_invalid, set_tx_b_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
@@ -3110,7 +3153,7 @@ static prop_t property_table[] = {
 	{"rx_b/link/mac_dest", get_invalid, set_rx_b_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/mixer", get_invalid, set_tx_c_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15"},
+	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_c/rf/dac/iqerr_gain", get_invalid, set_tx_c_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/iqerr_phase", get_invalid, set_tx_c_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
@@ -3172,7 +3215,7 @@ static prop_t property_table[] = {
 	{"rx_c/link/mac_dest", get_invalid, set_rx_c_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/mixer", get_invalid, set_tx_d_rf_dac_mixer, RW, NO_POLL, "0"},
-	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15"},
+	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},
 	{"tx_d/rf/dac/iqerr_gain", get_invalid, set_tx_d_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/iqerr_phase", get_invalid, set_tx_d_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
