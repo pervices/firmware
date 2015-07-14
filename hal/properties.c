@@ -17,6 +17,7 @@
 
 #include "mmap.h"
 #include "properties.h"
+#include "pllcalc.h"
 
 #define BASE_SAMPLE_RATE 322265625.0	// SPS
 #define RESAMP_SAMPLE_RATE  257812500.0	// SPS
@@ -178,33 +179,75 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 1 -m 'rf -c a -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(10000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(10000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// HMC833
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
@@ -478,33 +521,84 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	printf("Before PLL calc\n");
+
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	printf("After PLL calc\n");
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(100000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(100000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	printf("After HMC830 PLL\n");
+
+	// HMC833
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	printf("After HMC833 PLL\n");
+	printf("Actual freq: %lf\n", outfreq);
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
@@ -831,33 +925,75 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 1 -m 'rf -c b -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 1 -m 'rf -c b -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(10000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(10000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// HMC833
+	strcpy(buf, "fwd -b 1 -m 'rf -c b -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(10000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
@@ -1130,33 +1266,75 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(100000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(100000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// HMC833
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
@@ -1483,33 +1661,75 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 1 -m 'rf -c c -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 1 -m 'rf -c c -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(100000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(100000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// HMC833
+	strcpy(buf, "fwd -b 1 -m 'rf -c c -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
@@ -1782,33 +2002,75 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(100000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(100000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// HMC833
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
@@ -2135,33 +2397,75 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 1 -m 'rf -c d -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 1 -m 'rf -c d -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(100000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(100000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// HMC833
+	strcpy(buf, "fwd -b 1 -m 'rf -c d -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
@@ -2433,33 +2737,75 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// write kHz to MCU cmd
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -f ");
-	sprintf(buf + strlen(buf), "%" PRIu64 "", freq / 1000);
+	// run the pll calc algorithm
+	pllparam_t pll0;
+	pllparam_t pll1;
+	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	// extract pllX variables and pass to MCU
+	// HMC830
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -p 0'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC830 (PLL0) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// workaround: if >= 3000000000UL  (3 GHz) just return
-	if (freq >= 3000000000UL)
-		return RETURN_SUCCESS;
+	usleep(100000);
 
-	// read back the frequency
-	read_uart(FWD_CMD);
+	// write HMC830 (PLL0) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	// parse the return message (hardcoded)
-	int i = 0;
-	uint64_t div;
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &freq);
-	while (uart_ret_buf[i++] != ':' && i < MAX_UART_RET_LEN){}
-	if (i >= MAX_UART_RET_LEN)
-		return RETURN_SUCCESS;
-	sscanf((char*)(uart_ret_buf + i), "%"SCNd64"", &div);
+	usleep(100000);
 
-	if ((freq / div) != 0)
-		sprintf(ret, "%"PRId64"", freq / div);
+	// write HMC830 (PLL0) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// HMC833
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -p 1'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	// write HMC833 (PLL1) R
+	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) d
+	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) N
+	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	usleep(100000);
+
+	// write HMC833 (PLL1) x2en
+	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+	sprintf(ret, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }

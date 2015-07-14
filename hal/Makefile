@@ -27,7 +27,7 @@ SHELL = /bin/sh
 INCLUDES += -I$(OUTDIR)/inc
 
 # Source Files, only change this part of the file!
-SOURCES = comm_manager.c properties.c property_manager.c
+SOURCES = pllcalc.c comm_manager.c properties.c property_manager.c
 SUBDIRS += drivers
 
 OBJECTS = $(addprefix $(OUTDIR)/obj/,$(SOURCES:.c=.o))
