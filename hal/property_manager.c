@@ -212,7 +212,8 @@ void check_property_inotifies(void) {
 		struct inotify_event* event = (struct inotify_event*) &buf[i];
 		prop_t* prop = get_prop_from_wd(event -> wd);
 
-		if (event -> mask & IN_CLOSE_WRITE) {
+		// check if prop exists, prop will not exist if concurrent modifications were made to the file while in this loop
+		if (event -> mask & IN_CLOSE_WRITE && prop) {
 			#ifdef DEBUG
 			printf("Property located at %s has been modified, executing handler\n", prop -> path);
 			#endif
@@ -249,7 +250,7 @@ void check_property_inotifies(void) {
 
 			// if the property was enabling power, re-write all the rf configurations that have been
 			// adjusted due to the power on sequencing (matches string *****pwr )
-			if ( strstr(prop -> path, "pwr") && prop_data[0] >= '1' ) {
+			/*if ( strstr(prop -> path, "pwr") && prop_data[0] >= '1' ) {
 
 				// need to wait for fpga -o to finish executing
 				sleep(3);
@@ -268,7 +269,7 @@ void check_property_inotifies(void) {
 						get_prop(k) -> set_handler(prop_data, prop_ret);
 					}
 				}
-			}
+			}*/
 		}
 
 		i += sizeof(struct inotify_event) + event -> len;
