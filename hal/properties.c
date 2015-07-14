@@ -521,14 +521,10 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	printf("Before PLL calc\n");
-
 	// run the pll calc algorithm
 	pllparam_t pll0;
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
-
-	printf("After PLL calc\n");
 
 	// extract pllX variables and pass to MCU
 	// HMC830
@@ -558,8 +554,6 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
-
-	printf("After HMC830 PLL\n");
 
 	// HMC833
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 1'\r");
@@ -594,9 +588,6 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-	printf("After HMC833 PLL\n");
-	printf("Actual freq: %lf\n", outfreq);
 
 	sprintf(ret, "%lf", outfreq);
 
