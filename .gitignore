@@ -18,6 +18,7 @@
 *.project
 *.settings*
 */Debug/*
+*.sw?
 .metadata/*
 RemoteSystemsTempFiles/*
 boot/.dep/*
