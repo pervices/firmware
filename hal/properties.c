@@ -134,10 +134,6 @@ static int set_invalid (const char* data, char* ret) {
 	printf("Cannot invoke a set on this property\n");
 	return RETURN_ERROR_SET_PROP;
 }
-static int set_tx_a_rf_dac_mixer (const char* data, char* ret) {
-	// TODO: Need to implement in MCU code
-	return RETURN_SUCCESS;
-}
 
 static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
@@ -161,16 +157,6 @@ static int get_tx_a_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_a_rf_dac_iqerr_gain (const char* data, char* ret) {
-	// TODO: MCU code
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_a_rf_dac_iqerr_phase (const char* data, char* ret) {
-	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -252,14 +238,6 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c a -l ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_a_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b ");
 	strcat(buf, data);
@@ -332,11 +310,6 @@ static int set_tx_a_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_dsp_freq (const char* data, char* ret) {
-	// don't need to tune DSP chain
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_a_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
@@ -393,16 +366,6 @@ static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
 	write_hps_reg( "txa4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_a_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW code
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_a_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
@@ -610,11 +573,6 @@ static int set_rx_a_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_freq_varac (const char* data, char* ret) {
-	// TODO: Victor is going to do math from Voltage -> Clk Cycles
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_a_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'vga -c a -g ");
 	strcat(buf, data);
@@ -661,11 +619,6 @@ static int set_rx_a_dsp_signed (const char* data, char* ret) {
 	read_hps_reg( "rxa4", &old_val);
    old_val &= ~(1 << 4);
 	write_hps_reg( "rxa4", old_val | (sign << 4));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_dsp_freq (const char* data, char* ret) {
-        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
@@ -725,16 +678,6 @@ static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
 	write_hps_reg( "rxa4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW work
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_a_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -871,11 +814,6 @@ static int set_rx_a_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_dac_mixer (const char* data, char* ret) {
-	// TODO: Need to implement in MCU code
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
@@ -898,16 +836,6 @@ static int get_tx_b_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_b_rf_dac_iqerr_gain (const char* data, char* ret) {
-	// TODO: MCU code
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_b_rf_dac_iqerr_phase (const char* data, char* ret) {
-	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -989,14 +917,6 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c b -l ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_b_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b ");
 	strcat(buf, data);
@@ -1068,11 +988,6 @@ static int set_tx_b_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_dsp_freq (const char* data, char* ret) {
-        // don't need to tune DSP chain
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_b_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
@@ -1129,16 +1044,6 @@ static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
 	write_hps_reg( "txb4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_b_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW work
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_b_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -1346,11 +1251,6 @@ static int set_rx_b_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_freq_varac (const char* data, char* ret) {
-	// TODO: Victor is going to do math from Voltage -> Clk Cycles
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_b_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'vga -c b -g ");
 	strcat(buf, data);
@@ -1397,11 +1297,6 @@ static int set_rx_b_dsp_signed (const char* data, char* ret) {
 	read_hps_reg( "rxb4", &old_val);
    old_val &= ~(1 << 4);
 	write_hps_reg( "rxb4", old_val | (sign << 4));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_dsp_freq (const char* data, char* ret) {
-        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
@@ -1461,16 +1356,6 @@ static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
 	write_hps_reg( "rxb4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW work
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_b_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -1607,11 +1492,6 @@ static int set_rx_b_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_dac_mixer (const char* data, char* ret) {
-	// TODO: Need to implement in MCU code
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
@@ -1634,16 +1514,6 @@ static int get_tx_c_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_c_rf_dac_iqerr_gain (const char* data, char* ret) {
-	// TODO: MCU code
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_c_rf_dac_iqerr_phase (const char* data, char* ret) {
-	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -1725,14 +1595,6 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c c -l ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_c_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b ");
 	strcat(buf, data);
@@ -1804,11 +1666,6 @@ static int set_tx_c_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_dsp_freq (const char* data, char* ret) {
-        // don't need to tune DSP chain
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_c_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
@@ -1865,16 +1722,6 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
 	write_hps_reg( "txc4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_c_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW work
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_c_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -2082,11 +1929,6 @@ static int set_rx_c_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_freq_varac (const char* data, char* ret) {
-	// TODO: Victor is going to do math from Voltage -> Clk Cycles
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_c_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'vga -c c -g ");
 	strcat(buf, data);
@@ -2133,11 +1975,6 @@ static int set_rx_c_dsp_signed (const char* data, char* ret) {
 	read_hps_reg( "rxc4", &old_val);
    old_val &= ~(1 << 4);
 	write_hps_reg( "rxc4", old_val | (sign << 4));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_dsp_freq (const char* data, char* ret) {
-        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
@@ -2197,16 +2034,6 @@ static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
 	write_hps_reg( "rxc4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW work
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_c_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -2343,11 +2170,6 @@ static int set_rx_c_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_dac_mixer (const char* data, char* ret) {
-	// TODO: Need to implement in MCU code
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
@@ -2370,16 +2192,6 @@ static int get_tx_d_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_d_rf_dac_iqerr_gain (const char* data, char* ret) {
-	// TODO: MCU code
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_d_rf_dac_iqerr_phase (const char* data, char* ret) {
-	// TODO: MCU code
 	return RETURN_SUCCESS;
 }
 
@@ -2461,14 +2273,6 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c d -l ");
-	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_d_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b ");
 	strcat(buf, data);
@@ -2540,11 +2344,6 @@ static int set_tx_d_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_dsp_freq (const char* data, char* ret) {
-        // don't need to tune DSP chain
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_d_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
@@ -2601,16 +2400,6 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
 	write_hps_reg( "txd4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_d_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW work
-	return RETURN_SUCCESS;
-}
-
-static int set_tx_d_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -2817,11 +2606,6 @@ static int set_rx_d_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_freq_varac (const char* data, char* ret) {
-	// TODO: Victor is going to do math from Voltage -> Clk Cycles
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_d_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'vga -c d -g ");
 	strcat(buf, data);
@@ -2869,11 +2653,6 @@ static int set_rx_d_dsp_signed (const char* data, char* ret) {
 	read_hps_reg( "rxd4", &old_val);
    old_val &= ~(1 << 4);
 	write_hps_reg( "rxd4", old_val | (sign << 4));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_dsp_freq (const char* data, char* ret) {
-        // don't need to tune DSP chain
 	return RETURN_SUCCESS;
 }
 
@@ -2933,16 +2712,6 @@ static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
 	write_hps_reg( "rxd4", (old_val & ~(0x1 << 13) ) | (direction << 13));
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_dsp_iqerr_gain (const char* data, char* ret) {
-	// TODO: FW work
-	return RETURN_SUCCESS;
-}
-
-static int set_rx_d_dsp_iqerr_phase (const char* data, char* ret) {
-	// TODO: FW work
 	return RETURN_SUCCESS;
 }
 
@@ -3103,12 +2872,6 @@ static int set_time_clk_cur_time (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_source_rate (const char* data, char* ret) {
-	// Insert MCU/MEM command
-
-	return RETURN_SUCCESS;
-}
-
 static int set_time_source_vco (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
 		strcpy(buf, "fwd -b 2 -m 'clk -v 1'\r");
@@ -3213,6 +2976,24 @@ static int set_fpga_board_rstreq (const char* data, char* ret) {
 
 static int set_fpga_board_jesd_sync (const char* data, char* ret) {
 	strcpy(buf, "fpga -o \r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+static int set_fpga_board_sys_rstreq (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 2 -m 'board -r'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	usleep(100000);
+
+	strcpy(buf, "fwd -b 0 -m 'board -r'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	usleep(100000);
+
+	strcpy(buf, "fwd -b 1 -m 'board -r'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	usleep(100000);
+
+	strcpy(buf, "board -r \r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -3365,13 +3146,9 @@ static int set_poll_en (const char* data, char* ret) {
 // Beginning of property table
 static prop_t property_table[] = {
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
-	{"tx_a/rf/dac/mixer", get_invalid, set_tx_a_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_a/rf/dac/iqerr_gain", get_invalid, set_tx_a_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_a/rf/dac/iqerr_phase", get_invalid, set_tx_a_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "450000000"},
-	{"tx_a/rf/freq/lna", get_invalid, set_tx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/band", get_invalid, set_tx_a_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3381,12 +3158,9 @@ static prop_t property_table[] = {
 	{"tx_a/board/test", get_invalid, set_tx_a_rf_board_test, WO, NO_POLL, "0"},
 	{"tx_a/board/temp", get_tx_a_rf_board_temp, set_invalid, RO, POLL, "23"},
 	{"tx_a/board/led", get_invalid, set_tx_a_rf_board_led, WO, NO_POLL, "0"},
-	{"tx_a/dsp/freq", get_invalid, set_tx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_a/dsp/gain", get_invalid, set_tx_a_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_a/dsp/rate", get_invalid, set_tx_a_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_a/dsp/nco_adj", get_invalid, set_tx_a_dsp_nco_adj, RW, NO_POLL, "0"},
-	{"tx_a/dsp/iqerr_gain", get_invalid, set_tx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_a/dsp/iqerr_phase", get_invalid, set_tx_a_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_a/dsp/rstreq", get_invalid, set_tx_a_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_a/about/id", get_invalid, set_tx_a_about_id, RW, NO_POLL, "001"},
 	{"tx_a/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
@@ -3400,7 +3174,6 @@ static prop_t property_table[] = {
 	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/band", get_invalid, set_rx_a_rf_freq_band, RW, NO_POLL, "1"},
-	{"rx_a/rf/freq/varac", get_invalid, set_rx_a_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_a/board/status", get_rx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_a/board/dump", get_invalid, set_rx_a_rf_board_dump, WO, NO_POLL, "0"},
@@ -3408,12 +3181,9 @@ static prop_t property_table[] = {
 	{"rx_a/board/temp", get_rx_a_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_a/board/led", get_invalid, set_rx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_a/dsp/signed", get_invalid, set_rx_a_dsp_signed, RW, NO_POLL, "1"},
-	{"rx_a/dsp/freq", get_invalid, set_rx_a_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_a/dsp/rate", get_invalid, set_rx_a_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_a/dsp/nco_adj", get_invalid, set_rx_a_dsp_nco_adj, RW, NO_POLL, "-15000000"},
-	{"rx_a/dsp/iqerr_gain", get_invalid, set_rx_a_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"rx_a/dsp/iqerr_phase", get_invalid, set_rx_a_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_a/dsp/rstreq", get_invalid, set_rx_a_dsp_rstreq, WO, NO_POLL, "0"},
 	{"rx_a/dsp/loopback", get_invalid, set_rx_a_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_a/about/id", get_invalid, set_rx_a_about_id, RW, NO_POLL, "001"},
@@ -3427,13 +3197,9 @@ static prop_t property_table[] = {
 	{"rx_a/link/ip_dest", get_invalid, set_rx_a_link_ip_dest, RW, NO_POLL, "10.10.10.10"},
 	{"rx_a/link/mac_dest", get_invalid, set_rx_a_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
-	{"tx_b/rf/dac/mixer", get_invalid, set_tx_b_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_b/rf/dac/iqerr_gain", get_invalid, set_tx_b_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_b/rf/dac/iqerr_phase", get_invalid, set_tx_b_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "450000000"},
-	{"tx_b/rf/freq/lna", get_invalid, set_tx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/band", get_invalid, set_tx_b_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3443,12 +3209,9 @@ static prop_t property_table[] = {
 	{"tx_b/board/test", get_invalid, set_tx_b_rf_board_test, WO, NO_POLL, "0"},
 	{"tx_b/board/temp", get_tx_b_rf_board_temp, set_invalid, RO, POLL, "23"},
 	{"tx_b/board/led", get_invalid, set_tx_b_rf_board_led, WO, NO_POLL, "0"},
-	{"tx_b/dsp/freq", get_invalid, set_tx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_b/dsp/gain", get_invalid, set_tx_b_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_b/dsp/rate", get_invalid, set_tx_b_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_b/dsp/nco_adj", get_invalid, set_tx_b_dsp_nco_adj, RW, NO_POLL, "0"},
-	{"tx_b/dsp/iqerr_gain", get_invalid, set_tx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_b/dsp/iqerr_phase", get_invalid, set_tx_b_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_b/dsp/rstreq", get_invalid, set_tx_b_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_b/about/id", get_invalid, set_tx_b_about_id, RW, NO_POLL, "001"},
 	{"tx_b/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
@@ -3462,7 +3225,6 @@ static prop_t property_table[] = {
 	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/band", get_invalid, set_rx_b_rf_freq_band, RW, NO_POLL, "1"},
-	{"rx_b/rf/freq/varac", get_invalid, set_rx_b_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_b/board/status", get_rx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_b/board/dump", get_invalid, set_rx_b_rf_board_dump, WO, NO_POLL, "0"},
@@ -3470,12 +3232,9 @@ static prop_t property_table[] = {
 	{"rx_b/board/temp", get_rx_b_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_b/board/led", get_invalid, set_rx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_b/dsp/signed", get_invalid, set_rx_b_dsp_signed, RW, NO_POLL, "1"},
-	{"rx_b/dsp/freq", get_invalid, set_rx_b_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_b/dsp/rate", get_invalid, set_rx_b_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_b/dsp/nco_adj", get_invalid, set_rx_b_dsp_nco_adj, RW, NO_POLL, "-15000000"},
-	{"rx_b/dsp/iqerr_gain", get_invalid, set_rx_b_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"rx_b/dsp/iqerr_phase", get_invalid, set_rx_b_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_b/dsp/rstreq", get_invalid, set_rx_b_dsp_rstreq, WO, NO_POLL, "0"},
 	{"rx_b/dsp/loopback", get_invalid, set_rx_b_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_b/about/id", get_invalid, set_rx_b_about_id, RW, NO_POLL, "001"},
@@ -3489,13 +3248,9 @@ static prop_t property_table[] = {
 	{"rx_b/link/ip_dest", get_invalid, set_rx_b_link_ip_dest, RW, NO_POLL, "10.10.11.10"},
 	{"rx_b/link/mac_dest", get_invalid, set_rx_b_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
-	{"tx_c/rf/dac/mixer", get_invalid, set_tx_c_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_c/rf/dac/iqerr_gain", get_invalid, set_tx_c_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_c/rf/dac/iqerr_phase", get_invalid, set_tx_c_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "450000000"},
-	{"tx_c/rf/freq/lna", get_invalid, set_tx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/band", get_invalid, set_tx_c_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3505,12 +3260,9 @@ static prop_t property_table[] = {
 	{"tx_c/board/test", get_invalid, set_tx_c_rf_board_test, WO, NO_POLL, "0"},
 	{"tx_c/board/temp", get_tx_c_rf_board_temp, set_invalid, RO, POLL, "23"},
 	{"tx_c/board/led", get_invalid, set_tx_c_rf_board_led, WO, NO_POLL, "0"},
-	{"tx_c/dsp/freq", get_invalid, set_tx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_c/dsp/gain", get_invalid, set_tx_c_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_c/dsp/rate", get_invalid, set_tx_c_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_c/dsp/nco_adj", get_invalid, set_tx_c_dsp_nco_adj, RW, NO_POLL, "0"},
-	{"tx_c/dsp/iqerr_gain", get_invalid, set_tx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_c/dsp/iqerr_phase", get_invalid, set_tx_c_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_c/dsp/rstreq", get_invalid, set_tx_c_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_c/about/id", get_invalid, set_tx_c_about_id, RW, NO_POLL, "001"},
 	{"tx_c/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
@@ -3524,7 +3276,6 @@ static prop_t property_table[] = {
 	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/band", get_invalid, set_rx_c_rf_freq_band, RW, NO_POLL, "1"},
-	{"rx_c/rf/freq/varac", get_invalid, set_rx_c_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_c/board/status", get_rx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_c/board/dump", get_invalid, set_rx_c_rf_board_dump, WO, NO_POLL, "0"},
@@ -3532,12 +3283,9 @@ static prop_t property_table[] = {
 	{"rx_c/board/temp", get_rx_c_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_c/board/led", get_invalid, set_rx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_c/dsp/signed", get_invalid, set_rx_c_dsp_signed, RW, NO_POLL, "1"},
-	{"rx_c/dsp/freq", get_invalid, set_rx_c_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_c/dsp/rate", get_invalid, set_rx_c_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_c/dsp/nco_adj", get_invalid, set_rx_c_dsp_nco_adj, RW, NO_POLL, "-15000000"},
-	{"rx_c/dsp/iqerr_gain", get_invalid, set_rx_c_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"rx_c/dsp/iqerr_phase", get_invalid, set_rx_c_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_c/dsp/rstreq", get_invalid, set_rx_c_dsp_rstreq, WO, NO_POLL, "0"},
 	{"rx_c/dsp/loopback", get_invalid, set_rx_c_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_c/about/id", get_invalid, set_rx_c_about_id, RW, NO_POLL, "001"},
@@ -3551,13 +3299,9 @@ static prop_t property_table[] = {
 	{"rx_c/link/ip_dest", get_invalid, set_rx_c_link_ip_dest, RW, NO_POLL, "10.10.10.10"},
 	{"rx_c/link/mac_dest", get_invalid, set_rx_c_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
-	{"tx_d/rf/dac/mixer", get_invalid, set_tx_d_rf_dac_mixer, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_d/rf/dac/iqerr_gain", get_invalid, set_tx_d_rf_dac_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_d/rf/dac/iqerr_phase", get_invalid, set_tx_d_rf_dac_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "450000000"},
-	{"tx_d/rf/freq/lna", get_invalid, set_tx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/band", get_invalid, set_tx_d_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3567,12 +3311,9 @@ static prop_t property_table[] = {
 	{"tx_d/board/test", get_invalid, set_tx_d_rf_board_test, WO, NO_POLL, "0"},
 	{"tx_d/board/temp", get_tx_d_rf_board_temp, set_invalid, RO, POLL, "23"},
 	{"tx_d/board/led", get_invalid, set_tx_d_rf_board_led, WO, NO_POLL, "0"},
-	{"tx_d/dsp/freq", get_invalid, set_tx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"tx_d/dsp/gain", get_invalid, set_tx_d_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_d/dsp/rate", get_invalid, set_tx_d_dsp_rate, RW, NO_POLL, "1258850"},
 	{"tx_d/dsp/nco_adj", get_invalid, set_tx_d_dsp_nco_adj, RW, NO_POLL, "0"},
-	{"tx_d/dsp/iqerr_gain", get_invalid, set_tx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"tx_d/dsp/iqerr_phase", get_invalid, set_tx_d_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"tx_d/dsp/rstreq", get_invalid, set_tx_d_dsp_rstreq, WO, NO_POLL, "0"},
 	{"tx_d/about/id", get_invalid, set_tx_d_about_id, RW, NO_POLL, "001"},
 	{"tx_d/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
@@ -3586,7 +3327,6 @@ static prop_t property_table[] = {
 	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "450000000"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/band", get_invalid, set_rx_d_rf_freq_band, RW, NO_POLL, "1"},
-	{"rx_d/rf/freq/varac", get_invalid, set_rx_d_rf_freq_varac, RW, NO_POLL, "0"},
 	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "35"},
 	{"rx_d/board/status", get_rx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_d/board/dump", get_invalid, set_rx_d_rf_board_dump, WO, NO_POLL, "0"},
@@ -3594,12 +3334,9 @@ static prop_t property_table[] = {
 	{"rx_d/board/temp", get_rx_d_rf_board_temp, set_invalid, RO, POLL, "20"},
 	{"rx_d/board/led", get_invalid, set_rx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_d/dsp/signed", get_invalid, set_rx_d_dsp_signed, RW, NO_POLL, "1"},
-	{"rx_d/dsp/freq", get_invalid, set_rx_d_dsp_freq, RW, NO_POLL, "2400"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
 	{"rx_d/dsp/rate", get_invalid, set_rx_d_dsp_rate, RW, NO_POLL, "1258850"},
 	{"rx_d/dsp/nco_adj", get_invalid, set_rx_d_dsp_nco_adj, RW, NO_POLL, "-15000000"},
-	{"rx_d/dsp/iqerr_gain", get_invalid, set_rx_d_dsp_iqerr_gain, RW, NO_POLL, "0"},
-	{"rx_d/dsp/iqerr_phase", get_invalid, set_rx_d_dsp_iqerr_phase, RW, NO_POLL, "0"},
 	{"rx_d/dsp/rstreq", get_invalid, set_rx_d_dsp_rstreq, WO, NO_POLL, "0"},
 	{"rx_d/dsp/loopback", get_invalid, set_rx_d_dsp_loopback, RW, NO_POLL, "0"},
 	{"rx_d/about/id", get_invalid, set_rx_d_about_id, RW, NO_POLL, "001"},
@@ -3614,7 +3351,6 @@ static prop_t property_table[] = {
 	{"rx_d/link/mac_dest", get_invalid, set_rx_d_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"time/clk/pps", get_invalid, set_time_clk_pps, RW, NO_POLL, "0"},
 	{"time/clk/cur_time", get_invalid, set_time_clk_cur_time, RW, NO_POLL, "0.0"},
-	{"time/source/rate", get_invalid, set_time_source_rate, RW, NO_POLL, "10000000"},
 	{"time/source/vco", get_invalid, set_time_source_vco, RW, NO_POLL, "internal"},
 	{"time/source/sync", get_invalid, set_time_source_sync, RW, NO_POLL, "internal"},
 	{"time/source/ref", get_invalid, set_time_source_ref, RW, NO_POLL, "internal"},
@@ -3635,6 +3371,7 @@ static prop_t property_table[] = {
 	{"fpga/board/led", get_invalid, set_fpga_board_led, WO, NO_POLL, "0"},
 	{"fpga/board/rstreq", get_invalid, set_fpga_board_rstreq, WO, NO_POLL, "0"},
 	{"fpga/board/jesd_sync", get_invalid, set_fpga_board_jesd_sync, WO, NO_POLL, "0"},
+	{"fpga/board/sys_rstreq", get_invalid, set_fpga_board_sys_rstreq, WO, NO_POLL, "0"},
 	{"fpga/about/id", get_invalid, set_fpga_about_id, RW, NO_POLL, "001"},
 	{"fpga/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
 	{"fpga/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
