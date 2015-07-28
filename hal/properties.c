@@ -268,10 +268,12 @@ static int set_tx_a_rf_freq_q_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-// TODO: make sure the range (0 -> -28 is within the boundaries of requirement
 static int set_tx_a_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
+
+	if (gain > 28)		gain = 28;
+	else if (gain < 0) 	gain = 0;
 
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
@@ -574,8 +576,14 @@ static int set_rx_a_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_rx_a_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
+	if (gain > 95)		gain = 95;
+	else if (gain < 0) 	gain = 0;
+
 	strcpy(buf, "fwd -b 0 -m 'vga -c a -g ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", gain);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -951,6 +959,9 @@ static int set_tx_b_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
+	if (gain > 28)		gain = 28;
+	else if (gain < 0) 	gain = 0;
+
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
 	strcat(buf, "'\r");
@@ -1252,8 +1263,14 @@ static int set_rx_b_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_rx_b_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
+	if (gain > 95)		gain = 95;
+	else if (gain < 0) 	gain = 0;
+
 	strcpy(buf, "fwd -b 0 -m 'vga -c b -g ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", gain);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -1629,6 +1646,9 @@ static int set_tx_c_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
+	if (gain > 28)		gain = 28;
+	else if (gain < 0) 	gain = 0;
+
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
 	strcat(buf, "'\r");
@@ -1930,8 +1950,14 @@ static int set_rx_c_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_rx_c_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
+	if (gain > 95)		gain = 95;
+	else if (gain < 0) 	gain = 0;
+
 	strcpy(buf, "fwd -b 0 -m 'vga -c c -g ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", gain);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -2307,6 +2333,9 @@ static int set_tx_d_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
+	if (gain > 28)		gain = 28;
+	else if (gain < 0) 	gain = 0;
+
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
 	strcat(buf, "'\r");
@@ -2607,8 +2636,14 @@ static int set_rx_d_rf_freq_band (const char* data, char* ret) {
 }
 
 static int set_rx_d_rf_gain_val (const char* data, char* ret) {
+	int gain;
+	sscanf(data, "%i", &gain);
+
+	if (gain > 95)		gain = 95;
+	else if (gain < 0) 	gain = 0;
+
 	strcpy(buf, "fwd -b 0 -m 'vga -c d -g ");
-	strcat(buf, data);
+	sprintf(buf + strlen(buf), "%i", gain);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -2983,15 +3018,15 @@ static int set_fpga_board_jesd_sync (const char* data, char* ret) {
 static int set_fpga_board_sys_rstreq (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 2 -m 'board -r'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(100000);
+	usleep(700000);
 
 	strcpy(buf, "fwd -b 0 -m 'board -r'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(100000);
+	usleep(50000);
 
 	strcpy(buf, "fwd -b 1 -m 'board -r'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(100000);
+	usleep(50000);
 
 	strcpy(buf, "board -r \r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
