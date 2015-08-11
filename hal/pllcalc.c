@@ -95,10 +95,15 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 
 	uint64_t temp = *reqFreq;
 
-	// round the required Frequency to the nearest even MHz
-	*reqFreq = *reqFreq / 1e6;
-	//if ((*reqFreq & 1) != 0) *reqFreq += 1;
-	*reqFreq = *reqFreq * 1e6;
+	// round the required Frequency to the nearest MHz
+	uint64_t mhzFreq = (*reqFreq / 1e6); // MHz truncation
+	uint64_t hunkhzFreq = *reqFreq / 1e5;// 100kHz truncation
+	mhzFreq *= 10;
+	if ((hunkhzFreq - mhzFreq) > 4) {	// round accordingly
+		mhzFreq += 10;
+	}
+
+	*reqFreq = mhzFreq * 1e5;
 
     // Sanitize the input to be within range
     if (*reqFreq > PLL1_RFOUT_MAX_HZ) 		*reqFreq = PLL1_RFOUT_MAX_HZ;
