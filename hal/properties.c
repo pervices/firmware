@@ -160,10 +160,16 @@ static int get_tx_a_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 1 -m 'pwr -c a -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -481,10 +487,16 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 0 -m 'pwr -c a -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -847,10 +859,16 @@ static int get_tx_b_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 1 -m 'pwr -c b -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -1168,10 +1186,16 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 0 -m 'pwr -c b -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -1534,10 +1558,16 @@ static int get_tx_c_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 1 -m 'pwr -c c -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -1855,10 +1885,16 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 0 -m 'pwr -c c -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -2221,10 +2257,16 @@ static int get_tx_d_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 1 -m 'pwr -c d -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -2541,10 +2583,16 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-/* TODO not all frequencies are possible, read in the value and update it */
 static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
+
+	// if freq is less than 25MHz, mute the synthesizer chips
+	if ( freq < 25000000ULL ) {
+		strcpy(buf, "fwd -b 0 -m 'pwr -c d -s 0'\r");
+		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		return RETURN_SUCCESS;
+	}
 
 	// run the pll calc algorithm
 	pllparam_t pll0;
@@ -3183,7 +3231,7 @@ static prop_t property_table[] = {
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/band", get_invalid, set_tx_a_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3206,7 +3254,7 @@ static prop_t property_table[] = {
 	{"tx_a/link/iface", get_invalid, set_tx_a_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_a/link/port", get_invalid, set_tx_a_link_port, RW, NO_POLL, "42824"},
 	{"rx_a/pwr", get_invalid, set_rx_a_pwr, RW, NO_POLL, "0"},
-	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"rx_a/rf/freq/val", get_invalid, set_rx_a_rf_freq_val, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/band", get_invalid, set_rx_a_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "35"},
@@ -3234,7 +3282,7 @@ static prop_t property_table[] = {
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/band", get_invalid, set_tx_b_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3257,7 +3305,7 @@ static prop_t property_table[] = {
 	{"tx_b/link/iface", get_invalid, set_tx_b_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_b/link/port", get_invalid, set_tx_b_link_port, RW, NO_POLL, "42825"},
 	{"rx_b/pwr", get_invalid, set_rx_b_pwr, RW, NO_POLL, "0"},
-	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"rx_b/rf/freq/val", get_invalid, set_rx_b_rf_freq_val, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/band", get_invalid, set_rx_b_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "35"},
@@ -3285,7 +3333,7 @@ static prop_t property_table[] = {
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/band", get_invalid, set_tx_c_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3308,7 +3356,7 @@ static prop_t property_table[] = {
 	{"tx_c/link/iface", get_invalid, set_tx_c_link_iface, RW, NO_POLL, "sfpa"},
 	{"tx_c/link/port", get_invalid, set_tx_c_link_port, RW, NO_POLL, "42826"},
 	{"rx_c/pwr", get_invalid, set_rx_c_pwr, RW, NO_POLL, "0"},
-	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"rx_c/rf/freq/val", get_invalid, set_rx_c_rf_freq_val, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/band", get_invalid, set_rx_c_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "35"},
@@ -3336,7 +3384,7 @@ static prop_t property_table[] = {
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15000000"},
 	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},
-	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/band", get_invalid, set_tx_d_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "17"},
@@ -3359,7 +3407,7 @@ static prop_t property_table[] = {
 	{"tx_d/link/iface", get_invalid, set_tx_d_link_iface, RW, NO_POLL, "sfpb"},
 	{"tx_d/link/port", get_invalid, set_tx_d_link_port, RW, NO_POLL, "42827"},
 	{"rx_d/pwr", get_invalid, set_rx_d_pwr, RW, NO_POLL, "0"},
-	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "450000000"},
+	{"rx_d/rf/freq/val", get_invalid, set_rx_d_rf_freq_val, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/band", get_invalid, set_rx_d_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "35"},
