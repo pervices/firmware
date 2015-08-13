@@ -123,7 +123,10 @@ static void init_prop_val(prop_t* prop) {
 
 	// exceptions for values that must persist through hard resets
 	if (	strcmp(prop -> path, "fpga/link/net/hostname") == 0 ||
-		strcmp(prop -> path, "fpga/link/net/ip_addr") == 0 ) {
+		strcmp(prop -> path, "fpga/link/net/ip_addr") == 0  ||
+		strcmp(prop -> path, "save_config") == 0 ||
+		strcmp(prop -> path, "load_config") == 0
+	) {
 		return;
 	}
 
@@ -276,6 +279,76 @@ void check_property_inotifies(void) {
 	}
 }
 
+// Save properties to file
+int save_properties(const char* file) {
+	// open the file, if file exists, overwrite the file
+	FILE* fout = fopen(file, "w");
+	if (!fout) return RETURN_ERROR;
+
+	// temp buffer to store the property values
+	char prop_val [MAX_PROP_LEN];
+
+	// loop through all properties and write them to file
+	size_t i;
+	for (i = 0; i < get_num_prop(); i++) {
+		prop_t* cur_prop = get_prop(i);
+		if (cur_prop && cur_prop -> permissions != WO) {
+			get_property(cur_prop -> path, prop_val, MAX_PROP_LEN);
+			fprintf(fout, "%s,%s\n", cur_prop -> path, prop_val);
+		}
+	}
+
+	// close the file
+	fclose(fout);
+
+	return RETURN_SUCCESS;
+}
+
+// Load properties from file
+int load_properties(const char* file) {
+	printf("loading properties from %s!\n", file);
+
+	// open the file for reading
+	FILE* fin = fopen(file, "r");
+	if (!fin) return RETURN_ERROR;
+
+	// temp buffer to store the property values
+	char prop [MAX_PROP_LEN] = {0};
+
+	// loop through all properties, if there are incompatibilities, error out
+	size_t i;
+	for (i = 0; i < get_num_prop(); i++) {
+		// read from file and update the property table
+		if (fscanf(fin, "%s", prop) == EOF) {
+			break;
+		}
+
+		// if property exceeded the MAX_PROP_LEN
+		prop[MAX_PROP_LEN - 1] = 0;
+
+		// divide up the property and value
+		char* prop_val = strchr(prop, ',');
+		*prop_val = 0;
+		prop_val++;
+
+		// get pointer to current property
+		prop_t* cur_prop = get_prop_from_cmd(prop);
+		if (!cur_prop) {
+			printf("ERROR: invalid property %s\n", prop);
+			continue;
+		}
+		strcpy(cur_prop -> def_val, prop_val);
+
+		// write the current property to device
+		init_prop_val(get_prop(i));
+	}
+
+	// close the file
+	fclose(fin);
+
+	return RETURN_SUCCESS;
+}
+
 // Standard get property
 int get_property(const char* prop, char* data, size_t max_len) {
 	#ifdef DEBUG
@@ -346,4 +419,9 @@ void update_status_properties(void) {
 			write_to_file(get_abs_path(get_prop(i), path), buf);
 		}
 	}
+}
+
+// Pass the pointers for load/saving profiles flags
+void pass_profile_pntr_manager(uint8_t* load, uint8_t* save, char* load_path, char* save_path) {
+	pass_profile_pntr_prop(load, save, load_path, save_path);
 }

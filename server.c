@@ -49,6 +49,12 @@ static uint8_t timeout(uint32_t timeout) {
 		return 0;
 }
 
+// profile flags, read in this file, triggered in properties.c
+uint8_t load_profile = 0;
+uint8_t save_profile = 0;
+char load_profile_path[MAX_PROP_LEN];
+char save_profile_path[MAX_PROP_LEN];
+
 // execution options
 uint8_t options = 0;
 
@@ -92,6 +98,9 @@ int main(int argc, char *argv[]) {
 	// initialize the properties, which is implemented as a Linux file structure
 	init_property(options);
 
+	// pass the profile pointers down to properties.c
+	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);
+
 	// let the user know the server is ready to receive commands
 	printf("- Crimson server is up.\n");
 
@@ -109,7 +118,7 @@ int main(int argc, char *argv[]) {
 
 		// check for input commands from UDP
 		if (recv_udp_comm(comm_fds[i], buffer, &received_bytes, UDP_PAYLOAD_LEN) >= 0) {
-			parse_cmd(&cmd, buffer);
+			if (parse_cmd(&cmd, buffer) != RETURN_SUCCESS) break;
 
 			// Debug print
 			/*printf("\tRecevied:\n");
@@ -119,21 +128,35 @@ int main(int argc, char *argv[]) {
 			printf("\tProp:   %s\n", cmd.prop);
 			printf("\tData:   %s\n", cmd.data);*/
 
+			cmd.status = CMD_SUCCESS;
+
 			if (cmd.op == OP_GET) {
-				//printf("Getting property\n");
-				get_property(cmd.prop, cmd.data, MAX_PROP_LEN);
+				if (get_property(cmd.prop, cmd.data, MAX_PROP_LEN) != RETURN_SUCCESS)
+					cmd.status = CMD_ERROR;
 			} else {
-				//printf("Setting property\n");
-				set_property(cmd.prop, cmd.data);
+				if (set_property(cmd.prop, cmd.data) != RETURN_SUCCESS)
+					cmd.status = CMD_ERROR;
 			}
+
 			build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
 
 			send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
-			//printf("\tSent()\n");
 		}
 
 		// check if any files/properties have been modified through shell
 		check_property_inotifies();
+
+		// check if any of the writes/reads were made to save/load profiles
+		// priority given to saving profile
+		if (save_profile) {
+			save_properties(save_profile_path);
+			save_profile = 0;
+		}
+
+		if (load_profile) {
+			load_properties(load_profile_path);
+			load_profile = 0;
+		}
 
 		// increment to service the other ports
 		i = (i + 1) % num_udp_ports;

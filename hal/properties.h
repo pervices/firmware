@@ -33,12 +33,12 @@ typedef enum {RW, RO, WO} perm_t;
 typedef enum {POLL, NO_POLL} poll_t;
 
 typedef struct prop {
-	const char* path;
+	char path[MAX_PROP_LEN];
 	int (*get_handler)(const char* data, char* ret);
 	int (*set_handler)(const char* data, char* ret);
 	perm_t permissions;
 	poll_t poll;
-	const char* def_val;	// default value
+	char def_val[MAX_PROP_LEN];	// default value
 	int wd;		// inotify watch descriptor
 } prop_t;
 
@@ -50,5 +50,6 @@ inline prop_t* get_prop_from_cmd(const char* cmd);
 char* get_abs_path(prop_t* prop, char* path);
 char* get_abs_dir(prop_t* prop, char* path);
 inline void pass_uart_fd(int fd);
+void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char* save_path);
 
 #endif

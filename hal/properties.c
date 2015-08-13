@@ -52,6 +52,12 @@ const static char* reg4[] = {"rxa4", "rxb4", "rxc4", "rxd4", "txa4", "txb4", "tx
 static int i_bias[] = {17, 17, 17, 17};
 static int q_bias[] = {17, 17, 17, 17};
 
+// profile pointers
+uint8_t* _save_profile;
+uint8_t* _load_profile;
+char* _save_profile_path;
+char* _load_profile_path;
+
 // state variables
 static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
 
@@ -427,7 +433,7 @@ static int set_tx_a_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -448,6 +454,7 @@ static int set_tx_a_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -775,7 +782,7 @@ static int set_rx_a_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -796,6 +803,7 @@ static int set_rx_a_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1126,7 +1134,7 @@ static int set_tx_b_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1147,6 +1155,7 @@ static int set_tx_b_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1474,7 +1483,7 @@ static int set_rx_b_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1495,6 +1504,7 @@ static int set_rx_b_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1825,7 +1835,7 @@ static int set_tx_c_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1846,6 +1856,7 @@ static int set_tx_c_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2173,7 +2184,7 @@ static int set_rx_c_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2194,6 +2205,7 @@ static int set_rx_c_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2524,7 +2536,7 @@ static int set_tx_d_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2545,6 +2557,7 @@ static int set_tx_d_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2872,7 +2885,7 @@ static int set_rx_d_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(500000);
+      sleep(2);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2893,6 +2906,7 @@ static int set_rx_d_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -3221,8 +3235,18 @@ static int set_fpga_link_net_ip_addr (const char* data, char* ret) {
 }
 
 static int set_poll_en (const char* data, char* ret) {
-	// Insert MCU/MEM command
+	return RETURN_SUCCESS;
+}
 
+static int set_save_config (const char* data, char* ret) {
+	*_save_profile = 1;
+	strcpy(_save_profile_path, data);
+	return RETURN_SUCCESS;
+}
+
+static int set_load_config (const char* data, char* ret) {
+	*_load_profile = 1;
+	strcpy(_load_profile_path, data);
 	return RETURN_SUCCESS;
 }
 
@@ -3472,7 +3496,9 @@ static prop_t property_table[] = {
 	{"fpga/link/net/dhcp_en", get_invalid, set_fpga_link_net_dhcp_en, RW, NO_POLL, "0"},
 	{"fpga/link/net/hostname", get_invalid, set_fpga_link_net_hostname, RW, NO_POLL, "crimson"},
 	{"fpga/link/net/ip_addr", get_invalid, set_fpga_link_net_ip_addr, RW, NO_POLL, "192.168.10.2"},
-	{"poll_en", get_invalid, set_poll_en, RW, NO_POLL, "1"}
+	{"poll_en", get_invalid, set_poll_en, RW, NO_POLL, "1"},
+	{"save_config", get_invalid, set_save_config, RW, NO_POLL, "/home/root/profile.cfg"},
+	{"load_config", get_invalid, set_load_config, RW, NO_POLL, "/home/root/profile.cfg"}
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
@@ -3539,4 +3565,11 @@ char* get_abs_dir(prop_t* prop, char* path) {
 	path[temp_len + len] = '\0';
 
 	return path;
+}
+
+void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char* save_path) {
+	_load_profile = load;
+	_save_profile = save;
+	_load_profile_path = load_path;
+	_save_profile_path = save_path;
 }
