@@ -16,13 +16,20 @@ int main(int argc, char *argv[]) {
 	int verbose = 0;		// printing verbosity, default, not verbose
 	int length = 4;
 	uint32_t rval;			// value that is read
+	uint32_t mask = 0xffffffff;	// default mask if not specified
 
 	/* Parse arguments */
 	// if command is memory write
-	if (argc == 4 && strcmp(argv[1], ARG_MEM_WRITE) == 0) {
+	if ((argc == 5 || argc == 4) && strcmp(argv[1], ARG_MEM_WRITE) == 0) {
 		sscanf(argv[2], "%x", &addr);
 		sscanf(argv[3], "%x", &value);
-		write_hps_addr(addr, value);
+
+		if (argc == 5) {
+			sscanf(argv[4], "%x", &mask);
+			write_hps_addr_mask(addr, value, mask);
+		} else {
+			write_hps_addr(addr, value);
+		}
 
 	// if command is memory read
 	} else if (argc == 3 && strcmp(argv[1], ARG_MEM_READ) == 0) {
@@ -49,10 +56,16 @@ int main(int argc, char *argv[]) {
 		printf("\n");
 
 	// if command is register write
-	} else if (argc == 4 && strcmp(argv[1], ARG_REG_WRITE) == 0) {
+	} else if ((argc == 5 || argc == 4) && strcmp(argv[1], ARG_REG_WRITE) == 0) {
 		reg = argv[2];
 		sscanf(argv[3], "%x", &value);
-		write_hps_reg(reg, value);
+
+		if (argc == 5) {
+			sscanf(argv[4], "%x", &mask);
+			write_hps_reg_mask(reg, value, mask);
+		} else {
+			write_hps_reg(reg, value);
+		}
 
 	// if command is register read
 	} else if (argc == 3 && strcmp(argv[1], ARG_REG_READ) == 0) {
@@ -72,7 +85,7 @@ int main(int argc, char *argv[]) {
 
 	// usage menu
 	} else {
-		printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] [value|length]\n",
+		printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] [value|length|mask] [mask]\n",
 			ARG_MEM_READ, ARG_MEM_WRITE, ARG_MEM_DUMP,
 			ARG_REG_READ, ARG_REG_WRITE, ARG_REG_DUMP,
 			ARG_REG_LIST);

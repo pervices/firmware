@@ -127,6 +127,12 @@ int write_hps_addr(uint32_t addr, uint32_t data) {
 	return reg_write( addr, &data, 1 );
 }
 
+int write_hps_addr_mask(uint32_t addr, uint32_t data, uint32_t mask) {
+	uint32_t tmp;
+	if (read_hps_addr(addr, &tmp)) return RETURN_ERROR_INVALID_REGISTER;
+	return write_hps_addr(addr, (tmp & ~mask) | (data & mask));
+}
+
 int read_hps_reg(const char* reg, uint32_t* data) {
 	if (!reg || !data) return RETURN_ERROR_PARAM;
 
@@ -144,6 +150,12 @@ int write_hps_reg(const char* reg, uint32_t data) {
 	const reg_t* temp = get_reg_from_name(reg);
 	if (temp)	return reg_write( temp -> addr, &data, 1 );
 	else		return RETURN_ERROR_INVALID_REGISTER;
+}
+
+int write_hps_reg_mask(const char* reg, uint32_t data, uint32_t mask) {
+	uint32_t tmp;
+	if (read_hps_reg(reg, &tmp)) return RETURN_ERROR_INVALID_REGISTER;
+	return write_hps_reg(reg, (tmp & ~mask) | (data & mask));
 }
 
 void list_hps_reg(uint8_t verbosity) {
