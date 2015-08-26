@@ -77,6 +77,8 @@ int main(int argc, char *argv[]) {
 	int i = 0;
 	cmd_t cmd;
 
+	PRINT( INFO, "Starting Crimson server\n");
+
 	// check for an argument for debug mode
 	if (argc >= 2) {
 		if (strcmp(argv[1], "-d") == 0)
@@ -86,7 +88,7 @@ int main(int argc, char *argv[]) {
 	// Initialize network communications for each port
 	for( i = 0; i < num_udp_ports; i++) {
 		if ( init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0 ) {
-			printf("ERROR: %s, cannot initialize network %s\n", __func__, ENET_DEV);
+			PRINT( ERROR, "%s, cannot initialize network %s\n", __func__, ENET_DEV);
 			return RETURN_ERROR_COMM_INIT;
 		}
 	}
@@ -102,7 +104,7 @@ int main(int argc, char *argv[]) {
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);
 
 	// let the user know the server is ready to receive commands
-	printf("- Crimson server is up.\n");
+	PRINT( INFO, "Crimson server is up\n");
 
 	i = 0;
 	// main loop, look for commands, if exists, service it and respond
@@ -121,12 +123,12 @@ int main(int argc, char *argv[]) {
 			if (parse_cmd(&cmd, buffer) != RETURN_SUCCESS) break;
 
 			// Debug print
-			/*printf("\tRecevied:\n");
-			printf("\tSeq:    %"PRIu32"\n", cmd.seq);
-			printf("\tOp:     %i\n", cmd.op);
-			printf("\tStatus: %i\n", cmd.status);
-			printf("\tProp:   %s\n", cmd.prop);
-			printf("\tData:   %s\n", cmd.data);*/
+			PRINT( VERBOSE, "\tRecevied:\n");
+			PRINT( VERBOSE, "\tSeq:    %"PRIu32"\n", cmd.seq);
+			PRINT( VERBOSE, "\tOp:     %i\n", cmd.op);
+			PRINT( VERBOSE, "\tStatus: %i\n", cmd.status);
+			PRINT( VERBOSE, "\tProp:   %s\n", cmd.prop);
+			PRINT( VERBOSE, "\tData:   %s\n", cmd.data);
 
 			cmd.status = CMD_SUCCESS;
 

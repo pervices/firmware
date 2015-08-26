@@ -37,7 +37,6 @@ static boolean silent = FALSE;
 static boolean console = FALSE;
 static boolean fwd = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
-static uint16_t buf_size;
 static char fwd_board = 0;
 
 static int contains (const char* str, char letter, int size) {

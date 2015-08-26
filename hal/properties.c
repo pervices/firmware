@@ -132,12 +132,12 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
 static int get_invalid (const char* data, char* ret) {
-	printf("Cannot invoke a get on this property\n");
+	PRINT( ERROR,"Cannot invoke a get on this property\n");
 	return RETURN_ERROR_GET_PROP;
 }
 
 static int set_invalid (const char* data, char* ret) {
-	printf("Cannot invoke a set on this property\n");
+	PRINT( ERROR,"Cannot invoke a set on this property\n");
 	return RETURN_ERROR_SET_PROP;
 }
 

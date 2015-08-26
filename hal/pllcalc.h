@@ -30,6 +30,7 @@
 
 #include <stdlib.h>
 #include "math.h"
+#include "common.h"
 
 //PLL Calculator Parameters
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to 

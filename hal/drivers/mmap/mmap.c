@@ -37,14 +37,14 @@ static int reg_read(uint32_t addr, uint32_t* data, uint32_t bytes_to_read) {
 	if (span < bytes_to_read) span += PAGE_SIZE;
 
 	if( ( fd = open( MEM_DEV, ( O_RDWR | O_SYNC ) ) ) < 0 ) {
-		fprintf(stderr, "%s(): ERROR opening, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), opening, %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_MMAP;
 	}
 
 	virtual_base = mmap( NULL, span, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, addr & ~(span-1) );
 
 	if( virtual_base == MAP_FAILED ) {
-		fprintf(stderr, "%s(): ERROR mmap, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), mmap, %s\n", __func__, strerror(errno));
 		close( fd );
 		return RETURN_ERROR_COMM_MMAP;
 	}
@@ -55,7 +55,7 @@ static int reg_read(uint32_t addr, uint32_t* data, uint32_t bytes_to_read) {
 	}
 
 	if( munmap( virtual_base, span ) != 0 ) {
-		fprintf(stderr, "%s(): ERROR close, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), close, %s\n", __func__, strerror(errno));
 		close(fd);
 		return RETURN_ERROR_COMM_MMAP;
 	}
@@ -68,9 +68,7 @@ static int reg_write(uint32_t addr, uint32_t* data, uint32_t bytes_to_write) {
 	if (addr < ALT_LWFPGASLVS_OFST || addr >= ALT_LWFPGASLVS_OFST + ALT_LWFPGASLVS_SPAN)
 		return RETURN_ERROR_ADDR_OUT_OF_RANGE;
 
-	#ifdef DEBUG
-	printf("%s(): addr: 0x%08x data: 0x%08x\n", __func__, addr, *data);
-	#endif
+	PRINT(VERBOSE, "%s(): addr: 0x%08x data: 0x%08x\n", __func__, addr, *data);
 
 	int fd, i;
 	void* virtual_base;
@@ -80,14 +78,14 @@ static int reg_write(uint32_t addr, uint32_t* data, uint32_t bytes_to_write) {
 	if (span < bytes_to_write) span += PAGE_SIZE;
 
 	if( ( fd = open( MEM_DEV, ( O_RDWR | O_SYNC ) ) ) < 0 ) {
-		fprintf(stderr, "%s(): ERROR opening, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), opening, %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_MMAP;
 	}
 
 	virtual_base = mmap( NULL, span, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, addr & ~(span-1) );
 
 	if( virtual_base == MAP_FAILED ) {
-		fprintf(stderr, "%s(): ERROR mmap, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), mmap, %s\n", __func__, strerror(errno));
 		close( fd );
 		return RETURN_ERROR_COMM_MMAP;
 	}
@@ -98,7 +96,7 @@ static int reg_write(uint32_t addr, uint32_t* data, uint32_t bytes_to_write) {
 	}
 
 	if( munmap( virtual_base, span ) != 0 ) {
-		fprintf(stderr, "%s(): ERROR close, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), close, %s\n", __func__, strerror(errno));
 		close(fd);
 		return RETURN_ERROR_COMM_MMAP;
 	}
@@ -144,8 +142,8 @@ int read_hps_reg(const char* reg, uint32_t* data) {
 int write_hps_reg(const char* reg, uint32_t data) {
 	if (!reg) return RETURN_ERROR_PARAM;
 
-	if (_options & SERVER_DEBUG_OPT)
-		printf("%s(): %s: 0x%08x\n", __func__, reg, data);
+	//if (_options & SERVER_DEBUG_OPT)
+	PRINT(DEBUG, "%s(): %s: 0x%08x\n", __func__, reg, data);
 
 	const reg_t* temp = get_reg_from_name(reg);
 	if (temp)	return reg_write( temp -> addr, &data, 1 );

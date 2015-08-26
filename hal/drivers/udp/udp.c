@@ -27,7 +27,7 @@ static int establish_eth_settings(eth_t* eth) {
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
 	if((ioctl(sockfd, SIOCGIFHWADDR, &ifr)) == -1){
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 	memcpy(&(eth->hwa), &ifr.ifr_hwaddr.sa_data, 6);
@@ -36,7 +36,7 @@ static int establish_eth_settings(eth_t* eth) {
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
 	if((ioctl(sockfd, SIOCGIFADDR, &ifr)) == -1){
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 	memcpy(&eth->ipa, &(*(struct sockaddr_in *)&ifr.ifr_addr).sin_addr, 4);
@@ -45,7 +45,7 @@ static int establish_eth_settings(eth_t* eth) {
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
 	if((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1){
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 	memcpy(&eth->bcast, &(*(struct sockaddr_in *)&ifr.ifr_broadaddr).sin_addr, 4);
@@ -54,7 +54,7 @@ static int establish_eth_settings(eth_t* eth) {
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
 	if((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1){
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 	memcpy(&eth->bcast, &(*(struct sockaddr_in *)&ifr.ifr_broadaddr).sin_addr, 4);
@@ -63,7 +63,7 @@ static int establish_eth_settings(eth_t* eth) {
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
 	if((ioctl(sockfd, SIOCGIFNETMASK, &ifr)) == -1){
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 	memcpy(&eth->nmask.s_addr, &(*(struct sockaddr_in *)&ifr.ifr_netmask).sin_addr, 4);
@@ -72,7 +72,7 @@ static int establish_eth_settings(eth_t* eth) {
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
 	if((ioctl(sockfd, SIOCGIFMTU, &ifr)) == -1){
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 	eth->mtu = ifr.ifr_mtu;
@@ -108,33 +108,31 @@ int get_gate (eth_t* eth, char* str, int size) {
 int establish_udp_connection(udp_dev_t* udp) {
 	int ret = 0;
 
-	#ifdef DEBUG
-	printf("Calling establish_eth_settings()\n");
-	#endif
+	PRINT( VERBOSE,"Calling establish_eth_settings()\n");
+
 	// initialize ethernet parameters
 	ret = establish_eth_settings(udp -> eth);
 	if (ret < 0) return ret;
 
-	#ifdef DEBUG
+	// verbose debugging messages
 	char test[256];
 	get_ip(udp -> eth, test, 256);
-	printf("IP Address: %s\n", test);
+	PRINT( VERBOSE,"IP Address: %s\n", test);
 	get_bcast(udp -> eth, test, 256);
-	printf("Broadcast Address: %s\n", test);
+	PRINT( VERBOSE,"Broadcast Address: %s\n", test);
 	get_nmask(udp -> eth, test, 256);
-	printf("Netmask Address: %s\n", test);
+	PRINT( VERBOSE,"Netmask Address: %s\n", test);
 	get_mac(udp -> eth, test, 256);
-	printf("MAC Address: %s\n", test);
+	PRINT( VERBOSE,"MAC Address: %s\n", test);
 	get_gate(udp -> eth, test, 256);
-	printf("Gateway Address: %s\n", test);
-	printf("Port: %i\n", udp -> eth -> port);
-	printf("Interface: %s\n", udp -> eth -> iface);
-	#endif
+	PRINT( VERBOSE,"Gateway Address: %s\n", test);
+	PRINT( VERBOSE,"Port: %i\n", udp -> eth -> port);
+	PRINT( VERBOSE,"Interface: %s\n", udp -> eth -> iface);
 
 	// open the socket
 	udp -> sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (udp -> sockfd < 0) {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 
@@ -151,31 +149,27 @@ int establish_udp_connection(udp_dev_t* udp) {
 
 	// bind the settings to the socket
 	if (bind(udp -> sockfd, (struct sockaddr *) &(udp -> si), sizeof(udp -> si)) < 0) {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_INIT;
 	}
 	udp -> slen = sizeof(udp -> si);
 
 	// connection has been established
-	#ifdef DEBUG
-	printf("%s(): UDP connection up\n", __func__);
-	#endif
+	PRINT( VERBOSE,"%s(): UDP connection up\n", __func__);
 	return RETURN_SUCCESS;
 }
 
 // send data back
 // the sender's IP address is populated in slen on recvfrom()
 int send_udp(udp_dev_t* udp, uint8_t* data, uint16_t size) {
-	#ifdef DEBUG
-	printf("Sending: ");
+	PRINT( VERBOSE,"Sending: ");
 	int i;
-	for (i = 0; i < size; i++) printf("%c", data[i]);
-	printf("\n");
-	#endif
+	for (i = 0; i < size; i++) PRINT( VERBOSE,"%c", data[i]);
+	PRINT( VERBOSE,"\n");
 
 	if (sendto(udp -> sockfd, (void*)(data), size, 0,
 			(struct sockaddr*) &(udp -> si), udp -> slen) < 0) {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_BUS;
 	}
 
@@ -194,15 +188,13 @@ int recv_udp(udp_dev_t* udp, uint8_t* data, uint16_t* size, uint16_t max_size) {
 	if (bytes < 0) {
 		// non-blocking will return -1 if no data
 		if (bytes != -1)
-			fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+			PRINT( ERROR, "%s(): ERROR, %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_NO_DATA;
 	} else {
-		#ifdef DEBUG
-		printf("Receiving: ");
+		PRINT( VERBOSE,"Receiving: ");
 		int i;
-		for (i = 0; i < bytes; i++) printf("%c", data[i]);
-		printf("\n");
-		#endif
+		for (i = 0; i < bytes; i++) PRINT( VERBOSE,"%c", data[i]);
+		PRINT( VERBOSE,"\n");
 
 		*size = (uint8_t)bytes;
 		return RETURN_SUCCESS;
@@ -210,6 +202,6 @@ int recv_udp(udp_dev_t* udp, uint8_t* data, uint16_t* size, uint16_t max_size) {
 }
 
 int severe_udp_connection(udp_dev_t* udp) {
-	printf("Severing udp connection\n");
+	PRINT( VERBOSE,"Severing udp connection\n");
 	return close(udp -> sockfd);
 }

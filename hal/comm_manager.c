@@ -48,9 +48,7 @@ int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options) {
 
 	int ret = RETURN_SUCCESS;
 
-	#ifdef DEBUG
-	printf("Found file descriptor %i\n", *fd);
-	#endif
+	PRINT( VERBOSE,"Found file descriptor %i\n", *fd);
 
 	used_udp_devices[*fd] = USED_DEVICE;
 
@@ -64,9 +62,7 @@ int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options) {
 	mydev -> eth -> port = port;
 	mydev -> opt = options;
 
-	#ifdef DEBUG
-	printf("Calling establish_udp_connection()\n");
-	#endif
+	PRINT( VERBOSE,"Calling establish_udp_connection()\n");
 
 	ret = establish_udp_connection(mydev);
 	if (ret < 0) {
@@ -78,7 +74,7 @@ int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options) {
 int close_udp_comm(int fd) {
 	if (fd < 0 || !udp_devices[fd]) return RETURN_ERROR_PARAM;
 
-	printf("Closing udp network %s()\n", __func__);
+	PRINT( VERBOSE,"Closing udp network %s()\n", __func__);
 
 	udp_dev_t* mydev = udp_devices[fd];
 	severe_udp_connection(mydev);
@@ -128,28 +124,20 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 	if (get_next_uart_fd(fd) < 0)
 		return RETURN_ERROR_INSUFFICIENT_RESOURCES;
 
-	#ifdef DEBUG
-	printf("Found file descriptor %i\n", *fd);
-	#endif
-
+	PRINT( VERBOSE,"Found file descriptor %i\n", *fd);
 	used_uart_devices[*fd] = USED_DEVICE;
-
-	#ifdef DEBUG
-	printf("Opening UART port: %s\n", dev);
-	#endif
+	PRINT( VERBOSE,"Opening UART port: %s\n", dev);
 
 	// Allocate space for uart device
 	uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
 	if (uart_devices[*fd] < 0)
 	{
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return RETURN_ERROR;
 	}
 	int mydev = uart_devices[*fd];
 
-	#ifdef DEBUG
-	printf("Configuring UART\n");
-	#endif
+	PRINT( VERBOSE,"Configuring UART\n");
 
 	set_uart_interface_attribs (mydev, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
 	set_uart_blocking (mydev, 0);               	 // set no blocking
@@ -160,7 +148,7 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 int close_uart_comm(int fd) {
 	if (fd < 0) return RETURN_ERROR_PARAM;
 
-	printf("Closing uart network %s()\n", __func__);
+	PRINT( VERBOSE,"Closing uart network %s()\n", __func__);
 
 	int mydev = uart_devices[fd];
 

@@ -117,7 +117,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 
 	// Determine best values of the Feedback Divider (N)
 	if (pll_NCalc(reqFreq, pll1, &N1)) {
-		//printf("REQUIRED FREQUENCY HAS BEEN ROUNDED TO THE NEAREST 100 Hz.\n");
+		PRINT( VERBOSE,"REQUIRED FREQUENCY HAS BEEN ROUNDED TO THE NEAREST 100 Hz.\n");
 	}
 
 	pll1->N = N1;
@@ -178,16 +178,14 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
     //// Recalculate the VCO frequency as there is a dependency on N1/R1
     //pll1->outFreq = (reference * pll1->N) / pll1->R;
 
-#ifdef _PLL_DEBUG_RAM_ON
-    printf("setFreq PLL1-N: %li, PLL1-R: %i.\n", pll1->N, pll1->R);
-    printf("setFreq PLL1-VCO: %li.\n",pll1->outFreq); // PLL1-N/R: %lf.\n", pll1->outFreq, pll1_ratio);
-    printf("setFreq PLL0-VCO: %li, PLL0-x2en: %i, PLL0-D: %i.\n", pll0->outFreq, pll0->x2en, pll0->d);
-    printf("setFreq RefFreq: %li.\n", reference);
-    printf("setFreq PLL1-VCO: %li, PLL1-D: %i.\n", pll1->outFreq, pll1->d);
-#endif
+    PRINT( VERBOSE,"setFreq PLL1-N: %li, PLL1-R: %i.\n", pll1->N, pll1->R);
+    PRINT( VERBOSE,"setFreq PLL1-VCO: %li.\n",pll1->outFreq); // PLL1-N/R: %lf.\n", pll1->outFreq, pll1_ratio);
+    PRINT( VERBOSE,"setFreq PLL0-VCO: %li, PLL0-x2en: %i, PLL0-D: %i.\n", pll0->outFreq, pll0->x2en, pll0->d);
+    PRINT( VERBOSE,"setFreq RefFreq: %li.\n", reference);
+    PRINT( VERBOSE,"setFreq PLL1-VCO: %li, PLL1-D: %i.\n", pll1->outFreq, pll1->d);
 
     if (!pll_CheckParams(pll0, 0)) {
-        fprintf(stderr, "BAD PLL SETTINGS: PLL0: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
+        PRINT( ERROR, "BAD PLL SETTINGS: PLL0: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
                 pll0->N,
                 pll0->R,
                 pll0->d,
@@ -196,7 +194,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
     }
 
     if (!pll_CheckParams(pll1, 1)) {
-        fprintf(stderr, "BAD PLL SETTINGS: PLL0: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
+        PRINT( ERROR, "BAD PLL SETTINGS: PLL0: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
                 pll1->N,
                 pll1->R,
                 pll1->d,
@@ -299,9 +297,7 @@ void pll_RefCalc(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
         pll1->x2en = 0;
     }
 
-#ifdef _PLL_DEBUG_RAM_ON
-    printf("RefCalc RefFreq: %li, PLL0-D: %li, PLL0-VCO: %li.\n", ref_freq, pll0->d, pll0->outFreq);
-#endif
+    PRINT( VERBOSE,"RefCalc RefFreq: %li, PLL0-D: %li, PLL0-VCO: %li.\n", ref_freq, pll0->d, pll0->outFreq);
 }
 
 //Modified from the Rosetta Code;
@@ -395,7 +391,7 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1) {
         REF = PLL_CORE_REF_FREQ_HZ;
     }
 
-    if (Nt > MAX_N) { //printf("N found to be more than N_MAX: %li.\n", Nt);
+    if (Nt > MAX_N) { //PRINT( VERBOSE,"N found to be more than N_MAX: %li.\n", Nt);
         double ratio = (double)Nt / (double)Rt;
         double worst_delta = (double)_PLL_OUT_MAX_DEVIATION / (double)REF;
         double del = worst_delta / 10.0;
@@ -415,22 +411,18 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1) {
 					min_N_ratio = ratio;
 					NminR = Rt;
 				}
-#ifdef _PLL_DEBUG_RAM_ON
-                printf("In Loop: Possible N: %li.\n", Nt);
-#endif
+                PRINT( VERBOSE,"In Loop: Possible N: %li.\n", Nt);
                 if (Nt < (uint64_t)MAX_N) break;
                 else ratio -= del;
             }
             if (Nt < (uint64_t)MAX_N) break;
 
-#ifdef _PLL_DEBUG_RAM_ON
-            printf("Reducing Current-MAX_R: %i.\n", MAX_R);
-#endif
+            PRINT( VERBOSE,"Reducing Current-MAX_R: %i.\n", MAX_R);
             if (MAX_R < (50)) {
 				Nt = Nmin;
 				Rt = NminR;
 				ratio = min_N_ratio;
-                fprintf(stderr, "UNABLE TO FIND PROPER SOLUTION: N TOO LARGE: %"PRIu64", UNABLE TO REDUCE N.\n", Nmin);
+                PRINT( ERROR, "UNABLE TO FIND PROPER SOLUTION: N TOO LARGE: %"PRIu64", UNABLE TO REDUCE N.\n", Nmin);
                 break;
             }
         }
@@ -457,10 +449,8 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1) {
         Rt = *R * multiplier;
     }
 
-#ifdef _PLL_DEBUG_RAM_ON
-	printf("CD: Best N found: Nt: %li.\n", Nt);
-	printf("CD: Best R found: Rt: %li.\n", Rt);
-#endif
+	PRINT( VERBOSE,"CD: Best N found: Nt: %li.\n", Nt);
+	PRINT( VERBOSE,"CD: Best R found: Rt: %li.\n", Rt);
 
     *N = Nt;
     *R = Rt;
@@ -510,7 +500,7 @@ void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pll, uint8_t is_pll1) {
 	}
 }
 
-uint8_t pll_NCalc(uint64_t* reqFreq, pllparam_t* pll1, uint64_t* N) { //printf("In NCalc...\n");
+uint8_t pll_NCalc(uint64_t* reqFreq, pllparam_t* pll1, uint64_t* N) { //PRINT( VERBOSE,"In NCalc...\n");
 	uint8_t rounding_performed = 0;
 
 	// Determine the upper and lower bounds of N for PLL1
@@ -531,7 +521,7 @@ uint8_t pll_NCalc(uint64_t* reqFreq, pllparam_t* pll1, uint64_t* N) { //printf("
 	if (rem != 0) {
 		*reqFreq = *reqFreq - rem;
 		rounding_performed = 1;
-		//printf("Rounding Performed...\n");
+		//PRINT( VERBOSE,"Rounding Performed...\n");
 	}
 
 	uint64_t Ntemp = Nmin;
@@ -545,10 +535,8 @@ uint8_t pll_NCalc(uint64_t* reqFreq, pllparam_t* pll1, uint64_t* N) { //printf("
 			Nbest = Ntemp;
 			best_score = score;
 		}
-#ifdef _PLL_DEBUG_RAM_ON
-		printf("NCalc: Current-N: %li, Current-Score: %lf.\n", Ntemp, score);
-		printf("NCalc: Best-N: %li, Best-Score: %lf.\n", Nbest, best_score);
-#endif
+		PRINT( VERBOSE,"NCalc: Current-N: %li, Current-Score: %lf.\n", Ntemp, score);
+		PRINT( VERBOSE,"NCalc: Best-N: %li, Best-Score: %lf.\n", Nbest, best_score);
 	}
 	*N = Nbest;
 
@@ -564,9 +552,7 @@ void pll_NScoringFunction(pllparam_t* pll, uint64_t* N, double* score) {
 	while (remainder == 0) {
 		remainder = fmodf(div_value,divisor);
 		divisor = divisor * 10;
-#ifdef _PLL_DEBUG_RAM_ON
-		printf("NSF: Remainder: %li, Divisor: %li.\n", remainder, divisor);
-#endif
+		PRINT( VERBOSE,"NSF: Remainder: %li, Divisor: %li.\n", remainder, divisor);
 	}
 
 	*score = (double)log10(divisor) / (double) *N;

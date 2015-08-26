@@ -39,9 +39,7 @@ int parse_cmd(cmd_t* cmd, uint8_t* data) {
 	memset(cmd -> prop, 0, MAX_PATH_LEN);
 	memset(cmd -> data, 0, MAX_PROP_LEN);
 
-	#ifdef DEBUG
-	printf("Parsing: %s\n", data);
-	#endif
+	PRINT( VERBOSE,"Parsing: %s\n", data);
 
 	while (data[pos] != 0 || pos - start != 0) {
 		// if a deliminator is found
@@ -91,13 +89,11 @@ int parse_cmd(cmd_t* cmd, uint8_t* data) {
 		pos++;
 	}
 
-	#ifdef DEBUG
-	printf("Parsing: %i characters\n", pos);
-	#endif
+	PRINT( VERBOSE,"Parsing: %i characters\n", pos);
 
 	// if command did not receive everything it expects
 	if (finish == 0) {
-		printf("ERROR: %s, currupt command\n", __func__);
+		PRINT( ERROR,"%s, currupt command\n", __func__);
 		cmd -> status = CMD_ERROR;
 		return RETURN_ERROR_CMD_CURRUPT;
 	} else {

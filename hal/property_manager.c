@@ -39,22 +39,20 @@ static uint8_t _options = 0;
 static void write_to_file(const char* path, const char* data) {
 	FILE* fd;
 	if ( !(fd = fopen(path, "w")) ) {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return;
 	}
 	fprintf(fd, "%s", data);
 	fclose(fd);
 
-	#ifdef DEBUG
-	printf("wrote to file: %s (%s)\n", path, data);
-	#endif
+	PRINT(VERBOSE, "wrote to file: %s (%s)\n", path, data);
 }
 
 // Helper function to read to property
 static void read_from_file(const char* path, char* data, size_t max_len) {
 	FILE* fd;
 	if ( !(fd = fopen(path, "r")) ) {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
 		return;
 	}
 	fgets(data, max_len, fd);
@@ -65,9 +63,7 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	while(data[pos] != '\n' && data[pos] != '\0') pos++;
 	data[pos] = '\0';
 
-	#ifdef DEBUG
-	printf("read from file: %s (%s)\n", path, data);
-	#endif
+	PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
 // Helper function to make properties
@@ -79,13 +75,13 @@ static inline void make_prop(prop_t* prop) {
 	strcpy(cmd, "mkdir -p ");
 	strcat(cmd, get_abs_dir(prop, path));
 	system(cmd);
-	//printf("executing: %s\n", cmd);
+	//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 	// touch /home/root/state/*
 	strcpy(cmd, "touch ");
 	strcat(cmd, get_abs_path(prop, path));
 	system(cmd);
-	//printf("executing: %s\n", cmd);
+	//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 	// if read only property, change permissions
 	if (prop -> permissions == RO) {
@@ -113,7 +109,7 @@ static void add_prop_to_inotify(prop_t* prop) {
 	}
 
 	if (prop -> wd < 0)
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
 }
 
 // Helper function to call power-on reset values
@@ -138,35 +134,27 @@ static void init_prop_val(prop_t* prop) {
 
 // Helper function for building a tree in the home directory
 static void build_tree(void) {
-	#ifdef DEBUG
-	printf("Building tree, %i properties found\n", get_num_prop());
-	#endif
+	PRINT(VERBOSE, "Building tree, %i properties found\n", get_num_prop());
 
 	size_t i;
 	for (i = 0; i < get_num_prop(); i++) {
 		make_prop(get_prop(i));
 		add_prop_to_inotify(get_prop(i));
 		init_prop_val(get_prop(i));
-		#ifdef DEBUG
-		printf("made prop: %s wd: %i\n", get_prop(i) -> path, get_prop(i) -> wd);
-		#endif
+		PRINT(VERBOSE, "made prop: %s wd: %i\n", get_prop(i) -> path, get_prop(i) -> wd);
 	}
 
 	// force property initofy check (writing of defaults) after init
 	check_property_inotifies();
 
-	#ifdef DEBUG
-	printf("Last wd val: %i\n", get_prop(i-1) -> wd);
-	printf("Done building tree\n");
-	#endif
+	PRINT( VERBOSE, "Last wd val: %i\n", get_prop(i-1) -> wd);
+	PRINT( VERBOSE, "Done building tree\n");
 }
 
 // Initialize handler functions
 int init_property(uint8_t options) {
 	// uart transactions
-	#ifdef DEBUG
-	printf("Initializing UART\n");
-	#endif
+	PRINT( VERBOSE,"Initializing UART\n");
 
 	// save the options
 	_options = options;
@@ -174,18 +162,16 @@ int init_property(uint8_t options) {
 	set_mem_debug_opt(options);
 
 	if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
-		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_DEV);
+		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV);
 		return RETURN_ERROR_COMM_INIT;
 	}
 
-	#ifdef DEBUG
-	printf("init_uart_comm(): UART connection up\n");
-	printf("Initializing Inotify\n");
-	#endif
+	PRINT(VERBOSE, "init_uart_comm(): UART connection up\n");
+	PRINT(VERBOSE, "Initializing Inotify\n");
 
 	// inotify
 	if ( (inotify_fd = inotify_init()) < 0) {
-		printf("ERROR: %s, cannot initialize inotify\n", __func__);
+		PRINT( ERROR,"%s, cannot initialize inotify\n", __func__);
 		return RETURN_ERROR_INOTIFY;
 	}
 
@@ -195,7 +181,7 @@ int init_property(uint8_t options) {
 	// pass the uart handler to the property handlers
 	pass_uart_fd(uart_comm_fd);
 
-	printf("- Building the property tree...\n");
+	PRINT( INFO,"Building the property tree\n");
 	build_tree();
 
 	return RETURN_SUCCESS;
@@ -217,9 +203,7 @@ void check_property_inotifies(void) {
 
 		// check if prop exists, prop will not exist if concurrent modifications were made to the file while in this loop
 		if (event -> mask & IN_CLOSE_WRITE && prop) {
-			#ifdef DEBUG
-			printf("Property located at %s has been modified, executing handler\n", prop -> path);
-			#endif
+			PRINT( VERBOSE,"Property located at %s has been modified, executing handler\n", prop -> path);
 
 			// empty out the buffers
 			memset(prop_data, 0, MAX_PROP_LEN);
@@ -233,22 +217,20 @@ void check_property_inotifies(void) {
 			// if the return value didn't change, don't write to file again
 			if ( strcmp(prop_ret, prop_data) != 0) {
 				// temperarily remove property from inotify so the file update won't trigger another inotify event
-				if (inotify_rm_watch( inotify_fd, prop -> wd) < 0)
-					fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
-				#ifdef DEBUG
-				printf("Removed inotify, wd: %i\n", prop -> wd);
-				#endif
+				if (inotify_rm_watch( inotify_fd, prop -> wd) < 0) {
+					PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
+				}
+				PRINT( VERBOSE,"Removed inotify, wd: %i\n", prop -> wd);
 
 				// write output of set_handler to property
 				write_to_file(get_abs_path(prop, path), prop_ret);
 
 				// re-add property to inotify
 				prop -> wd = inotify_add_watch( inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
-				if (prop -> wd < 0)
-					fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
-				#ifdef DEBUG
-				printf("Re-added to inotify, wd: %i\n", prop -> wd);
-				#endif
+				if (prop -> wd < 0) {
+					PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
+				}
+				PRINT( VERBOSE,"Re-added to inotify, wd: %i\n", prop -> wd);
 			}
 
 			// if the property was enabling power, re-write all the rf configurations that have been
@@ -268,7 +250,7 @@ void check_property_inotifies(void) {
 						memset(prop_ret,  0, MAX_PROP_LEN);
 
 						read_from_file(get_abs_path(get_prop(k), path), prop_data, MAX_PROP_LEN);
-						//printf("-- prop: %s val: %s\n", get_prop(k) -> path, prop_data);
+						//PRINT( VERBOSE,"-- prop: %s val: %s\n", get_prop(k) -> path, prop_data);
 						get_prop(k) -> set_handler(prop_data, prop_ret);
 					}
 				}
@@ -306,7 +288,7 @@ int save_properties(const char* file) {
 
 // Load properties from file
 int load_properties(const char* file) {
-	printf("loading properties from %s!\n", file);
+	PRINT( DEBUG,"loading properties from %s!\n", file);
 
 	// open the file for reading
 	FILE* fin = fopen(file, "r");
@@ -334,7 +316,7 @@ int load_properties(const char* file) {
 		// get pointer to current property
 		prop_t* cur_prop = get_prop_from_cmd(prop);
 		if (!cur_prop) {
-			printf("ERROR: invalid property %s\n", prop);
+			PRINT( ERROR,"invalid property %s\n", prop);
 			continue;
 		}
 		strcpy(cur_prop -> def_val, prop_val);
@@ -351,9 +333,7 @@ int load_properties(const char* file) {
 
 // Standard get property
 int get_property(const char* prop, char* data, size_t max_len) {
-	#ifdef DEBUG
-	printf("%s(): %s\n", __func__, prop);
-	#endif
+	PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
 
 	memset(data, 0, max_len);
 	char path [MAX_PATH_LEN];
@@ -361,13 +341,13 @@ int get_property(const char* prop, char* data, size_t max_len) {
 
 	// check if valid property
 	if (!temp) {
-		printf("Property: %s does not exist\n", prop);
+		PRINT( ERROR,"Property: %s does not exist\n", prop);
 		return RETURN_ERROR_SET_PROP;		
 	}
 
 	// check if WO property
 	if (temp -> permissions == WO) {
-		printf("Cannot invoke a get on this property\n");
+		PRINT( ERROR,"Cannot invoke a get on this property\n");
 		return RETURN_ERROR_GET_PROP;
 	}
 
@@ -377,22 +357,20 @@ int get_property(const char* prop, char* data, size_t max_len) {
 
 // standard set property
 int set_property(const char* prop, const char* data) {
-	#ifdef DEBUG
-	printf("%s(): %s\n", __func__, prop);
-	#endif
+	PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
 
 	char path [MAX_PATH_LEN];
 	prop_t* temp = get_prop_from_cmd(prop);
 
 	// check if valid property
 	if (!temp) {
-		printf("Property: %s does not exist\n", prop);
+		PRINT( ERROR,"Property: %s does not exist\n", prop);
 		return RETURN_ERROR_SET_PROP;		
 	}
 
 	// check if RO property
 	if (temp -> permissions == RO) {
-		printf("Cannot invoke a set on this property\n");
+		PRINT( ERROR,"Cannot invoke a set on this property\n");
 		return RETURN_ERROR_SET_PROP;
 	}
 

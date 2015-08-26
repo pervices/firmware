@@ -22,7 +22,7 @@
 #define TIMEOUT 1000000	// us, 1.0 seconds
 
 // Minimum time between UART commands
-#define TIME_INTERVAL 35000 // us, 0.035 seconds
+#define TIME_INTERVAL 100000 // us, 0.1 seconds
 
 static struct timeval tprev;	// time since previous UART command
 static struct timeval tstart;	// time since the beginning of a UART send attempt
@@ -53,7 +53,7 @@ int set_uart_interface_attribs (int fd, int speed, int parity)
         memset (&tty, 0, sizeof tty);
         if (tcgetattr (fd, &tty) != 0)
         {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 return RETURN_ERROR;
         }
 
@@ -81,7 +81,7 @@ int set_uart_interface_attribs (int fd, int speed, int parity)
 
         if (tcsetattr (fd, TCSANOW, &tty) != 0)
         {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 return RETURN_ERROR;
         }
         return RETURN_SUCCESS;
@@ -93,7 +93,7 @@ void set_uart_blocking (int fd, int should_block)
         memset (&tty, 0, sizeof tty);
         if (tcgetattr (fd, &tty) != 0)
         {
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 return;
         }
 
@@ -101,7 +101,7 @@ void set_uart_blocking (int fd, int should_block)
         tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
 
         if (tcsetattr (fd, TCSANOW, &tty) != 0)
-		fprintf(stderr, "%s(): ERROR, %s\n", __func__, strerror(errno));
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
 
         return;
 }
@@ -115,15 +115,15 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 	}
 
 	/*int i;
-	printf("got %i characters, uart: ", rd_len);
-	for (i = 0; i < rd_len; i++) printf("%c", data[i]);
-	printf("\n");*/
+	PRINT( VERBOSE,"got %i characters, uart: ", rd_len);
+	for (i = 0; i < rd_len; i++) PRINT( VERBOSE,"%c", data[i]);
+	PRINT( VERBOSE,"\n");*/
 
 	// if nothing to be read
 	if (rd_len < 0) rd_len = 0;
 
 	if (timeout(&tstart, TIMEOUT)) {
-		printf("%s(): timedout\n", __func__);
+		PRINT(ERROR, "%s(), timedout\n", __func__);
 		*size = rd_len;
 		return RETURN_ERROR_UART_TIMEOUT;
 	}
@@ -133,24 +133,29 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 }
 
 int send_uart(int fd, uint8_t* data, uint16_t size) {
-	gettimeofday(&tstart, NULL);
+	//if (_options & SERVER_DEBUG_OPT)
+	PRINT(DEBUG, "%s(): %s\n", __func__, data);
+
+	// wait for previous command to finish
+	while (!timeout(&tprev, TIME_INTERVAL)){}
 
 	// clear receive buffer first, for old data from previous commands
 	flush_uart(fd);
 
-	if (_options & SERVER_DEBUG_OPT)
-		printf("%s(): %s\n", __func__, data);
-
-	while (!timeout(&tprev, TIME_INTERVAL)){}
+	// begin timer for timeout
+	gettimeofday(&tstart, NULL);
 
 	int wr_len = 0;
 	while (wr_len != size && !timeout(&tstart, TIMEOUT)) {
 		wr_len += write(fd, data + wr_len, size - wr_len);
 	}
 
+	// reset the tprev timer
 	gettimeofday(&tprev, NULL);
+
+	// if it timedout, print out a message
 	if (timeout(&tstart, TIMEOUT)) {
-		printf("%s(): timedout\n", __func__);
+		PRINT(ERROR, "%s(): timedout\n", __func__);
 		return RETURN_ERROR_UART_TIMEOUT;
 	}
 
