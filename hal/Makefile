@@ -21,7 +21,7 @@ ifdef CRIMSON_ROOTDIR
 #CC = $(CRIMSON_ROOTDIR)/build/gcc/bin/arm-linux-gnueabihf-gcc
 CC = arm-linux-gnueabihf-gcc
 CFLAGS = -c -O0 -g3 -Wall -c -fmessage-length=0 -DVERSION=\"$(DATE_VERSION)--$(GIT_VERSION)\"
-LDFLAGS = -lm
+LDFLAGS = -lm -lrt
 OUTDIR = $(CRIMSON_ROOTDIR)/out
 SHELL = /bin/sh
 INCLUDES += -I$(OUTDIR)/inc

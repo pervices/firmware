@@ -23,7 +23,7 @@ CC = arm-linux-gnueabihf-gcc
 CFLAGS = -c -O0 -g3 -Wall -fmessage-length=0
 
 # Linker flags
-LDFLAGS = -lm
+LDFLAGS = -lm -lrt
 
 # Out Directory
 OUTDIR = $(CRIMSON_ROOTDIR)/out

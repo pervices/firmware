@@ -21,6 +21,9 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <time.h>
 
 // Define used for debugging
 //#define DEBUG
@@ -48,7 +51,7 @@
 #define SERVER_RESVD_OPT	(1 << 1)
 
 // General purpose temp buffer size
-#define BUF_SIZE 	( 100 )
+#define BUF_SIZE 	( 1024 )
 #define MAX_PATH_LEN	( 1024 )
 #define MAX_PROP_LEN	( 1024 )
 #define MAX_UART_LEN	( 8192 )
@@ -117,5 +120,15 @@ typedef enum {
 	FALSE,
 	TRUE
 } boolean;
+
+typedef enum {
+	ERROR,
+	INFO,
+	DEBUG,
+	VERBOSE
+} print_t;
+
+// printf wrapper
+int PRINT( print_t priority, const char* format, ... );
 
 #endif /* COMMON_H_ */

@@ -20,22 +20,32 @@ ifdef CRIMSON_ROOTDIR
 
 #CC = $(CRIMSON_ROOTDIR)/build/gcc/bin/arm-linux-gnueabihf-gcc
 CC = arm-linux-gnueabihf-gcc
-CFLAGS = -c -O0 -g3 -Wall -c -fmessage-length=0
-LDFLAGS = -lm
+CFLAGS = -c -O0 -g3 -Wall -c -fmessage-length=0 -DVERSION=\"$(DATE_VERSION)--$(GIT_VERSION)\"
+LDFLAGS = -lm -lrt
 OUTDIR = $(CRIMSON_ROOTDIR)/out
 SHELL = /bin/sh
 INCLUDES += -I$(OUTDIR)/inc
 
 # Source Files, only change this part of the file!
-SOURCES = 
+SOURCES = common.c
 SUBDIRS +=
 
 OBJECTS = $(addprefix $(OUTDIR)/obj/,$(SOURCES:.c=.o))
 
-all: MAKE_SUBDIR $(OBJECTS)
+#Git revision (to be included in all source files).
+#Note that the use of the --long flag below means that
+#The commit hash shall be prefixed with 'g', indicating
+#that the commit comes from the git repo. (This is useful
+#if we need to integrate with other SCM software).
+GIT_VERSION := $(shell git describe --abbrev=8 --dirty --always --long)
+
+# Point in time when the code was compiled.
+DATE_VERSION := $(shell date "+%F-%T")
+
+all: $(OBJECTS)
 
 # Generates all of the object files from the source files
-$(OUTDIR)/obj/%.o: %.c
+$(OUTDIR)/obj/%.o: %.c | MAKE_SUBDIR
 	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
 	@cp -f $< $(OUTDIR)/src
 
