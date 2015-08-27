@@ -123,12 +123,8 @@ int main(int argc, char *argv[]) {
 			if (parse_cmd(&cmd, buffer) != RETURN_SUCCESS) break;
 
 			// Debug print
-			PRINT( VERBOSE, "\tRecevied:\n");
-			PRINT( VERBOSE, "\tSeq:    %"PRIu32"\n", cmd.seq);
-			PRINT( VERBOSE, "\tOp:     %i\n", cmd.op);
-			PRINT( VERBOSE, "\tStatus: %i\n", cmd.status);
-			PRINT( VERBOSE, "\tProp:   %s\n", cmd.prop);
-			PRINT( VERBOSE, "\tData:   %s\n", cmd.data);
+			PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
+				cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
 
 			cmd.status = CMD_SUCCESS;
 
