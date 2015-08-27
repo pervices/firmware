@@ -212,6 +212,8 @@ void check_property_inotifies(void) {
 			// read the change from the file
 			read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
 			strcpy(prop_ret, prop_data);
+
+			PRINT( DEBUG,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
 			prop -> set_handler(prop_data, prop_ret);
 
 			// if the return value didn't change, don't write to file again
@@ -232,29 +234,6 @@ void check_property_inotifies(void) {
 				}
 				PRINT( VERBOSE,"Re-added to inotify, wd: %i\n", prop -> wd);
 			}
-
-			// if the property was enabling power, re-write all the rf configurations that have been
-			// adjusted due to the power on sequencing (matches string *****pwr )
-			/*if ( strstr(prop -> path, "pwr") && prop_data[0] >= '1' ) {
-
-				// need to wait for fpga -o to finish executing
-				sleep(3);
-
-				char board[5] = {0};
-				memcpy(board, prop -> path, 4);
-				int k = 0;
-				for (k = 0; k < get_num_prop(); k++) {
-					if (strstr(get_prop(k) -> path, board) && get_prop(k) -> permissions == RW ) {
-						// empty out the buffers
-						memset(prop_data, 0, MAX_PROP_LEN);
-						memset(prop_ret,  0, MAX_PROP_LEN);
-
-						read_from_file(get_abs_path(get_prop(k), path), prop_data, MAX_PROP_LEN);
-						//PRINT( VERBOSE,"-- prop: %s val: %s\n", get_prop(k) -> path, prop_data);
-						get_prop(k) -> set_handler(prop_data, prop_ret);
-					}
-				}
-			}*/
 		}
 
 		i += sizeof(struct inotify_event) + event -> len;
@@ -372,6 +351,22 @@ int set_property(const char* prop, const char* data) {
 	if (temp -> permissions == RO) {
 		PRINT( ERROR,"Cannot invoke a set on this property\n");
 		return RETURN_ERROR_SET_PROP;
+	}
+
+	// enable channel if it has not been enabled yet
+	// (enabling the channel later will erase the current channels, so enable now)
+	char root[MAX_PATH_LEN] = {0};
+	get_root(temp, root);
+
+	// check if the root is either rx or tx
+	root[2] = 0;	// temporarily end string at '_'
+	if ( !strcmp(root, "rx") || !strcmp(root, "tx") ) {
+		root[2] = '_';				// re-insert '_'
+		strcat(root + strlen(root), "/pwr");
+		prop_t* pwr_prop = get_prop_from_cmd(root);
+		char pwr_path[MAX_PATH_LEN] = {0};
+
+		write_to_file(get_abs_path(pwr_prop, pwr_path), "1");
 	}
 
 	write_to_file(get_abs_path(temp, path), data);
