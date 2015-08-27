@@ -441,16 +441,6 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 		   write_hps_reg( reg4[i], old_val & ~0x100);
       }
 
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
-      }
-
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -788,16 +778,6 @@ static int set_rx_a_pwr (const char* data, char* ret) {
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
          read_hps_reg ( reg4[i], &old_val);
 		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
-
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
       }
 
       // send sync pulse
@@ -1142,16 +1122,6 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 		   write_hps_reg( reg4[i], old_val & ~0x100);
       }
 
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
-      }
-
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1489,16 +1459,6 @@ static int set_rx_b_pwr (const char* data, char* ret) {
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
          read_hps_reg ( reg4[i], &old_val);
 		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
-
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
       }
 
       // send sync pulse
@@ -1843,16 +1803,6 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 		   write_hps_reg( reg4[i], old_val & ~0x100);
       }
 
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
-      }
-
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2190,16 +2140,6 @@ static int set_rx_c_pwr (const char* data, char* ret) {
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
          read_hps_reg ( reg4[i], &old_val);
 		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
-
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
       }
 
       // send sync pulse
@@ -2544,16 +2484,6 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 		   write_hps_reg( reg4[i], old_val & ~0x100);
       }
 
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
-      }
-
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2891,16 +2821,6 @@ static int set_rx_d_pwr (const char* data, char* ret) {
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
          read_hps_reg ( reg4[i], &old_val);
 		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
-
-      // set all active DAC's to demo mode
-      for (i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-	         strcpy(buf, "fwd -b 1 -m 'power -c ");
-            strcat(buf, chan_letter[i]);
-         	strcat(buf, " -d 1'\r");
-   	      send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-         }
       }
 
       // send sync pulse
@@ -3565,6 +3485,17 @@ char* get_abs_dir(prop_t* prop, char* path) {
 	path[temp_len + len] = '\0';
 
 	return path;
+}
+
+
+char* get_root (prop_t* prop, char* root) {
+	int i;
+	for(i = 0; prop -> path[i] != '/'; i++) {
+		root[i] = prop -> path[i];
+	}
+	root[i] = 0;
+
+	return root;
 }
 
 void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char* save_path) {
