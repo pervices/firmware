@@ -40,14 +40,12 @@
 // static global variables
 static int uart_fd = 0;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = {};
-static uint16_t uart_ret_size = 0;
 static char buf[MAX_PROP_LEN] = {};
 static uint16_t rd_len;
 
 // by default the board is powered off
 static uint8_t rx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 static uint8_t tx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
-const static char* chan_letter[] = {"a", "b", "c", "d"};
 const static char* reg4[] = {"rxa4", "rxb4", "rxc4", "rxd4", "txa4", "txb4", "txc4", "txd4"};
 static int i_bias[] = {17, 17, 17, 17};
 static int q_bias[] = {17, 17, 17, 17};
@@ -62,41 +60,42 @@ char* _load_profile_path;
 static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
 
 // helper function to check if the buffer contains a character, strstr() won't work because no NULL terminator
-static int contains (uint8_t* buf, size_t len, uint8_t ch) {
-	int i = 0;
-	for (i = 0; i < len; i++) {
-		if (buf[i] == ch) return 1;
+static int contains (const char* str, char letter, int size) {
+	int i = 0, cnt = 0;
+	for (i = 0; i < size; i++) {
+		if (str[i] == letter) cnt++;
 	}
-	return 0;
+	return cnt;
 }
 
 // helper function to read back from UART after a UART command
 static int read_uart(int fwd) {
-	int counter = 0;
+	char buf[MAX_UART_LEN] = {};
+	memset(buf, 0, MAX_UART_LEN);
 
-	// read uart return messages
-	memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
-	counter = 0;
-	while (counter == 0 || !contains(uart_ret_buf, counter, '>')) {
-		recv_uart_comm(uart_fd, uart_ret_buf + counter, &uart_ret_size, MAX_UART_RET_LEN - counter);
-		counter += uart_ret_size;
-		if (counter > MAX_UART_RET_LEN) break;
+	uint16_t total_bytes = 0, cur_bytes = 0;
+
+	while (( contains(buf, '>', total_bytes) < 1 && !fwd) ||
+		(contains(buf, '>', total_bytes) < 2 &&  fwd)) {
+	   if (recv_uart_comm(uart_fd, ((uint8_t*)buf) + total_bytes,
+	   		&cur_bytes, MAX_UART_LEN - total_bytes)) {
+		return 0;
+	   }
+	   total_bytes += cur_bytes;
 	}
 
-	// uart command is forwarded, discard the first read
+	// if fwd, remove everything prior to the second message
 	if (fwd) {
-		memset(uart_ret_buf, 0, MAX_UART_RET_LEN);
-		counter = 0;
-		while (counter == 0 || !contains(uart_ret_buf, counter, '>')) {
-			recv_uart_comm(uart_fd, uart_ret_buf + counter, &uart_ret_size, MAX_UART_RET_LEN - counter);
-			counter += uart_ret_size;
-			if (counter > MAX_UART_RET_LEN) break;
-		}
+		uint16_t pos = 0, real_size = 0;
+		while (buf[pos] != '>') pos++;
+		pos++;
+		real_size = total_bytes - pos;
+		memcpy(buf, buf + pos, real_size);
+		memset(buf + real_size, 0, MAX_UART_LEN - real_size);
 	}
 
-	// add null terminator
-	uart_ret_buf[counter] = '\0';
-	//printf("%s\n", uart_ret_buf);
+	//printf("%s\n", buf);
+	strcpy((char*)uart_ret_buf, buf);
 
 	return RETURN_SUCCESS;
 }
@@ -300,7 +299,20 @@ static int get_tx_a_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_tx_a_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// DAC
+	strcpy(buf, "fwd -b 1 -m 'dump -c a -d'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 1 -m 'dump -c a -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -604,7 +616,26 @@ static int get_rx_a_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_rx_a_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// ADC
+	strcpy(buf, "fwd -b 0 -m 'dump -c a -a'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 0 -m 'dump -c a -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);
+
+	// ADC Driver
+	strcpy(buf, "fwd -b 0 -m 'dump -c a -v'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -981,7 +1012,20 @@ static int get_tx_b_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_tx_b_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// DAC
+	strcpy(buf, "fwd -b 1 -m 'dump -c b -d'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_b Chip: DAC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 1 -m 'dump -c b -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_b Chip: GPIOX] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1285,7 +1329,26 @@ static int get_rx_b_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_rx_b_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// ADC
+	strcpy(buf, "fwd -b 0 -m 'dump -c b -a'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_b Chip: ADC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 0 -m 'dump -c b -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_b Chip: GPIOX] %s\n", uart_ret_buf);
+
+	// ADC Driver
+	strcpy(buf, "fwd -b 0 -m 'dump -c b -v'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_b Chip: ADC Driver] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1662,7 +1725,20 @@ static int get_tx_c_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_tx_c_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// DAC
+	strcpy(buf, "fwd -b 1 -m 'dump -c c -d'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_c Chip: DAC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 1 -m 'dump -c c -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_c Chip: GPIOX] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1966,7 +2042,26 @@ static int get_rx_c_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_rx_c_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// ADC
+	strcpy(buf, "fwd -b 0 -m 'dump -c c -a'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_c Chip: ADC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 0 -m 'dump -c c -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_c Chip: GPIOX] %s\n", uart_ret_buf);
+
+	// ADC Driver
+	strcpy(buf, "fwd -b 0 -m 'dump -c c -v'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_c Chip: ADC Driver] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2343,7 +2438,20 @@ static int get_tx_d_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_tx_d_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// DAC
+	strcpy(buf, "fwd -b 1 -m 'dump -c d -d'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_d Chip: DAC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 1 -m 'dump -c d -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: tx_d Chip: GPIOX] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2646,7 +2754,26 @@ static int get_rx_d_rf_board_status (const char* data, char* ret) {
 }
 
 static int set_rx_d_rf_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// ADC
+	strcpy(buf, "fwd -b 0 -m 'dump -c d -a'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_d Chip: ADC] %s\n", uart_ret_buf);
+
+	// GPIOX
+	strcpy(buf, "fwd -b 0 -m 'dump -c d -g'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_d Chip: GPIOX] %s\n", uart_ret_buf);
+
+	// ADC Driver
+	strcpy(buf, "fwd -b 0 -m 'dump -c d -v'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: rx_d Chip: ADC Driver] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2926,7 +3053,20 @@ static int get_time_board_status (const char* data, char* ret) {
 }
 
 static int set_time_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+	// send the uart commands and read back the output and write to file
+
+	// FANOUT
+	strcpy(buf, "fwd -b 2 -m 'dump -f'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: time Chip: FANOUT] %s\n", uart_ret_buf);
+
+	// CLK
+	strcpy(buf, "fwd -b 2 -m 'dump -c'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(1);
+	PRINT(DUMP, "[Board: time Chip: CLK] %s\n", uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2961,7 +3101,18 @@ static int get_fpga_board_status (const char* data, char* ret) {
 }
 
 static int set_fpga_board_dump (const char* data, char* ret) {
-	// TODO: MCU code cleanup
+
+	// dump all of the board logs
+	set_tx_a_rf_board_dump(NULL, NULL);
+	set_tx_b_rf_board_dump(NULL, NULL);
+	set_tx_c_rf_board_dump(NULL, NULL);
+	set_tx_d_rf_board_dump(NULL, NULL);
+	set_rx_a_rf_board_dump(NULL, NULL);
+	set_rx_b_rf_board_dump(NULL, NULL);
+	set_rx_c_rf_board_dump(NULL, NULL);
+	set_rx_d_rf_board_dump(NULL, NULL);
+	set_time_board_dump(NULL, NULL);
+
 	return RETURN_SUCCESS;
 }
 
