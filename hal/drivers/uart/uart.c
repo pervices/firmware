@@ -38,11 +38,12 @@ void set_uart_debug_opt(uint8_t options) {
 // return 1 if timeout, 0 if not
 static uint8_t timeout(struct timeval* t, long int time) {
 	gettimeofday(&tend, NULL);
-	if ( ((tend.tv_usec + 1000000 * tend.tv_sec)
-		- (t->tv_usec + 1000000 * t->tv_sec) - 26) > time)
+	long int elapsed = ((tend.tv_usec + 1000000 * tend.tv_sec) - (t->tv_usec + 1000000 * t->tv_sec) - 26);
+	if ( elapsed > time || elapsed < 0) {
 		return 1;
-	else
+	} else {
 		return 0;
+	}
 }
 
 int set_uart_interface_attribs (int fd, int speed, int parity)
