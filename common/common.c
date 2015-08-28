@@ -37,19 +37,19 @@ int PRINT( print_t priority, const char* format, ... ) {
 	char newfmt[BUF_SIZE] = {0};
 	switch (priority) {
 		case ERROR:
-			snprintf(newfmt, BUF_SIZE, "[%5ld.%03ld] ERROR: ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] ERROR: ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
 			break;
 		case INFO:
-			snprintf(newfmt, BUF_SIZE, "[%5ld.%03ld] INFO:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] INFO:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
 			break;
 		case DEBUG:
-			snprintf(newfmt, BUF_SIZE, "[%5ld.%03ld] DEBUG: ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] DEBUG: ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
 			break;
 		case VERBOSE:
-			snprintf(newfmt, BUF_SIZE, "[%5ld.%03ld] VERB:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] VERB:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
 			break;
 		default:
-			snprintf(newfmt, BUF_SIZE, "[%5ld.%03ld] DFLT:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] DFLT:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
 			break;
 	}
 	strcpy(newfmt + strlen(newfmt), format);
