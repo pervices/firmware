@@ -19,7 +19,7 @@
 
 
 // Maximum before a UART command is considered a fail
-#define TIMEOUT 1000000	// us, 1.0 seconds
+#define TIMEOUT 1000000UL	// us, 1.0 seconds
 
 // Minimum time between UART commands
 #define TIME_INTERVAL 100000 // us, 0.1 seconds
@@ -36,9 +36,14 @@ void set_uart_debug_opt(uint8_t options) {
 }
 
 // return 1 if timeout, 0 if not
-static uint8_t timeout(struct timeval* t, long int time) {
+static uint8_t timeout(struct timeval* t, long long int time) {
 	gettimeofday(&tend, NULL);
-	long int elapsed = ((tend.tv_usec + 1000000 * tend.tv_sec) - (t->tv_usec + 1000000 * t->tv_sec) - 26);
+
+	// overflow issue when computing all within the same statement
+	long long int cur = (t->tv_usec + 1000000UL * t->tv_sec);
+	long long int pre = (tend.tv_usec + 1000000UL * tend.tv_sec);
+	long long int elapsed = pre - cur;
+
 	if ( elapsed > time || elapsed < 0) {
 		return 1;
 	} else {
