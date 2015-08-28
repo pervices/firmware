@@ -18,6 +18,7 @@
 #include "common.h"
 
 static FILE* fout = NULL;
+static FILE* dout = NULL;
 
 int PRINT( print_t priority, const char* format, ... ) {
 	int ret = 0;
@@ -26,7 +27,11 @@ int PRINT( print_t priority, const char* format, ... ) {
 
 	// open the file
 	if (!fout) {
-		fout = fopen("/home/root/crimson.log", "a");
+		fout = fopen(LOG_FILE, "a");
+	}
+
+	if (!dout) {
+		dout = fopen(DUMP_FILE, "a");
 	}
 
 	// get the time
@@ -48,14 +53,17 @@ int PRINT( print_t priority, const char* format, ... ) {
 		case VERBOSE:
 			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] VERB:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
 			break;
+		case DUMP:
+			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] DUMP:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			break;
 		default:
 			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] DFLT:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
 			break;
 	}
 	strcpy(newfmt + strlen(newfmt), format);
 
-	// DEBUG or INFO or ERROR, file
-	if (fout && priority <= DEBUG) {
+	// DUMP or DEBUG or INFO or ERROR, file
+	if (fout && priority != VERBOSE) {
 		ret = vfprintf(fout, newfmt, args );
 	}
 
@@ -69,12 +77,18 @@ int PRINT( print_t priority, const char* format, ... ) {
 		ret = vfprintf(stderr, newfmt, args );
 	}
 
+	// DUMP, file
+	if (priority == DUMP) {
+		ret = vfprintf(dout, newfmt, args);
+	}
+
 	if (priority == VERBOSE) {
 		// do nothing as of now
 	}
 
 	// flush the file
 	fflush(fout);
+	fflush(dout);
 
 	va_end(args);
 	return ret;
