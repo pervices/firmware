@@ -214,7 +214,7 @@ void check_property_inotifies(void) {
 			strcpy(prop_ret, prop_data);
 
 			PRINT( DEBUG,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
-			prop -> set_handler(prop_data, prop_ret);
+			prop -> handler(prop_data, prop_ret);
 
 			// if the return value didn't change, don't write to file again
 			if ( strcmp(prop_ret, prop_data) != 0) {
@@ -224,7 +224,7 @@ void check_property_inotifies(void) {
 				}
 				PRINT( VERBOSE,"Removed inotify, wd: %i\n", prop -> wd);
 
-				// write output of set_handler to property
+				// write output of handler to property
 				write_to_file(get_abs_path(prop, path), prop_ret);
 
 				// re-add property to inotify

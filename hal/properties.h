@@ -34,7 +34,7 @@ typedef enum {POLL, NO_POLL} poll_t;
 
 typedef struct prop {
 	char path[MAX_PROP_LEN];
-	int (*set_handler)(const char* data, char* ret);
+	int (*handler)(const char* data, char* ret);
 	perm_t permissions;
 	char def_val[MAX_PROP_LEN];	// default value
 	int wd;		// inotify watch descriptor

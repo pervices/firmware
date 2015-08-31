@@ -130,12 +130,12 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err
 
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
-static int set_invalid (const char* data, char* ret) {
+static int hdlr_invalid (const char* data, char* ret) {
 	PRINT( ERROR,"Cannot invoke a set on this property\n");
 	return RETURN_ERROR_SET_PROP;
 }
 
-static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
+static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
@@ -153,7 +153,7 @@ static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_dac_temp (const char* data, char* ret) {
+static int hdlr_tx_a_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -162,7 +162,7 @@ static int set_tx_a_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_freq_val (const char* data, char* ret) {
+static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -246,7 +246,7 @@ static int set_tx_a_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_freq_band (const char* data, char* ret) {
+static int hdlr_tx_a_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -254,7 +254,7 @@ static int set_tx_a_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_freq_i_bias (const char* data, char* ret) {
+static int hdlr_tx_a_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[0]));
    strcpy(buf, "fwd -b 1 -m 'rf -c a -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[0]);
@@ -265,7 +265,7 @@ static int set_tx_a_rf_freq_i_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_freq_q_bias (const char* data, char* ret) {
+static int hdlr_tx_a_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[0]));
    strcpy(buf, "fwd -b 1 -m 'rf -c a -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[0]);
@@ -276,7 +276,7 @@ static int set_tx_a_rf_freq_q_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_gain_val (const char* data, char* ret) {
+static int hdlr_tx_a_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -290,7 +290,7 @@ static int set_tx_a_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_board_dump (const char* data, char* ret) {
+static int hdlr_tx_a_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
@@ -308,12 +308,12 @@ static int set_tx_a_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_board_test (const char* data, char* ret) {
+static int hdlr_tx_a_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_board_temp (const char* data, char* ret) {
+static int hdlr_tx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -322,7 +322,7 @@ static int set_tx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_rf_board_led (const char* data, char* ret) {
+static int hdlr_tx_a_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -330,12 +330,12 @@ static int set_tx_a_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_dsp_gain (const char* data, char* ret) {
+static int hdlr_tx_a_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_dsp_rate (const char* data, char* ret) {
+static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -363,7 +363,7 @@ static int set_tx_a_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -389,7 +389,7 @@ static int set_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_tx_a_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txa4", &old_val);
 	write_hps_reg( "txa4", old_val |  0x2);
@@ -397,12 +397,12 @@ static int set_tx_a_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_about_id (const char* data, char* ret) {
+static int hdlr_tx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_link_vita_en (const char* data, char* ret) {
+static int hdlr_tx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txa4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | (1 << 14));
@@ -410,19 +410,19 @@ static int set_tx_a_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_link_iface (const char* data, char* ret) {
+static int hdlr_tx_a_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_link_port (const char* data, char* ret) {
+static int hdlr_tx_a_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txa5", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_a_pwr (const char* data, char* ret) {
+static int hdlr_tx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -490,7 +490,7 @@ static int set_tx_a_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_freq_val (const char* data, char* ret) {
+static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -574,7 +574,7 @@ static int set_rx_a_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_freq_lna (const char* data, char* ret) {
+static int hdlr_rx_a_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -582,7 +582,7 @@ static int set_rx_a_rf_freq_lna (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_freq_band (const char* data, char* ret) {
+static int hdlr_rx_a_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -590,7 +590,7 @@ static int set_rx_a_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_gain_val (const char* data, char* ret) {
+static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -604,7 +604,7 @@ static int set_rx_a_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_board_dump (const char* data, char* ret) {
+static int hdlr_rx_a_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
@@ -628,12 +628,12 @@ static int set_rx_a_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_board_test (const char* data, char* ret) {
+static int hdlr_rx_a_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_board_temp (const char* data, char* ret) {
+static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -642,7 +642,7 @@ static int set_rx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_rf_board_led (const char* data, char* ret) {
+static int hdlr_rx_a_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -650,7 +650,7 @@ static int set_rx_a_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_dsp_signed (const char* data, char* ret) {
+static int hdlr_rx_a_dsp_signed (const char* data, char* ret) {
    uint32_t old_val, sign;
    sscanf(data, "%u", &sign);
    sign = sign ? 0 : 1;
@@ -661,12 +661,12 @@ static int set_rx_a_dsp_signed (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_dsp_gain (const char* data, char* ret) {
+static int hdlr_rx_a_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_dsp_rate (const char* data, char* ret) {
+static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -694,7 +694,7 @@ static int set_rx_a_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -720,7 +720,7 @@ static int set_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_rx_a_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxa4", &old_val);
 	write_hps_reg( "rxa4", old_val |  0x2);
@@ -728,7 +728,7 @@ static int set_rx_a_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_dsp_loopback (const char* data, char* ret) {
+static int hdlr_rx_a_dsp_loopback (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxa4", &old_val);
 	if (strcmp(data, "1") == 0)   write_hps_reg( "rxa4", (old_val & ~0x1e00) | 0x400);
@@ -736,12 +736,12 @@ static int set_rx_a_dsp_loopback (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_about_id (const char* data, char* ret) {
+static int hdlr_rx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_link_vita_en (const char* data, char* ret) {
+static int hdlr_rx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxa4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | (1 << 14));
@@ -749,26 +749,26 @@ static int set_rx_a_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_link_iface (const char* data, char* ret) {
+static int hdlr_rx_a_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_link_port (const char* data, char* ret) {
+static int hdlr_rx_a_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "rxa8", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_link_ip_dest (const char* data, char* ret) {
+static int hdlr_rx_a_link_ip_dest (const char* data, char* ret) {
 	uint8_t ip[4];
 	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
 	write_hps_reg( "rxa5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_link_mac_dest (const char* data, char* ret) {
+static int hdlr_rx_a_link_mac_dest (const char* data, char* ret) {
 	uint8_t mac[6];
 	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
 		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
@@ -777,7 +777,7 @@ static int set_rx_a_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_a_pwr (const char* data, char* ret) {
+static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -844,7 +844,7 @@ static int set_rx_a_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
+static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
@@ -862,7 +862,7 @@ static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_dac_temp (const char* data, char* ret) {
+static int hdlr_tx_b_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -871,7 +871,7 @@ static int set_tx_b_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_freq_val (const char* data, char* ret) {
+static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -955,7 +955,7 @@ static int set_tx_b_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_freq_band (const char* data, char* ret) {
+static int hdlr_tx_b_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -963,7 +963,7 @@ static int set_tx_b_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_freq_i_bias (const char* data, char* ret) {
+static int hdlr_tx_b_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[1]));
    strcpy(buf, "fwd -b 1 -m 'rf -c b -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[1]);
@@ -974,7 +974,7 @@ static int set_tx_b_rf_freq_i_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_freq_q_bias (const char* data, char* ret) {
+static int hdlr_tx_b_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[1]));
    strcpy(buf, "fwd -b 1 -m 'rf -c b -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[1]);
@@ -985,7 +985,7 @@ static int set_tx_b_rf_freq_q_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_gain_val (const char* data, char* ret) {
+static int hdlr_tx_b_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -999,7 +999,7 @@ static int set_tx_b_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_board_dump (const char* data, char* ret) {
+static int hdlr_tx_b_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
@@ -1017,12 +1017,12 @@ static int set_tx_b_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_board_test (const char* data, char* ret) {
+static int hdlr_tx_b_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_board_temp (const char* data, char* ret) {
+static int hdlr_tx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -1031,7 +1031,7 @@ static int set_tx_b_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_rf_board_led (const char* data, char* ret) {
+static int hdlr_tx_b_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -1039,12 +1039,12 @@ static int set_tx_b_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_dsp_gain (const char* data, char* ret) {
+static int hdlr_tx_b_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_dsp_rate (const char* data, char* ret) {
+static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -1072,7 +1072,7 @@ static int set_tx_b_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -1098,7 +1098,7 @@ static int set_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_tx_b_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txb4", &old_val);
 	write_hps_reg( "txb4", old_val |  0x2);
@@ -1106,12 +1106,12 @@ static int set_tx_b_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_about_id (const char* data, char* ret) {
+static int hdlr_tx_b_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_link_vita_en (const char* data, char* ret) {
+static int hdlr_tx_b_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txb4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | (1 << 14));
@@ -1119,19 +1119,19 @@ static int set_tx_b_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_link_iface (const char* data, char* ret) {
+static int hdlr_tx_b_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_link_port (const char* data, char* ret) {
+static int hdlr_tx_b_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txb5", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_b_pwr (const char* data, char* ret) {
+static int hdlr_tx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -1199,7 +1199,7 @@ static int set_tx_b_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_freq_val (const char* data, char* ret) {
+static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -1283,7 +1283,7 @@ static int set_rx_b_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_freq_lna (const char* data, char* ret) {
+static int hdlr_rx_b_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -1291,7 +1291,7 @@ static int set_rx_b_rf_freq_lna (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_freq_band (const char* data, char* ret) {
+static int hdlr_rx_b_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -1299,7 +1299,7 @@ static int set_rx_b_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_gain_val (const char* data, char* ret) {
+static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -1313,7 +1313,7 @@ static int set_rx_b_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_board_dump (const char* data, char* ret) {
+static int hdlr_rx_b_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
@@ -1337,12 +1337,12 @@ static int set_rx_b_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_board_test (const char* data, char* ret) {
+static int hdlr_rx_b_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_board_temp (const char* data, char* ret) {
+static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -1351,7 +1351,7 @@ static int set_rx_b_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_rf_board_led (const char* data, char* ret) {
+static int hdlr_rx_b_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -1359,7 +1359,7 @@ static int set_rx_b_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_dsp_signed (const char* data, char* ret) {
+static int hdlr_rx_b_dsp_signed (const char* data, char* ret) {
    uint32_t old_val, sign;
    sscanf(data, "%u", &sign);
    sign = sign ? 0 : 1;
@@ -1370,12 +1370,12 @@ static int set_rx_b_dsp_signed (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_dsp_gain (const char* data, char* ret) {
+static int hdlr_rx_b_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_dsp_rate (const char* data, char* ret) {
+static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -1403,7 +1403,7 @@ static int set_rx_b_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -1429,7 +1429,7 @@ static int set_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_rx_b_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxb4", &old_val);
 	write_hps_reg( "rxb4", old_val |  0x2);
@@ -1437,7 +1437,7 @@ static int set_rx_b_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_dsp_loopback (const char* data, char* ret) {
+static int hdlr_rx_b_dsp_loopback (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxb4", &old_val);
 	if (strcmp(data, "1") == 0)   write_hps_reg( "rxb4", (old_val & ~0x1e00) | 0x400);
@@ -1445,12 +1445,12 @@ static int set_rx_b_dsp_loopback (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_about_id (const char* data, char* ret) {
+static int hdlr_rx_b_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_link_vita_en (const char* data, char* ret) {
+static int hdlr_rx_b_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxb4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | (1 << 14));
@@ -1458,26 +1458,26 @@ static int set_rx_b_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_link_iface (const char* data, char* ret) {
+static int hdlr_rx_b_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_link_port (const char* data, char* ret) {
+static int hdlr_rx_b_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "rxb8", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_link_ip_dest (const char* data, char* ret) {
+static int hdlr_rx_b_link_ip_dest (const char* data, char* ret) {
 	uint8_t ip[4];
 	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
 	write_hps_reg( "rxb5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_link_mac_dest (const char* data, char* ret) {
+static int hdlr_rx_b_link_mac_dest (const char* data, char* ret) {
 	uint8_t mac[6];
 	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
 		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
@@ -1486,7 +1486,7 @@ static int set_rx_b_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_b_pwr (const char* data, char* ret) {
+static int hdlr_rx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -1553,7 +1553,7 @@ static int set_rx_b_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
+static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
@@ -1571,7 +1571,7 @@ static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_dac_temp (const char* data, char* ret) {
+static int hdlr_tx_c_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -1580,7 +1580,7 @@ static int set_tx_c_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_freq_val (const char* data, char* ret) {
+static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -1664,7 +1664,7 @@ static int set_tx_c_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_freq_band (const char* data, char* ret) {
+static int hdlr_tx_c_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -1672,7 +1672,7 @@ static int set_tx_c_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_freq_i_bias (const char* data, char* ret) {
+static int hdlr_tx_c_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[2]));
    strcpy(buf, "fwd -b 1 -m 'rf -c c -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[2]);
@@ -1683,7 +1683,7 @@ static int set_tx_c_rf_freq_i_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_freq_q_bias (const char* data, char* ret) {
+static int hdlr_tx_c_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[2]));
    strcpy(buf, "fwd -b 1 -m 'rf -c c -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[2]);
@@ -1694,7 +1694,7 @@ static int set_tx_c_rf_freq_q_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_gain_val (const char* data, char* ret) {
+static int hdlr_tx_c_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -1708,7 +1708,7 @@ static int set_tx_c_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_board_dump (const char* data, char* ret) {
+static int hdlr_tx_c_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
@@ -1726,12 +1726,12 @@ static int set_tx_c_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_board_test (const char* data, char* ret) {
+static int hdlr_tx_c_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_board_temp (const char* data, char* ret) {
+static int hdlr_tx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -1740,7 +1740,7 @@ static int set_tx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_rf_board_led (const char* data, char* ret) {
+static int hdlr_tx_c_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -1748,12 +1748,12 @@ static int set_tx_c_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_dsp_gain (const char* data, char* ret) {
+static int hdlr_tx_c_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_dsp_rate (const char* data, char* ret) {
+static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -1781,7 +1781,7 @@ static int set_tx_c_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -1807,7 +1807,7 @@ static int set_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_tx_c_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txc4", &old_val);
 	write_hps_reg( "txc4", old_val |  0x2);
@@ -1815,12 +1815,12 @@ static int set_tx_c_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_about_id (const char* data, char* ret) {
+static int hdlr_tx_c_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_link_vita_en (const char* data, char* ret) {
+static int hdlr_tx_c_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txc4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | (1 << 14));
@@ -1828,19 +1828,19 @@ static int set_tx_c_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_link_iface (const char* data, char* ret) {
+static int hdlr_tx_c_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_link_port (const char* data, char* ret) {
+static int hdlr_tx_c_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txc5", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_c_pwr (const char* data, char* ret) {
+static int hdlr_tx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -1908,7 +1908,7 @@ static int set_tx_c_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_freq_val (const char* data, char* ret) {
+static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -1992,7 +1992,7 @@ static int set_rx_c_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_freq_lna (const char* data, char* ret) {
+static int hdlr_rx_c_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2000,7 +2000,7 @@ static int set_rx_c_rf_freq_lna (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_freq_band (const char* data, char* ret) {
+static int hdlr_rx_c_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2008,7 +2008,7 @@ static int set_rx_c_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_gain_val (const char* data, char* ret) {
+static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -2022,7 +2022,7 @@ static int set_rx_c_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_board_dump (const char* data, char* ret) {
+static int hdlr_rx_c_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
@@ -2046,12 +2046,12 @@ static int set_rx_c_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_board_test (const char* data, char* ret) {
+static int hdlr_rx_c_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_board_temp (const char* data, char* ret) {
+static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -2060,7 +2060,7 @@ static int set_rx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_rf_board_led (const char* data, char* ret) {
+static int hdlr_rx_c_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2068,7 +2068,7 @@ static int set_rx_c_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_dsp_signed (const char* data, char* ret) {
+static int hdlr_rx_c_dsp_signed (const char* data, char* ret) {
    uint32_t old_val, sign;
    sscanf(data, "%u", &sign);
    sign = sign ? 0 : 1;
@@ -2079,12 +2079,12 @@ static int set_rx_c_dsp_signed (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_dsp_gain (const char* data, char* ret) {
+static int hdlr_rx_c_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_dsp_rate (const char* data, char* ret) {
+static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -2112,7 +2112,7 @@ static int set_rx_c_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -2138,7 +2138,7 @@ static int set_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_rx_c_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxc4", &old_val);
 	write_hps_reg( "rxc4", old_val |  0x2);
@@ -2146,7 +2146,7 @@ static int set_rx_c_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_dsp_loopback (const char* data, char* ret) {
+static int hdlr_rx_c_dsp_loopback (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxc4", &old_val);
 	if (strcmp(data, "1") == 0)   write_hps_reg( "rxc4", (old_val & ~0x1e00) | 0x400);
@@ -2154,12 +2154,12 @@ static int set_rx_c_dsp_loopback (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_about_id (const char* data, char* ret) {
+static int hdlr_rx_c_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_link_vita_en (const char* data, char* ret) {
+static int hdlr_rx_c_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxc4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | (1 << 14));
@@ -2167,26 +2167,26 @@ static int set_rx_c_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_link_iface (const char* data, char* ret) {
+static int hdlr_rx_c_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_link_port (const char* data, char* ret) {
+static int hdlr_rx_c_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "rxc8", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_link_ip_dest (const char* data, char* ret) {
+static int hdlr_rx_c_link_ip_dest (const char* data, char* ret) {
 	uint8_t ip[4];
 	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
 	write_hps_reg( "rxc5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_link_mac_dest (const char* data, char* ret) {
+static int hdlr_rx_c_link_mac_dest (const char* data, char* ret) {
 	uint8_t mac[6];
 	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
 		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
@@ -2195,7 +2195,7 @@ static int set_rx_c_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_c_pwr (const char* data, char* ret) {
+static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -2262,7 +2262,7 @@ static int set_rx_c_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
+static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
@@ -2280,7 +2280,7 @@ static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_dac_temp (const char* data, char* ret) {
+static int hdlr_tx_d_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -2289,7 +2289,7 @@ static int set_tx_d_rf_dac_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_freq_val (const char* data, char* ret) {
+static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -2373,7 +2373,7 @@ static int set_tx_d_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_freq_band (const char* data, char* ret) {
+static int hdlr_tx_d_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2381,7 +2381,7 @@ static int set_tx_d_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_freq_i_bias (const char* data, char* ret) {
+static int hdlr_tx_d_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[3]));
    strcpy(buf, "fwd -b 1 -m 'rf -c d -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[3]);
@@ -2392,7 +2392,7 @@ static int set_tx_d_rf_freq_i_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_freq_q_bias (const char* data, char* ret) {
+static int hdlr_tx_d_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[3]));
    strcpy(buf, "fwd -b 1 -m 'rf -c d -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[3]);
@@ -2403,7 +2403,7 @@ static int set_tx_d_rf_freq_q_bias (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_gain_val (const char* data, char* ret) {
+static int hdlr_tx_d_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -2417,7 +2417,7 @@ static int set_tx_d_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_board_dump (const char* data, char* ret) {
+static int hdlr_tx_d_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
@@ -2435,12 +2435,12 @@ static int set_tx_d_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_board_test (const char* data, char* ret) {
+static int hdlr_tx_d_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_board_temp (const char* data, char* ret) {
+static int hdlr_tx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -2449,7 +2449,7 @@ static int set_tx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_rf_board_led (const char* data, char* ret) {
+static int hdlr_tx_d_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2457,12 +2457,12 @@ static int set_tx_d_rf_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_dsp_gain (const char* data, char* ret) {
+static int hdlr_tx_d_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_dsp_rate (const char* data, char* ret) {
+static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -2490,7 +2490,7 @@ static int set_tx_d_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -2516,7 +2516,7 @@ static int set_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_tx_d_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txd4", &old_val);
 	write_hps_reg( "txd4", old_val |  0x2);
@@ -2524,12 +2524,12 @@ static int set_tx_d_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_about_id (const char* data, char* ret) {
+static int hdlr_tx_d_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_link_vita_en (const char* data, char* ret) {
+static int hdlr_tx_d_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txd4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | (1 << 14));
@@ -2537,19 +2537,19 @@ static int set_tx_d_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_link_iface (const char* data, char* ret) {
+static int hdlr_tx_d_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_link_port (const char* data, char* ret) {
+static int hdlr_tx_d_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txd5", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_tx_d_pwr (const char* data, char* ret) {
+static int hdlr_tx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -2616,7 +2616,7 @@ static int set_tx_d_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_freq_val (const char* data, char* ret) {
+static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
@@ -2700,7 +2700,7 @@ static int set_rx_d_rf_freq_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_freq_lna (const char* data, char* ret) {
+static int hdlr_rx_d_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2708,7 +2708,7 @@ static int set_rx_d_rf_freq_lna (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_freq_band (const char* data, char* ret) {
+static int hdlr_rx_d_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -b ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2716,7 +2716,7 @@ static int set_rx_d_rf_freq_band (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_gain_val (const char* data, char* ret) {
+static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 
@@ -2730,7 +2730,7 @@ static int set_rx_d_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_board_dump (const char* data, char* ret) {
+static int hdlr_rx_d_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
@@ -2754,12 +2754,12 @@ static int set_rx_d_rf_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_board_test (const char* data, char* ret) {
+static int hdlr_rx_d_rf_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_board_temp (const char* data, char* ret) {
+static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -2768,7 +2768,7 @@ static int set_rx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_rf_board_led (const char* data, char* ret) {
+static int hdlr_rx_d_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -2777,7 +2777,7 @@ static int set_rx_d_rf_board_led (const char* data, char* ret) {
 }
 
 
-static int set_rx_d_dsp_signed (const char* data, char* ret) {
+static int hdlr_rx_d_dsp_signed (const char* data, char* ret) {
    uint32_t old_val, sign;
    sscanf(data, "%u", &sign);
    sign = sign ? 0 : 1;
@@ -2788,12 +2788,12 @@ static int set_rx_d_dsp_signed (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_dsp_gain (const char* data, char* ret) {
+static int hdlr_rx_d_dsp_gain (const char* data, char* ret) {
 	// TODO: FW code
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_dsp_rate (const char* data, char* ret) {
+static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
    uint16_t base_factor, resamp_factor;
    double base_err, resamp_err;
@@ -2821,7 +2821,7 @@ static int set_rx_d_dsp_rate (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
+static int hdlr_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	uint32_t freq;
 	uint32_t old_val;
 	uint8_t direction;
@@ -2847,7 +2847,7 @@ static int set_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_dsp_rstreq (const char* data, char* ret) {
+static int hdlr_rx_d_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxd4", &old_val);
 	write_hps_reg( "rxd4", old_val |  0x2);
@@ -2855,7 +2855,7 @@ static int set_rx_d_dsp_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_dsp_loopback (const char* data, char* ret) {
+static int hdlr_rx_d_dsp_loopback (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxd4", &old_val);
 	if (strcmp(data, "1") == 0)   write_hps_reg( "rxd4", (old_val & ~0x1e00) | 0x400);
@@ -2863,12 +2863,12 @@ static int set_rx_d_dsp_loopback (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_about_id (const char* data, char* ret) {
+static int hdlr_rx_d_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_link_vita_en (const char* data, char* ret) {
+static int hdlr_rx_d_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxd4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | (1 << 14));
@@ -2876,26 +2876,26 @@ static int set_rx_d_link_vita_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_link_iface (const char* data, char* ret) {
+static int hdlr_rx_d_link_iface (const char* data, char* ret) {
 	// TODO: FW support for streaming to management port required
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_link_port (const char* data, char* ret) {
+static int hdlr_rx_d_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "rxd8", port);
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_link_ip_dest (const char* data, char* ret) {
+static int hdlr_rx_d_link_ip_dest (const char* data, char* ret) {
 	uint8_t ip[4];
 	sscanf(data, "%"SCNd8".%"SCNd8".%"SCNd8".%"SCNd8"", ip, ip+1, ip+2, ip+3);
 	write_hps_reg( "rxd5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]) );
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_link_mac_dest (const char* data, char* ret) {
+static int hdlr_rx_d_link_mac_dest (const char* data, char* ret) {
 	uint8_t mac[6];
 	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
 		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
@@ -2904,7 +2904,7 @@ static int set_rx_d_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_rx_d_pwr (const char* data, char* ret) {
+static int hdlr_rx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
    uint8_t i;
@@ -2971,13 +2971,13 @@ static int set_rx_d_pwr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_clk_pps (const char* data, char* ret) {
+static int hdlr_time_clk_pps (const char* data, char* ret) {
 	// Insert MCU/MEM command
 
 	return RETURN_SUCCESS;
 }
 
-static int set_time_clk_cur_time (const char* data, char* ret) {
+static int hdlr_time_clk_cur_time (const char* data, char* ret) {
 	// test by reading it before writing to it
 	//uint32_t intpart, fracpart;
 	//read_hps_reg( "sys5", &intpart);
@@ -2995,7 +2995,7 @@ static int set_time_clk_cur_time (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_source_vco (const char* data, char* ret) {
+static int hdlr_time_source_vco (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
 		strcpy(buf, "fwd -b 2 -m 'clk -v 1'\r");
 	} else if (strcmp(data, "internal") == 0) {
@@ -3005,7 +3005,7 @@ static int set_time_source_vco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_source_sync (const char* data, char* ret) {
+static int hdlr_time_source_sync (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
 		strcpy(buf, "fwd -b 2 -m 'clk -n 1'\r");
 	} else if (strcmp(data, "internal") == 0) {
@@ -3016,7 +3016,7 @@ static int set_time_source_sync (const char* data, char* ret) {
 }
 
 // 10 MHz clock
-static int set_time_source_ref (const char* data, char* ret) {
+static int hdlr_time_source_ref (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
 		strcpy(buf, "fwd -b 2 -m 'clk -t 1'\r");
 	} else if (strcmp(data, "internal") == 0) {
@@ -3026,7 +3026,7 @@ static int set_time_source_ref (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_board_dump (const char* data, char* ret) {
+static int hdlr_time_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// FANOUT
@@ -3044,12 +3044,12 @@ static int set_time_board_dump (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_board_test (const char* data, char* ret) {
+static int hdlr_time_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_time_board_temp (const char* data, char* ret) {
+static int hdlr_time_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 2 -m 'board -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(FWD_CMD);
@@ -3058,7 +3058,7 @@ static int set_time_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_board_led (const char* data, char* ret) {
+static int hdlr_time_board_led (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 2 -m 'board -l ");
 	strcat(buf, data);
 	strcat(buf, "'\r");
@@ -3066,33 +3066,33 @@ static int set_time_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_time_about_id (const char* data, char* ret) {
+static int hdlr_time_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_board_dump (const char* data, char* ret) {
+static int hdlr_fpga_board_dump (const char* data, char* ret) {
 
 	// dump all of the board logs
-	set_tx_a_rf_board_dump(NULL, NULL);
-	set_tx_b_rf_board_dump(NULL, NULL);
-	set_tx_c_rf_board_dump(NULL, NULL);
-	set_tx_d_rf_board_dump(NULL, NULL);
-	set_rx_a_rf_board_dump(NULL, NULL);
-	set_rx_b_rf_board_dump(NULL, NULL);
-	set_rx_c_rf_board_dump(NULL, NULL);
-	set_rx_d_rf_board_dump(NULL, NULL);
-	set_time_board_dump(NULL, NULL);
+	hdlr_tx_a_rf_board_dump(NULL, NULL);
+	hdlr_tx_b_rf_board_dump(NULL, NULL);
+	hdlr_tx_c_rf_board_dump(NULL, NULL);
+	hdlr_tx_d_rf_board_dump(NULL, NULL);
+	hdlr_rx_a_rf_board_dump(NULL, NULL);
+	hdlr_rx_b_rf_board_dump(NULL, NULL);
+	hdlr_rx_c_rf_board_dump(NULL, NULL);
+	hdlr_rx_d_rf_board_dump(NULL, NULL);
+	hdlr_time_board_dump(NULL, NULL);
 
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_board_test (const char* data, char* ret) {
+static int hdlr_fpga_board_test (const char* data, char* ret) {
 	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_board_temp (const char* data, char* ret) {
+static int hdlr_fpga_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -t\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(NO_FWD_CMD);
@@ -3101,7 +3101,7 @@ static int set_fpga_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_board_led (const char* data, char* ret) {
+static int hdlr_fpga_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
@@ -3109,19 +3109,19 @@ static int set_fpga_board_led (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_board_rstreq (const char* data, char* ret) {
+static int hdlr_fpga_board_rstreq (const char* data, char* ret) {
 	strcpy(buf, "fpga -r \r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_board_jesd_sync (const char* data, char* ret) {
+static int hdlr_fpga_board_jesd_sync (const char* data, char* ret) {
 	strcpy(buf, "fpga -o \r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_board_sys_rstreq (const char* data, char* ret) {
+static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 2 -m 'board -r'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	usleep(700000);
@@ -3139,17 +3139,17 @@ static int set_fpga_board_sys_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_about_id (const char* data, char* ret) {
+static int hdlr_fpga_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_rate (const char* data, char* ret) {
+static int hdlr_fpga_link_rate (const char* data, char* ret) {
    // TODO: Need to implement in FW
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpa_ip_addr (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpa_ip_addr (const char* data, char* ret) {
 	uint32_t ip[4];
 	if (ipver[0] == IPVER_IPV4) {
 		sscanf(data, "%"SCNd32".%"SCNd32".%"SCNd32".%"SCNd32"",
@@ -3166,7 +3166,7 @@ static int set_fpga_link_sfpa_ip_addr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpa_mac_addr (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpa_mac_addr (const char* data, char* ret) {
 	uint8_t mac[6];
 	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
 		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
@@ -3175,7 +3175,7 @@ static int set_fpga_link_sfpa_mac_addr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpa_ver (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpa_ver (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t ver;
 	sscanf(data, "%"SCNd8"", &ver);
@@ -3185,7 +3185,7 @@ static int set_fpga_link_sfpa_ver (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpa_pay_len (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpa_pay_len (const char* data, char* ret) {
 	uint32_t old_val;
 	uint32_t pay_len;
 	sscanf(data, "%"SCNd32"", &pay_len);
@@ -3194,7 +3194,7 @@ static int set_fpga_link_sfpa_pay_len (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpb_ip_addr (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpb_ip_addr (const char* data, char* ret) {
 	uint32_t ip[4];
 	if (ipver[1] == IPVER_IPV4) {
 		sscanf(data, "%"SCNd32".%"SCNd32".%"SCNd32".%"SCNd32"",
@@ -3212,7 +3212,7 @@ static int set_fpga_link_sfpb_ip_addr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpb_mac_addr (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpb_mac_addr (const char* data, char* ret) {
 	uint8_t mac[6];
 	sscanf(data, "%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8":%"SCNx8"",
 		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
@@ -3221,7 +3221,7 @@ static int set_fpga_link_sfpb_mac_addr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpb_ver (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpb_ver (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t ver;
 	sscanf(data, "%"SCNd8"", &ver);
@@ -3231,7 +3231,7 @@ static int set_fpga_link_sfpb_ver (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_sfpb_pay_len (const char* data, char* ret) {
+static int hdlr_fpga_link_sfpb_pay_len (const char* data, char* ret) {
 	uint32_t old_val;
 	uint32_t pay_len;
 	sscanf(data, "%"SCNd32"", &pay_len);
@@ -3240,12 +3240,12 @@ static int set_fpga_link_sfpb_pay_len (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_net_dhcp_en (const char* data, char* ret) {
+static int hdlr_fpga_link_net_dhcp_en (const char* data, char* ret) {
 
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_net_hostname (const char* data, char* ret) {
+static int hdlr_fpga_link_net_hostname (const char* data, char* ret) {
 	// write to the file
 	char name[MAX_PROP_LEN] = {0};
 	char command[MAX_PROP_LEN] = {0};
@@ -3259,7 +3259,7 @@ static int set_fpga_link_net_hostname (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_fpga_link_net_ip_addr (const char* data, char* ret) {
+static int hdlr_fpga_link_net_ip_addr (const char* data, char* ret) {
 	// ensure that it is a valid IP address
 	char ip_address[MAX_PROP_LEN] = {0};
 	char command[MAX_PROP_LEN] = {0};
@@ -3278,17 +3278,17 @@ static int set_fpga_link_net_ip_addr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_poll_en (const char* data, char* ret) {
+static int hdlr_poll_en (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int set_save_config (const char* data, char* ret) {
+static int hdlr_save_config (const char* data, char* ret) {
 	*_save_profile = 1;
 	strcpy(_save_profile_path, data);
 	return RETURN_SUCCESS;
 }
 
-static int set_load_config (const char* data, char* ret) {
+static int hdlr_load_config (const char* data, char* ret) {
 	*_load_profile = 1;
 	strcpy(_load_profile_path, data);
 	return RETURN_SUCCESS;
@@ -3296,243 +3296,243 @@ static int set_load_config (const char* data, char* ret) {
 
 // Beginning of property table
 static prop_t property_table[] = {
-	{"tx_a/pwr", set_tx_a_pwr, RW, "0"},
-	{"tx_a/rf/dac/nco", set_tx_a_rf_dac_nco, RW, "15000000"},
-	{"tx_a/rf/dac/temp", set_tx_a_rf_dac_temp, RW, "0"},
-	{"tx_a/rf/freq/val", set_tx_a_rf_freq_val, RW, "0"},
-	{"tx_a/rf/freq/band", set_tx_a_rf_freq_band, RW, "1"},
-	{"tx_a/rf/freq/i_bias", set_tx_a_rf_freq_i_bias, RW, "17"},
-	{"tx_a/rf/freq/q_bias", set_tx_a_rf_freq_q_bias, RW, "17"},
-	{"tx_a/rf/gain/val", set_tx_a_rf_gain_val, RW, "14"},
-	{"tx_a/board/dump", set_tx_a_rf_board_dump, WO, "0"},
-	{"tx_a/board/test", set_tx_a_rf_board_test, WO, "0"},
-	{"tx_a/board/temp", set_tx_a_rf_board_temp, RW, "23"},
-	{"tx_a/board/led", set_tx_a_rf_board_led, WO, "0"},
-	{"tx_a/dsp/gain", set_tx_a_dsp_gain, RW, "10"},
-	{"tx_a/dsp/rate", set_tx_a_dsp_rate, RW, "1258850"},
-	{"tx_a/dsp/nco_adj", set_tx_a_dsp_nco_adj, RW, "0"},
-	{"tx_a/dsp/rstreq", set_tx_a_dsp_rstreq, WO, "0"},
-	{"tx_a/about/id", set_tx_a_about_id, RW, "001"},
-	{"tx_a/about/serial", set_invalid, RO, "001"},
-	{"tx_a/about/fw_ver", set_invalid, RO, VERSION},
-	{"tx_a/about/hw_ver", set_invalid, RO, VERSION},
-	{"tx_a/about/sw_ver", set_invalid, RO, VERSION},
-	{"tx_a/link/vita_en", set_tx_a_link_vita_en, RW, "0"},
-	{"tx_a/link/iface", set_tx_a_link_iface, RW, "sfpa"},
-	{"tx_a/link/port", set_tx_a_link_port, RW, "42824"},
-	{"rx_a/pwr", set_rx_a_pwr, RW, "0"},
-	{"rx_a/rf/freq/val", set_rx_a_rf_freq_val, RW, "0"},
-	{"rx_a/rf/freq/lna", set_rx_a_rf_freq_lna, RW, "0"},
-	{"rx_a/rf/freq/band", set_rx_a_rf_freq_band, RW, "1"},
-	{"rx_a/rf/gain/val", set_rx_a_rf_gain_val, RW, "35"},
-	{"rx_a/board/dump", set_rx_a_rf_board_dump, WO, "0"},
-	{"rx_a/board/test", set_rx_a_rf_board_test, WO, "0"},
-	{"rx_a/board/temp", set_rx_a_rf_board_temp, RW, "20"},
-	{"rx_a/board/led", set_rx_a_rf_board_led, WO, "0"},
-	{"rx_a/dsp/signed", set_rx_a_dsp_signed, RW, "1"},
-	{"rx_a/dsp/gain", set_rx_a_dsp_gain, RW, "10"},
-	{"rx_a/dsp/rate", set_rx_a_dsp_rate, RW, "1258850"},
-	{"rx_a/dsp/nco_adj", set_rx_a_dsp_nco_adj, RW, "-15000000"},
-	{"rx_a/dsp/rstreq", set_rx_a_dsp_rstreq, WO, "0"},
-	{"rx_a/dsp/loopback", set_rx_a_dsp_loopback, RW, "0"},
-	{"rx_a/about/id", set_rx_a_about_id, RW, "001"},
-	{"rx_a/about/serial", set_invalid, RO, "001"},
-	{"rx_a/about/fw_ver", set_invalid, RO, VERSION},
-	{"rx_a/about/hw_ver", set_invalid, RO, VERSION},
-	{"rx_a/about/sw_ver", set_invalid, RO, VERSION},
-	{"rx_a/link/vita_en", set_rx_a_link_vita_en, RW, "0"},
-	{"rx_a/link/iface", set_rx_a_link_iface, RW, "sfpa"},
-	{"rx_a/link/port", set_rx_a_link_port, RW, "42820"},
-	{"rx_a/link/ip_dest", set_rx_a_link_ip_dest, RW, "10.10.10.10"},
-	{"rx_a/link/mac_dest", set_rx_a_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"tx_b/pwr", set_tx_b_pwr, RW, "0"},
-	{"tx_b/rf/dac/nco", set_tx_b_rf_dac_nco, RW, "15000000"},
-	{"tx_b/rf/dac/temp", set_tx_b_rf_dac_temp, RW, "0"},
-	{"tx_b/rf/freq/val", set_tx_b_rf_freq_val, RW, "0"},
-	{"tx_b/rf/freq/band", set_tx_b_rf_freq_band, RW, "1"},
-	{"tx_b/rf/freq/i_bias", set_tx_b_rf_freq_i_bias, RW, "17"},
-	{"tx_b/rf/freq/q_bias", set_tx_b_rf_freq_q_bias, RW, "17"},
-	{"tx_b/rf/gain/val", set_tx_b_rf_gain_val, RW, "14"},
-	{"tx_b/board/dump", set_tx_b_rf_board_dump, WO, "0"},
-	{"tx_b/board/test", set_tx_b_rf_board_test, WO, "0"},
-	{"tx_b/board/temp", set_tx_b_rf_board_temp, RW, "23"},
-	{"tx_b/board/led", set_tx_b_rf_board_led, WO, "0"},
-	{"tx_b/dsp/gain", set_tx_b_dsp_gain, RW, "10"},
-	{"tx_b/dsp/rate", set_tx_b_dsp_rate, RW, "1258850"},
-	{"tx_b/dsp/nco_adj", set_tx_b_dsp_nco_adj, RW, "0"},
-	{"tx_b/dsp/rstreq", set_tx_b_dsp_rstreq, WO, "0"},
-	{"tx_b/about/id", set_tx_b_about_id, RW, "001"},
-	{"tx_b/about/serial", set_invalid, RO, "001"},
-	{"tx_b/about/fw_ver", set_invalid, RO, VERSION},
-	{"tx_b/about/hw_ver", set_invalid, RO, VERSION},
-	{"tx_b/about/sw_ver", set_invalid, RO, VERSION},
-	{"tx_b/link/vita_en", set_tx_b_link_vita_en, RW, "0"},
-	{"tx_b/link/iface", set_tx_b_link_iface, RW, "sfpb"},
-	{"tx_b/link/port", set_tx_b_link_port, RW, "42825"},
-	{"rx_b/pwr", set_rx_b_pwr, RW, "0"},
-	{"rx_b/rf/freq/val", set_rx_b_rf_freq_val, RW, "0"},
-	{"rx_b/rf/freq/lna", set_rx_b_rf_freq_lna, RW, "0"},
-	{"rx_b/rf/freq/band", set_rx_b_rf_freq_band, RW, "1"},
-	{"rx_b/rf/gain/val", set_rx_b_rf_gain_val, RW, "35"},
-	{"rx_b/board/dump", set_rx_b_rf_board_dump, WO, "0"},
-	{"rx_b/board/test", set_rx_b_rf_board_test, WO, "0"},
-	{"rx_b/board/temp", set_rx_b_rf_board_temp, RW, "20"},
-	{"rx_b/board/led", set_rx_b_rf_board_led, WO, "0"},
-	{"rx_b/dsp/signed", set_rx_b_dsp_signed, RW, "1"},
-	{"rx_b/dsp/gain", set_rx_b_dsp_gain, RW, "10"},
-	{"rx_b/dsp/rate", set_rx_b_dsp_rate, RW, "1258850"},
-	{"rx_b/dsp/nco_adj", set_rx_b_dsp_nco_adj, RW, "-15000000"},
-	{"rx_b/dsp/rstreq", set_rx_b_dsp_rstreq, WO, "0"},
-	{"rx_b/dsp/loopback", set_rx_b_dsp_loopback, RW, "0"},
-	{"rx_b/about/id", set_rx_b_about_id, RW, "001"},
-	{"rx_b/about/serial", set_invalid, RO, "001"},
-	{"rx_b/about/fw_ver", set_invalid, RO, VERSION},
-	{"rx_b/about/hw_ver", set_invalid, RO, VERSION},
-	{"rx_b/about/sw_ver", set_invalid, RO, VERSION},
-	{"rx_b/link/vita_en", set_rx_b_link_vita_en, RW, "0"},
-	{"rx_b/link/iface", set_rx_b_link_iface, RW, "sfpb"},
-	{"rx_b/link/port", set_rx_b_link_port, RW, "42821"},
-	{"rx_b/link/ip_dest", set_rx_b_link_ip_dest, RW, "10.10.11.10"},
-	{"rx_b/link/mac_dest", set_rx_b_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"tx_c/pwr", set_tx_c_pwr, RW, "0"},
-	{"tx_c/rf/dac/nco", set_tx_c_rf_dac_nco, RW, "15000000"},
-	{"tx_c/rf/dac/temp", set_tx_c_rf_dac_temp, RW, "0"},
-	{"tx_c/rf/freq/val", set_tx_c_rf_freq_val, RW, "0"},
-	{"tx_c/rf/freq/band", set_tx_c_rf_freq_band, RW, "1"},
-	{"tx_c/rf/freq/i_bias", set_tx_c_rf_freq_i_bias, RW, "17"},
-	{"tx_c/rf/freq/q_bias", set_tx_c_rf_freq_q_bias, RW, "17"},
-	{"tx_c/rf/gain/val", set_tx_c_rf_gain_val, RW, "14"},
-	{"tx_c/board/dump", set_tx_c_rf_board_dump, WO, "0"},
-	{"tx_c/board/test", set_tx_c_rf_board_test, WO, "0"},
-	{"tx_c/board/temp", set_tx_c_rf_board_temp, RW, "23"},
-	{"tx_c/board/led", set_tx_c_rf_board_led, WO, "0"},
-	{"tx_c/dsp/gain", set_tx_c_dsp_gain, RW, "10"},
-	{"tx_c/dsp/rate", set_tx_c_dsp_rate, RW, "1258850"},
-	{"tx_c/dsp/nco_adj", set_tx_c_dsp_nco_adj, RW, "0"},
-	{"tx_c/dsp/rstreq", set_tx_c_dsp_rstreq, WO, "0"},
-	{"tx_c/about/id", set_tx_c_about_id, RW, "001"},
-	{"tx_c/about/serial", set_invalid, RO, "001"},
-	{"tx_c/about/fw_ver", set_invalid, RO, VERSION},
-	{"tx_c/about/hw_ver", set_invalid, RO, VERSION},
-	{"tx_c/about/sw_ver", set_invalid, RO, VERSION},
-	{"tx_c/link/vita_en", set_tx_c_link_vita_en, RW, "0"},
-	{"tx_c/link/iface", set_tx_c_link_iface, RW, "sfpa"},
-	{"tx_c/link/port", set_tx_c_link_port, RW, "42826"},
-	{"rx_c/pwr", set_rx_c_pwr, RW, "0"},
-	{"rx_c/rf/freq/val", set_rx_c_rf_freq_val, RW, "0"},
-	{"rx_c/rf/freq/lna", set_rx_c_rf_freq_lna, RW, "0"},
-	{"rx_c/rf/freq/band", set_rx_c_rf_freq_band, RW, "1"},
-	{"rx_c/rf/gain/val", set_rx_c_rf_gain_val, RW, "35"},
-	{"rx_c/board/dump", set_rx_c_rf_board_dump, WO, "0"},
-	{"rx_c/board/test", set_rx_c_rf_board_test, WO, "0"},
-	{"rx_c/board/temp", set_rx_c_rf_board_temp, RW, "20"},
-	{"rx_c/board/led", set_rx_c_rf_board_led, WO, "0"},
-	{"rx_c/dsp/signed", set_rx_c_dsp_signed, RW, "1"},
-	{"rx_c/dsp/gain", set_rx_c_dsp_gain, RW, "10"},
-	{"rx_c/dsp/rate", set_rx_c_dsp_rate, RW, "1258850"},
-	{"rx_c/dsp/nco_adj", set_rx_c_dsp_nco_adj, RW, "-15000000"},
-	{"rx_c/dsp/rstreq", set_rx_c_dsp_rstreq, WO, "0"},
-	{"rx_c/dsp/loopback", set_rx_c_dsp_loopback, RW, "0"},
-	{"rx_c/about/id", set_rx_c_about_id, RW, "001"},
-	{"rx_c/about/serial", set_invalid, RO, "001"},
-	{"rx_c/about/fw_ver", set_invalid, RO, VERSION},
-	{"rx_c/about/hw_ver", set_invalid, RO, VERSION},
-	{"rx_c/about/sw_ver", set_invalid, RO, VERSION},
-	{"rx_c/link/vita_en", set_rx_c_link_vita_en, RW, "0"},
-	{"rx_c/link/iface", set_rx_c_link_iface, RW, "sfpa"},
-	{"rx_c/link/port", set_rx_c_link_port, RW, "42822"},
-	{"rx_c/link/ip_dest", set_rx_c_link_ip_dest, RW, "10.10.10.10"},
-	{"rx_c/link/mac_dest", set_rx_c_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"tx_d/pwr", set_tx_d_pwr, RW, "0"},
-	{"tx_d/rf/dac/nco", set_tx_d_rf_dac_nco, RW, "15000000"},
-	{"tx_d/rf/dac/temp", set_tx_d_rf_dac_temp, RW, "0"},
-	{"tx_d/rf/freq/val", set_tx_d_rf_freq_val, RW, "0"},
-	{"tx_d/rf/freq/band", set_tx_d_rf_freq_band, RW, "1"},
-	{"tx_d/rf/freq/i_bias", set_tx_d_rf_freq_i_bias, RW, "17"},
-	{"tx_d/rf/freq/q_bias", set_tx_d_rf_freq_q_bias, RW, "17"},
-	{"tx_d/rf/gain/val", set_tx_d_rf_gain_val, RW, "14"},
-	{"tx_d/board/dump", set_tx_d_rf_board_dump, WO, "0"},
-	{"tx_d/board/test", set_tx_d_rf_board_test, WO, "0"},
-	{"tx_d/board/temp", set_tx_d_rf_board_temp, RW, "23"},
-	{"tx_d/board/led", set_tx_d_rf_board_led, WO, "0"},
-	{"tx_d/dsp/gain", set_tx_d_dsp_gain, RW, "10"},
-	{"tx_d/dsp/rate", set_tx_d_dsp_rate, RW, "1258850"},
-	{"tx_d/dsp/nco_adj", set_tx_d_dsp_nco_adj, RW, "0"},
-	{"tx_d/dsp/rstreq", set_tx_d_dsp_rstreq, WO, "0"},
-	{"tx_d/about/id", set_tx_d_about_id, RW, "001"},
-	{"tx_d/about/serial", set_invalid, RO, "001"},
-	{"tx_d/about/fw_ver", set_invalid, RO, VERSION},
-	{"tx_d/about/hw_ver", set_invalid, RO, VERSION},
-	{"tx_d/about/sw_ver", set_invalid, RO, VERSION},
-	{"tx_d/link/vita_en", set_tx_d_link_vita_en, RW, "0"},
-	{"tx_d/link/iface", set_tx_d_link_iface, RW, "sfpb"},
-	{"tx_d/link/port", set_tx_d_link_port, RW, "42827"},
-	{"rx_d/pwr", set_rx_d_pwr, RW, "0"},
-	{"rx_d/rf/freq/val", set_rx_d_rf_freq_val, RW, "0"},
-	{"rx_d/rf/freq/lna", set_rx_d_rf_freq_lna, RW, "0"},
-	{"rx_d/rf/freq/band", set_rx_d_rf_freq_band, RW, "1"},
-	{"rx_d/rf/gain/val", set_rx_d_rf_gain_val, RW, "35"},
-	{"rx_d/board/dump", set_rx_d_rf_board_dump, WO, "0"},
-	{"rx_d/board/test", set_rx_d_rf_board_test, WO, "0"},
-	{"rx_d/board/temp", set_rx_d_rf_board_temp, RW, "20"},
-	{"rx_d/board/led", set_rx_d_rf_board_led, WO, "0"},
-	{"rx_d/dsp/signed", set_rx_d_dsp_signed, RW, "1"},
-	{"rx_d/dsp/gain", set_rx_d_dsp_gain, RW, "10"},
-	{"rx_d/dsp/rate", set_rx_d_dsp_rate, RW, "1258850"},
-	{"rx_d/dsp/nco_adj", set_rx_d_dsp_nco_adj, RW, "-15000000"},
-	{"rx_d/dsp/rstreq", set_rx_d_dsp_rstreq, WO, "0"},
-	{"rx_d/dsp/loopback", set_rx_d_dsp_loopback, RW, "0"},
-	{"rx_d/about/id", set_rx_d_about_id, RW, "001"},
-	{"rx_d/about/serial", set_invalid, RO, "001"},
-	{"rx_d/about/fw_ver", set_invalid, RO, VERSION},
-	{"rx_d/about/hw_ver", set_invalid, RO, VERSION},
-	{"rx_d/about/sw_ver", set_invalid, RO, VERSION},
-	{"rx_d/link/vita_en", set_rx_d_link_vita_en, RW, "0"},
-	{"rx_d/link/iface", set_rx_d_link_iface, RW, "sfpb"},
-	{"rx_d/link/port", set_rx_d_link_port, RW, "42823"},
-	{"rx_d/link/ip_dest", set_rx_d_link_ip_dest, RW, "10.10.11.10"},
-	{"rx_d/link/mac_dest", set_rx_d_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"time/clk/pps", set_time_clk_pps, RW, "0"},
-	{"time/clk/cur_time", set_time_clk_cur_time, RW, "0.0"},
-	{"time/source/vco", set_time_source_vco, RW, "internal"},
-	{"time/source/sync", set_time_source_sync, RW, "internal"},
-	{"time/source/ref", set_time_source_ref, RW, "internal"},
-	{"time/board/dump", set_time_board_dump, WO, "0"},
-	{"time/board/test", set_time_board_test, WO, "0"},
-	{"time/board/temp", set_time_board_temp, RW, "20"},
-	{"time/board/led", set_time_board_led, WO, "0"},
-	{"time/about/id", set_time_about_id, RW, "001"},
-	{"time/about/serial", set_invalid, RO, "001"},
-	{"time/about/fw_ver", set_invalid, RO, VERSION},
-	{"time/about/hw_ver", set_invalid, RO, VERSION},
-	{"time/about/sw_ver", set_invalid, RO, VERSION},
-	{"fpga/board/dump", set_fpga_board_dump, WO, "0"},
-	{"fpga/board/test", set_fpga_board_test, WO, "0"},
-	{"fpga/board/temp", set_fpga_board_temp, RW, "20"},
-	{"fpga/board/led", set_fpga_board_led, WO, "0"},
-	{"fpga/board/rstreq", set_fpga_board_rstreq, WO, "0"},
-	{"fpga/board/jesd_sync", set_fpga_board_jesd_sync, WO, "0"},
-	{"fpga/board/sys_rstreq", set_fpga_board_sys_rstreq, WO, "0"},
-	{"fpga/about/id", set_fpga_about_id, RW, "001"},
-	{"fpga/about/serial", set_invalid, RO, "001"},
-	{"fpga/about/fw_ver", set_invalid, RO, VERSION},
-	{"fpga/about/hw_ver", set_invalid, RO, VERSION},
-	{"fpga/about/sw_ver", set_invalid, RO, VERSION},
-	{"fpga/link/rate", set_fpga_link_rate, RW, "1250000000"},      // BPS (10G/8)
-	{"fpga/link/sfpa/ip_addr", set_fpga_link_sfpa_ip_addr, RW, "10.10.10.2"},
-	{"fpga/link/sfpa/mac_addr", set_fpga_link_sfpa_mac_addr, RW, "aa:00:00:00:00:00"},
-	{"fpga/link/sfpa/ver", set_fpga_link_sfpa_ver, RW, "0"},
-	{"fpga/link/sfpa/pay_len", set_fpga_link_sfpa_pay_len, RW, "1400"},
-	{"fpga/link/sfpb/ip_addr", set_fpga_link_sfpb_ip_addr, RW, "10.10.11.2"},
-	{"fpga/link/sfpb/mac_addr", set_fpga_link_sfpb_mac_addr, RW, "aa:00:00:00:00:01"},
-	{"fpga/link/sfpb/ver", set_fpga_link_sfpb_ver, RW, "0"},
-	{"fpga/link/sfpb/pay_len", set_fpga_link_sfpb_pay_len, RW, "1400"},
-	{"fpga/link/net/dhcp_en", set_fpga_link_net_dhcp_en, RW, "0"},
-	{"fpga/link/net/hostname", set_fpga_link_net_hostname, RW, "crimson"},
-	{"fpga/link/net/ip_addr", set_fpga_link_net_ip_addr, RW, "192.168.10.2"},
-	{"poll_en", set_poll_en, RW, "1"},
-	{"save_config", set_save_config, RW, "/home/root/profile.cfg"},
-	{"load_config", set_load_config, RW, "/home/root/profile.cfg"}
+	{"tx_a/pwr", hdlr_tx_a_pwr, RW, "0"},
+	{"tx_a/rf/dac/nco", hdlr_tx_a_rf_dac_nco, RW, "15000000"},
+	{"tx_a/rf/dac/temp", hdlr_tx_a_rf_dac_temp, RW, "0"},
+	{"tx_a/rf/freq/val", hdlr_tx_a_rf_freq_val, RW, "0"},
+	{"tx_a/rf/freq/band", hdlr_tx_a_rf_freq_band, RW, "1"},
+	{"tx_a/rf/freq/i_bias", hdlr_tx_a_rf_freq_i_bias, RW, "17"},
+	{"tx_a/rf/freq/q_bias", hdlr_tx_a_rf_freq_q_bias, RW, "17"},
+	{"tx_a/rf/gain/val", hdlr_tx_a_rf_gain_val, RW, "14"},
+	{"tx_a/board/dump", hdlr_tx_a_rf_board_dump, WO, "0"},
+	{"tx_a/board/test", hdlr_tx_a_rf_board_test, WO, "0"},
+	{"tx_a/board/temp", hdlr_tx_a_rf_board_temp, RW, "23"},
+	{"tx_a/board/led", hdlr_tx_a_rf_board_led, WO, "0"},
+	{"tx_a/dsp/gain", hdlr_tx_a_dsp_gain, RW, "10"},
+	{"tx_a/dsp/rate", hdlr_tx_a_dsp_rate, RW, "1258850"},
+	{"tx_a/dsp/nco_adj", hdlr_tx_a_dsp_nco_adj, RW, "0"},
+	{"tx_a/dsp/rstreq", hdlr_tx_a_dsp_rstreq, WO, "0"},
+	{"tx_a/about/id", hdlr_tx_a_about_id, RW, "001"},
+	{"tx_a/about/serial", hdlr_invalid, RO, "001"},
+	{"tx_a/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_a/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_a/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_a/link/vita_en", hdlr_tx_a_link_vita_en, RW, "0"},
+	{"tx_a/link/iface", hdlr_tx_a_link_iface, RW, "sfpa"},
+	{"tx_a/link/port", hdlr_tx_a_link_port, RW, "42824"},
+	{"rx_a/pwr", hdlr_rx_a_pwr, RW, "0"},
+	{"rx_a/rf/freq/val", hdlr_rx_a_rf_freq_val, RW, "0"},
+	{"rx_a/rf/freq/lna", hdlr_rx_a_rf_freq_lna, RW, "0"},
+	{"rx_a/rf/freq/band", hdlr_rx_a_rf_freq_band, RW, "1"},
+	{"rx_a/rf/gain/val", hdlr_rx_a_rf_gain_val, RW, "35"},
+	{"rx_a/board/dump", hdlr_rx_a_rf_board_dump, WO, "0"},
+	{"rx_a/board/test", hdlr_rx_a_rf_board_test, WO, "0"},
+	{"rx_a/board/temp", hdlr_rx_a_rf_board_temp, RW, "20"},
+	{"rx_a/board/led", hdlr_rx_a_rf_board_led, WO, "0"},
+	{"rx_a/dsp/signed", hdlr_rx_a_dsp_signed, RW, "1"},
+	{"rx_a/dsp/gain", hdlr_rx_a_dsp_gain, RW, "10"},
+	{"rx_a/dsp/rate", hdlr_rx_a_dsp_rate, RW, "1258850"},
+	{"rx_a/dsp/nco_adj", hdlr_rx_a_dsp_nco_adj, RW, "-15000000"},
+	{"rx_a/dsp/rstreq", hdlr_rx_a_dsp_rstreq, WO, "0"},
+	{"rx_a/dsp/loopback", hdlr_rx_a_dsp_loopback, RW, "0"},
+	{"rx_a/about/id", hdlr_rx_a_about_id, RW, "001"},
+	{"rx_a/about/serial", hdlr_invalid, RO, "001"},
+	{"rx_a/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_a/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_a/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_a/link/vita_en", hdlr_rx_a_link_vita_en, RW, "0"},
+	{"rx_a/link/iface", hdlr_rx_a_link_iface, RW, "sfpa"},
+	{"rx_a/link/port", hdlr_rx_a_link_port, RW, "42820"},
+	{"rx_a/link/ip_dest", hdlr_rx_a_link_ip_dest, RW, "10.10.10.10"},
+	{"rx_a/link/mac_dest", hdlr_rx_a_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
+	{"tx_b/pwr", hdlr_tx_b_pwr, RW, "0"},
+	{"tx_b/rf/dac/nco", hdlr_tx_b_rf_dac_nco, RW, "15000000"},
+	{"tx_b/rf/dac/temp", hdlr_tx_b_rf_dac_temp, RW, "0"},
+	{"tx_b/rf/freq/val", hdlr_tx_b_rf_freq_val, RW, "0"},
+	{"tx_b/rf/freq/band", hdlr_tx_b_rf_freq_band, RW, "1"},
+	{"tx_b/rf/freq/i_bias", hdlr_tx_b_rf_freq_i_bias, RW, "17"},
+	{"tx_b/rf/freq/q_bias", hdlr_tx_b_rf_freq_q_bias, RW, "17"},
+	{"tx_b/rf/gain/val", hdlr_tx_b_rf_gain_val, RW, "14"},
+	{"tx_b/board/dump", hdlr_tx_b_rf_board_dump, WO, "0"},
+	{"tx_b/board/test", hdlr_tx_b_rf_board_test, WO, "0"},
+	{"tx_b/board/temp", hdlr_tx_b_rf_board_temp, RW, "23"},
+	{"tx_b/board/led", hdlr_tx_b_rf_board_led, WO, "0"},
+	{"tx_b/dsp/gain", hdlr_tx_b_dsp_gain, RW, "10"},
+	{"tx_b/dsp/rate", hdlr_tx_b_dsp_rate, RW, "1258850"},
+	{"tx_b/dsp/nco_adj", hdlr_tx_b_dsp_nco_adj, RW, "0"},
+	{"tx_b/dsp/rstreq", hdlr_tx_b_dsp_rstreq, WO, "0"},
+	{"tx_b/about/id", hdlr_tx_b_about_id, RW, "001"},
+	{"tx_b/about/serial", hdlr_invalid, RO, "001"},
+	{"tx_b/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_b/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_b/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_b/link/vita_en", hdlr_tx_b_link_vita_en, RW, "0"},
+	{"tx_b/link/iface", hdlr_tx_b_link_iface, RW, "sfpb"},
+	{"tx_b/link/port", hdlr_tx_b_link_port, RW, "42825"},
+	{"rx_b/pwr", hdlr_rx_b_pwr, RW, "0"},
+	{"rx_b/rf/freq/val", hdlr_rx_b_rf_freq_val, RW, "0"},
+	{"rx_b/rf/freq/lna", hdlr_rx_b_rf_freq_lna, RW, "0"},
+	{"rx_b/rf/freq/band", hdlr_rx_b_rf_freq_band, RW, "1"},
+	{"rx_b/rf/gain/val", hdlr_rx_b_rf_gain_val, RW, "35"},
+	{"rx_b/board/dump", hdlr_rx_b_rf_board_dump, WO, "0"},
+	{"rx_b/board/test", hdlr_rx_b_rf_board_test, WO, "0"},
+	{"rx_b/board/temp", hdlr_rx_b_rf_board_temp, RW, "20"},
+	{"rx_b/board/led", hdlr_rx_b_rf_board_led, WO, "0"},
+	{"rx_b/dsp/signed", hdlr_rx_b_dsp_signed, RW, "1"},
+	{"rx_b/dsp/gain", hdlr_rx_b_dsp_gain, RW, "10"},
+	{"rx_b/dsp/rate", hdlr_rx_b_dsp_rate, RW, "1258850"},
+	{"rx_b/dsp/nco_adj", hdlr_rx_b_dsp_nco_adj, RW, "-15000000"},
+	{"rx_b/dsp/rstreq", hdlr_rx_b_dsp_rstreq, WO, "0"},
+	{"rx_b/dsp/loopback", hdlr_rx_b_dsp_loopback, RW, "0"},
+	{"rx_b/about/id", hdlr_rx_b_about_id, RW, "001"},
+	{"rx_b/about/serial", hdlr_invalid, RO, "001"},
+	{"rx_b/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_b/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_b/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_b/link/vita_en", hdlr_rx_b_link_vita_en, RW, "0"},
+	{"rx_b/link/iface", hdlr_rx_b_link_iface, RW, "sfpb"},
+	{"rx_b/link/port", hdlr_rx_b_link_port, RW, "42821"},
+	{"rx_b/link/ip_dest", hdlr_rx_b_link_ip_dest, RW, "10.10.11.10"},
+	{"rx_b/link/mac_dest", hdlr_rx_b_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
+	{"tx_c/pwr", hdlr_tx_c_pwr, RW, "0"},
+	{"tx_c/rf/dac/nco", hdlr_tx_c_rf_dac_nco, RW, "15000000"},
+	{"tx_c/rf/dac/temp", hdlr_tx_c_rf_dac_temp, RW, "0"},
+	{"tx_c/rf/freq/val", hdlr_tx_c_rf_freq_val, RW, "0"},
+	{"tx_c/rf/freq/band", hdlr_tx_c_rf_freq_band, RW, "1"},
+	{"tx_c/rf/freq/i_bias", hdlr_tx_c_rf_freq_i_bias, RW, "17"},
+	{"tx_c/rf/freq/q_bias", hdlr_tx_c_rf_freq_q_bias, RW, "17"},
+	{"tx_c/rf/gain/val", hdlr_tx_c_rf_gain_val, RW, "14"},
+	{"tx_c/board/dump", hdlr_tx_c_rf_board_dump, WO, "0"},
+	{"tx_c/board/test", hdlr_tx_c_rf_board_test, WO, "0"},
+	{"tx_c/board/temp", hdlr_tx_c_rf_board_temp, RW, "23"},
+	{"tx_c/board/led", hdlr_tx_c_rf_board_led, WO, "0"},
+	{"tx_c/dsp/gain", hdlr_tx_c_dsp_gain, RW, "10"},
+	{"tx_c/dsp/rate", hdlr_tx_c_dsp_rate, RW, "1258850"},
+	{"tx_c/dsp/nco_adj", hdlr_tx_c_dsp_nco_adj, RW, "0"},
+	{"tx_c/dsp/rstreq", hdlr_tx_c_dsp_rstreq, WO, "0"},
+	{"tx_c/about/id", hdlr_tx_c_about_id, RW, "001"},
+	{"tx_c/about/serial", hdlr_invalid, RO, "001"},
+	{"tx_c/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_c/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_c/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_c/link/vita_en", hdlr_tx_c_link_vita_en, RW, "0"},
+	{"tx_c/link/iface", hdlr_tx_c_link_iface, RW, "sfpa"},
+	{"tx_c/link/port", hdlr_tx_c_link_port, RW, "42826"},
+	{"rx_c/pwr", hdlr_rx_c_pwr, RW, "0"},
+	{"rx_c/rf/freq/val", hdlr_rx_c_rf_freq_val, RW, "0"},
+	{"rx_c/rf/freq/lna", hdlr_rx_c_rf_freq_lna, RW, "0"},
+	{"rx_c/rf/freq/band", hdlr_rx_c_rf_freq_band, RW, "1"},
+	{"rx_c/rf/gain/val", hdlr_rx_c_rf_gain_val, RW, "35"},
+	{"rx_c/board/dump", hdlr_rx_c_rf_board_dump, WO, "0"},
+	{"rx_c/board/test", hdlr_rx_c_rf_board_test, WO, "0"},
+	{"rx_c/board/temp", hdlr_rx_c_rf_board_temp, RW, "20"},
+	{"rx_c/board/led", hdlr_rx_c_rf_board_led, WO, "0"},
+	{"rx_c/dsp/signed", hdlr_rx_c_dsp_signed, RW, "1"},
+	{"rx_c/dsp/gain", hdlr_rx_c_dsp_gain, RW, "10"},
+	{"rx_c/dsp/rate", hdlr_rx_c_dsp_rate, RW, "1258850"},
+	{"rx_c/dsp/nco_adj", hdlr_rx_c_dsp_nco_adj, RW, "-15000000"},
+	{"rx_c/dsp/rstreq", hdlr_rx_c_dsp_rstreq, WO, "0"},
+	{"rx_c/dsp/loopback", hdlr_rx_c_dsp_loopback, RW, "0"},
+	{"rx_c/about/id", hdlr_rx_c_about_id, RW, "001"},
+	{"rx_c/about/serial", hdlr_invalid, RO, "001"},
+	{"rx_c/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_c/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_c/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_c/link/vita_en", hdlr_rx_c_link_vita_en, RW, "0"},
+	{"rx_c/link/iface", hdlr_rx_c_link_iface, RW, "sfpa"},
+	{"rx_c/link/port", hdlr_rx_c_link_port, RW, "42822"},
+	{"rx_c/link/ip_dest", hdlr_rx_c_link_ip_dest, RW, "10.10.10.10"},
+	{"rx_c/link/mac_dest", hdlr_rx_c_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
+	{"tx_d/pwr", hdlr_tx_d_pwr, RW, "0"},
+	{"tx_d/rf/dac/nco", hdlr_tx_d_rf_dac_nco, RW, "15000000"},
+	{"tx_d/rf/dac/temp", hdlr_tx_d_rf_dac_temp, RW, "0"},
+	{"tx_d/rf/freq/val", hdlr_tx_d_rf_freq_val, RW, "0"},
+	{"tx_d/rf/freq/band", hdlr_tx_d_rf_freq_band, RW, "1"},
+	{"tx_d/rf/freq/i_bias", hdlr_tx_d_rf_freq_i_bias, RW, "17"},
+	{"tx_d/rf/freq/q_bias", hdlr_tx_d_rf_freq_q_bias, RW, "17"},
+	{"tx_d/rf/gain/val", hdlr_tx_d_rf_gain_val, RW, "14"},
+	{"tx_d/board/dump", hdlr_tx_d_rf_board_dump, WO, "0"},
+	{"tx_d/board/test", hdlr_tx_d_rf_board_test, WO, "0"},
+	{"tx_d/board/temp", hdlr_tx_d_rf_board_temp, RW, "23"},
+	{"tx_d/board/led", hdlr_tx_d_rf_board_led, WO, "0"},
+	{"tx_d/dsp/gain", hdlr_tx_d_dsp_gain, RW, "10"},
+	{"tx_d/dsp/rate", hdlr_tx_d_dsp_rate, RW, "1258850"},
+	{"tx_d/dsp/nco_adj", hdlr_tx_d_dsp_nco_adj, RW, "0"},
+	{"tx_d/dsp/rstreq", hdlr_tx_d_dsp_rstreq, WO, "0"},
+	{"tx_d/about/id", hdlr_tx_d_about_id, RW, "001"},
+	{"tx_d/about/serial", hdlr_invalid, RO, "001"},
+	{"tx_d/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_d/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_d/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_d/link/vita_en", hdlr_tx_d_link_vita_en, RW, "0"},
+	{"tx_d/link/iface", hdlr_tx_d_link_iface, RW, "sfpb"},
+	{"tx_d/link/port", hdlr_tx_d_link_port, RW, "42827"},
+	{"rx_d/pwr", hdlr_rx_d_pwr, RW, "0"},
+	{"rx_d/rf/freq/val", hdlr_rx_d_rf_freq_val, RW, "0"},
+	{"rx_d/rf/freq/lna", hdlr_rx_d_rf_freq_lna, RW, "0"},
+	{"rx_d/rf/freq/band", hdlr_rx_d_rf_freq_band, RW, "1"},
+	{"rx_d/rf/gain/val", hdlr_rx_d_rf_gain_val, RW, "35"},
+	{"rx_d/board/dump", hdlr_rx_d_rf_board_dump, WO, "0"},
+	{"rx_d/board/test", hdlr_rx_d_rf_board_test, WO, "0"},
+	{"rx_d/board/temp", hdlr_rx_d_rf_board_temp, RW, "20"},
+	{"rx_d/board/led", hdlr_rx_d_rf_board_led, WO, "0"},
+	{"rx_d/dsp/signed", hdlr_rx_d_dsp_signed, RW, "1"},
+	{"rx_d/dsp/gain", hdlr_rx_d_dsp_gain, RW, "10"},
+	{"rx_d/dsp/rate", hdlr_rx_d_dsp_rate, RW, "1258850"},
+	{"rx_d/dsp/nco_adj", hdlr_rx_d_dsp_nco_adj, RW, "-15000000"},
+	{"rx_d/dsp/rstreq", hdlr_rx_d_dsp_rstreq, WO, "0"},
+	{"rx_d/dsp/loopback", hdlr_rx_d_dsp_loopback, RW, "0"},
+	{"rx_d/about/id", hdlr_rx_d_about_id, RW, "001"},
+	{"rx_d/about/serial", hdlr_invalid, RO, "001"},
+	{"rx_d/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_d/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_d/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_d/link/vita_en", hdlr_rx_d_link_vita_en, RW, "0"},
+	{"rx_d/link/iface", hdlr_rx_d_link_iface, RW, "sfpb"},
+	{"rx_d/link/port", hdlr_rx_d_link_port, RW, "42823"},
+	{"rx_d/link/ip_dest", hdlr_rx_d_link_ip_dest, RW, "10.10.11.10"},
+	{"rx_d/link/mac_dest", hdlr_rx_d_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
+	{"time/clk/pps", hdlr_time_clk_pps, RW, "0"},
+	{"time/clk/cur_time", hdlr_time_clk_cur_time, RW, "0.0"},
+	{"time/source/vco", hdlr_time_source_vco, RW, "internal"},
+	{"time/source/sync", hdlr_time_source_sync, RW, "internal"},
+	{"time/source/ref", hdlr_time_source_ref, RW, "internal"},
+	{"time/board/dump", hdlr_time_board_dump, WO, "0"},
+	{"time/board/test", hdlr_time_board_test, WO, "0"},
+	{"time/board/temp", hdlr_time_board_temp, RW, "20"},
+	{"time/board/led", hdlr_time_board_led, WO, "0"},
+	{"time/about/id", hdlr_time_about_id, RW, "001"},
+	{"time/about/serial", hdlr_invalid, RO, "001"},
+	{"time/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"time/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"time/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"fpga/board/dump", hdlr_fpga_board_dump, WO, "0"},
+	{"fpga/board/test", hdlr_fpga_board_test, WO, "0"},
+	{"fpga/board/temp", hdlr_fpga_board_temp, RW, "20"},
+	{"fpga/board/led", hdlr_fpga_board_led, WO, "0"},
+	{"fpga/board/rstreq", hdlr_fpga_board_rstreq, WO, "0"},
+	{"fpga/board/jesd_sync", hdlr_fpga_board_jesd_sync, WO, "0"},
+	{"fpga/board/sys_rstreq", hdlr_fpga_board_sys_rstreq, WO, "0"},
+	{"fpga/about/id", hdlr_fpga_about_id, RW, "001"},
+	{"fpga/about/serial", hdlr_invalid, RO, "001"},
+	{"fpga/about/fw_ver", hdlr_invalid, RO, VERSION},
+	{"fpga/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"fpga/about/sw_ver", hdlr_invalid, RO, VERSION},
+	{"fpga/link/rate", hdlr_fpga_link_rate, RW, "1250000000"},      // BPS (10G/8)
+	{"fpga/link/sfpa/ip_addr", hdlr_fpga_link_sfpa_ip_addr, RW, "10.10.10.2"},
+	{"fpga/link/sfpa/mac_addr", hdlr_fpga_link_sfpa_mac_addr, RW, "aa:00:00:00:00:00"},
+	{"fpga/link/sfpa/ver", hdlr_fpga_link_sfpa_ver, RW, "0"},
+	{"fpga/link/sfpa/pay_len", hdlr_fpga_link_sfpa_pay_len, RW, "1400"},
+	{"fpga/link/sfpb/ip_addr", hdlr_fpga_link_sfpb_ip_addr, RW, "10.10.11.2"},
+	{"fpga/link/sfpb/mac_addr", hdlr_fpga_link_sfpb_mac_addr, RW, "aa:00:00:00:00:01"},
+	{"fpga/link/sfpb/ver", hdlr_fpga_link_sfpb_ver, RW, "0"},
+	{"fpga/link/sfpb/pay_len", hdlr_fpga_link_sfpb_pay_len, RW, "1400"},
+	{"fpga/link/net/dhcp_en", hdlr_fpga_link_net_dhcp_en, RW, "0"},
+	{"fpga/link/net/hostname", hdlr_fpga_link_net_hostname, RW, "crimson"},
+	{"fpga/link/net/ip_addr", hdlr_fpga_link_net_ip_addr, RW, "192.168.10.2"},
+	{"poll_en", hdlr_poll_en, RW, "1"},
+	{"save_config", hdlr_save_config, RW, "/home/root/profile.cfg"},
+	{"load_config", hdlr_load_config, RW, "/home/root/profile.cfg"}
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
