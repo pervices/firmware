@@ -158,10 +158,12 @@ static int set_tx_a_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_a_rf_dac_temp (const char* data, char* ret) {
+static int set_tx_a_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -293,24 +295,19 @@ static int set_tx_a_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_a_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_a_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
 	strcpy(buf, "fwd -b 1 -m 'dump -c a -d'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 1 -m 'dump -c a -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -321,10 +318,12 @@ static int set_tx_a_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_a_rf_board_temp (const char* data, char* ret) {
+static int set_tx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -610,30 +609,25 @@ static int set_rx_a_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_a_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_a_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
 	strcpy(buf, "fwd -b 0 -m 'dump -c a -a'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 0 -m 'dump -c a -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "fwd -b 0 -m 'dump -c a -v'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -644,10 +638,12 @@ static int set_rx_a_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_a_rf_board_temp (const char* data, char* ret) {
+static int set_rx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c a -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -871,10 +867,12 @@ static int set_tx_b_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_b_rf_dac_temp (const char* data, char* ret) {
+static int set_tx_b_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1006,24 +1004,19 @@ static int set_tx_b_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_b_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_b_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
 	strcpy(buf, "fwd -b 1 -m 'dump -c b -d'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_b Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 1 -m 'dump -c b -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1034,10 +1027,12 @@ static int set_tx_b_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_b_rf_board_temp (const char* data, char* ret) {
+static int set_tx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1323,30 +1318,25 @@ static int set_rx_b_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_b_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_b_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
 	strcpy(buf, "fwd -b 0 -m 'dump -c b -a'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 0 -m 'dump -c b -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "fwd -b 0 -m 'dump -c b -v'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1357,10 +1347,12 @@ static int set_rx_b_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_b_rf_board_temp (const char* data, char* ret) {
+static int set_rx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c b -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1584,10 +1576,12 @@ static int set_tx_c_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_c_rf_dac_temp (const char* data, char* ret) {
+static int set_tx_c_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1719,24 +1713,19 @@ static int set_tx_c_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_c_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_c_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
 	strcpy(buf, "fwd -b 1 -m 'dump -c c -d'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_c Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 1 -m 'dump -c c -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1747,10 +1736,12 @@ static int set_tx_c_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_c_rf_board_temp (const char* data, char* ret) {
+static int set_tx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2036,30 +2027,25 @@ static int set_rx_c_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_c_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_c_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
 	strcpy(buf, "fwd -b 0 -m 'dump -c c -a'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 0 -m 'dump -c c -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "fwd -b 0 -m 'dump -c c -v'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2070,10 +2056,12 @@ static int set_rx_c_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_c_rf_board_temp (const char* data, char* ret) {
+static int set_rx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c c -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2297,10 +2285,12 @@ static int set_tx_d_rf_dac_nco (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_d_rf_dac_temp (const char* data, char* ret) {
+static int set_tx_d_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2432,24 +2422,19 @@ static int set_tx_d_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_d_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_tx_d_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
 	strcpy(buf, "fwd -b 1 -m 'dump -c d -d'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_d Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 1 -m 'dump -c d -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: tx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2460,10 +2445,12 @@ static int set_tx_d_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_tx_d_rf_board_temp (const char* data, char* ret) {
+static int set_tx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -2748,30 +2735,25 @@ static int set_rx_d_rf_gain_val (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_d_rf_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_rx_d_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
 	strcpy(buf, "fwd -b 0 -m 'dump -c d -a'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "fwd -b 0 -m 'dump -c d -g'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "fwd -b 0 -m 'dump -c d -v'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2782,10 +2764,12 @@ static int set_rx_d_rf_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_rx_d_rf_board_temp (const char* data, char* ret) {
+static int set_rx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 0 -m 'board -c d -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -3047,24 +3031,19 @@ static int set_time_source_ref (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_time_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
-	return RETURN_SUCCESS;
-}
-
 static int set_time_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// FANOUT
 	strcpy(buf, "fwd -b 2 -m 'dump -f'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: time Chip: FANOUT] %s\n", uart_ret_buf);
 
 	// CLK
 	strcpy(buf, "fwd -b 2 -m 'dump -c'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(1);
+	read_uart(FWD_CMD);
 	PRINT(DUMP, "[Board: time Chip: CLK] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3075,10 +3054,12 @@ static int set_time_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_time_board_temp (const char* data, char* ret) {
+static int set_time_board_temp (const char* data, char* ret) {
 	strcpy(buf, "fwd -b 2 -m 'board -t'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -3092,11 +3073,6 @@ static int set_time_board_led (const char* data, char* ret) {
 
 static int set_time_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
-	return RETURN_SUCCESS;
-}
-
-static int get_fpga_board_status (const char* data, char* ret) {
-	// TODO: MCU code cleanup
 	return RETURN_SUCCESS;
 }
 
@@ -3121,10 +3097,12 @@ static int set_fpga_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int get_fpga_board_temp (const char* data, char* ret) {
-	strcpy(buf, "board -t");
+static int set_fpga_board_temp (const char* data, char* ret) {
+	strcpy(buf, "board -t\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	recv_uart_comm(uart_fd, (uint8_t*)data, &rd_len, MAX_PROP_LEN);
+	read_uart(NO_FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -3325,16 +3303,15 @@ static int set_load_config (const char* data, char* ret) {
 static prop_t property_table[] = {
 	{"tx_a/pwr", get_invalid, set_tx_a_pwr, RW, NO_POLL, "0"},
 	{"tx_a/rf/dac/nco", get_invalid, set_tx_a_rf_dac_nco, RW, NO_POLL, "15000000"},
-	{"tx_a/rf/dac/temp", get_tx_a_rf_dac_temp, set_invalid, RO, POLL, "0"},
+	{"tx_a/rf/dac/temp", get_invalid, set_tx_a_rf_dac_temp, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/val", get_invalid, set_tx_a_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_a/rf/freq/band", get_invalid, set_tx_a_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_a/rf/freq/i_bias", get_invalid, set_tx_a_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_a/rf/freq/q_bias", get_invalid, set_tx_a_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_a/rf/gain/val", get_invalid, set_tx_a_rf_gain_val, RW, NO_POLL, "14"},
-	{"tx_a/board/status", get_tx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_a/board/dump", get_invalid, set_tx_a_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_a/board/test", get_invalid, set_tx_a_rf_board_test, WO, NO_POLL, "0"},
-	{"tx_a/board/temp", get_tx_a_rf_board_temp, set_invalid, RO, POLL, "23"},
+	{"tx_a/board/temp", get_invalid, set_tx_a_rf_board_temp, RW, NO_POLL, "23"},
 	{"tx_a/board/led", get_invalid, set_tx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_a/dsp/gain", get_invalid, set_tx_a_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_a/dsp/rate", get_invalid, set_tx_a_dsp_rate, RW, NO_POLL, "1258850"},
@@ -3353,10 +3330,9 @@ static prop_t property_table[] = {
 	{"rx_a/rf/freq/lna", get_invalid, set_rx_a_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_a/rf/freq/band", get_invalid, set_rx_a_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_a/rf/gain/val", get_invalid, set_rx_a_rf_gain_val, RW, NO_POLL, "35"},
-	{"rx_a/board/status", get_rx_a_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_a/board/dump", get_invalid, set_rx_a_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_a/board/test", get_invalid, set_rx_a_rf_board_test, WO, NO_POLL, "0"},
-	{"rx_a/board/temp", get_rx_a_rf_board_temp, set_invalid, RO, POLL, "20"},
+	{"rx_a/board/temp", get_invalid, set_rx_a_rf_board_temp, RW, NO_POLL, "20"},
 	{"rx_a/board/led", get_invalid, set_rx_a_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_a/dsp/signed", get_invalid, set_rx_a_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_a/dsp/gain", get_invalid, set_rx_a_dsp_gain, RW, NO_POLL, "10"},
@@ -3376,16 +3352,15 @@ static prop_t property_table[] = {
 	{"rx_a/link/mac_dest", get_invalid, set_rx_a_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_b/pwr", get_invalid, set_tx_b_pwr, RW, NO_POLL, "0"},
 	{"tx_b/rf/dac/nco", get_invalid, set_tx_b_rf_dac_nco, RW, NO_POLL, "15000000"},
-	{"tx_b/rf/dac/temp", get_tx_b_rf_dac_temp, set_invalid, RO, POLL, "0"},
+	{"tx_b/rf/dac/temp", get_invalid, set_tx_b_rf_dac_temp, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/val", get_invalid, set_tx_b_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_b/rf/freq/band", get_invalid, set_tx_b_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_b/rf/freq/i_bias", get_invalid, set_tx_b_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_b/rf/freq/q_bias", get_invalid, set_tx_b_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_b/rf/gain/val", get_invalid, set_tx_b_rf_gain_val, RW, NO_POLL, "14"},
-	{"tx_b/board/status", get_tx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_b/board/dump", get_invalid, set_tx_b_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_b/board/test", get_invalid, set_tx_b_rf_board_test, WO, NO_POLL, "0"},
-	{"tx_b/board/temp", get_tx_b_rf_board_temp, set_invalid, RO, POLL, "23"},
+	{"tx_b/board/temp", get_invalid, set_tx_b_rf_board_temp, RW, NO_POLL, "23"},
 	{"tx_b/board/led", get_invalid, set_tx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_b/dsp/gain", get_invalid, set_tx_b_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_b/dsp/rate", get_invalid, set_tx_b_dsp_rate, RW, NO_POLL, "1258850"},
@@ -3404,10 +3379,9 @@ static prop_t property_table[] = {
 	{"rx_b/rf/freq/lna", get_invalid, set_rx_b_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_b/rf/freq/band", get_invalid, set_rx_b_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_b/rf/gain/val", get_invalid, set_rx_b_rf_gain_val, RW, NO_POLL, "35"},
-	{"rx_b/board/status", get_rx_b_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_b/board/dump", get_invalid, set_rx_b_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_b/board/test", get_invalid, set_rx_b_rf_board_test, WO, NO_POLL, "0"},
-	{"rx_b/board/temp", get_rx_b_rf_board_temp, set_invalid, RO, POLL, "20"},
+	{"rx_b/board/temp", get_invalid, set_rx_b_rf_board_temp, RW, NO_POLL, "20"},
 	{"rx_b/board/led", get_invalid, set_rx_b_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_b/dsp/signed", get_invalid, set_rx_b_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_b/dsp/gain", get_invalid, set_rx_b_dsp_gain, RW, NO_POLL, "10"},
@@ -3427,16 +3401,15 @@ static prop_t property_table[] = {
 	{"rx_b/link/mac_dest", get_invalid, set_rx_b_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_c/pwr", get_invalid, set_tx_c_pwr, RW, NO_POLL, "0"},
 	{"tx_c/rf/dac/nco", get_invalid, set_tx_c_rf_dac_nco, RW, NO_POLL, "15000000"},
-	{"tx_c/rf/dac/temp", get_tx_c_rf_dac_temp, set_invalid, RO, POLL, "0"},
+	{"tx_c/rf/dac/temp", get_invalid, set_tx_c_rf_dac_temp, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/val", get_invalid, set_tx_c_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_c/rf/freq/band", get_invalid, set_tx_c_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_c/rf/freq/i_bias", get_invalid, set_tx_c_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_c/rf/freq/q_bias", get_invalid, set_tx_c_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_c/rf/gain/val", get_invalid, set_tx_c_rf_gain_val, RW, NO_POLL, "14"},
-	{"tx_c/board/status", get_tx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_c/board/dump", get_invalid, set_tx_c_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_c/board/test", get_invalid, set_tx_c_rf_board_test, WO, NO_POLL, "0"},
-	{"tx_c/board/temp", get_tx_c_rf_board_temp, set_invalid, RO, POLL, "23"},
+	{"tx_c/board/temp", get_invalid, set_tx_c_rf_board_temp, RW, NO_POLL, "23"},
 	{"tx_c/board/led", get_invalid, set_tx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_c/dsp/gain", get_invalid, set_tx_c_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_c/dsp/rate", get_invalid, set_tx_c_dsp_rate, RW, NO_POLL, "1258850"},
@@ -3455,10 +3428,9 @@ static prop_t property_table[] = {
 	{"rx_c/rf/freq/lna", get_invalid, set_rx_c_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_c/rf/freq/band", get_invalid, set_rx_c_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_c/rf/gain/val", get_invalid, set_rx_c_rf_gain_val, RW, NO_POLL, "35"},
-	{"rx_c/board/status", get_rx_c_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_c/board/dump", get_invalid, set_rx_c_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_c/board/test", get_invalid, set_rx_c_rf_board_test, WO, NO_POLL, "0"},
-	{"rx_c/board/temp", get_rx_c_rf_board_temp, set_invalid, RO, POLL, "20"},
+	{"rx_c/board/temp", get_invalid, set_rx_c_rf_board_temp, RW, NO_POLL, "20"},
 	{"rx_c/board/led", get_invalid, set_rx_c_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_c/dsp/signed", get_invalid, set_rx_c_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_c/dsp/gain", get_invalid, set_rx_c_dsp_gain, RW, NO_POLL, "10"},
@@ -3478,16 +3450,15 @@ static prop_t property_table[] = {
 	{"rx_c/link/mac_dest", get_invalid, set_rx_c_link_mac_dest, RW, NO_POLL, "ff:ff:ff:ff:ff:ff"},
 	{"tx_d/pwr", get_invalid, set_tx_d_pwr, RW, NO_POLL, "0"},
 	{"tx_d/rf/dac/nco", get_invalid, set_tx_d_rf_dac_nco, RW, NO_POLL, "15000000"},
-	{"tx_d/rf/dac/temp", get_tx_d_rf_dac_temp, set_invalid, RO, POLL, "0"},
+	{"tx_d/rf/dac/temp", get_invalid, set_tx_d_rf_dac_temp, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/val", get_invalid, set_tx_d_rf_freq_val, RW, NO_POLL, "0"},
 	{"tx_d/rf/freq/band", get_invalid, set_tx_d_rf_freq_band, RW, NO_POLL, "1"},
 	{"tx_d/rf/freq/i_bias", get_invalid, set_tx_d_rf_freq_i_bias, RW, NO_POLL, "17"},
 	{"tx_d/rf/freq/q_bias", get_invalid, set_tx_d_rf_freq_q_bias, RW, NO_POLL, "17"},
 	{"tx_d/rf/gain/val", get_invalid, set_tx_d_rf_gain_val, RW, NO_POLL, "14"},
-	{"tx_d/board/status", get_tx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"tx_d/board/dump", get_invalid, set_tx_d_rf_board_dump, WO, NO_POLL, "0"},
 	{"tx_d/board/test", get_invalid, set_tx_d_rf_board_test, WO, NO_POLL, "0"},
-	{"tx_d/board/temp", get_tx_d_rf_board_temp, set_invalid, RO, POLL, "23"},
+	{"tx_d/board/temp", get_invalid, set_tx_d_rf_board_temp, RW, NO_POLL, "23"},
 	{"tx_d/board/led", get_invalid, set_tx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"tx_d/dsp/gain", get_invalid, set_tx_d_dsp_gain, RW, NO_POLL, "10"},
 	{"tx_d/dsp/rate", get_invalid, set_tx_d_dsp_rate, RW, NO_POLL, "1258850"},
@@ -3506,10 +3477,9 @@ static prop_t property_table[] = {
 	{"rx_d/rf/freq/lna", get_invalid, set_rx_d_rf_freq_lna, RW, NO_POLL, "0"},
 	{"rx_d/rf/freq/band", get_invalid, set_rx_d_rf_freq_band, RW, NO_POLL, "1"},
 	{"rx_d/rf/gain/val", get_invalid, set_rx_d_rf_gain_val, RW, NO_POLL, "35"},
-	{"rx_d/board/status", get_rx_d_rf_board_status, set_invalid, RO, POLL, "off"},
 	{"rx_d/board/dump", get_invalid, set_rx_d_rf_board_dump, WO, NO_POLL, "0"},
 	{"rx_d/board/test", get_invalid, set_rx_d_rf_board_test, WO, NO_POLL, "0"},
-	{"rx_d/board/temp", get_rx_d_rf_board_temp, set_invalid, RO, POLL, "20"},
+	{"rx_d/board/temp", get_invalid, set_rx_d_rf_board_temp, RW, NO_POLL, "20"},
 	{"rx_d/board/led", get_invalid, set_rx_d_rf_board_led, WO, NO_POLL, "0"},
 	{"rx_d/dsp/signed", get_invalid, set_rx_d_dsp_signed, RW, NO_POLL, "1"},
 	{"rx_d/dsp/gain", get_invalid, set_rx_d_dsp_gain, RW, NO_POLL, "10"},
@@ -3532,20 +3502,18 @@ static prop_t property_table[] = {
 	{"time/source/vco", get_invalid, set_time_source_vco, RW, NO_POLL, "internal"},
 	{"time/source/sync", get_invalid, set_time_source_sync, RW, NO_POLL, "internal"},
 	{"time/source/ref", get_invalid, set_time_source_ref, RW, NO_POLL, "internal"},
-	{"time/board/status", get_time_board_status, set_invalid, RO, POLL, "on"},
 	{"time/board/dump", get_invalid, set_time_board_dump, WO, NO_POLL, "0"},
 	{"time/board/test", get_invalid, set_time_board_test, WO, NO_POLL, "0"},
-	{"time/board/temp", get_time_board_temp, set_invalid, RO, POLL, "20"},
+	{"time/board/temp", get_invalid, set_time_board_temp, RW, NO_POLL, "20"},
 	{"time/board/led", get_invalid, set_time_board_led, WO, NO_POLL, "0"},
 	{"time/about/id", get_invalid, set_time_about_id, RW, NO_POLL, "001"},
 	{"time/about/serial", get_invalid, set_invalid, RO, NO_POLL, "001"},
 	{"time/about/fw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"time/about/hw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
 	{"time/about/sw_ver", get_invalid, set_invalid, RO, NO_POLL, VERSION},
-	{"fpga/board/status", get_fpga_board_status, set_invalid, RO, POLL, "on"},
 	{"fpga/board/dump", get_invalid, set_fpga_board_dump, WO, NO_POLL, "0"},
 	{"fpga/board/test", get_invalid, set_fpga_board_test, WO, NO_POLL, "0"},
-	{"fpga/board/temp", get_fpga_board_temp, set_invalid, RO, POLL, "20"},
+	{"fpga/board/temp", get_invalid, set_fpga_board_temp, RW, NO_POLL, "20"},
 	{"fpga/board/led", get_invalid, set_fpga_board_led, WO, NO_POLL, "0"},
 	{"fpga/board/rstreq", get_invalid, set_fpga_board_rstreq, WO, NO_POLL, "0"},
 	{"fpga/board/jesd_sync", get_invalid, set_fpga_board_jesd_sync, WO, NO_POLL, "0"},
