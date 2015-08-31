@@ -35,6 +35,7 @@
 
 #define ENET_DEV "eth0"
 
+/*
 // timers for polling
 static struct timeval tstart;
 static struct timeval tend;
@@ -48,6 +49,7 @@ static uint8_t timeout(uint32_t timeout) {
 	else
 		return 0;
 }
+*/
 
 // profile flags, read in this file, triggered in properties.c
 uint8_t load_profile = 0;
@@ -111,12 +113,6 @@ int main(int argc, char *argv[]) {
 	while (1) {
 		// prevent busy wait, taking up too much CPU resources
 		usleep(1);
-
-		// poll for all status properties every 3s
-		if (timeout(3000000) == 1) {
-			//update_status_properties();
-			gettimeofday(&tstart, NULL);
-		}
 
 		// check for input commands from UDP
 		if (recv_udp_comm(comm_fds[i], buffer, &received_bytes, UDP_PAYLOAD_LEN) >= 0) {

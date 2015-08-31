@@ -41,7 +41,6 @@
 static int uart_fd = 0;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = {};
 static char buf[MAX_PROP_LEN] = {};
-static uint16_t rd_len;
 
 // by default the board is powered off
 static uint8_t rx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
@@ -3278,10 +3277,6 @@ static int hdlr_fpga_link_net_ip_addr (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_poll_en (const char* data, char* ret) {
-	return RETURN_SUCCESS;
-}
-
 static int hdlr_save_config (const char* data, char* ret) {
 	*_save_profile = 1;
 	strcpy(_save_profile_path, data);
@@ -3530,7 +3525,6 @@ static prop_t property_table[] = {
 	{"fpga/link/net/dhcp_en", hdlr_fpga_link_net_dhcp_en, RW, "0"},
 	{"fpga/link/net/hostname", hdlr_fpga_link_net_hostname, RW, "crimson"},
 	{"fpga/link/net/ip_addr", hdlr_fpga_link_net_ip_addr, RW, "192.168.10.2"},
-	{"poll_en", hdlr_poll_en, RW, "1"},
 	{"save_config", hdlr_save_config, RW, "/home/root/profile.cfg"},
 	{"load_config", hdlr_load_config, RW, "/home/root/profile.cfg"}
 };
