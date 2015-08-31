@@ -375,25 +375,6 @@ int set_property(const char* prop, const char* data) {
 	return RETURN_SUCCESS;
 }
 
-// For polling properties
-void update_status_properties(void) {
-	char buf[MAX_PROP_LEN];
-	char path [MAX_PATH_LEN];
-	size_t i;
-
-	// check if continue polling
-	get_property("poll_en", buf, MAX_PROP_LEN);
-	if (buf[0] != '1') return;
-
-	for (i = 0; i < get_num_prop(); i++) {
-		// if POLL and RO property
-		if  (get_prop(i) -> poll == POLL) {
-			get_prop(i) -> get_handler(buf, buf);
-			write_to_file(get_abs_path(get_prop(i), path), buf);
-		}
-	}
-}
-
 // Pass the pointers for load/saving profiles flags
 void pass_profile_pntr_manager(uint8_t* load, uint8_t* save, char* load_path, char* save_path) {
 	pass_profile_pntr_prop(load, save, load_path, save_path);

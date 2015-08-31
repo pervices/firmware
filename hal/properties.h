@@ -34,7 +34,6 @@ typedef enum {POLL, NO_POLL} poll_t;
 
 typedef struct prop {
 	char path[MAX_PROP_LEN];
-	int (*get_handler)(const char* data, char* ret);
 	int (*set_handler)(const char* data, char* ret);
 	perm_t permissions;
 	poll_t poll;
