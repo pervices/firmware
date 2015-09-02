@@ -22,7 +22,7 @@
 #define TIMEOUT 1000000UL	// us, 1.0 seconds
 
 // Minimum time between UART commands
-#define TIME_INTERVAL 60000 // us, 0.06 seconds
+#define TIME_INTERVAL 50000 // us, 0.05 seconds
 
 static struct timeval tprev;	// time since previous UART command
 static struct timeval tstart;	// time since the beginning of a UART send attempt
