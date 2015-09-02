@@ -53,23 +53,23 @@
 #define PLL0_VCO_MIN_HZ		1500000000ULL
 #define PLL0_VCO_MAX_HZ		3000000000ULL
 #define PLL0_PD_MIN_HZ		0	// DC Value
-#define PLL0_PD_MAX_HZ		125000000ULL
+#define PLL0_PD_MAX_HZ		50000000ULL
 #define PLL0_N_MIN		16
 #define PLL0_N_MAX		7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255
-#define PLL0_R_MIN		1
+#define PLL0_R_MIN		2
 #define PLL0_DIV_STEPS		2
 #define PLL0_DIV_MAX		62
 #define PLL0_DIV_MIN		2
 
 //HMC833 PLL Specifications
-#define PLL1_REF_MAX_HZ		100000000ULL // Have to change Reg08h[21] of HMC833 if higher (upto 350MHz) necessary
-#define PLL1_REF_MIN_HZ		20000000ULL
+#define PLL1_REF_MAX_HZ		55000000ULL // Have to change Reg08h[21] of HMC833 if higher (upto 350MHz) necessary
+#define PLL1_REF_MIN_HZ		25000000ULL
 #define PLL1_RFOUT_MAX_HZ	6000000000ULL
 #define PLL1_RFOUT_MIN_HZ	25000000ULL
 #define PLL1_VCO_MIN_HZ		1500000000ULL
 #define PLL1_VCO_MAX_HZ		3000000000ULL
 #define PLL1_PD_MIN_HZ		20000000ULL	// To Maximize PD spur width
-#define PLL1_PD_MAX_HZ		125000000ULL
+#define PLL1_PD_MAX_HZ		50000000ULL
 #define PLL1_N_MIN		16	 //Minimum allowable N value (per datasheet)
 #define PLL1_N_MAX		7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
 #define PLL1_R_MIN		1
@@ -117,6 +117,9 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1);
 
 // Determine the VCO and Output Settings of the PLL
 void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pllparam, uint8_t is_pll1);
+
+// Only for PLL0; Determine Best VCOFreq, N, R & D configuration
+void pll_SetVCO_PLL0(uint64_t* reqFreq, pllparam_t* pllparam, uint64_t* N, uint64_t* R);
 
 // Determine the best value for PLL1.N
 uint8_t pll_NCalc(uint64_t* reqFreq, pllparam_t* pll1, uint64_t* N);
