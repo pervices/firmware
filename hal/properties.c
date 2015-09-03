@@ -401,6 +401,15 @@ static int hdlr_tx_a_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_about_fw_ver (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 1 -m 'board -v'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txa4", &old_val);
@@ -485,6 +494,17 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
 		tx_power[0] = PWR_OFF;
 	}
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_sync (const char* data, char* ret) {
+	uint32_t old_val;
+
+	// toggle the bit sys0[6]
+	read_hps_reg ( "sys0", &old_val);
+	write_hps_reg( "sys0", old_val | 0x40);
+	write_hps_reg( "sys0", old_val & (~0x40));
 
 	return RETURN_SUCCESS;
 }
@@ -740,6 +760,15 @@ static int hdlr_rx_a_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_about_fw_ver (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 0 -m 'board -v'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_a_link_vita_en (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "rxa4", &old_val);
@@ -840,6 +869,17 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 		read_hps_reg ( "rxa4", &old_val);
 		write_hps_reg( "rxa4", old_val & (~0x100));
 	}
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_sync (const char* data, char* ret) {
+	uint32_t old_val;
+
+	// toggle the bit sys0[5]
+	read_hps_reg ( "sys0", &old_val);
+	write_hps_reg( "sys0", old_val | 0x20);
+	write_hps_reg( "sys0", old_val & (~0x20));
+
 	return RETURN_SUCCESS;
 }
 
@@ -3070,6 +3110,15 @@ static int hdlr_time_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_time_about_fw_ver (const char* data, char* ret) {
+	strcpy(buf, "fwd -b 2 -m 'board -v'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_dump (const char* data, char* ret) {
 
 	// dump all of the board logs
@@ -3138,8 +3187,40 @@ static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+
+static int hdlr_fpga_board_fw_rst (const char* data, char* ret) {
+	uint32_t old_val;
+
+	// toggle the bit sys0[4]
+	read_hps_reg ( "sys0", &old_val);
+	write_hps_reg( "sys0", old_val | 0x10);
+	write_hps_reg( "sys0", old_val & (~0x10));
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
+	strcpy(buf, "board -v\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_hw_ver (const char* data, char* ret) {
+	uint32_t old_val;
+	read_hps_reg ( "sys1", &old_val);
+
+	// bits sys1[10:7]
+	old_val = (old_val >> 7) & 0xf;
+
+	sprintf(ret, "ver. 0x%02x", old_val);
 	return RETURN_SUCCESS;
 }
 
@@ -3292,6 +3373,7 @@ static int hdlr_load_config (const char* data, char* ret) {
 // Beginning of property table
 static prop_t property_table[] = {
 	{"tx_a/pwr", hdlr_tx_a_pwr, RW, "0"},
+	{"tx_a/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_a/rf/dac/nco", hdlr_tx_a_rf_dac_nco, RW, "15000000"},
 	{"tx_a/rf/dac/temp", hdlr_tx_a_rf_dac_temp, RW, "0"},
 	{"tx_a/rf/freq/val", hdlr_tx_a_rf_freq_val, RW, "0"},
@@ -3309,13 +3391,13 @@ static prop_t property_table[] = {
 	{"tx_a/dsp/rstreq", hdlr_tx_a_dsp_rstreq, WO, "0"},
 	{"tx_a/about/id", hdlr_tx_a_about_id, RW, "001"},
 	{"tx_a/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_a/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_a/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_a/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
 	{"tx_a/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"tx_a/link/vita_en", hdlr_tx_a_link_vita_en, RW, "0"},
 	{"tx_a/link/iface", hdlr_tx_a_link_iface, RW, "sfpa"},
 	{"tx_a/link/port", hdlr_tx_a_link_port, RW, "42824"},
 	{"rx_a/pwr", hdlr_rx_a_pwr, RW, "0"},
+	{"rx_a/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_a/rf/freq/val", hdlr_rx_a_rf_freq_val, RW, "0"},
 	{"rx_a/rf/freq/lna", hdlr_rx_a_rf_freq_lna, RW, "0"},
 	{"rx_a/rf/freq/band", hdlr_rx_a_rf_freq_band, RW, "1"},
@@ -3332,8 +3414,7 @@ static prop_t property_table[] = {
 	{"rx_a/dsp/loopback", hdlr_rx_a_dsp_loopback, RW, "0"},
 	{"rx_a/about/id", hdlr_rx_a_about_id, RW, "001"},
 	{"rx_a/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_a/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_a/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_a/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
 	{"rx_a/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"rx_a/link/vita_en", hdlr_rx_a_link_vita_en, RW, "0"},
 	{"rx_a/link/iface", hdlr_rx_a_link_iface, RW, "sfpa"},
@@ -3341,6 +3422,7 @@ static prop_t property_table[] = {
 	{"rx_a/link/ip_dest", hdlr_rx_a_link_ip_dest, RW, "10.10.10.10"},
 	{"rx_a/link/mac_dest", hdlr_rx_a_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
 	{"tx_b/pwr", hdlr_tx_b_pwr, RW, "0"},
+	{"tx_b/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_b/rf/dac/nco", hdlr_tx_b_rf_dac_nco, RW, "15000000"},
 	{"tx_b/rf/dac/temp", hdlr_tx_b_rf_dac_temp, RW, "0"},
 	{"tx_b/rf/freq/val", hdlr_tx_b_rf_freq_val, RW, "0"},
@@ -3358,13 +3440,13 @@ static prop_t property_table[] = {
 	{"tx_b/dsp/rstreq", hdlr_tx_b_dsp_rstreq, WO, "0"},
 	{"tx_b/about/id", hdlr_tx_b_about_id, RW, "001"},
 	{"tx_b/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_b/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_b/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_b/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
 	{"tx_b/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"tx_b/link/vita_en", hdlr_tx_b_link_vita_en, RW, "0"},
 	{"tx_b/link/iface", hdlr_tx_b_link_iface, RW, "sfpb"},
 	{"tx_b/link/port", hdlr_tx_b_link_port, RW, "42825"},
 	{"rx_b/pwr", hdlr_rx_b_pwr, RW, "0"},
+	{"rx_b/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_b/rf/freq/val", hdlr_rx_b_rf_freq_val, RW, "0"},
 	{"rx_b/rf/freq/lna", hdlr_rx_b_rf_freq_lna, RW, "0"},
 	{"rx_b/rf/freq/band", hdlr_rx_b_rf_freq_band, RW, "1"},
@@ -3381,8 +3463,7 @@ static prop_t property_table[] = {
 	{"rx_b/dsp/loopback", hdlr_rx_b_dsp_loopback, RW, "0"},
 	{"rx_b/about/id", hdlr_rx_b_about_id, RW, "001"},
 	{"rx_b/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_b/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_b/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_b/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
 	{"rx_b/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"rx_b/link/vita_en", hdlr_rx_b_link_vita_en, RW, "0"},
 	{"rx_b/link/iface", hdlr_rx_b_link_iface, RW, "sfpb"},
@@ -3390,6 +3471,7 @@ static prop_t property_table[] = {
 	{"rx_b/link/ip_dest", hdlr_rx_b_link_ip_dest, RW, "10.10.11.10"},
 	{"rx_b/link/mac_dest", hdlr_rx_b_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
 	{"tx_c/pwr", hdlr_tx_c_pwr, RW, "0"},
+	{"tx_c/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_c/rf/dac/nco", hdlr_tx_c_rf_dac_nco, RW, "15000000"},
 	{"tx_c/rf/dac/temp", hdlr_tx_c_rf_dac_temp, RW, "0"},
 	{"tx_c/rf/freq/val", hdlr_tx_c_rf_freq_val, RW, "0"},
@@ -3407,13 +3489,13 @@ static prop_t property_table[] = {
 	{"tx_c/dsp/rstreq", hdlr_tx_c_dsp_rstreq, WO, "0"},
 	{"tx_c/about/id", hdlr_tx_c_about_id, RW, "001"},
 	{"tx_c/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_c/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_c/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_c/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
 	{"tx_c/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"tx_c/link/vita_en", hdlr_tx_c_link_vita_en, RW, "0"},
 	{"tx_c/link/iface", hdlr_tx_c_link_iface, RW, "sfpa"},
 	{"tx_c/link/port", hdlr_tx_c_link_port, RW, "42826"},
 	{"rx_c/pwr", hdlr_rx_c_pwr, RW, "0"},
+	{"rx_c/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_c/rf/freq/val", hdlr_rx_c_rf_freq_val, RW, "0"},
 	{"rx_c/rf/freq/lna", hdlr_rx_c_rf_freq_lna, RW, "0"},
 	{"rx_c/rf/freq/band", hdlr_rx_c_rf_freq_band, RW, "1"},
@@ -3430,8 +3512,7 @@ static prop_t property_table[] = {
 	{"rx_c/dsp/loopback", hdlr_rx_c_dsp_loopback, RW, "0"},
 	{"rx_c/about/id", hdlr_rx_c_about_id, RW, "001"},
 	{"rx_c/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_c/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_c/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_c/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
 	{"rx_c/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"rx_c/link/vita_en", hdlr_rx_c_link_vita_en, RW, "0"},
 	{"rx_c/link/iface", hdlr_rx_c_link_iface, RW, "sfpa"},
@@ -3439,6 +3520,7 @@ static prop_t property_table[] = {
 	{"rx_c/link/ip_dest", hdlr_rx_c_link_ip_dest, RW, "10.10.10.10"},
 	{"rx_c/link/mac_dest", hdlr_rx_c_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
 	{"tx_d/pwr", hdlr_tx_d_pwr, RW, "0"},
+	{"tx_d/sync", hdlr_tx_sync, WO, "0"},	
 	{"tx_d/rf/dac/nco", hdlr_tx_d_rf_dac_nco, RW, "15000000"},
 	{"tx_d/rf/dac/temp", hdlr_tx_d_rf_dac_temp, RW, "0"},
 	{"tx_d/rf/freq/val", hdlr_tx_d_rf_freq_val, RW, "0"},
@@ -3456,13 +3538,13 @@ static prop_t property_table[] = {
 	{"tx_d/dsp/rstreq", hdlr_tx_d_dsp_rstreq, WO, "0"},
 	{"tx_d/about/id", hdlr_tx_d_about_id, RW, "001"},
 	{"tx_d/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_d/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_d/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"tx_d/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
 	{"tx_d/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"tx_d/link/vita_en", hdlr_tx_d_link_vita_en, RW, "0"},
 	{"tx_d/link/iface", hdlr_tx_d_link_iface, RW, "sfpb"},
 	{"tx_d/link/port", hdlr_tx_d_link_port, RW, "42827"},
 	{"rx_d/pwr", hdlr_rx_d_pwr, RW, "0"},
+	{"rx_d/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_d/rf/freq/val", hdlr_rx_d_rf_freq_val, RW, "0"},
 	{"rx_d/rf/freq/lna", hdlr_rx_d_rf_freq_lna, RW, "0"},
 	{"rx_d/rf/freq/band", hdlr_rx_d_rf_freq_band, RW, "1"},
@@ -3479,8 +3561,7 @@ static prop_t property_table[] = {
 	{"rx_d/dsp/loopback", hdlr_rx_d_dsp_loopback, RW, "0"},
 	{"rx_d/about/id", hdlr_rx_d_about_id, RW, "001"},
 	{"rx_d/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_d/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_d/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"rx_d/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
 	{"rx_d/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"rx_d/link/vita_en", hdlr_rx_d_link_vita_en, RW, "0"},
 	{"rx_d/link/iface", hdlr_rx_d_link_iface, RW, "sfpb"},
@@ -3498,8 +3579,7 @@ static prop_t property_table[] = {
 	{"time/board/led", hdlr_time_board_led, WO, "0"},
 	{"time/about/id", hdlr_time_about_id, RW, "001"},
 	{"time/about/serial", hdlr_invalid, RO, "001"},
-	{"time/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"time/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"time/about/fw_ver", hdlr_time_about_fw_ver, RW, VERSION},
 	{"time/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"fpga/board/dump", hdlr_fpga_board_dump, WO, "0"},
 	{"fpga/board/test", hdlr_fpga_board_test, WO, "0"},
@@ -3507,11 +3587,12 @@ static prop_t property_table[] = {
 	{"fpga/board/led", hdlr_fpga_board_led, WO, "0"},
 	{"fpga/board/rstreq", hdlr_fpga_board_rstreq, WO, "0"},
 	{"fpga/board/jesd_sync", hdlr_fpga_board_jesd_sync, WO, "0"},
+	{"fpga/board/fw_rst", hdlr_fpga_board_fw_rst, WO, "0"},
 	{"fpga/board/sys_rstreq", hdlr_fpga_board_sys_rstreq, WO, "0"},
 	{"fpga/about/id", hdlr_fpga_about_id, RW, "001"},
 	{"fpga/about/serial", hdlr_invalid, RO, "001"},
-	{"fpga/about/fw_ver", hdlr_invalid, RO, VERSION},
-	{"fpga/about/hw_ver", hdlr_invalid, RO, VERSION},
+	{"fpga/about/fw_ver", hdlr_fpga_about_fw_ver, RW, VERSION},
+	{"fpga/about/hw_ver", hdlr_fpga_about_hw_ver, RW, VERSION},
 	{"fpga/about/sw_ver", hdlr_invalid, RO, VERSION},
 	{"fpga/link/rate", hdlr_fpga_link_rate, RW, "1250000000"},      // BPS (10G/8)
 	{"fpga/link/sfpa/ip_addr", hdlr_fpga_link_sfpa_ip_addr, RW, "10.10.10.2"},
