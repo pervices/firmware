@@ -3725,9 +3725,13 @@ char* get_abs_dir(prop_t* prop, char* path) {
 	strcpy(path, get_home_dir());
 	strcat(path, "/state/");
 
-	size_t temp_len = strlen(path);
-	memcpy(path + temp_len, prop -> path, len);
-	path[temp_len + len] = '\0';
+	size_t temp_len = 0;
+
+	if (len != 0) {
+		temp_len = strlen(path);
+		memcpy(path + temp_len, prop -> path, len);
+		path[temp_len + len] = '\0';
+	}
 
 	return path;
 }
@@ -3735,7 +3739,7 @@ char* get_abs_dir(prop_t* prop, char* path) {
 
 char* get_root (prop_t* prop, char* root) {
 	int i;
-	for(i = 0; prop -> path[i] != '/'; i++) {
+	for(i = 0; prop -> path[i] != '/' && prop -> path[i] != '\0'; i++) {
 		root[i] = prop -> path[i];
 	}
 	root[i] = 0;
