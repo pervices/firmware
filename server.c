@@ -29,6 +29,7 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include "common.h"
+#include "mmap.h"
 #include "comm_manager.h"
 #include "property_manager.h"
 #include "parser.h"
@@ -71,7 +72,8 @@ int port_nums[num_udp_ports] = {
 	UDP_TXA_PORT,
 	UDP_TXB_PORT,
 	UDP_TXC_PORT,
-	UDP_TXD_PORT };
+	UDP_TXD_PORT,
+	UDP_FLOW_CNTRL_PORT};
 
 // main loop
 int main(int argc, char *argv[]) {
@@ -116,25 +118,43 @@ int main(int argc, char *argv[]) {
 
 		// check for input commands from UDP
 		if (recv_udp_comm(comm_fds[i], buffer, &received_bytes, UDP_PAYLOAD_LEN) >= 0) {
-			if (parse_cmd(&cmd, buffer) != RETURN_SUCCESS) break;
+			// if flow control request
+			if (port_nums[i] == UDP_FLOW_CNTRL_PORT) {
 
-			// Debug print
-			PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
-				cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
+				// service the flow control port
+				uint32_t fifo_lvl[4];
+				read_hps_reg("res_ro4", fifo_lvl + 0);
+				read_hps_reg("res_ro5", fifo_lvl + 1);
+				read_hps_reg("res_ro6", fifo_lvl + 2);
+				read_hps_reg("res_ro7", fifo_lvl + 3);
 
-			cmd.status = CMD_SUCCESS;
+				snprintf((char*)buffer, UDP_PAYLOAD_LEN, "flow,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n",
+					fifo_lvl[0], fifo_lvl[1], fifo_lvl[2], fifo_lvl[3]);
 
-			if (cmd.op == OP_GET) {
-				if (get_property(cmd.prop, cmd.data, MAX_PROP_LEN) != RETURN_SUCCESS)
-					cmd.status = CMD_ERROR;
+				send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
+
+			// if UHD command request
 			} else {
-				if (set_property(cmd.prop, cmd.data) != RETURN_SUCCESS)
-					cmd.status = CMD_ERROR;
+				if (parse_cmd(&cmd, buffer) != RETURN_SUCCESS) break;
+
+				// Debug print
+				PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
+					cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
+
+				cmd.status = CMD_SUCCESS;
+
+				if (cmd.op == OP_GET) {
+					if (get_property(cmd.prop, cmd.data, MAX_PROP_LEN) != RETURN_SUCCESS)
+						cmd.status = CMD_ERROR;
+				} else {
+					if (set_property(cmd.prop, cmd.data) != RETURN_SUCCESS)
+						cmd.status = CMD_ERROR;
+				}
+
+				build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
+
+				send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
 			}
-
-			build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
-
-			send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
 		}
 
 		// check if any files/properties have been modified through shell
@@ -153,7 +173,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// increment to service the other ports
-		i = (i + 1) % num_udp_ports;
+		i = (i + 1) % (num_udp_ports);
 	}
 
 	// close the file descriptors

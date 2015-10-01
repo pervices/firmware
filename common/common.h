@@ -112,7 +112,8 @@ typedef enum {
 	UDP_TXB_PORT  = 42805,
 	UDP_TXC_PORT  = 42806,
 	UDP_TXD_PORT  = 42807,
-	num_udp_ports = 9
+	UDP_FLOW_CNTRL_PORT = 42808,	// this one has to be the last one
+	num_udp_ports = 10
 } udp_port_t;
 
 // Boolean datatype
