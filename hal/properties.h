@@ -48,7 +48,9 @@ inline prop_t* get_prop_from_cmd(const char* cmd);
 char* get_abs_path(prop_t* prop, char* path);
 char* get_abs_dir(prop_t* prop, char* path);
 char* get_root (prop_t* prop, char* root);
-inline void pass_uart_fd(int fd);
+inline void pass_uart_synth_fd(int fd);
+inline void pass_uart_tx_fd(int fd);
+inline void pass_uart_rx_fd(int fd);
 void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char* save_path);
 
 #endif

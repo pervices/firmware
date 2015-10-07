@@ -27,7 +27,10 @@
 #define EVENT_BUF_LEN 	( 1024 * (EVENT_SIZE + 16) )
 
 // UART communication manager's file descriptor
-static int uart_comm_fd;
+//static int uart_comm_fd;
+static int uart_synth_comm_fd;
+static int uart_tx_comm_fd;
+static int uart_rx_comm_fd;
 
 // Inotify's file descriptor
 static int inotify_fd;
@@ -161,12 +164,27 @@ int init_property(uint8_t options) {
 	set_uart_debug_opt(options);
 	set_mem_debug_opt(options);
 
-	if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
-		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV);
+	//if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
+	//	PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV1);
+	//	return RETURN_ERROR_COMM_INIT;
+	//}
+	
+	if ( init_uart_comm(&uart_synth_comm_fd, UART_DEV1, 0) < 0 ) {
+		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV1);
 		return RETURN_ERROR_COMM_INIT;
 	}
 
-	PRINT(VERBOSE, "init_uart_comm(): UART connection up\n");
+	if ( init_uart_comm(&uart_tx_comm_fd, UART_DEV2, 0) < 0 ) {
+		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV2);
+		return RETURN_ERROR_COMM_INIT;
+	}
+	
+	if ( init_uart_comm(&uart_rx_comm_fd, UART_DEV3, 0) < 0 ) {
+		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV3);
+		return RETURN_ERROR_COMM_INIT;
+	}
+	
+	PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
 	PRINT(VERBOSE, "Initializing Inotify\n");
 
 	// inotify
@@ -179,7 +197,9 @@ int init_property(uint8_t options) {
 	fcntl(inotify_fd, F_SETFL, fcntl(inotify_fd, F_GETFL) | O_NONBLOCK);
 
 	// pass the uart handler to the property handlers
-	pass_uart_fd(uart_comm_fd);
+	pass_uart_synth_fd(uart_comm_fd);
+	pass_uart_tx_fd(uart_tx_comm_fd);
+	pass_uart_rx_fd(uart_rx_comm_fd);
 
 	PRINT( INFO,"Building the property tree\n");
 	build_tree();

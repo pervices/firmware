@@ -38,7 +38,9 @@
 #define NUM_CHANNELS 4
 
 // static global variables
-static int uart_fd = 0;
+static int uart_synth_fd = 0;
+static int uart_tx_fd = 0;
+static int uart_rx_fd = 0;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = {};
 static char buf[MAX_PROP_LEN] = {};
 
@@ -139,23 +141,23 @@ static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret) {
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
 
-	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
+	strcpy(buf, "dac -c a -e 0 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c a -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -168,14 +170,14 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 1 -m 'rf -c a -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c a -p 1\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 1 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -186,66 +188,66 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 1 -m 'rf -c a -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c a -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 1 -m 'rf -c a -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c a -p 1\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -253,32 +255,32 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_tx_a_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c a -b ");
+	strcpy(buf, "rf -c a -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[0]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c a -i ");
+   strcpy(buf, "rf -c a -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[0]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[0]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[0]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c a -i ");
+   strcpy(buf, "rf -c a -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[0]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[0]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -289,10 +291,10 @@ static int hdlr_tx_a_rf_gain_val (const char* data, char* ret) {
 	if (gain > 28)		gain = 28;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 1 -m 'rf -c a -v ");
+	strcpy(buf, "rf -c a -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -300,15 +302,15 @@ static int hdlr_tx_a_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "fwd -b 1 -m 'dump -c a -d'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c a -d\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 1 -m 'dump -c a -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c a -g\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -320,19 +322,19 @@ static int hdlr_tx_a_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_tx_a_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c a -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c a -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -409,9 +411,9 @@ static int hdlr_tx_a_about_id (const char* data, char* ret) {
 }
 
 static int hdlr_tx_about_fw_ver (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -v'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -v\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -443,7 +445,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
    uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// check it power is already enabled
+	// check if power is already enabled
 	if (power >= PWR_ON  && tx_power[0] == PWR_ON)  return RETURN_SUCCESS;
 	if (power == PWR_OFF && tx_power[0] == PWR_OFF) return RETURN_SUCCESS;
 
@@ -452,8 +454,8 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 		tx_power[0] = PWR_ON;
 
       // board commands
-		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c a -d\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -488,8 +490,8 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 	// power off
 	} else {
 		// mute the board
-		strcpy(buf, "fwd -b 1 -m 'board -c a -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c a -m\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP cores
 		read_hps_reg ( "txa4", &old_val);
@@ -523,14 +525,14 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 0 -m 'rf -c a -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c a -p 1\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 0 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -541,66 +543,66 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c a -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c a -p 1\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -608,18 +610,18 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_rx_a_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -l ");
+	strcpy(buf, "rf -c a -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_a_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c a -b ");
+	strcpy(buf, "rf -c a -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -630,10 +632,10 @@ static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 	if (gain > 95)		gain = 95;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 0 -m 'vga -c a -g ");
+	strcpy(buf, "vga -c a -g ");
 	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -641,21 +643,21 @@ static int hdlr_rx_a_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "fwd -b 0 -m 'dump -c a -a'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c a -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 0 -m 'dump -c a -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c a -g\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "fwd -b 0 -m 'dump -c a -v'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c a -v\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -667,19 +669,19 @@ static int hdlr_rx_a_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c a -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c a -t\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_a_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -775,9 +777,9 @@ static int hdlr_rx_a_about_id (const char* data, char* ret) {
 }
 
 static int hdlr_rx_about_fw_ver (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -v'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -v\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -833,9 +835,9 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	if (power >= PWR_ON) {
 		rx_power[0] = PWR_ON;
 
-      // board commands
-		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+      // board command
+		strcpy(buf, "board -c a -d\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -872,8 +874,8 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 		rx_power[0] = PWR_OFF;
 
 		// mute the board
-		strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c a -m\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP core
 		read_hps_reg ( "rxa4", &old_val);
@@ -902,23 +904,23 @@ static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret) {
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
 
-	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
+	strcpy(buf, "dac -c b -e 1 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c b -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -931,14 +933,14 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 1 -m 'rf -c b -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c b -p 1\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 1 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -949,66 +951,66 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 1 -m 'rf -c b -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c b -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 1 -m 'rf -c b -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c b -p 1\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(10000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1016,32 +1018,32 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_tx_b_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c b -b ");
+	strcpy(buf, "rf -c b -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[1]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c b -i ");
+   strcpy(buf, "rf -c b -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[1]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[1]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[1]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c b -i ");
+   strcpy(buf, "rf -c b -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[1]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[1]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1052,10 +1054,10 @@ static int hdlr_tx_b_rf_gain_val (const char* data, char* ret) {
 	if (gain > 28)		gain = 28;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 1 -m 'rf -c b -v ");
+	strcpy(buf, "rf -c b -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1063,15 +1065,15 @@ static int hdlr_tx_b_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "fwd -b 1 -m 'dump -c b -d'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c b -d\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_b Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 1 -m 'dump -c b -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c b -g\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1083,19 +1085,19 @@ static int hdlr_tx_b_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_tx_b_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c b -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c b -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1206,8 +1208,8 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 		tx_power[1] = PWR_ON;
 
       // board commands
-		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c b -d\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -1242,8 +1244,8 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 	// power off
 	} else {
 		// mute the board
-		strcpy(buf, "fwd -b 1 -m 'board -c b -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c b -m\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
@@ -1266,14 +1268,14 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 0 -m 'rf -c b -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c b -p 1\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 0 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -1284,66 +1286,66 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c b -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c b -p 1\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1351,18 +1353,18 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_rx_b_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -l ");
+	strcpy(buf, "rf -c b -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_b_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c b -b ");
+	strcpy(buf, "rf -c b -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1373,10 +1375,10 @@ static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 	if (gain > 95)		gain = 95;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 0 -m 'vga -c b -g ");
+	strcpy(buf, "vga -c b -g ");
 	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1384,21 +1386,21 @@ static int hdlr_rx_b_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "fwd -b 0 -m 'dump -c b -a'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c b -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 0 -m 'dump -c b -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c b -g\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "fwd -b 0 -m 'dump -c b -v'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c b -v\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1410,19 +1412,19 @@ static int hdlr_rx_b_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c b -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c b -t\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_b_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1568,8 +1570,8 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 		rx_power[1] = PWR_ON;
 
       // board commands
-		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c b -d\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -1606,8 +1608,8 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 		rx_power[1] = PWR_OFF;
 
 		// mute the board
-		strcpy(buf, "fwd -b 0 -m 'board -c b -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c b -m\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP core
 		read_hps_reg ( "rxb4", &old_val);
@@ -1625,23 +1627,23 @@ static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret) {
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
 
-	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n ");
+	strcpy(buf, "dac -c c -e 0 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c c -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1654,14 +1656,14 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 1 -m 'rf -c c -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c c -p 1\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 1 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -1672,66 +1674,66 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 1 -m 'rf -c c -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c c -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 1 -m 'rf -c c -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c c -p 1\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1739,32 +1741,32 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_tx_c_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c c -b ");
+	strcpy(buf, "rf -c c -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[2]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c c -i ");
+   strcpy(buf, "rf -c c -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[2]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[2]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[2]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c c -i ");
+   strcpy(buf, "rf -c c -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[2]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[2]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1775,10 +1777,10 @@ static int hdlr_tx_c_rf_gain_val (const char* data, char* ret) {
 	if (gain > 28)		gain = 28;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 1 -m 'rf -c c -v ");
+	strcpy(buf, "rf -c c -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1786,15 +1788,15 @@ static int hdlr_tx_c_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "fwd -b 1 -m 'dump -c c -d'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c c -d\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_c Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 1 -m 'dump -c c -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c c -g\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1806,19 +1808,19 @@ static int hdlr_tx_c_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_tx_c_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c c -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c c -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -1929,8 +1931,8 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 		tx_power[2] = PWR_ON;
 
       // board commands
-		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c c -d\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -1965,8 +1967,8 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 	// power off
 	} else {
 		// mute the board
-		strcpy(buf, "fwd -b 1 -m 'board -c c -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c c -m\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
@@ -1989,14 +1991,14 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 0 -m 'rf -c c -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c c -p 1\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 0 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -2007,66 +2009,66 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c c -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c c -p 1\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2074,18 +2076,18 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_rx_c_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -l ");
+	strcpy(buf, "rf -c c -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_c_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c c -b ");
+	strcpy(buf, "rf -c c -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2096,10 +2098,10 @@ static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 	if (gain > 95)		gain = 95;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 0 -m 'vga -c c -g ");
+	strcpy(buf, "vga -c c -g ");
 	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2107,21 +2109,21 @@ static int hdlr_rx_c_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "fwd -b 0 -m 'dump -c c -a'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c c -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 0 -m 'dump -c c -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c c -g\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "fwd -b 0 -m 'dump -c c -v'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c c -v\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2133,19 +2135,19 @@ static int hdlr_rx_c_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c c -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c c -t\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_c_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2291,8 +2293,8 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 		rx_power[2] = PWR_ON;
 
       // board commands
-		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c c -d\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -2327,8 +2329,8 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	// power off
 	} else {
 		// mute the board
-		strcpy(buf, "fwd -b 0 -m 'board -c c -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c c -m\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
 		read_hps_reg ( "rxc4", &old_val);
@@ -2348,23 +2350,23 @@ static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret) {
 	sscanf(data, "%"SCNd64"", &freq);
 	freq *= DAC_NCO_CONST;
 
-	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 1 -n ");
+	strcpy(buf, "dac -c d -e 1 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-	strcpy(buf, "fwd -b 1 -m 'dac -o ");
+	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_dac_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c d -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2377,14 +2379,14 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 1 -m 'rf -c d -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c d -p 1\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 1 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -2395,66 +2397,66 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 1 -m 'rf -c d -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c d -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 1 -m 'rf -c d -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c d -p 1\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 1 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 1 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 1 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 1 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2462,32 +2464,32 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_tx_d_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'rf -c d -b ");
+	strcpy(buf, "rf -c d -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_freq_i_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(i_bias[3]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c d -i ");
+   strcpy(buf, "rf -c d -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[3]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[3]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_freq_q_bias (const char* data, char* ret) {
    sscanf(data, "%i", &(q_bias[3]));
-   strcpy(buf, "fwd -b 1 -m 'rf -c d -i ");
+   strcpy(buf, "rf -c d -i ");
    sprintf(buf + strlen(buf), "%i", i_bias[3]);
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[3]);
-   strcat(buf, " -m'\r");
-   send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+   strcat(buf, " -m\r");
+   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2498,10 +2500,10 @@ static int hdlr_tx_d_rf_gain_val (const char* data, char* ret) {
 	if (gain > 28)		gain = 28;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 1 -m 'rf -c d -v ");
+	strcpy(buf, "rf -c d -v ");
 	sprintf(buf + strlen(buf), "%i", (28-gain));
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2509,15 +2511,15 @@ static int hdlr_tx_d_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "fwd -b 1 -m 'dump -c d -d'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c d -d\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_d Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 1 -m 'dump -c d -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c d -g\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: tx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2529,19 +2531,19 @@ static int hdlr_tx_d_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_tx_d_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -c d -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c d -t\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 1 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2652,8 +2654,8 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 		tx_power[3] = PWR_ON;
 
       // board commands
-		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c d -d\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -2688,8 +2690,8 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 	// power off
 	} else {
 		// mute the board
-		strcpy(buf, "fwd -b 1 -m 'board -c d -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c d -m\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
@@ -2711,14 +2713,14 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 25MHz, mute the synthesizer chips
 	if ( freq < 25000000ULL ) {
 		// HMC833
-		strcpy(buf, "fwd -b 0 -m 'rf -c d -p 1'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -c d -p 1\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		usleep(10000);
 
 		// mute HMC833 (PLL1) d
-		strcpy(buf, "fwd -b 0 -m 'rf -d 0\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "rf -d 0\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		return RETURN_SUCCESS;
 	}
 
@@ -2729,66 +2731,66 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -p 0'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c d -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC830 (PLL0) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC830 (PLL0) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// HMC833
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -p 1'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "rf -c d -p 1\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// write HMC833 (PLL1) R
-	strcpy(buf, "fwd -b 0 -m 'rf -r ");
+	strcpy(buf, "rf -r ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) d
-	strcpy(buf, "fwd -b 0 -m 'rf -d ");
+	strcpy(buf, "rf -d ");
 	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) N
-	strcpy(buf, "fwd -b 0 -m 'rf -n ");
+	strcpy(buf, "rf -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
 
 	// write HMC833 (PLL1) x2en
-	strcpy(buf, "fwd -b 0 -m 'rf -x ");
+	strcpy(buf, "rf -x ");
 	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2796,18 +2798,18 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 }
 
 static int hdlr_rx_d_rf_freq_lna (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -l ");
+	strcpy(buf, "rf -c d -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_rf_freq_band (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'rf -c d -b ");
+	strcpy(buf, "rf -c d -b ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2818,10 +2820,10 @@ static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 	if (gain > 95)		gain = 95;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "fwd -b 0 -m 'vga -c d -g ");
+	strcpy(buf, "vga -c d -g ");
 	sprintf(buf + strlen(buf), "%i", gain);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -2829,21 +2831,21 @@ static int hdlr_rx_d_rf_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "fwd -b 0 -m 'dump -c d -a'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c d -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "fwd -b 0 -m 'dump -c d -g'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c d -g\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "fwd -b 0 -m 'dump -c d -v'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c d -v\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2855,19 +2857,19 @@ static int hdlr_rx_d_rf_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -c d -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -c d -t\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 0 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -3014,8 +3016,8 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 		rx_power[3] = PWR_ON;
 
       // board commands
-		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c d -d\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
       sleep(2);
 
 		// disable dsp channels
@@ -3050,8 +3052,8 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 	// power off
 	} else {
 		// mute the board
-		strcpy(buf, "fwd -b 0 -m 'board -c d -m'\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+		strcpy(buf, "board -c d -m\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
 		read_hps_reg ( "rxd4", &old_val);
@@ -3092,32 +3094,32 @@ static int hdlr_time_clk_cur_time (const char* data, char* ret) {
 
 static int hdlr_time_source_vco (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "fwd -b 2 -m 'clk -v 1'\r");
+		strcpy(buf, "clk -v 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "fwd -b 2 -m 'clk -v 0'\r");
+		strcpy(buf, "clk -v 0\r");
 	}
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_source_sync (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "fwd -b 2 -m 'clk -n 1'\r");
+		strcpy(buf, "clk -n 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "fwd -b 2 -m 'clk -n 0'\r");
+		strcpy(buf, "clk -n 0\r");
 	}
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 // 10 MHz clock
 static int hdlr_time_source_ref (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "fwd -b 2 -m 'clk -t 1'\r");
+		strcpy(buf, "clk -t 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "fwd -b 2 -m 'clk -t 0'\r");
+		strcpy(buf, "clk -t 0\r");
 	}
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -3125,15 +3127,15 @@ static int hdlr_time_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
 	// FANOUT
-	strcpy(buf, "fwd -b 2 -m 'dump -f'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -f\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: time Chip: FANOUT] %s\n", uart_ret_buf);
 
 	// CLK
-	strcpy(buf, "fwd -b 2 -m 'dump -c'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "dump -c\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	PRINT(DUMP, "[Board: time Chip: CLK] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3145,19 +3147,19 @@ static int hdlr_time_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_time_board_temp (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 2 -m 'board -t'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -t\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_board_led (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 2 -m 'board -l ");
+	strcpy(buf, "board -l ");
 	strcat(buf, data);
-	strcat(buf, "'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcat(buf, "\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
@@ -3167,9 +3169,9 @@ static int hdlr_time_about_id (const char* data, char* ret) {
 }
 
 static int hdlr_time_about_fw_ver (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 2 -m 'board -v'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(FWD_CMD);
+	strcpy(buf, "board -v\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(NO_FWD_CMD);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3226,16 +3228,16 @@ static int hdlr_fpga_board_jesd_sync (const char* data, char* ret) {
 }
 
 static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
-	strcpy(buf, "fwd -b 2 -m 'board -r'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "board -r\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	usleep(700000);
 
-	strcpy(buf, "fwd -b 0 -m 'board -r'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "board -r\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	usleep(50000);
 
-	strcpy(buf, "fwd -b 1 -m 'board -r'\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	strcpy(buf, "board -r\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	usleep(50000);
 
 	strcpy(buf, "board -r \r");
@@ -3426,6 +3428,30 @@ static int hdlr_load_config (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_gps_time (const char* data, char* ret) {
+	uint32_t gps_time = 0;
+	read_hps_reg( "sys5", &gps_time );
+	sprintf(ret, "%i", gps_time);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_frac_time (const char* data, char* ret) {
+	uint32_t gps_frac_time = 0;
+	read_hps_reg( "sys6", &gps_frac_time );
+	sprintf(ret, "%i", gps_frac_time);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
+	uint32_t systime  = 0;
+	read_hps_reg( "sys5", &systime );
+	write_hps_reg( "sys7", systime );
+	write_hps_reg( "sys8", 0 ); // set frac_time to 0
+	write_hps_reg( "sys9", 1 ); // writing 1, then 0 to sys9 sets the time
+	write_hps_reg( "sys9", 0 ); // to what is written in sys7 and sys8
+}
 // Beginning of property table
 static prop_t property_table[] = {
 	{"tx_a/pwr", hdlr_tx_a_pwr, RW, "0"},
@@ -3663,7 +3689,10 @@ static prop_t property_table[] = {
 	{"fpga/link/net/hostname", hdlr_fpga_link_net_hostname, RW, "crimson"},
 	{"fpga/link/net/ip_addr", hdlr_fpga_link_net_ip_addr, RW, "192.168.10.2"},
 	{"save_config", hdlr_save_config, RW, "/home/root/profile.cfg"},
-	{"load_config", hdlr_load_config, RW, "/home/root/profile.cfg"}
+	{"load_config", hdlr_load_config, RW, "/home/root/profile.cfg"},
+	{"fpga/board/gps_time", hdlr_fpga_board_gps_time, RW, "0"},
+	{"fpga/board/gps_frac_time", hdlr_fpga_board_gps_frac_time, RW, "0"},
+	{"fpga/board/gps_sync_time", hdlr_fpga_board_gps_sync_time, RW, "0"}
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
@@ -3703,8 +3732,16 @@ static inline const char* get_home_dir(void) {
 	return getpwuid(getuid()) -> pw_dir;
 }
 
-inline void pass_uart_fd(int fd) {
-	uart_fd = fd;
+inline void pass_uart_synth_fd(int fd) {
+	uart_synth_fd = fd;
+}
+
+inline void pass_uart_tx_fd(int fd) {
+	uart_tx_fd = fd;
+}
+
+inline void pass_uart_rx_fd(int fd) {
+	uart_rx_fd = fd;
 }
 
 char* get_abs_path(prop_t* prop, char* path) {
