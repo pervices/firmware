@@ -211,7 +211,13 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-	usleep(10000);
+	usleep(10000); 
+
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 1 -m 'rf -c a -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// HMC833
 	strcpy(buf, "fwd -b 1 -m 'rf -c a -p 1'\r");
@@ -567,6 +573,12 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
+	
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 0 -m 'rf -c a -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// HMC833
 	strcpy(buf, "fwd -b 0 -m 'rf -c a -p 1'\r");
@@ -976,6 +988,12 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 
 	usleep(10000);
 
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 1 -m 'rf -c b -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 	// HMC833
 	strcpy(buf, "fwd -b 1 -m 'rf -c b -p 1'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -1310,6 +1328,12 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
+
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 0 -m 'rf -c b -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// HMC833
 	strcpy(buf, "fwd -b 0 -m 'rf -c b -p 1'\r");
@@ -1699,6 +1723,12 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 
 	usleep(100000);
 
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 1 -m 'rf -c c -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 	// HMC833
 	strcpy(buf, "fwd -b 1 -m 'rf -c c -p 1'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2033,6 +2063,12 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
+
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 0 -m 'rf -c c -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// HMC833
 	strcpy(buf, "fwd -b 0 -m 'rf -c c -p 1'\r");
@@ -2422,6 +2458,12 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 
 	usleep(100000);
 
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 1 -m 'rf -c d -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
 	// HMC833
 	strcpy(buf, "fwd -b 1 -m 'rf -c d -p 1'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -2755,6 +2797,12 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	usleep(100000);
+
+	// Set appropriate filter bank
+	strcpy(buf, "fwd -b 0 -m 'rf -c d -g ");
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+	strcat(buf, "'\r");
+	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	// HMC833
 	strcpy(buf, "fwd -b 0 -m 'rf -c d -p 1'\r");
