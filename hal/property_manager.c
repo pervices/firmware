@@ -169,18 +169,18 @@ int init_property(uint8_t options) {
 	//	return RETURN_ERROR_COMM_INIT;
 	//}
 	
-	if ( init_uart_comm(&uart_synth_comm_fd, UART_DEV1, 0) < 0 ) {
-		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV1);
+	if ( init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0) < 0 ) {
+		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_SYNTH);
 		return RETURN_ERROR_COMM_INIT;
 	}
 
-	if ( init_uart_comm(&uart_tx_comm_fd, UART_DEV2, 0) < 0 ) {
-		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV2);
+	if ( init_uart_comm(&uart_tx_comm_fd, UART_TX, 0) < 0 ) {
+		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_TX);
 		return RETURN_ERROR_COMM_INIT;
 	}
 	
-	if ( init_uart_comm(&uart_rx_comm_fd, UART_DEV3, 0) < 0 ) {
-		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV3);
+	if ( init_uart_comm(&uart_rx_comm_fd, UART_RX, 0) < 0 ) {
+		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_RX);
 		return RETURN_ERROR_COMM_INIT;
 	}
 	
@@ -197,7 +197,7 @@ int init_property(uint8_t options) {
 	fcntl(inotify_fd, F_SETFL, fcntl(inotify_fd, F_GETFL) | O_NONBLOCK);
 
 	// pass the uart handler to the property handlers
-	pass_uart_synth_fd(uart_comm_fd);
+	pass_uart_synth_fd(uart_synth_comm_fd);
 	pass_uart_tx_fd(uart_tx_comm_fd);
 	pass_uart_rx_fd(uart_rx_comm_fd);
 

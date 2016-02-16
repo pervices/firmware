@@ -27,8 +27,9 @@
 #define DSP_NCO_CONST ((double)13.3274136700121212121)	// (2^32) / (322265625)
 #define DAC_NCO_CONST ((double)218356.345569478593939)	// (2^48) / (4*322265625)
 
-#define FWD_CMD 	1
-#define NO_FWD_CMD	0
+/* Forwarding is now obsolete */
+//#define FWD_CMD 	1
+//#define NO_FWD_CMD	0
 
 #define PWR_ON	1
 #define PWR_OFF	0
@@ -70,32 +71,33 @@ static int contains (const char* str, char letter, int size) {
 }
 
 // helper function to read back from UART after a UART command
-static int read_uart(int fwd) {
+static int read_uart(int uartfd) {
 	char buf[MAX_UART_LEN] = {};
 	memset(buf, 0, MAX_UART_LEN);
 
 	uint16_t total_bytes = 0, cur_bytes = 0;
 
-	while (( contains(buf, '>', total_bytes) < 1 && !fwd) ||
-		(contains(buf, '>', total_bytes) < 2 &&  fwd)) {
-	   if (recv_uart_comm(uart_fd, ((uint8_t*)buf) + total_bytes,
+	while ( contains(buf, '>', total_bytes) < 1 ) {
+	   if (recv_uart_comm(uartfd, ((uint8_t*)buf) + total_bytes,
 	   		&cur_bytes, MAX_UART_LEN - total_bytes)) {
 		return 0;
 	   }
 	   total_bytes += cur_bytes;
 	}
 
-	// if fwd, remove everything prior to the second message
-	if (fwd) {
-		uint16_t pos = 0, real_size = 0;
-		while (buf[pos] != '>') pos++;
-		pos++;
-		real_size = total_bytes - pos;
-		memcpy(buf, buf + pos, real_size);
-		memset(buf + real_size, 0, MAX_UART_LEN - real_size);
-	}
+	/* Forwarding is now obsolete */
 
-	//printf("%s\n", buf);
+	// if fwd, remove everything prior to the second message
+	//if (fwd) {
+	//	uint16_t pos = 0, real_size = 0;
+	//	while (buf[pos] != '>') pos++;
+	//	pos++;
+	//	real_size = total_bytes - pos;
+	//	memcpy(buf, buf + pos, real_size);
+	//	memset(buf + real_size, 0, MAX_UART_LEN - real_size);
+	//}
+
+	printf("%s\n", buf);
 	strcpy((char*)uart_ret_buf, buf);
 
 	return RETURN_SUCCESS;
@@ -157,7 +159,7 @@ static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret) {
 static int hdlr_tx_a_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c a -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -304,13 +306,13 @@ static int hdlr_tx_a_rf_board_dump (const char* data, char* ret) {
 	// DAC
 	strcpy(buf, "dump -c a -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c a -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -324,7 +326,7 @@ static int hdlr_tx_a_rf_board_test (const char* data, char* ret) {
 static int hdlr_tx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c a -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -413,7 +415,7 @@ static int hdlr_tx_a_about_id (const char* data, char* ret) {
 static int hdlr_tx_about_fw_ver (const char* data, char* ret) {
 	strcpy(buf, "board -v\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -465,9 +467,8 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+      sync_channels(15);
+      sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -645,19 +646,19 @@ static int hdlr_rx_a_rf_board_dump (const char* data, char* ret) {
 	// ADC
 	strcpy(buf, "dump -c a -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c a -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c a -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -671,7 +672,7 @@ static int hdlr_rx_a_rf_board_test (const char* data, char* ret) {
 static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c a -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -779,7 +780,7 @@ static int hdlr_rx_a_about_id (const char* data, char* ret) {
 static int hdlr_rx_about_fw_ver (const char* data, char* ret) {
 	strcpy(buf, "board -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -847,8 +848,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+      sync_channels(15);
 	sleep(2);
 
 		// enable active dsp channels, and reset the DSP
@@ -920,7 +920,7 @@ static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret) {
 static int hdlr_tx_b_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c b -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1067,13 +1067,13 @@ static int hdlr_tx_b_rf_board_dump (const char* data, char* ret) {
 	// DAC
 	strcpy(buf, "dump -c b -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_b Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c b -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1087,7 +1087,7 @@ static int hdlr_tx_b_rf_board_test (const char* data, char* ret) {
 static int hdlr_tx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c b -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1219,9 +1219,8 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+      sync_channels(15);
+      sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1388,19 +1387,19 @@ static int hdlr_rx_b_rf_board_dump (const char* data, char* ret) {
 	// ADC
 	strcpy(buf, "dump -c b -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c b -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c b -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1414,7 +1413,7 @@ static int hdlr_rx_b_rf_board_test (const char* data, char* ret) {
 static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c b -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1581,9 +1580,8 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+      sync_channels(15);
+      sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1643,7 +1641,7 @@ static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret) {
 static int hdlr_tx_c_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c c -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1790,13 +1788,13 @@ static int hdlr_tx_c_rf_board_dump (const char* data, char* ret) {
 	// DAC
 	strcpy(buf, "dump -c c -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_c Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c c -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1810,7 +1808,7 @@ static int hdlr_tx_c_rf_board_test (const char* data, char* ret) {
 static int hdlr_tx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c c -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1942,9 +1940,8 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+      sync_channels(15);
+      sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2111,19 +2108,19 @@ static int hdlr_rx_c_rf_board_dump (const char* data, char* ret) {
 	// ADC
 	strcpy(buf, "dump -c c -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c c -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c c -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2137,7 +2134,7 @@ static int hdlr_rx_c_rf_board_test (const char* data, char* ret) {
 static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c c -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2304,9 +2301,8 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+      sync_channels(15);
+      sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2366,7 +2362,7 @@ static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret) {
 static int hdlr_tx_d_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c d -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2513,13 +2509,13 @@ static int hdlr_tx_d_rf_board_dump (const char* data, char* ret) {
 	// DAC
 	strcpy(buf, "dump -c d -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_d Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c d -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2533,7 +2529,7 @@ static int hdlr_tx_d_rf_board_test (const char* data, char* ret) {
 static int hdlr_tx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c d -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2665,9 +2661,8 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+      sync_channels(15);
+      sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2833,19 +2828,19 @@ static int hdlr_rx_d_rf_board_dump (const char* data, char* ret) {
 	// ADC
 	strcpy(buf, "dump -c d -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c d -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c d -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2859,7 +2854,7 @@ static int hdlr_rx_d_rf_board_test (const char* data, char* ret) {
 static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c d -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3027,9 +3022,8 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
       }
 
       // send sync pulse
-		strcpy(buf, "fpga -o\r");
-		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+      sync_channels(15);
+      sleep(2);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -3129,13 +3123,13 @@ static int hdlr_time_board_dump (const char* data, char* ret) {
 	// FANOUT
 	strcpy(buf, "dump -f\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_synth_fd);
 	PRINT(DUMP, "[Board: time Chip: FANOUT] %s\n", uart_ret_buf);
 
 	// CLK
 	strcpy(buf, "dump -c\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_synth_fd);
 	PRINT(DUMP, "[Board: time Chip: CLK] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3149,7 +3143,7 @@ static int hdlr_time_board_test (const char* data, char* ret) {
 static int hdlr_time_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -t\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_synth_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3171,7 +3165,7 @@ static int hdlr_time_about_id (const char* data, char* ret) {
 static int hdlr_time_about_fw_ver (const char* data, char* ret) {
 	strcpy(buf, "board -v\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
+	read_uart(uart_synth_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3199,31 +3193,35 @@ static int hdlr_fpga_board_test (const char* data, char* ret) {
 }
 
 static int hdlr_fpga_board_temp (const char* data, char* ret) {
-	strcpy(buf, "board -t\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strcpy(buf, "board -t\r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//read_uart(NO_FWD_CMD);
+	//strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
-	strcat(buf, data);
-	strcat(buf, "\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//strcpy(buf, "board -l ");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_rstreq (const char* data, char* ret) {
-	strcpy(buf, "fpga -r \r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//strcpy(buf, "fpga -r \r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	
+	/* TODO: Implement DIG Board FPGA Reset */
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_jesd_sync (const char* data, char* ret) {
-	strcpy(buf, "fpga -o \r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//strcpy(buf, "fpga -o \r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	sync_channels(15);
 	return RETURN_SUCCESS;
 }
 
@@ -3240,8 +3238,7 @@ static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	usleep(50000);
 
-	strcpy(buf, "board -r \r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	/* TODO: Implement DIG board Reset */
 	return RETURN_SUCCESS;
 }
 
@@ -3262,11 +3259,12 @@ static int hdlr_fpga_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+// TODO: Move FWversion code to ARM, edit MAKE file with version info, refer to MCU code
 static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
-	strcpy(buf, "board -v\r");
-	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(NO_FWD_CMD);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strcpy(buf, "board -v\r");
+	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//read_uart(NO_FWD_CMD);
+	//strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -3451,6 +3449,8 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 	write_hps_reg( "sys8", 0 ); // set frac_time to 0
 	write_hps_reg( "sys9", 1 ); // writing 1, then 0 to sys9 sets the time
 	write_hps_reg( "sys9", 0 ); // to what is written in sys7 and sys8
+
+	return RETURN_SUCCESS;
 }
 // Beginning of property table
 static prop_t property_table[] = {
@@ -3789,4 +3789,50 @@ void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char*
 	_save_profile = save;
 	_load_profile_path = load_path;
 	_save_profile_path = save_path;
+}
+
+void sync_channels(uint8_t chan_mask) {
+
+    char* str_chan_mask = "";
+    sprintf(str_chan_mask, "%" PRIu8 "", chan_mask);
+
+    /* Bring the ADCs & DACs into 'demo' mode for JESD */
+
+    // RX - ADCs
+    strcpy(buf, "power -c ");
+    strcat(buf, str_chan_mask);
+    strcpy(buf, " -a 1\r");
+    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    usleep(200000);
+
+    // TX - DACs
+    //strcpy(buf, "power -c ");
+    //strcat(buf, str_chan_mask);
+    //strcpy(buf, " -d 1\r");
+    //send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+    //usleep(200000);
+
+    /* Initiate the SYSREF sequence for jesd
+     * Set all boards' SYSREF detection gate to ON */
+
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcpy(buf, " -s 1\r");
+    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    usleep(200000);
+
+    /* Trigger a SYSREF pulse */
+
+    strcpy(buf, "clk -y -y -y\r");
+    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+    usleep(200000);
+
+    /* Turn off all boards' SYSREF detection gates */
+
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcpy(buf, " -s 0\r");
+    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
+
 }
