@@ -181,6 +181,9 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
+	strcpy(buf, "rf -c a -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
@@ -539,6 +542,9 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll0;
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	strcpy(buf, "rf -c a -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -952,6 +958,9 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
+	strcpy(buf, "rf -c b -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
@@ -1290,6 +1299,9 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll0;
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	strcpy(buf, "rf -c b -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -1683,6 +1695,9 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
+	strcpy(buf, "rf -c c -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
@@ -2021,6 +2036,9 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll0;
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	strcpy(buf, "rf -c c -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -2414,6 +2432,9 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
+	strcpy(buf, "rf -c d -p 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
@@ -2751,6 +2772,9 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll0;
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
+
+	strcpy(buf, "rf -c d -p 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
