@@ -30,17 +30,17 @@
 #define _PLLDEBUG_ON
 #define _PLLDEBUG_OFF_VERBOSE
 
-#define PLL0_R_DEFAULT		( 2 )		// R value (we aim to minimize this)
+#define PLL0_R_DEFAULT		( 1 )		// R value (we aim to minimize this)
 #define PLL0_N_DEFAULT		( 30 )          // N value (N^2 contribution to PLL noise) [16..4096]
 #define PLL0_D_DEFAULT		( 30 )		// RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL0_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
-#define PLL0_OUTFREQ_DEFAULT	( 50000000 )	// Resulting VCO Output Frequency
+#define PLL0_OUTFREQ_DEFAULT	( 1500000000 )	// Resulting VCO Output Frequency
 
 #define PLL1_R_DEFAULT		( 1 )		// R value (we aim to minimize this)
-#define PLL1_N_DEFAULT		( 30 )          // N value (N^2 contribution to PLL noise) [16..4096]
-#define PLL1_D_DEFAULT		( 30 )		// RFoutput divider value (1,2,4,6..58,60,62)
+#define PLL1_N_DEFAULT		( 376 )         // N value (N^2 contribution to PLL noise) [16..4096]
+#define PLL1_D_DEFAULT		( 8 )		// RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL1_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
-#define PLL1_OUTFREQ_DEFAULT	( 1500000000 )	// Resulting VCO Output Frequency
+#define PLL1_OUTFREQ_DEFAULT	( 470000000 )	// Resulting VCO Output Frequency
 
 // PLL Constructors
 pllparam_t pll0_def = {
@@ -95,15 +95,27 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 
 	uint64_t temp = *reqFreq;
 
-	// round the required Frequency to the nearest MHz
-	uint64_t mhzFreq = (*reqFreq / 1e6); // MHz truncation
-	uint64_t hunkhzFreq = *reqFreq / 1e5;// 100kHz truncation
-	mhzFreq *= 10;
-	if ((hunkhzFreq - mhzFreq) > 4) {	// round accordingly
-		mhzFreq += 10;
+//	// round the required Frequency to the nearest MHz
+//	uint64_t mhzFreq = (*reqFreq / 1e6); // MHz truncation
+//	uint64_t hunkhzFreq = *reqFreq / 1e5;// 100kHz truncation
+//	mhzFreq *= 10;
+//	if ((hunkhzFreq - mhzFreq) > 4) {	// round accordingly
+//		mhzFreq += 10;
+//	}
+//
+//	*reqFreq = mhzFreq * 1e5;
+
+	uint64_t mhzFreq = (*reqFreq / 1e6);
+	if ((mhzFreq % 10) > 4) {
+	    mhzFreq = mhzFreq / 10;
+	    mhzFreq = mhzFreq + 1;
+	    mhzFreq = mhzFreq * 10;
+	} else {
+	    mhzFreq = mhzFreq / 10;
+	    mhzFreq = mhzFreq * 10;
 	}
 
-	*reqFreq = mhzFreq * 1e5;
+	* reqFreq = mhzFreq * 1e6;
 
     // Sanitize the input to be within range
     if (*reqFreq > PLL1_RFOUT_MAX_HZ) 		*reqFreq = PLL1_RFOUT_MAX_HZ;
@@ -116,15 +128,20 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 	uint64_t R1 = PLL1_R_MIN;
 
 	// Determine best values of the Feedback Divider (N)
-	if (pll_NCalc(reqFreq, pll1, &N1)) {
-		PRINT( VERBOSE,"REQUIRED FREQUENCY HAS BEEN ROUNDED TO THE NEAREST 100 Hz.\n");
-	}
+//	if (pll_NCalc(reqFreq, pll1, &N1)) {
+//		PRINT( VERBOSE,"REQUIRED FREQUENCY HAS BEEN ROUNDED TO THE NEAREST 100 Hz.\n");
+//	}
+//
+//	pll1->N = N1;
+//	uint64_t pd_input = pll1->outFreq / pll1->N;
 
+	N1 = pll1->outFreq / 10000000;
 	pll1->N = N1;
 	uint64_t pd_input = pll1->outFreq / pll1->N;
 
 	// Calculate the necessary Reference Divider (R) value within the restrictions defined
-	R1 = PLL1_REF_MAX_HZ / pd_input; // floor happens as its an integer operation
+//	R1 = PLL1_REF_MAX_HZ / pd_input; // floor happens as its an integer operation
+	R1 = 1;
 
 	if (R1 > _PLL_RATS_MAX_DENOM) pll1->R = _PLL_RATS_MAX_DENOM;
 	else if (R1 < PLL1_R_MIN) pll1->R = PLL1_R_MIN;
@@ -144,25 +161,28 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
     //// Determine the values of the N and R dividers for PLL0
     //double pll0_ratio = (double)pll0->outFreq / (double)PLL_CORE_REF_FREQ_HZ;
 
-    uint64_t N0 = 1;
-    uint64_t R0 = PLL0_R_MIN;
+//    uint64_t N0 = 1;
+//    uint64_t R0 = PLL0_R_MIN;
+	uint64_t N0 = 150;
+	uint64_t R0 = 1;
 
 	// Determine Best Configuration of PLL0 (VCOFreq, N, R, D)
-	pll_SetVCO_PLL0(&reference, pll0, &N0, &R0);
+//	pll_SetVCO_PLL0(&reference, pll0, &N0, &R0);
 
     //rat_approx(pll0_ratio, (uint64_t)_PLL_RATS_MAX_DENOM, &N0, &R0);
 
-	if (R0 < PLL0_R_MIN) {
-		R0 = R0 * 2;
-		N0 = N0 * 2;
-	}
+//	if (R0 < PLL0_R_MIN) {
+//		R0 = R0 * 2;
+//		N0 = N0 * 2;
+//	}
 
     // Massage N0 and R0 values to fit within the specified restrictions
-    pll_ConformDividers(&N0, &R0, 0);
+//    pll_ConformDividers(&N0, &R0, 0);
 
     // Assign the new N0 and R0 values to PLL0
     pll0->N = (uint32_t)N0;
     pll0->R = (uint16_t)R0;
+    pll0->d = (uint16_t)150;
 
     // Recalculate the VCO frequency as there is a dependency on N0/R0
     pll0->outFreq = round(((double)PLL_CORE_REF_FREQ_HZ * (double)pll0->N) / (double)pll0->R);
@@ -532,9 +552,16 @@ void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pll, uint8_t is_pll1) {
     		    pll->d = 1;
     		    pll->outFreq = *reqFreq;
     		} else {
-    		    uint16_t D = PLL1_VCO_MIN_HZ / *reqFreq;
-    		    D += 1; // round up, safer
-    		    if ((D & 1) != 0) D += 1;
+    		    uint8_t D = PLL1_VCO_MIN_HZ / *reqFreq;
+    		    //D += 1; // round up, safer
+    		    //if ((D & 1) != 0) D += 1;
+		    {	// round up to nearest power of 2 (ADF4355/ADF5355)
+			D--;
+			D = D | (D >> 1);
+			D = D | (D >> 2);
+			D = D | (D >> 4);
+			D++;
+		    }
     		    if (D > PLL1_DIV_MAX) D = PLL1_DIV_MAX;
 		    	if (D < PLL1_DIV_MIN) D = PLL1_DIV_MIN;
     		    pll->outFreq = (uint64_t)D * *reqFreq;

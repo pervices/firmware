@@ -36,7 +36,7 @@
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to 
 // used during approximation, and has the largest impact on overall tuning
 // accuracy.
-#define _PLL_RATS_MAX_DENOM 40 // 16383 // 4095 // 2047 // 1023 // 511
+#define _PLL_RATS_MAX_DENOM 1023 // 40 // 16383 // 4095 // 2047 // 1023 // 511
 
 // For further accuracy, one may also adjust the PLL1_N_MAX parameter. 
 // Increasing both will lead to better frequency accuracy on the radio side, 
@@ -45,11 +45,11 @@
 #define _PLL_OUT_MAX_DEVIATION  200000
 
 //Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ	100000000ULL
+#define PLL_CORE_REF_FREQ_HZ	10000000ULL
 
 //HMC830 PLL Specifications
 #define PLL0_RFOUT_MAX_HZ	3000000000ULL
-#define PLL0_RFOUT_MIN_HZ	25000000ULL
+#define PLL0_RFOUT_MIN_HZ	10000000ULL
 #define PLL0_VCO_MIN_HZ		1500000000ULL
 #define PLL0_VCO_MAX_HZ		3000000000ULL
 #define PLL0_PD_MIN_HZ		0	// DC Value
@@ -62,20 +62,21 @@
 #define PLL0_DIV_MIN		2
 
 //HMC833 PLL Specifications
-#define PLL1_REF_MAX_HZ		55000000ULL // Have to change Reg08h[21] of HMC833 if higher (upto 350MHz) necessary
-#define PLL1_REF_MIN_HZ		25000000ULL
-#define PLL1_RFOUT_MAX_HZ	6000000000ULL
-#define PLL1_RFOUT_MIN_HZ	25000000ULL
-#define PLL1_VCO_MIN_HZ		1500000000ULL
-#define PLL1_VCO_MAX_HZ		3000000000ULL
-#define PLL1_PD_MIN_HZ		20000000ULL	// To Maximize PD spur width
-#define PLL1_PD_MAX_HZ		50000000ULL
-#define PLL1_N_MIN		16	 //Minimum allowable N value (per datasheet)
-#define PLL1_N_MAX		7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
+#define PLL1_REF_MAX_HZ		600000000ULL // Have to change Reg08h[21] of HMC833 if higher (upto 350MHz) necessary
+#define PLL1_REF_MIN_HZ		10000000ULL
+#define PLL1_REF_DEFAULT	10000000ULL
+#define PLL1_RFOUT_MAX_HZ	13600000000ULL
+#define PLL1_RFOUT_MIN_HZ	54000000ULL
+#define PLL1_VCO_MIN_HZ		3400000000ULL
+#define PLL1_VCO_MAX_HZ		6800000000ULL
+#define PLL1_PD_MIN_HZ		10000000ULL	// To Maximize PD spur width
+#define PLL1_PD_MAX_HZ		120000000ULL
+#define PLL1_N_MIN		23	 //Minimum allowable N value (per datasheet)
+#define PLL1_N_MAX		1680 // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
 #define PLL1_R_MIN		1
-#define PLL1_DIV_STEPS		2
-#define PLL1_DIV_MAX		62
-#define PLL1_DIV_MIN		2
+//#define PLL1_DIV_STEPS		2
+#define PLL1_DIV_MAX		64
+#define PLL1_DIV_MIN		1
 
 #define PLL_PARAM_GOOD		0
 
