@@ -308,6 +308,10 @@ static int hdlr_tx_a_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c a -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c a -g 0\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -317,7 +321,7 @@ static int hdlr_tx_a_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c a -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -325,7 +329,7 @@ static int hdlr_tx_a_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c a -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -682,6 +686,10 @@ static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c a -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c a -g 0\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -691,7 +699,7 @@ static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c a -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -699,7 +707,7 @@ static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c a -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -1137,6 +1145,10 @@ static int hdlr_tx_b_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c b -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c b -g 0\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -1146,7 +1158,7 @@ static int hdlr_tx_b_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c b -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -1154,7 +1166,7 @@ static int hdlr_tx_b_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c b -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -1491,6 +1503,10 @@ static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c b -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c b -g 0\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -1500,7 +1516,7 @@ static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c b -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -1508,7 +1524,7 @@ static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c b -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -1926,6 +1942,10 @@ static int hdlr_tx_c_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c c -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c c -g 0\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -1935,7 +1955,7 @@ static int hdlr_tx_c_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c c -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -1943,7 +1963,7 @@ static int hdlr_tx_c_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c c -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -2280,6 +2300,10 @@ static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c c -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c c -g 0\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -2289,7 +2313,7 @@ static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c c -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -2297,7 +2321,7 @@ static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c c -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -2715,6 +2739,10 @@ static int hdlr_tx_d_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c d -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c d -g 0\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -2724,7 +2752,7 @@ static int hdlr_tx_d_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c d -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -2732,7 +2760,7 @@ static int hdlr_tx_d_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c d -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -3068,6 +3096,10 @@ static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 
 	    strcpy(buf, "rf -c d -a ");
 	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+	    strcat(buf, "\r");
+	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+	    strcpy(buf, "vga -c d -g 0\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	} else  {	    // gain with possibly some attenuation
@@ -3077,7 +3109,7 @@ static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 	    if (gain % 2) {	// odd (0.25 or 0.75)
 		strcpy(buf, "rf -c d -a ");
 		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "/r");
+		strcat(buf, "\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
 	    }
@@ -3085,7 +3117,7 @@ static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 	    // Gain will always be even from here on
 	    strcpy(buf, "vga -c d -g ");
 	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "/r");
+	    strcat(buf, "\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	}
@@ -4114,37 +4146,37 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     // Send Reference to MCU ( No Need ATM since fixed reference )
     strcpy(buf, "rf -v ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference/1000)); // Send reference in kHz
-    strcat(buf, "/r");
+    strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/5355 R
     strcpy(buf, "rf -r ");
     sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
-    strcat(buf, "/r");
+    strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 N
     strcpy(buf, "rf -n ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
-    strcat(buf, "/r");
+    strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 D
     strcpy(buf, "rf -d ");
     sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
-    strcat(buf, "/r");
+    strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 Power
     strcpy(buf, "rf -g ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", 3 /*pll->power*/);    // default to highest power
-    strcat(buf, "/r");
+    strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(pll->outFreq)); // Send output frequency in kHz
-    strcat(buf, "/r");
+    strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     usleep(100000);
 }
