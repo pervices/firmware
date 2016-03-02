@@ -17,7 +17,6 @@
 
 #include "mmap.h"
 #include "properties.h"
-#include "pllcalc.h"
 
 #define BASE_SAMPLE_RATE 322265625.0	// SPS
 #define RESAMP_SAMPLE_RATE  257812500.0	// SPS
@@ -182,74 +181,79 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
-	// extract pllX variables and pass to MCU
-	// HMC830
-	strcpy(buf, "rf -c a -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
 
-	usleep(10000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000); 
-
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c a -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c a -p 1\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//	// extract pllX variables and pass to MCU
+//	// HMC830
+//	strcpy(buf, "rf -c a -p 0\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000); 
+//
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c a -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c a -p 1\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -536,74 +540,79 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
-	// extract pllX variables and pass to MCU
-	// HMC830
-	strcpy(buf, "rf -c a -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
 
-	usleep(100000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-	
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c a -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c a -p 1\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	// extract pllX variables and pass to MCU
+//	// HMC830
+//	strcpy(buf, "rf -c a -p 0\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//	
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c a -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c a -p 1\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -943,74 +952,79 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
-	// extract pllX variables and pass to MCU
-	// HMC830
-	strcpy(buf, "rf -c b -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
 
-	usleep(10000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c b -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c b -p 1\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(10000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//	// extract pllX variables and pass to MCU
+//	// HMC830
+//	strcpy(buf, "rf -c b -p 0\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c b -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c b -p 1\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(10000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1277,74 +1291,79 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
-	// extract pllX variables and pass to MCU
-	// HMC830
-	strcpy(buf, "rf -c b -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
 
-	usleep(100000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c b -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c b -p 1\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	// extract pllX variables and pass to MCU
+//	// HMC830
+//	strcpy(buf, "rf -c b -p 0\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c b -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c b -p 1\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1664,74 +1683,79 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
-	// extract pllX variables and pass to MCU
-	// HMC830
-	strcpy(buf, "rf -c c -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
 
-	usleep(100000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c c -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c c -p 1\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//	// extract pllX variables and pass to MCU
+//	// HMC830
+//	strcpy(buf, "rf -c c -p 0\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c c -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c c -p 1\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1998,74 +2022,79 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
+
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
+
 	// extract pllX variables and pass to MCU
 	// HMC830
-	strcpy(buf, "rf -c c -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c c -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c c -p 1\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	strcpy(buf, "rf -c c -p 0\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c c -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c c -p 1\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2385,74 +2414,79 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
-	// extract pllX variables and pass to MCU
-	// HMC830
-	strcpy(buf, "rf -c d -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
 
-	usleep(100000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c d -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c d -p 1\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//	// extract pllX variables and pass to MCU
+//	// HMC830
+//	strcpy(buf, "rf -c d -p 0\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c d -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c d -p 1\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2718,74 +2752,79 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	pllparam_t pll1;
 	double outfreq = setFreq(&freq, &pll0, &pll1);
 
-	// extract pllX variables and pass to MCU
-	// HMC830
-	strcpy(buf, "rf -c d -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
-	// write HMC830 (PLL0) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	// Send Parameters over to the MCU
+	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
 
-	usleep(100000);
-
-	// write HMC830 (PLL0) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC830 (PLL0) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// Set appropriate filter bank
-	strcpy(buf, "rf -c d -g ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// HMC833
-	strcpy(buf, "rf -c d -p 1\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	// write HMC833 (PLL1) R
-	strcpy(buf, "rf -r ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) d
-	strcpy(buf, "rf -d ");
-	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) N
-	strcpy(buf, "rf -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	usleep(100000);
-
-	// write HMC833 (PLL1) x2en
-	strcpy(buf, "rf -x ");
-	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
-	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	// extract pllX variables and pass to MCU
+//	// HMC830
+//	strcpy(buf, "rf -c d -p 0\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC830 (PLL0) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll0.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC830 (PLL0) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll0.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// Set appropriate filter bank
+//	strcpy(buf, "rf -c d -g ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(round(outfreq) / 1000));
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// HMC833
+//	strcpy(buf, "rf -c d -p 1\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	// write HMC833 (PLL1) R
+//	strcpy(buf, "rf -r ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.R);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) d
+//	strcpy(buf, "rf -d ");
+//	sprintf(buf + strlen(buf), "%" PRIu16 "", pll1.d);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) N
+//	strcpy(buf, "rf -n ");
+//	sprintf(buf + strlen(buf), "%" PRIu32 "", pll1.N);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	usleep(100000);
+//
+//	// write HMC833 (PLL1) x2en
+//	strcpy(buf, "rf -x ");
+//	sprintf(buf + strlen(buf), "%" PRIu8 "", pll1.x2en);
+//	strcat(buf, "\r");
+//	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -3835,4 +3874,50 @@ void sync_channels(uint8_t chan_mask) {
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
     usleep(100000);
 
+}
+
+void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
+    // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
+    
+    // Send Reference to MCU ( No Need ATM since fixed reference )
+    strcpy(buf, "rf -v ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference/1000)); // Send reference in kHz
+    strcat(buf, "/r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
+
+    // write ADF4355/5355 R
+    strcpy(buf, "rf -r ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
+    strcat(buf, "/r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
+
+    // write ADF4355/ADF5355 N
+    strcpy(buf, "rf -n ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
+    strcat(buf, "/r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
+
+    // write ADF4355/ADF5355 D
+    strcpy(buf, "rf -d ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
+    strcat(buf, "/r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
+
+    // write ADF4355/ADF5355 Power
+    strcpy(buf, "rf -g ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 3 /*pll->power*/);    // default to highest power
+    strcat(buf, "/r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
+
+    // write ADF4355/ADF5355 Output Frequency
+    strcpy(buf, "rf -f ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(pll->outFreq)); // Send output frequency in kHz
+    strcat(buf, "/r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
 }

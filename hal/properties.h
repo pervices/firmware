@@ -28,6 +28,7 @@
 #include <net/if.h>
 #include "comm_manager.h"
 #include "common.h"
+#include "pllcalc.h"
 
 typedef enum {RW, RO, WO} perm_t;
 typedef enum {POLL, NO_POLL} poll_t;
@@ -53,5 +54,6 @@ inline void pass_uart_tx_fd(int fd);
 inline void pass_uart_rx_fd(int fd);
 void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char* save_path);
 void sync_channels(uint8_t chan_mask);
+void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll);
 
 #endif
