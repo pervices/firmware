@@ -648,43 +648,66 @@ static int hdlr_rx_a_rf_freq_band (const char* data, char* ret) {
 static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
-
-	// 0   -> 126	attenuation only
-	// 127		0dB
-	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
 	
-	if (gain > 253)		gain = 253;
-	else if (gain < 0) 	gain = 0;
+	// 0 -> 63 gain
+	strcpy(buf, "vga -c a -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
-	if (gain < 127) {   // attenuation only 
+/* Below is function to abstract Gain & Atten into a Single Setting */
 
-	    strcpy(buf, "rf -c a -a ");
-	    sprintf(buf + strlen(buf), "%i", 127 - gain);
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	// 0   -> 126	attenuation only
+//	// 127		0dB
+//	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
+//
+//	if (gain > 253)		gain = 253;
+//	else if (gain < 0) 	gain = 0;
+//
+//	if (gain < 127) {   // attenuation only
+//
+//	    strcpy(buf, "rf -c a -a ");
+//	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	    strcpy(buf, "vga -c a -g 0\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	} else  {	    // gain with possibly some attenuation
+//
+//	    gain = gain - 127; // isolate gain part
+//
+//	    if (gain % 2) {	// odd (0.25 or 0.75)
+//		strcpy(buf, "rf -c a -a ");
+//		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
+//		strcat(buf, "\r");
+//		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
+//	    }
+//
+//	    // Gain will always be even from here on
+//	    strcpy(buf, "vga -c a -g ");
+//	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	}
 
-	    strcpy(buf, "vga -c a -g 0\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
 
-	} else  {	    // gain with possibly some attenuation
+static int hdlr_rx_a_rf_atten_val(const char* data, char* ret) {
+	int atten;
+	sscanf(data, "%i", &atten);
 
-	    gain = gain - 127; // isolate gain part
+	if (atten > 127)		atten = 127;
+	else if (atten < 0) 	atten = 0;
 
-	    if (gain % 2) {	// odd (0.25 or 0.75)
-		strcpy(buf, "rf -c a -a ");
-		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
-	    }
-
-	    // Gain will always be even from here on
-	    strcpy(buf, "vga -c a -g ");
-	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	}
+	strcpy(buf, "rf -c a -a ");
+	sprintf(buf + strlen(buf), "%i", atten);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
@@ -1439,43 +1462,66 @@ static int hdlr_rx_b_rf_freq_band (const char* data, char* ret) {
 static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
-
-	// 0   -> 126	attenuation only
-	// 127		0dB
-	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
 	
-	if (gain > 253)		gain = 253;
-	else if (gain < 0) 	gain = 0;
+	// 0 -> 63 gain
+	strcpy(buf, "vga -c b -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
-	if (gain < 127) {   // attenuation only 
+/* Below is function to abstract Gain & Atten into a Single Setting */
 
-	    strcpy(buf, "rf -c b -a ");
-	    sprintf(buf + strlen(buf), "%i", 127 - gain);
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	// 0   -> 126	attenuation only
+//	// 127		0dB
+//	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
+//
+//	if (gain > 253)		gain = 253;
+//	else if (gain < 0) 	gain = 0;
+//
+//	if (gain < 127) {   // attenuation only
+//
+//	    strcpy(buf, "rf -c b -a ");
+//	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	    strcpy(buf, "vga -c b -g 0\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	} else  {	    // gain with possibly some attenuation
+//
+//	    gain = gain - 127; // isolate gain part
+//
+//	    if (gain % 2) {	// odd (0.25 or 0.75)
+//		strcpy(buf, "rf -c b -a ");
+//		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
+//		strcat(buf, "\r");
+//		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
+//	    }
+//
+//	    // Gain will always be even from here on
+//	    strcpy(buf, "vga -c b -g ");
+//	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	}
 
-	    strcpy(buf, "vga -c b -g 0\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
 
-	} else  {	    // gain with possibly some attenuation
+static int hdlr_rx_b_rf_atten_val(const char* data, char* ret) {
+	int atten;
+	sscanf(data, "%i", &atten);
 
-	    gain = gain - 127; // isolate gain part
+	if (atten > 127)		atten = 127;
+	else if (atten < 0) 	atten = 0;
 
-	    if (gain % 2) {	// odd (0.25 or 0.75)
-		strcpy(buf, "rf -c b -a ");
-		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
-	    }
-
-	    // Gain will always be even from here on
-	    strcpy(buf, "vga -c b -g ");
-	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	}
+	strcpy(buf, "rf -c b -a ");
+	sprintf(buf + strlen(buf), "%i", atten);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
@@ -2210,43 +2256,66 @@ static int hdlr_rx_c_rf_freq_band (const char* data, char* ret) {
 static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
-
-	// 0   -> 126	attenuation only
-	// 127		0dB
-	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
 	
-	if (gain > 253)		gain = 253;
-	else if (gain < 0) 	gain = 0;
+	// 0 -> 63 gain
+	strcpy(buf, "vga -c c -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
-	if (gain < 127) {   // attenuation only 
+/* Below is function to abstract Gain & Atten into a Single Setting */
 
-	    strcpy(buf, "rf -c c -a ");
-	    sprintf(buf + strlen(buf), "%i", 127 - gain);
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	// 0   -> 126	attenuation only
+//	// 127		0dB
+//	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
+//
+//	if (gain > 253)		gain = 253;
+//	else if (gain < 0) 	gain = 0;
+//
+//	if (gain < 127) {   // attenuation only
+//
+//	    strcpy(buf, "rf -c c -a ");
+//	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	    strcpy(buf, "vga -c c -g 0\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	} else  {	    // gain with possibly some attenuation
+//
+//	    gain = gain - 127; // isolate gain part
+//
+//	    if (gain % 2) {	// odd (0.25 or 0.75)
+//		strcpy(buf, "rf -c c -a ");
+//		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
+//		strcat(buf, "\r");
+//		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
+//	    }
+//
+//	    // Gain will always be even from here on
+//	    strcpy(buf, "vga -c c -g ");
+//	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	}
 
-	    strcpy(buf, "vga -c c -g 0\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
 
-	} else  {	    // gain with possibly some attenuation
+static int hdlr_rx_c_rf_atten_val(const char* data, char* ret) {
+	int atten;
+	sscanf(data, "%i", &atten);
 
-	    gain = gain - 127; // isolate gain part
+	if (atten > 127)		atten = 127;
+	else if (atten < 0) 	atten = 0;
 
-	    if (gain % 2) {	// odd (0.25 or 0.75)
-		strcpy(buf, "rf -c c -a ");
-		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
-	    }
-
-	    // Gain will always be even from here on
-	    strcpy(buf, "vga -c c -g ");
-	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	}
+	strcpy(buf, "rf -c c -a ");
+	sprintf(buf + strlen(buf), "%i", atten);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
@@ -2980,43 +3049,66 @@ static int hdlr_rx_d_rf_freq_band (const char* data, char* ret) {
 static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
-
-	// 0   -> 126	attenuation only
-	// 127		0dB
-	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
 	
-	if (gain > 253)		gain = 253;
-	else if (gain < 0) 	gain = 0;
+	// 0 -> 63 gain
+	strcpy(buf, "vga -c d -g ");
+	sprintf(buf + strlen(buf), "%i", gain);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
-	if (gain < 127) {   // attenuation only 
+/* Below is function to abstract Gain & Atten into a Single Setting */
 
-	    strcpy(buf, "rf -c d -a ");
-	    sprintf(buf + strlen(buf), "%i", 127 - gain);
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//	// 0   -> 126	attenuation only
+//	// 127		0dB
+//	// 128 -> 254	gain with some attenuation to maintain 0.25dB resolution
+//
+//	if (gain > 253)		gain = 253;
+//	else if (gain < 0) 	gain = 0;
+//
+//	if (gain < 127) {   // attenuation only
+//
+//	    strcpy(buf, "rf -c d -a ");
+//	    sprintf(buf + strlen(buf), "%i", 127 - gain);
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	    strcpy(buf, "vga -c d -g 0\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	} else  {	    // gain with possibly some attenuation
+//
+//	    gain = gain - 127; // isolate gain part
+//
+//	    if (gain % 2) {	// odd (0.25 or 0.75)
+//		strcpy(buf, "rf -c d -a ");
+//		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
+//		strcat(buf, "\r");
+//		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
+//	    }
+//
+//	    // Gain will always be even from here on
+//	    strcpy(buf, "vga -c d -g ");
+//	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
+//	    strcat(buf, "\r");
+//	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+//
+//	}
 
-	    strcpy(buf, "vga -c d -g 0\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
 
-	} else  {	    // gain with possibly some attenuation
+static int hdlr_rx_d_rf_atten_val(const char* data, char* ret) {
+	int atten;
+	sscanf(data, "%i", &atten);
 
-	    gain = gain - 127; // isolate gain part
+	if (atten > 127)		atten = 127;
+	else if (atten < 0) 	atten = 0;
 
-	    if (gain % 2) {	// odd (0.25 or 0.75)
-		strcpy(buf, "rf -c d -a ");
-		sprintf(buf + strlen(buf), "%i", 1); // corresponds to 0.25dB attenuation
-		strcat(buf, "\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		gain++;	// add +0.25 to gain, making it even (VGA can only handle resolution of +0.5dB)
-	    }
-
-	    // Gain will always be even from here on
-	    strcpy(buf, "vga -c d -g ");
-	    sprintf(buf + strlen(buf), "%i", gain >> 1); // divide by 2
-	    strcat(buf, "\r");
-	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-	}
+	strcpy(buf, "rf -c d -a ");
+	sprintf(buf + strlen(buf), "%i", atten);
+	strcat(buf, "\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
@@ -3683,6 +3775,7 @@ static prop_t property_table[] = {
 	{"rx_a/rf/freq/lna", hdlr_rx_a_rf_freq_lna, RW, "0"},
 	{"rx_a/rf/freq/band", hdlr_rx_a_rf_freq_band, RW, "1"},
 	{"rx_a/rf/gain/val", hdlr_rx_a_rf_gain_val, RW, "35"},
+	{"rx_a/rf/atten/val", hdlr_rx_a_rf_atten_val, RW, "127"},
 	{"rx_a/board/dump", hdlr_rx_a_rf_board_dump, WO, "0"},
 	{"rx_a/board/test", hdlr_rx_a_rf_board_test, WO, "0"},
 	{"rx_a/board/temp", hdlr_rx_a_rf_board_temp, RW, "20"},
@@ -3732,6 +3825,7 @@ static prop_t property_table[] = {
 	{"rx_b/rf/freq/lna", hdlr_rx_b_rf_freq_lna, RW, "0"},
 	{"rx_b/rf/freq/band", hdlr_rx_b_rf_freq_band, RW, "1"},
 	{"rx_b/rf/gain/val", hdlr_rx_b_rf_gain_val, RW, "35"},
+	{"rx_b/rf/atten/val", hdlr_rx_b_rf_atten_val, RW, "127"},
 	{"rx_b/board/dump", hdlr_rx_b_rf_board_dump, WO, "0"},
 	{"rx_b/board/test", hdlr_rx_b_rf_board_test, WO, "0"},
 	{"rx_b/board/temp", hdlr_rx_b_rf_board_temp, RW, "20"},
@@ -3781,6 +3875,7 @@ static prop_t property_table[] = {
 	{"rx_c/rf/freq/lna", hdlr_rx_c_rf_freq_lna, RW, "0"},
 	{"rx_c/rf/freq/band", hdlr_rx_c_rf_freq_band, RW, "1"},
 	{"rx_c/rf/gain/val", hdlr_rx_c_rf_gain_val, RW, "35"},
+	{"rx_c/rf/atten/val", hdlr_rx_c_rf_atten_val, RW, "127"},
 	{"rx_c/board/dump", hdlr_rx_c_rf_board_dump, WO, "0"},
 	{"rx_c/board/test", hdlr_rx_c_rf_board_test, WO, "0"},
 	{"rx_c/board/temp", hdlr_rx_c_rf_board_temp, RW, "20"},
@@ -3830,6 +3925,7 @@ static prop_t property_table[] = {
 	{"rx_d/rf/freq/lna", hdlr_rx_d_rf_freq_lna, RW, "0"},
 	{"rx_d/rf/freq/band", hdlr_rx_d_rf_freq_band, RW, "1"},
 	{"rx_d/rf/gain/val", hdlr_rx_d_rf_gain_val, RW, "35"},
+	{"rx_d/rf/atten/val", hdlr_rx_d_rf_atten_val, RW, "127"},
 	{"rx_d/board/dump", hdlr_rx_d_rf_board_dump, WO, "0"},
 	{"rx_d/board/test", hdlr_rx_d_rf_board_test, WO, "0"},
 	{"rx_d/board/temp", hdlr_rx_d_rf_board_temp, RW, "20"},
@@ -4063,7 +4159,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-    // write ADF4355/ADF5355 Power
+    // write ADF4355/ADF5355 Output RF Power
     strcpy(buf, "rf -g ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", 3 /*pll->power*/);    // default to highest power
     strcat(buf, "\r");
