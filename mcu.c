@@ -22,7 +22,9 @@
 #include "common.h"
 #include "comm_manager.h"
 
-#define UART_DEV "/dev/ttyS1"
+#define UART_SYNTH  "/dev/ttyUSB2"
+#define UART_TX	    "/dev/ttyUSB1"
+#define UART_RX	    "/dev/ttyUSB0"
 
 #define ARG_MCU_SILENT	"-s"
 #define ARG_MCU_CONSOLE	"-c"
@@ -48,9 +50,21 @@ static int contains (const char* str, char letter, int size) {
 }
 
 int main(int argc, char *argv[]) {
+    int uart_synth_fd;
+    int uart_tx_fd;
+    int uart_rx_fd;
+
 	// initialize the comm port
-	if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
-		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_DEV);
+	if ( init_uart_comm(&uart_synth_fd, UART_SYNTH, 0) < 0 ) {
+		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_SYNTH);
+		return RETURN_ERROR_COMM_INIT;
+	}
+	if ( init_uart_comm(&uart_tx_fd, UART_TX, 0) < 0 ) {
+		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_TX);
+		return RETURN_ERROR_COMM_INIT;
+	}
+	if ( init_uart_comm(&uart_rx_fd, UART_RX, 0) < 0 ) {
+		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_RX);
 		return RETURN_ERROR_COMM_INIT;
 	}
 
@@ -71,10 +85,13 @@ int main(int argc, char *argv[]) {
 			fwd = TRUE;
          i++;
          if (argv[i][0] == 't') {
+        	 uart_comm_fd = uart_tx_fd;
             fwd_board = '1';
          } else if (argv[i][0] == 'r') {
+        	 uart_comm_fd = uart_rx_fd;
             fwd_board = '0';
          } else if (argv[i][0] == 's') {
+        	 uart_comm_fd = uart_synth_fd;
             fwd_board = '2';
          } else {
 			   printf("Usage: mcu [%s] [%s] [%s [t|r|s]] [%s milliseconds]\n",
@@ -101,9 +118,9 @@ int main(int argc, char *argv[]) {
 	do {
       // read in the input from stdin      
       if (fwd == TRUE) {
-         strcpy(buf, "fwd -b   -m '");
-         buf[7] = fwd_board;
-		   fgets(buf + 13, MAX_UART_LEN, stdin);
+         //strcpy(buf, "fwd -b   -m '");
+         //buf[7] = fwd_board;
+		   fgets(buf, MAX_UART_LEN, stdin);
          strcat(buf, "'\r");
       } else {
 		   fgets(buf, MAX_UART_LEN, stdin);
@@ -127,14 +144,14 @@ int main(int argc, char *argv[]) {
 			}
 
 			// if fwd, remove everything prior to the second message
-			if (fwd == TRUE) {
-				uint16_t pos = 0, real_size = 0;
-				while (buf[pos] != '>') pos++;
-				pos++;
-				real_size = total_bytes - pos;
-				memcpy(buf, buf + pos, real_size);
-				memset(buf + real_size, 0, MAX_UART_LEN - real_size);
-			}
+//			if (fwd == TRUE) {
+//				uint16_t pos = 0, real_size = 0;
+//				while (buf[pos] != '>') pos++;
+//				pos++;
+//				real_size = total_bytes - pos;
+//				memcpy(buf, buf + pos, real_size);
+//				memset(buf + real_size, 0, MAX_UART_LEN - real_size);
+//			}
 
 			printf("%s\n", buf);
 		}

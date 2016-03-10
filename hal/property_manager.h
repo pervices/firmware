@@ -26,9 +26,9 @@
 #include <inttypes.h>
 #include <string.h>
 
-#define UART_SYNTH "/dev/ttyS1"
-#define UART_TX "/dev/ttyS2"
-#define UART_RX "/dev/ttyS3"
+#define UART_SYNTH "/dev/ttyUSB2"
+#define UART_TX "/dev/ttyUSB1"
+#define UART_RX "/dev/ttyUSB0"
 
 int init_property(uint8_t options);
 void check_property_inotifies(void);
