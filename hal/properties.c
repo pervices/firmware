@@ -649,9 +649,14 @@ static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 	
-	// 0 -> 63 gain
+	if (gain > 126)		gain = 126;
+	else if (gain < 0)	gain  = 0;
+
+	if (gain % 2) gain++;		// Odd Number
+
+	// 0 -> 126 gain
 	strcpy(buf, "vga -c a -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
+	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1463,9 +1468,14 @@ static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 	
-	// 0 -> 63 gain
+	if (gain > 126)		gain = 126;
+	else if (gain < 0)	gain  = 0;
+
+	if (gain % 2) gain++;		// Odd Number
+
+	// 0 -> 126 gain
 	strcpy(buf, "vga -c b -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
+	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2257,9 +2267,14 @@ static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 	
-	// 0 -> 63 gain
+	if (gain > 126)		gain = 126;
+	else if (gain < 0)	gain  = 0;
+
+	if (gain % 2) gain++;		// Odd Number
+
+	// 0 -> 126 gain
 	strcpy(buf, "vga -c c -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
+	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -3050,9 +3065,14 @@ static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 	int gain;
 	sscanf(data, "%i", &gain);
 	
-	// 0 -> 63 gain
+	if (gain > 126)		gain = 126;
+	else if (gain < 0)	gain  = 0;
+
+	if (gain % 2) gain++;		// Odd Number
+
+	// 0 -> 126 gain
 	strcpy(buf, "vga -c d -g ");
-	sprintf(buf + strlen(buf), "%i", gain);
+	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
