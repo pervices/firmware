@@ -3428,6 +3428,28 @@ static int hdlr_time_source_ref (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+// TODO: Enable DevClock Output
+static int hdlr_time_source_devclk (const char* data, char* ret) {
+	if (strcmp(data, "external") == 0) {
+		strcpy(buf, "clk -t 1\r");
+	} else if (strcmp(data, "internal") == 0) {
+		strcpy(buf, "clk -t 0\r");
+	}
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+// TODO: Enable PLL Output
+static int hdlr_time_source_pll (const char* data, char* ret) {
+	if (strcmp(data, "external") == 0) {
+		strcpy(buf, "clk -t 1\r");
+	} else if (strcmp(data, "internal") == 0) {
+		strcpy(buf, "clk -t 0\r");
+	}
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_time_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
@@ -3970,6 +3992,8 @@ static prop_t property_table[] = {
 	{"time/source/vco", hdlr_time_source_vco, RW, "internal"},
 	{"time/source/sync", hdlr_time_source_sync, RW, "internal"},
 	{"time/source/ref", hdlr_time_source_ref, RW, "internal"},
+	{"time/source/devclk", hdlr_time_source_devclk, RW, "internal"},
+	{"time/source/pll", hdlr_time_source_pll, RW, "internal"},
 	{"time/board/dump", hdlr_time_board_dump, WO, "0"},
 	{"time/board/test", hdlr_time_board_test, WO, "0"},
 	{"time/board/temp", hdlr_time_board_temp, RW, "20"},
