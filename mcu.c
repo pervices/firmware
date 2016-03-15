@@ -134,10 +134,9 @@ int main(int argc, char *argv[]) {
 			memset(buf, 0, MAX_UART_LEN);
 			uint16_t total_bytes = 0, cur_bytes = 0;
 
-			while (( contains(buf, '>', total_bytes) < 1 && fwd == FALSE) ||
-				(contains(buf, '>', total_bytes) < 2 && fwd == TRUE )) {
+			while ( contains(buf, '>', total_bytes) < 1 ) {
 			   if (recv_uart_comm(uart_comm_fd, ((uint8_t*)buf) + total_bytes,
-			   		&cur_bytes, MAX_UART_LEN - total_bytes)) {
+					   &cur_bytes, MAX_UART_LEN - total_bytes)) {
 				return 0;
 			   }
 			   total_bytes += cur_bytes;
