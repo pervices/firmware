@@ -501,8 +501,8 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
 	// power off
 	} else {
-		// mute the board
-		strcpy(buf, "board -c a -m\r");
+		// kill the channel
+		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP cores
@@ -950,8 +950,8 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	} else {
 		rx_power[0] = PWR_OFF;
 
-		// mute the board
-		strcpy(buf, "board -c a -m\r");
+		// kill the channel
+		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP core
@@ -1331,8 +1331,8 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 
 	// power off
 	} else {
-		// mute the board
-		strcpy(buf, "board -c b -m\r");
+		// kill the channel
+		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
@@ -1760,8 +1760,8 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 	} else {
 		rx_power[1] = PWR_OFF;
 
-		// mute the board
-		strcpy(buf, "board -c b -m\r");
+		// kill the channel
+		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP core
@@ -2130,8 +2130,8 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 
 	// power off
 	} else {
-		// mute the board
-		strcpy(buf, "board -c c -m\r");
+		// kill the channel
+		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
@@ -2557,8 +2557,8 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 
 	// power off
 	} else {
-		// mute the board
-		strcpy(buf, "board -c c -m\r");
+		// kill the channel
+		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
@@ -2929,8 +2929,8 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 
 	// power off
 	} else {
-		// mute the board
-		strcpy(buf, "board -c d -m\r");
+		// kill the channel
+		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
@@ -3356,8 +3356,8 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 
 	// power off
 	} else {
-		// mute the board
-		strcpy(buf, "board -c d -m\r");
+		// kill the channel
+		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// diable the DSP cores
