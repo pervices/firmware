@@ -4132,8 +4132,8 @@ void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char*
 
 void sync_channels(uint8_t chan_mask) {
 
-    char* str_chan_mask = "";
-    sprintf(str_chan_mask, "%" PRIu8 "", chan_mask);
+    char str_chan_mask[MAX_PROP_LEN] = "chan_mask: ";
+    sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", chan_mask);
 
     /* Bring the ADCs & DACs into 'demo' mode for JESD */
 
