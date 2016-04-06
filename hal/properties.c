@@ -4140,24 +4140,30 @@ void sync_channels(uint8_t chan_mask) {
     // RX - ADCs
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
-    strcpy(buf, " -a 1\r");
+    strcat(buf, " -a 1\r");
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
     usleep(200000);
 
     // TX - DACs
-    //strcpy(buf, "power -c ");
-    //strcat(buf, str_chan_mask);
-    //strcpy(buf, " -d 1\r");
-    //send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-    //usleep(200000);
+    strcpy(buf, "power -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -d 1\r");
+    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+    usleep(200000);
 
     /* Initiate the SYSREF sequence for jesd
      * Set all boards' SYSREF detection gate to ON */
 
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
-    strcpy(buf, " -s 1\r");
+    strcat(buf, " -s 1\r");
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    usleep(200000);
+
+    strcat(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 1\r");
+    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
     usleep(200000);
 
     /* Trigger a SYSREF pulse */
@@ -4170,8 +4176,14 @@ void sync_channels(uint8_t chan_mask) {
 
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
-    strcpy(buf, " -s 0\r");
+    strcat(buf, " -s 0\r");
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    usleep(100000);
+
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 0\r");
+    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
     usleep(100000);
 
 }
