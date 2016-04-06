@@ -22,9 +22,9 @@
 #include "common.h"
 #include "comm_manager.h"
 
-#define UART_SYNTH  "/dev/ttyUSB2"
-#define UART_TX	    "/dev/ttyUSB1"
-#define UART_RX	    "/dev/ttyUSB0"
+#define UART_SYNTH  "/dev/ttycrimson-time"
+#define UART_TX	    "/dev/ttycrimson-tx"
+#define UART_RX	    "/dev/ttycrimson-rx"
 
 #define ARG_MCU_SILENT	"-s"
 #define ARG_MCU_CONSOLE	"-c"
