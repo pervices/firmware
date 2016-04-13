@@ -105,20 +105,21 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 //
 //	*reqFreq = mhzFreq * 1e5;
 
+	// Round to nearest 5 MHz
 	uint64_t mhzFreq = (*reqFreq / 1e6);
-	if ((mhzFreq % 10) > 4) {
-	    mhzFreq = mhzFreq / 10;
+	if ((mhzFreq % 5) > 2) {
+	    mhzFreq = mhzFreq / 5;
 	    mhzFreq = mhzFreq + 1;
-	    mhzFreq = mhzFreq * 10;
+	    mhzFreq = mhzFreq * 5;
 	} else {
-	    mhzFreq = mhzFreq / 10;
-	    mhzFreq = mhzFreq * 10;
+	    mhzFreq = mhzFreq / 5;
+	    mhzFreq = mhzFreq * 5;
 	}
 
-	* reqFreq = mhzFreq * 1e6;
+	*reqFreq = mhzFreq * 1e6;
 
     // Sanitize the input to be within range
-    if (*reqFreq > PLL1_RFOUT_MAX_HZ) 		*reqFreq = PLL1_RFOUT_MAX_HZ;
+    if (*reqFreq > PLL1_RFOUT_MAX_HZ) 		*reqFreq = 6000000000ULL;// PLL1_RFOUT_MAX_HZ;
     else if (*reqFreq < PLL1_RFOUT_MIN_HZ) 	*reqFreq = PLL1_RFOUT_MIN_HZ;
 
 	// Determine the VCO and Output Divider (d) values of PLL1
@@ -135,13 +136,13 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 //	pll1->N = N1;
 //	uint64_t pd_input = pll1->outFreq / pll1->N;
 
-	N1 = pll1->outFreq / 10000000;
+	N1 = *reqFreq / 5000000ULL;
 	pll1->N = N1;
 	uint64_t pd_input = pll1->outFreq / pll1->N;
 
 	// Calculate the necessary Reference Divider (R) value within the restrictions defined
 //	R1 = PLL1_REF_MAX_HZ / pd_input; // floor happens as its an integer operation
-	R1 = 1;
+	R1 = 65;
 
 	if (R1 > _PLL_RATS_MAX_DENOM) pll1->R = _PLL_RATS_MAX_DENOM;
 	else if (R1 < PLL1_R_MIN) pll1->R = PLL1_R_MIN;
@@ -163,7 +164,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 
 //    uint64_t N0 = 1;
 //    uint64_t R0 = PLL0_R_MIN;
-	uint64_t N0 = 150;
+	uint64_t N0 = 5;
 	uint64_t R0 = 1;
 
 	// Determine Best Configuration of PLL0 (VCOFreq, N, R, D)
@@ -182,7 +183,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
     // Assign the new N0 and R0 values to PLL0
     pll0->N = (uint32_t)N0;
     pll0->R = (uint16_t)R0;
-    pll0->d = (uint16_t)150;
+    pll0->d = (uint16_t)5;
 
     // Recalculate the VCO frequency as there is a dependency on N0/R0
     pll0->outFreq = round(((double)PLL_CORE_REF_FREQ_HZ * (double)pll0->N) / (double)pll0->R);
