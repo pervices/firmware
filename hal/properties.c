@@ -168,8 +168,8 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c a -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -534,8 +534,8 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c a -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -1007,8 +1007,8 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c b -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -1353,8 +1353,8 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c b -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -1806,8 +1806,8 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c c -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -2152,8 +2152,8 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c c -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -2605,8 +2605,8 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c d -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -2950,8 +2950,8 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 25MHz, mute the synthesizer chips
-	if ( freq < 25000000ULL ) {
+	// if freq is less than 55MHz, mute the synthesizer chips
+	if ( freq < 55000000ULL ) {
 		// Mute HMC833, and then 830
 		strcpy(buf, "rf -c d -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -4190,7 +4190,7 @@ void sync_channels(uint8_t chan_mask) {
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
-    
+
     // Send Reference to MCU ( No Need ATM since fixed reference )
     strcpy(buf, "rf -v ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference/1000)); // Send reference in kHz
@@ -4223,7 +4223,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(pll->outFreq)); // Send output frequency in kHz
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->outFreq / pll->d) / 1000)); // Send output frequency in kHz
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     usleep(100000);

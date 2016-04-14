@@ -214,16 +214,16 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
     PRINT( VERBOSE,"setFreq PLL1-VCO: %li, PLL1-D: %i.\n", pll1->outFreq, pll1->d);
 
     if (!pll_CheckParams(pll0, 0)) {
-        PRINT( ERROR, "BAD PLL SETTINGS: PLL0: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
-                pll0->N,
-                pll0->R,
-                pll0->d,
-                pll0->x2en,
-                pll0->outFreq);
+//        PRINT( ERROR, "BAD PLL SETTINGS: PLL0: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
+//                pll0->N,
+//                pll0->R,
+//                pll0->d,
+//                pll0->x2en,
+//                pll0->outFreq);
     }
 
     if (!pll_CheckParams(pll1, 1)) {
-        PRINT( ERROR, "BAD PLL SETTINGS: PLL0: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
+        PRINT( ERROR, "BAD PLL SETTINGS: PLL1: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
                 pll1->N,
                 pll1->R,
                 pll1->d,
@@ -243,7 +243,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 	double actual_output = (actual_reference * (double)pll1->N) / (double)pll1->R;
 
 	if (pll1->x2en)	actual_output *= 2.0;
-	else		actual_output /= (double)pll1->d;
+	//else		actual_output /= (double)pll1->d;
 
     return actual_output;
 };
@@ -553,7 +553,8 @@ void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pll, uint8_t is_pll1) {
     		    pll->d = 1;
     		    pll->outFreq = *reqFreq;
     		} else {
-    		    uint8_t D = PLL1_VCO_MIN_HZ / *reqFreq;
+    		    double D_float = (double)PLL1_VCO_MIN_HZ / (double)*reqFreq;
+    		    uint8_t D = ceil(D_float);
     		    //D += 1; // round up, safer
     		    //if ((D & 1) != 0) D += 1;
 		    {	// round up to nearest power of 2 (ADF4355/ADF5355)
