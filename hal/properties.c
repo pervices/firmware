@@ -168,10 +168,34 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c a -z\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF TXA on HPS
+		uint32_t old_val;
+
+		// disable DSP cores
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & (~0x100));
+
+		tx_power[0] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down TXA.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -526,10 +550,34 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c a -z\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF RXA on HPS
+		uint32_t old_val;
+
+		// disable DSP core
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & (~0x100));
+
+		rx_power[0] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down RXA.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -991,10 +1039,34 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c b -z\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF TXB on HPS
+		uint32_t old_val;
+
+		// disable the DSP cores
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & (~0x100));
+
+		tx_power[1] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down TXB.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -1311,7 +1383,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-		// diable the DSP cores
+		// disable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
 		write_hps_reg( "txb4", old_val | 0x2);
 
@@ -1329,10 +1401,34 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c b -z\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF RXB on HPS
+		uint32_t old_val;
+
+		// disable DSP core
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & (~0x100));
+
+		rx_power[1] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down RXB.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -1774,10 +1870,34 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c c -z\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF TXC on HPS
+		uint32_t old_val;
+
+		// disable the DSP cores
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & (~0x100));
+
+		tx_power[2] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down TXC.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -2094,7 +2214,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-		// diable the DSP cores
+		// disable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
 		write_hps_reg( "txc4", old_val | 0x2);
 
@@ -2112,10 +2232,34 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c c -z\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF RXC on HPS
+		uint32_t old_val;
+
+		// disable the DSP cores
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & (~0x100));
+
+		rx_power[2] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down RXC.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -2513,7 +2657,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
-		// diable the DSP cores
+		// disable the DSP cores
 		read_hps_reg ( "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val | 0x2);
 
@@ -2557,10 +2701,34 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c d -z\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF TXD on HPS
+		uint32_t old_val;
+
+		// disable the DSP cores
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & (~0x100));
+
+		tx_power[3] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down TXD.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -2877,7 +3045,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-		// diable the DSP cores
+		// disable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
 		write_hps_reg( "txd4", old_val | 0x2);
 
@@ -2894,10 +3062,34 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
+	// if freq = 0, mute PLL
+	if ( freq == 0 ) {
+		strcpy(buf, "rf -c d -z\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		return RETURN_SUCCESS;
+	}
+
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+		// Turn OFF RXD on HPS
+		uint32_t old_val;
+
+		// disable the DSP cores
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x2);
+
+		// disable 10G transmission
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & (~0x100));
+
+		rx_power[3] = PWR_OFF;
+
+		PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: Shutting Down RXD.\n");
+
 		return RETURN_ERROR;
 	}
 
@@ -3296,7 +3488,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
-		// diable the DSP cores
+		// disable the DSP cores
 		read_hps_reg ( "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val | 0x2);
 
