@@ -168,12 +168,11 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c a -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
@@ -534,12 +533,11 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c a -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
@@ -1007,12 +1005,11 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c b -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
@@ -1353,12 +1350,11 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c b -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
@@ -1806,12 +1802,11 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c c -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
@@ -2152,12 +2147,11 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c c -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
@@ -2605,12 +2599,11 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c d -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
@@ -2950,12 +2943,11 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	uint64_t freq;
 	sscanf(data, "%"SCNd64"", &freq);
 
-	// if freq is less than 55MHz, mute the synthesizer chips
-	if ( freq < 55000000ULL ) {
-		// Mute HMC833, and then 830
-		strcpy(buf, "rf -c d -z\r");
+	// if freq is less than 53MHz, kill the channel
+	if ( freq < 53000000ULL ) {
+		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		return RETURN_SUCCESS;
+		return RETURN_ERROR;
 	}
 
 	// run the pll calc algorithm
