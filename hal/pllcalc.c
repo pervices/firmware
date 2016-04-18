@@ -136,13 +136,21 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1) {
 //	pll1->N = N1;
 //	uint64_t pd_input = pll1->outFreq / pll1->N;
 
-	N1 = *reqFreq / 5000000ULL;
+	if (*reqFreq < 115000000ULL) {
+		N1 = *reqFreq / 1000000ULL;		// To circumvent min N of 23
+	} else {
+		N1 = *reqFreq / 5000000ULL;
+	}
 	pll1->N = N1;
 	uint64_t pd_input = pll1->outFreq / pll1->N;
 
 	// Calculate the necessary Reference Divider (R) value within the restrictions defined
 //	R1 = PLL1_REF_MAX_HZ / pd_input; // floor happens as its an integer operation
-	R1 = 65;
+	if (*reqFreq < 115000000ULL) {
+		R1 = 325;						// To circumvent min N of 23
+	} else {
+		R1 = 65;
+	}
 
 	if (R1 > _PLL_RATS_MAX_DENOM) pll1->R = _PLL_RATS_MAX_DENOM;
 	else if (R1 < PLL1_R_MIN) pll1->R = PLL1_R_MIN;
