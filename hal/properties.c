@@ -4288,7 +4288,7 @@ void sync_channels(uint8_t chan_mask) {
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
     usleep(200000);
 
-    strcat(buf, "board -c ");
+    strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 1\r");
     send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
