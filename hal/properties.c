@@ -495,7 +495,6 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -958,7 +957,6 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1357,7 +1355,6 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1800,7 +1797,6 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2188,7 +2184,6 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2631,7 +2626,6 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -3019,7 +3013,6 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -3462,7 +3455,6 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 
       // send sync pulse
       sync_channels(15);
-      usleep(250000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -4270,14 +4262,12 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, str_chan_mask);
     strcat(buf, " -a 1\r");
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-    usleep(200000);
 
     // TX - DACs
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -d 1\r");
     send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-    usleep(200000);
 
     /* Initiate the SYSREF sequence for jesd
      * Set all boards' SYSREF detection gate to ON */
@@ -4286,16 +4276,15 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 1\r");
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-    usleep(200000);
 
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 1\r");
     send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-    usleep(200000);
 
     /* Trigger a SYSREF pulse */
 
+    usleep(200000);		// Some wait time for MCUs to be ready
     strcpy(buf, "clk -y -y -y\r");
     send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
     usleep(200000);
@@ -4306,13 +4295,11 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 0\r");
     send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-    usleep(100000);
 
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 0\r");
     send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-    usleep(100000);
 
 }
 
