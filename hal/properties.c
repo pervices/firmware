@@ -454,7 +454,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -465,7 +465,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -836,7 +836,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -847,7 +847,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1208,7 +1208,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1219,7 +1219,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1570,7 +1570,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1581,7 +1581,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1931,7 +1931,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1942,7 +1942,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2293,7 +2293,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2304,7 +2304,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2654,7 +2654,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2665,7 +2665,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -3016,7 +3016,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      sleep(2);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -3027,7 +3027,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	sleep(2);
+	usleep(200000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
