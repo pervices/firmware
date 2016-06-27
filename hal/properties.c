@@ -485,7 +485,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c a -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-      usleep(250000);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -947,7 +947,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
       // board command
 		strcpy(buf, "board -c a -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-      usleep(250000);
+      usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1345,7 +1345,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c b -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(250000);
+		usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1787,7 +1787,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c b -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(250000);
+		usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2174,7 +2174,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c c -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(250000);
+		usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2616,7 +2616,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c c -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(250000);
+		usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -3003,7 +3003,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c d -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(250000);
+		usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -3445,7 +3445,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c d -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(250000);
+		usleep(200000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -4284,10 +4284,10 @@ void sync_channels(uint8_t chan_mask) {
 
     /* Trigger a SYSREF pulse */
 
-    usleep(200000);		// Some wait time for MCUs to be ready
+    usleep(100000);		// Some wait time for MCUs to be ready
     strcpy(buf, "clk -y -y -y\r");
     send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-    usleep(200000);
+    usleep(100000);
 
     /* Turn off all boards' SYSREF detection gates */
 
