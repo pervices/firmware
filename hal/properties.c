@@ -447,9 +447,14 @@ static int hdlr_tx_a_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_power[0]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  tx_stream[0]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (tx_stream[0] == 0))	return RETURN_SUCCESS;
+	if (stream == tx_stream[0]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -462,6 +467,9 @@ static int hdlr_tx_a_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[0+4], old_val & (~0x2));
 
 			tx_stream[0] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP cores
@@ -867,9 +875,14 @@ static int hdlr_rx_a_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_power[0]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  rx_stream[0]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (rx_stream[0] == 0))	return RETURN_SUCCESS;
+	if (stream == rx_stream[0]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -882,6 +895,9 @@ static int hdlr_rx_a_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[0], old_val & (~0x2));
 
 			rx_stream[0] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP core
@@ -1277,9 +1293,14 @@ static int hdlr_tx_b_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_power[1]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  tx_stream[1]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (tx_stream[1] == 0))	return RETURN_SUCCESS;
+	if (stream == tx_stream[1]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -1292,6 +1313,9 @@ static int hdlr_tx_b_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[1+4], old_val & (~0x2));
 
 			tx_stream[1] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP cores
@@ -1677,9 +1701,14 @@ static int hdlr_rx_b_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_power[1]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  rx_stream[1]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (rx_stream[1] == 0))	return RETURN_SUCCESS;
+	if (stream == rx_stream[1]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -1692,6 +1721,9 @@ static int hdlr_rx_b_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[1], old_val & (~0x2));
 
 			rx_stream[1] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP core
@@ -2076,9 +2108,14 @@ static int hdlr_tx_c_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_power[2]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  tx_stream[2]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (tx_stream[2] == 0))	return RETURN_SUCCESS;
+	if (stream == tx_stream[2]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -2091,6 +2128,9 @@ static int hdlr_tx_c_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[2+4], old_val & (~0x2));
 
 			tx_stream[2] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP cores
@@ -2476,9 +2516,14 @@ static int hdlr_rx_c_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_power[2]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  rx_stream[2]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (rx_stream[2] == 0))	return RETURN_SUCCESS;
+	if (stream == rx_stream[2]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -2491,6 +2536,9 @@ static int hdlr_rx_c_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[2], old_val & (~0x2));
 
 			rx_stream[2] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP core
@@ -2875,9 +2923,14 @@ static int hdlr_tx_d_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_power[3]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  tx_stream[3]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (tx_stream[3] == 0))	return RETURN_SUCCESS;
+	if (stream == tx_stream[3]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -2890,6 +2943,9 @@ static int hdlr_tx_d_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[3+4], old_val & (~0x2));
 
 			tx_stream[3] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP cores
@@ -3275,9 +3331,14 @@ static int hdlr_rx_d_stream (const char* data, char* ret) {
 	uint8_t stream;
 	sscanf(data, "%"SCNd8"", &stream);
 
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_power[3]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
 	// Stream is already ON or OFF then return
-	if ((stream >  0) &&  rx_stream[3]) 		return RETURN_SUCCESS;
-	if ((stream == 0) && (rx_stream[3] == 0))	return RETURN_SUCCESS;
+	if (stream == rx_stream[3]) return RETURN_SUCCESS;
 
 	// Otherwise make the change accordingly
 	if (stream > 0) {	// TURN THE STREAM ON
@@ -3290,6 +3351,9 @@ static int hdlr_rx_d_stream (const char* data, char* ret) {
 			write_hps_reg( reg4[3], old_val & (~0x2));
 
 			rx_stream[3] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP core
