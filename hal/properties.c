@@ -449,7 +449,7 @@ static int hdlr_tx_a_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", tx_power[0]);	// Alert File Tree
+		sprintf(ret, "%u", tx_stream[0]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -877,7 +877,7 @@ static int hdlr_rx_a_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", rx_power[0]);	// Alert File Tree
+		sprintf(ret, "%u", rx_stream[0]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -1295,7 +1295,7 @@ static int hdlr_tx_b_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", tx_power[1]);	// Alert File Tree
+		sprintf(ret, "%u", tx_stream[1]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -1703,7 +1703,7 @@ static int hdlr_rx_b_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", rx_power[1]);	// Alert File Tree
+		sprintf(ret, "%u", rx_stream[1]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -2110,7 +2110,7 @@ static int hdlr_tx_c_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", tx_power[2]);	// Alert File Tree
+		sprintf(ret, "%u", tx_stream[2]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -2518,7 +2518,7 @@ static int hdlr_rx_c_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", rx_power[2]);	// Alert File Tree
+		sprintf(ret, "%u", rx_stream[2]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -2925,7 +2925,7 @@ static int hdlr_tx_d_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", tx_power[3]);	// Alert File Tree
+		sprintf(ret, "%u", tx_stream[3]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -3333,7 +3333,7 @@ static int hdlr_rx_d_stream (const char* data, char* ret) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", rx_power[3]);	// Alert File Tree
+		sprintf(ret, "%u", rx_stream[3]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
