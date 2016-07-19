@@ -140,17 +140,18 @@ static int hdlr_invalid (const char* data, char* ret) {
 }
 
 static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -368,24 +369,26 @@ static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_tx_a_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txa0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txa0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
@@ -765,24 +768,26 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_rx_a_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxa0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxa0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
@@ -981,17 +986,18 @@ static int hdlr_rx_sync (const char* data, char* ret) {
 }
 
 static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1209,24 +1215,26 @@ static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_tx_b_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txb0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txb0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
@@ -1586,24 +1594,26 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_rx_b_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxb0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxb0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
@@ -1782,17 +1792,18 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2010,24 +2021,26 @@ static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_tx_c_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txc0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txc0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
@@ -2387,24 +2400,26 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_rx_c_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxc0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxc0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
@@ -2583,17 +2598,18 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 1 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2812,24 +2828,26 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_tx_d_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txd0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txd0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
@@ -3189,24 +3207,26 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 }
 
 static int hdlr_rx_d_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxd0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxd0", nco_steps);
+	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
 
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
