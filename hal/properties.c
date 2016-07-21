@@ -140,16 +140,16 @@ static int hdlr_invalid (const char* data, char* ret) {
 static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret) {
 	double freq;
 	sscanf(data, "%lf", &freq);
-	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
 	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "dac -c a -e 0 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1012,16 +1012,16 @@ static int hdlr_rx_sync (const char* data, char* ret) {
 static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret) {
 	double freq;
 	sscanf(data, "%lf", &freq);
-	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
 	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "dac -c b -e 1 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1844,16 +1844,16 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret) {
 	double freq;
 	sscanf(data, "%lf", &freq);
-	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
 	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "dac -c c -e 0 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2676,16 +2676,16 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret) {
 	double freq;
 	sscanf(data, "%lf", &freq);
-	uint32_t nco_steps = (uint32_t)round(freq * DAC_NCO_CONST);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
 	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "dac -c d -e 1 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps); //(uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", nco_steps);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
