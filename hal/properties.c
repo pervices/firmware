@@ -201,9 +201,8 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c a -p 0\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -211,7 +210,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
 
 //	// extract pllX variables and pass to MCU
 //	// HMC830
@@ -584,9 +583,8 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c a -p 0\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -594,7 +592,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
 
 //	// extract pllX variables and pass to MCU
 //	// HMC830
@@ -1075,9 +1073,8 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c b -p 0\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -1085,7 +1082,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_tx_fd, (uint64_t)325000000, &pll);
 
 //	// extract pllX variables and pass to MCU
 //	// HMC830
@@ -1438,9 +1435,8 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c b -p 0\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -1448,7 +1444,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
 
 //	// extract pllX variables and pass to MCU
 //	// HMC830
@@ -1909,9 +1905,8 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c c -p 0\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -1919,7 +1914,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
 
 //	// extract pllX variables and pass to MCU
 //	// HMC830
@@ -2272,9 +2267,8 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c c -p 0\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -2282,7 +2276,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
 
 	// extract pllX variables and pass to MCU
 	// HMC830
@@ -2743,9 +2737,8 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c d -p 0\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -2753,7 +2746,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
 
 //	// extract pllX variables and pass to MCU
 //	// HMC830
@@ -3105,9 +3098,8 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	}
 
 	// run the pll calc algorithm
-	pllparam_t pll0;
-	pllparam_t pll1;
-	double outfreq = setFreq(&freq, &pll0, &pll1);
+	pllparam_t pll;
+	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c d -p 0\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -3115,7 +3107,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, pll0.outFreq / pll0.d, &pll1);
+	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
 
 //	// extract pllX variables and pass to MCU
 //	// HMC830
@@ -4352,7 +4344,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
 
     // write ADF4355/ADF5355 Output RF Power
     strcpy(buf, "rf -g ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", 3 /*pll->power*/);    // default to highest power
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);    // default to lower mid power
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 

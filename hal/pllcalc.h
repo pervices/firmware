@@ -30,7 +30,11 @@
 
 #include <stdlib.h>
 #include "math.h"
+
+//#define _PLL_DEBUG_STANDALONE
+#ifndef _PLL_DEBUG_STANDALONE
 #include "common.h"
+#endif
 
 //PLL Calculator Parameters
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to 
@@ -47,25 +51,11 @@
 //Core reference feeds to PLL0
 #define PLL_CORE_REF_FREQ_HZ	325000000ULL
 
-//HMC830 PLL Specifications
-#define PLL0_RFOUT_MAX_HZ	3000000000ULL
-#define PLL0_RFOUT_MIN_HZ	10000000ULL
-#define PLL0_VCO_MIN_HZ		1500000000ULL
-#define PLL0_VCO_MAX_HZ		3000000000ULL
-#define PLL0_PD_MIN_HZ		0	// DC Value
-#define PLL0_PD_MAX_HZ		50000000ULL
-#define PLL0_N_MIN		16
-#define PLL0_N_MAX		7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255
-#define PLL0_R_MIN		2
-#define PLL0_DIV_STEPS		2
-#define PLL0_DIV_MAX		62
-#define PLL0_DIV_MIN		2
-
-//HMC833 PLL Specifications
+//ADF4355 PLL Specifications
 #define PLL1_REF_MAX_HZ		600000000ULL // Have to change Reg08h[21] of HMC833 if higher (upto 350MHz) necessary
 #define PLL1_REF_MIN_HZ		10000000ULL
 #define PLL1_REF_DEFAULT	10000000ULL
-#define PLL1_RFOUT_MAX_HZ	13600000000ULL
+#define PLL1_RFOUT_MAX_HZ	6800000000ULL
 #define PLL1_RFOUT_MIN_HZ	54000000ULL
 #define PLL1_VCO_MIN_HZ		3400000000ULL
 #define PLL1_VCO_MAX_HZ		6800000000ULL
@@ -79,6 +69,13 @@
 #define PLL1_DIV_MIN		1
 
 #define PLL_PARAM_GOOD		0
+
+// ADF4355 Default specs
+#define PLL1_R_DEFAULT		( 1 )		// R value (we aim to minimize this)
+#define PLL1_N_DEFAULT		( 376 )         // N value (N^2 contribution to PLL noise) [16..4096]
+#define PLL1_D_DEFAULT		( 8 )		// RFoutput divider value (1,2,4,6..58,60,62)
+#define PLL1_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
+#define PLL1_OUTFREQ_DEFAULT	( 470000000 )	// Resulting VCO Output Frequency
 
 /*
 
@@ -102,10 +99,10 @@
 } pllparam_t;
 
 // Set Output Frequency
-double setFreq(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1); //Returns the actual frequency set.
+double setFreq(uint64_t* reqFreq, pllparam_t* pll1); //Returns the actual frequency set.
 
 // Determine PLL1 Reference frequency (and ensuring it falls within an acceptable range)
-void pll_RefCalc(uint64_t* reqFreq, pllparam_t* pll0, pllparam_t* pll1);
+void pll_RefCalc(uint64_t* reqFreq, pllparam_t* pll1);
 
 // Return Rational approximation
 void rat_approx(double f, uint64_t md, uint64_t* num, uint64_t* denom);
@@ -118,9 +115,6 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1);
 
 // Determine the VCO and Output Settings of the PLL
 void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pllparam, uint8_t is_pll1);
-
-// Only for PLL0; Determine Best VCOFreq, N, R & D configuration
-void pll_SetVCO_PLL0(uint64_t* reqFreq, pllparam_t* pllparam, uint64_t* N, uint64_t* R);
 
 // Determine the best value for PLL1.N
 uint8_t pll_NCalc(uint64_t* reqFreq, pllparam_t* pll1, uint64_t* N);
