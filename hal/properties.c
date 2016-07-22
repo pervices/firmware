@@ -33,6 +33,9 @@
 #define PWR_ON	1
 #define PWR_OFF	0
 
+#define STREAM_ON	1
+#define STREAM_OFF	0
+
 #define FREQ_XOVER_PNT 100000000	// 100 MHz is the crossover frequency for high and low band
 
 #define NUM_CHANNELS 4
@@ -47,6 +50,8 @@ static char buf[MAX_PROP_LEN] = {};
 // by default the board is powered off
 static uint8_t rx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 static uint8_t tx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+static uint8_t rx_stream[] = {STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF};
+static uint8_t tx_stream[] = {STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF};
 const static char* reg4[] = {"rxa4", "rxb4", "rxc4", "rxd4", "txa4", "txb4", "txc4", "txd4"};
 static int i_bias[] = {17, 17, 17, 17};
 static int q_bias[] = {17, 17, 17, 17};
@@ -467,6 +472,50 @@ static int hdlr_tx_a_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txa5", port);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_stream[0]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == tx_stream[0]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (tx_power[0] == PWR_ON) {
+			read_hps_reg ( reg4[0+4], &old_val);
+			write_hps_reg( reg4[0+4], old_val | 0x100);
+
+			read_hps_reg ( reg4[0+4], &old_val);
+			write_hps_reg( reg4[0+4], old_val | 0x2);
+			write_hps_reg( reg4[0+4], old_val & (~0x2));
+
+			tx_stream[0] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP cores
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & (~0x100));
+
+		tx_stream[0] = STREAM_OFF;
+	}
+
 	return RETURN_SUCCESS;
 }
 
@@ -933,6 +982,50 @@ static int hdlr_rx_a_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_a_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[0]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[0]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[0] == PWR_ON) {
+			read_hps_reg ( reg4[0], &old_val);
+			write_hps_reg( reg4[0], old_val | 0x100);
+
+			read_hps_reg ( reg4[0], &old_val);
+			write_hps_reg( reg4[0], old_val | 0x2);
+			write_hps_reg( reg4[0], old_val & (~0x2));
+
+			rx_stream[0] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & (~0x100));
+
+		rx_stream[0] = STREAM_OFF;
+	}
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -1330,6 +1423,50 @@ static int hdlr_tx_b_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txb5", port);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_stream[1]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == tx_stream[1]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (tx_power[1] == PWR_ON) {
+			read_hps_reg ( reg4[1+4], &old_val);
+			write_hps_reg( reg4[1+4], old_val | 0x100);
+
+			read_hps_reg ( reg4[1+4], &old_val);
+			write_hps_reg( reg4[1+4], old_val | 0x2);
+			write_hps_reg( reg4[1+4], old_val & (~0x2));
+
+			tx_stream[1] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP cores
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & (~0x100));
+
+		tx_stream[1] = STREAM_OFF;
+	}
+
 	return RETURN_SUCCESS;
 }
 
@@ -1776,6 +1913,50 @@ static int hdlr_rx_b_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_b_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[1]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[1]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[1] == PWR_ON) {
+			read_hps_reg ( reg4[1], &old_val);
+			write_hps_reg( reg4[1], old_val | 0x100);
+
+			read_hps_reg ( reg4[1], &old_val);
+			write_hps_reg( reg4[1], old_val | 0x2);
+			write_hps_reg( reg4[1], old_val & (~0x2));
+
+			rx_stream[1] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & (~0x100));
+
+		rx_stream[1] = STREAM_OFF;
+	}
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -2162,6 +2343,50 @@ static int hdlr_tx_c_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txc5", port);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_stream[2]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == tx_stream[2]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (tx_power[2] == PWR_ON) {
+			read_hps_reg ( reg4[2+4], &old_val);
+			write_hps_reg( reg4[2+4], old_val | 0x100);
+
+			read_hps_reg ( reg4[2+4], &old_val);
+			write_hps_reg( reg4[2+4], old_val | 0x2);
+			write_hps_reg( reg4[2+4], old_val & (~0x2));
+
+			tx_stream[2] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP cores
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & (~0x100));
+
+		tx_stream[2] = STREAM_OFF;
+	}
+
 	return RETURN_SUCCESS;
 }
 
@@ -2608,6 +2833,50 @@ static int hdlr_rx_c_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_c_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[2]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[2]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[2] == PWR_ON) {
+			read_hps_reg ( reg4[2], &old_val);
+			write_hps_reg( reg4[2], old_val | 0x100);
+
+			read_hps_reg ( reg4[2], &old_val);
+			write_hps_reg( reg4[2], old_val | 0x2);
+			write_hps_reg( reg4[2], old_val & (~0x2));
+
+			rx_stream[2] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & (~0x100));
+
+		rx_stream[2] = STREAM_OFF;
+	}
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -2994,6 +3263,50 @@ static int hdlr_tx_d_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txd5", port);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", tx_stream[3]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == tx_stream[3]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (tx_power[3] == PWR_ON) {
+			read_hps_reg ( reg4[3+4], &old_val);
+			write_hps_reg( reg4[3+4], old_val | 0x100);
+
+			read_hps_reg ( reg4[3+4], &old_val);
+			write_hps_reg( reg4[3+4], old_val | 0x2);
+			write_hps_reg( reg4[3+4], old_val & (~0x2));
+
+			tx_stream[3] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP cores
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & (~0x100));
+
+		tx_stream[3] = STREAM_OFF;
+	}
+
 	return RETURN_SUCCESS;
 }
 
@@ -3437,6 +3750,50 @@ static int hdlr_rx_d_link_mac_dest (const char* data, char* ret) {
 		mac, mac+1, mac+2, mac+3, mac+4, mac+5);
 	write_hps_reg( "rxd6", (mac[0] << 8) | (mac[1]) );
 	write_hps_reg( "rxd7", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_d_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[3]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[3]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[3] == PWR_ON) {
+			read_hps_reg ( reg4[3], &old_val);
+			write_hps_reg( reg4[3], old_val | 0x100);
+
+			read_hps_reg ( reg4[3], &old_val);
+			write_hps_reg( reg4[3], old_val | 0x2);
+			write_hps_reg( reg4[3], old_val & (~0x2));
+
+			rx_stream[3] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & (~0x100));
+
+		rx_stream[3] = STREAM_OFF;
+	}
+
 	return RETURN_SUCCESS;
 }
 
@@ -3920,6 +4277,7 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 // Beginning of property table
 static prop_t property_table[] = {
 	{"tx_a/pwr", hdlr_tx_a_pwr, RW, "0"},
+	{"tx_a/stream", hdlr_tx_a_stream, RW, "0"},
 	{"tx_a/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_a/rf/dac/nco", hdlr_tx_a_rf_dac_nco, RW, "15000000"},
 	{"tx_a/rf/dac/temp", hdlr_tx_a_rf_dac_temp, RW, "0"},
@@ -3944,6 +4302,7 @@ static prop_t property_table[] = {
 	{"tx_a/link/iface", hdlr_tx_a_link_iface, RW, "sfpa"},
 	{"tx_a/link/port", hdlr_tx_a_link_port, RW, "42824"},
 	{"rx_a/pwr", hdlr_rx_a_pwr, RW, "0"},
+	{"rx_a/stream", hdlr_rx_a_stream, RW, "0"},
 	{"rx_a/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_a/rf/freq/val", hdlr_rx_a_rf_freq_val, RW, "0"},
 	{"rx_a/rf/freq/lna", hdlr_rx_a_rf_freq_lna, RW, "0"},
@@ -3970,6 +4329,7 @@ static prop_t property_table[] = {
 	{"rx_a/link/ip_dest", hdlr_rx_a_link_ip_dest, RW, "10.10.10.10"},
 	{"rx_a/link/mac_dest", hdlr_rx_a_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
 	{"tx_b/pwr", hdlr_tx_b_pwr, RW, "0"},
+	{"tx_b/stream", hdlr_tx_b_stream, RW, "0"},
 	{"tx_b/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_b/rf/dac/nco", hdlr_tx_b_rf_dac_nco, RW, "15000000"},
 	{"tx_b/rf/dac/temp", hdlr_tx_b_rf_dac_temp, RW, "0"},
@@ -3994,6 +4354,7 @@ static prop_t property_table[] = {
 	{"tx_b/link/iface", hdlr_tx_b_link_iface, RW, "sfpb"},
 	{"tx_b/link/port", hdlr_tx_b_link_port, RW, "42825"},
 	{"rx_b/pwr", hdlr_rx_b_pwr, RW, "0"},
+	{"rx_b/stream", hdlr_rx_b_stream, RW, "0"},
 	{"rx_b/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_b/rf/freq/val", hdlr_rx_b_rf_freq_val, RW, "0"},
 	{"rx_b/rf/freq/lna", hdlr_rx_b_rf_freq_lna, RW, "0"},
@@ -4020,6 +4381,7 @@ static prop_t property_table[] = {
 	{"rx_b/link/ip_dest", hdlr_rx_b_link_ip_dest, RW, "10.10.11.10"},
 	{"rx_b/link/mac_dest", hdlr_rx_b_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
 	{"tx_c/pwr", hdlr_tx_c_pwr, RW, "0"},
+	{"tx_c/stream", hdlr_tx_c_stream, RW, "0"},
 	{"tx_c/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_c/rf/dac/nco", hdlr_tx_c_rf_dac_nco, RW, "15000000"},
 	{"tx_c/rf/dac/temp", hdlr_tx_c_rf_dac_temp, RW, "0"},
@@ -4044,6 +4406,7 @@ static prop_t property_table[] = {
 	{"tx_c/link/iface", hdlr_tx_c_link_iface, RW, "sfpa"},
 	{"tx_c/link/port", hdlr_tx_c_link_port, RW, "42826"},
 	{"rx_c/pwr", hdlr_rx_c_pwr, RW, "0"},
+	{"rx_c/stream", hdlr_rx_c_stream, RW, "0"},
 	{"rx_c/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_c/rf/freq/val", hdlr_rx_c_rf_freq_val, RW, "0"},
 	{"rx_c/rf/freq/lna", hdlr_rx_c_rf_freq_lna, RW, "0"},
@@ -4070,6 +4433,7 @@ static prop_t property_table[] = {
 	{"rx_c/link/ip_dest", hdlr_rx_c_link_ip_dest, RW, "10.10.10.10"},
 	{"rx_c/link/mac_dest", hdlr_rx_c_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
 	{"tx_d/pwr", hdlr_tx_d_pwr, RW, "0"},
+	{"tx_d/stream", hdlr_tx_d_stream, RW, "0"},
 	{"tx_d/sync", hdlr_tx_sync, WO, "0"},	
 	{"tx_d/rf/dac/nco", hdlr_tx_d_rf_dac_nco, RW, "15000000"},
 	{"tx_d/rf/dac/temp", hdlr_tx_d_rf_dac_temp, RW, "0"},
@@ -4094,6 +4458,7 @@ static prop_t property_table[] = {
 	{"tx_d/link/iface", hdlr_tx_d_link_iface, RW, "sfpb"},
 	{"tx_d/link/port", hdlr_tx_d_link_port, RW, "42827"},
 	{"rx_d/pwr", hdlr_rx_d_pwr, RW, "0"},
+	{"rx_d/stream", hdlr_rx_d_stream, RW, "0"},
 	{"rx_d/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_d/rf/freq/val", hdlr_rx_d_rf_freq_val, RW, "0"},
 	{"rx_d/rf/freq/lna", hdlr_rx_d_rf_freq_lna, RW, "0"},
