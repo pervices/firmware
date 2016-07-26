@@ -286,7 +286,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 	*reqFreq = temp;
 
 
-	double actual_reference = (double)(uint64_t)PLL_CORE_REF_FREQ_HZ;
+	//double actual_reference = (double)(uint64_t)PLL_CORE_REF_FREQ_HZ;
 
 	double actual_output = (double)pll->outFreq / (double)pll->d;
 
