@@ -4507,6 +4507,7 @@ static prop_t property_table[] = {
 	{"fpga/board/jesd_sync", hdlr_fpga_board_jesd_sync, WO, "0"},
 	{"fpga/board/fw_rst", hdlr_fpga_board_fw_rst, WO, "0"},
 	{"fpga/board/sys_rstreq", hdlr_fpga_board_sys_rstreq, WO, "0"},
+	{"fpga/about/name", hdlr_invalid, RO, "crimson_tng"},
 	{"fpga/about/id", hdlr_fpga_about_id, RW, "001"},
 	{"fpga/about/serial", hdlr_invalid, RO, "001"},
 	{"fpga/about/fw_ver", hdlr_fpga_about_fw_ver, RW, VERSION},
