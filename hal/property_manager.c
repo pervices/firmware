@@ -215,6 +215,10 @@ void check_property_inotifies(void) {
 
 			PRINT( DEBUG,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
 			prop -> handler(prop_data, prop_ret);
+			if (prop->permissions == RO) {
+				memset(prop_ret, 0, sizeof(prop_ret));
+				sprintf(prop_ret, "%s", prop->def_val);
+			}
 
 			// if the return value didn't change, don't write to file again
 			if ( strcmp(prop_ret, prop_data) != 0) {
