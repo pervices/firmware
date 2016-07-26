@@ -4522,7 +4522,7 @@ static prop_t property_table[] = {
 	{"fpga/link/sfpb/ver", hdlr_fpga_link_sfpb_ver, RW, "0"},
 	{"fpga/link/sfpb/pay_len", hdlr_fpga_link_sfpb_pay_len, RW, "1400"},
 	{"fpga/link/net/dhcp_en", hdlr_fpga_link_net_dhcp_en, RW, "0"},
-	{"fpga/link/net/hostname", hdlr_fpga_link_net_hostname, RW, "crimson"},
+	{"fpga/link/net/hostname", hdlr_fpga_link_net_hostname, RW, "crimson_tng"},
 	{"fpga/link/net/ip_addr", hdlr_fpga_link_net_ip_addr, RW, "192.168.10.2"},
 	{"save_config", hdlr_save_config, RW, "/home/root/profile.cfg"},
 	{"load_config", hdlr_load_config, RW, "/home/root/profile.cfg"},
