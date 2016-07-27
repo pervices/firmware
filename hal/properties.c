@@ -388,7 +388,11 @@ static int hdlr_tx_a_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "txa0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
@@ -787,7 +791,11 @@ static int hdlr_rx_a_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "rxa0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
@@ -1234,7 +1242,11 @@ static int hdlr_tx_b_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "txb0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
@@ -1613,7 +1625,11 @@ static int hdlr_rx_b_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "rxb0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
@@ -2040,7 +2056,11 @@ static int hdlr_tx_c_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "txc0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
@@ -2419,7 +2439,11 @@ static int hdlr_rx_c_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "rxc0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
@@ -2847,7 +2871,11 @@ static int hdlr_tx_d_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "txd0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
@@ -3226,7 +3254,11 @@ static int hdlr_rx_d_dsp_nco_adj (const char* data, char* ret) {
 	// write NCO adj
 	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "rxd0", nco_steps);
-	sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
