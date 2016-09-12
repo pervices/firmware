@@ -322,13 +322,13 @@ static int hdlr_tx_a_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor;
+	double base_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
@@ -337,6 +337,11 @@ static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 	read_hps_reg(  "txa4", &old_val);
 	write_hps_reg( "txa4", old_val & ~(1 << 15));
 	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "txa4", &old_val);
+	write_hps_reg( "txa4", old_val |  0x2);
+	write_hps_reg( "txa4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -658,21 +663,26 @@ static int hdlr_rx_a_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
-   double rate;
-   sscanf(data, "%lf", &rate);
+	uint16_t base_factor;
+	double base_err;
+	double rate;
+	sscanf(data, "%lf", &rate);
 
-   // get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	// get the error for base rate
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
-   // set the appropriate sample rate
-   memset(ret, 0, MAX_PROP_LEN);
+	// set the appropriate sample rate
+	memset(ret, 0, MAX_PROP_LEN);
 
-   write_hps_reg( "rxa1", base_factor);
-   read_hps_reg(  "rxa4", &old_val);
-   write_hps_reg( "rxa4", old_val & ~(1 << 15));
-   sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "rxa1", base_factor);
+	read_hps_reg(  "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val & ~(1 << 15));
+	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val |  0x2);
+	write_hps_reg( "rxa4", old_val & ~0x2);
 
    return RETURN_SUCCESS;
 }
@@ -1072,13 +1082,13 @@ static int hdlr_tx_b_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor;
+	double base_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
@@ -1087,6 +1097,11 @@ static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 	read_hps_reg(  "txb4", &old_val);
 	write_hps_reg( "txb4", old_val & ~(1 << 15));
 	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "txb4", &old_val);
+	write_hps_reg( "txb4", old_val |  0x2);
+	write_hps_reg( "txb4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -1388,13 +1403,13 @@ static int hdlr_rx_b_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor;
+	double base_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
@@ -1403,6 +1418,11 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 	read_hps_reg(  "rxb4", &old_val);
 	write_hps_reg( "rxb4", old_val & ~(1 << 15));
 	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "rxb4", &old_val);
+	write_hps_reg( "rxb4", old_val |  0x2);
+	write_hps_reg( "rxb4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -1782,13 +1802,13 @@ static int hdlr_tx_c_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor;
+	double base_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
@@ -1797,6 +1817,11 @@ static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 	read_hps_reg(  "txc4", &old_val);
 	write_hps_reg( "txc4", old_val & ~(1 << 15));
 	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "txc4", &old_val);
+	write_hps_reg( "txc4", old_val |  0x2);
+	write_hps_reg( "txc4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -2098,13 +2123,13 @@ static int hdlr_rx_c_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor;
+	double base_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
@@ -2113,6 +2138,11 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 	read_hps_reg(  "rxc4", &old_val);
 	write_hps_reg( "rxc4", old_val & ~(1 << 15));
 	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "rxc4", &old_val);
+	write_hps_reg( "rxc4", old_val |  0x2);
+	write_hps_reg( "rxc4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -2492,13 +2522,13 @@ static int hdlr_tx_d_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor;
+	double base_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
@@ -2507,6 +2537,11 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 	read_hps_reg(  "txd4", &old_val);
 	write_hps_reg( "txd4", old_val & ~(1 << 15));
 	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "txd4", &old_val);
+	write_hps_reg( "txd4", old_val |  0x2);
+	write_hps_reg( "txd4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -2808,13 +2843,13 @@ static int hdlr_rx_d_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor;
+	double base_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
@@ -2823,6 +2858,11 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 	read_hps_reg(  "rxd4", &old_val);
 	write_hps_reg( "rxd4", old_val & ~(1 << 15));
 	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+
+	// DSP Reset
+	read_hps_reg(  "rxd4", &old_val);
+	write_hps_reg( "rxd4", old_val |  0x2);
+	write_hps_reg( "rxd4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
