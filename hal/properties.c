@@ -468,7 +468,6 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[0] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[0] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -901,51 +900,31 @@ static int hdlr_rx_a_stream (const char* data, char* ret) {
 static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[0] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[0] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[0]  = PWR_ON;
-		rx_stream[0] = STREAM_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(350000);
-
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		usleep(350000);
 
 	// power off
 	} else {
@@ -1293,7 +1272,6 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[1] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[1] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -1712,46 +1690,26 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[1] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[1] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[1]  = PWR_ON;
-		rx_stream[1] = STREAM_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(350000);
-
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		usleep(350000);
 
 	// power off
 	} else {
@@ -2088,7 +2046,6 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[2] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[2] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -2501,51 +2458,31 @@ static int hdlr_rx_c_stream (const char* data, char* ret) {
 static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[2] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[2] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[2]  = PWR_ON;
-		rx_stream[2] = STREAM_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(350000);
-
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		usleep(350000);
 
 	// power off
 	} else {
@@ -2882,7 +2819,6 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[3] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[3] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -3295,51 +3231,31 @@ static int hdlr_rx_d_stream (const char* data, char* ret) {
 static int hdlr_rx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[3] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[3] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[3]  = PWR_ON;
-		rx_stream[3] = STREAM_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(350000);
-
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		usleep(350000);
 
 	// power off
 	} else {
