@@ -120,16 +120,18 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err
    if (lower_factor > max_factor || lower_factor < min_factor) lower_factor_violation = 1;
    if (upper_factor > max_factor || upper_factor < min_factor) upper_factor_violation = 1;
 
+   double lower_factor_error = (base_rate / (double)lower_factor) - rate;
+   double upper_factor_error = rate - (base_rate / (double)upper_factor);
+
    if (lower_factor_violation && upper_factor_violation) {
 	   return 0xffff;
    } else if (lower_factor_violation) {
+	   if (err) *err = upper_factor_error;
 	   return (uint16_t)(upper_factor - 1);
    } else if (upper_factor_violation) {
+	   if (err) *err = lower_factor_error;
 	   return (uint16_t)(lower_factor - 1);
    } else {		// Nothing is wrong, then
-	   double lower_factor_error = (base_rate / (double)lower_factor) - rate;
-	   double upper_factor_error = rate - (base_rate / (double)upper_factor);
-
 	   if (lower_factor_error < upper_factor_error) {
 		   if (err) *err = lower_factor_error;
 		   return (uint16_t)(lower_factor - 1);
