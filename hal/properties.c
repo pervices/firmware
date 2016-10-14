@@ -341,11 +341,17 @@ static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "txa4", &old_val);
 		write_hps_reg( "txa4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 0) ) | (interp_gain_lut[(resamp_factor)] << 0));
 	} else {
 		write_hps_reg( "txa1", base_factor);
 		read_hps_reg(  "txa4", &old_val);
 		write_hps_reg( "txa4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 0) ) | (interp_gain_lut[(base_factor)] << 0));
 	}
 
 	// DSP Reset
@@ -689,11 +695,17 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "rxa4", &old_val);
 		write_hps_reg( "rxa4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (decim_gain_lut[(resamp_factor)] << 0));
 	} else {
 		write_hps_reg( "rxa1", base_factor);
 		read_hps_reg(  "rxa4", &old_val);
 		write_hps_reg( "rxa4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (decim_gain_lut[(base_factor)] << 0));
 	}
 
 	// DSP Reset
@@ -1096,11 +1108,17 @@ static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "txb4", &old_val);
 		write_hps_reg( "txb4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 8) ) | (interp_gain_lut[(resamp_factor)] << 8));
 	} else {
 		write_hps_reg( "txb1", base_factor);
 		read_hps_reg(  "txb4", &old_val);
 		write_hps_reg( "txb4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 8) ) | (interp_gain_lut[(base_factor)] << 8));
 	}
 
 	// DSP Reset
@@ -1424,11 +1442,17 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "rxb4", &old_val);
 		write_hps_reg( "rxb4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (decim_gain_lut[(resamp_factor)] << 8));
 	} else {
 		write_hps_reg( "rxb1", base_factor);
 		read_hps_reg(  "rxb4", &old_val);
 		write_hps_reg( "rxb4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (decim_gain_lut[(base_factor)] << 8));
 	}
 
 	// DSP Reset
@@ -1811,11 +1835,17 @@ static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "txc4", &old_val);
 		write_hps_reg( "txc4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 16) ) | (interp_gain_lut[(resamp_factor)] << 16));
 	} else {
 		write_hps_reg( "txc1", base_factor);
 		read_hps_reg(  "txc4", &old_val);
 		write_hps_reg( "txc4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 16) ) | (interp_gain_lut[(base_factor)] << 16));
 	}
 
 	// DSP Reset
@@ -2139,11 +2169,17 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (decim_gain_lut[(resamp_factor)] << 16));
 	} else {
 		write_hps_reg( "rxc1", base_factor);
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (decim_gain_lut[(base_factor)] << 16));
 	}
 
 	// DSP Reset
@@ -2526,11 +2562,17 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(resamp_factor)] << 24));
 	} else {
 		write_hps_reg( "txd1", base_factor);
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(base_factor)] << 24));
 	}
 
 	// DSP Reset
@@ -2854,11 +2896,17 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val | (1 << 15));
 		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (decim_gain_lut[(resamp_factor)] << 24));
 	} else {
 		write_hps_reg( "rxd1", base_factor);
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (decim_gain_lut[(base_factor)] << 24));
 	}
 
 	// DSP Reset
