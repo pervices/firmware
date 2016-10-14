@@ -885,6 +885,24 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 		// send sync pulse
 		sync_channels(15);
 
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
+
 	// power off & stream off
 	} else {
 		rx_power[0] = PWR_OFF;
@@ -1623,6 +1641,24 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 		// send sync pulse
 		sync_channels(15);
 
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
+
 	// power off
 	} else {
 		rx_power[1] = PWR_OFF;
@@ -2350,6 +2386,24 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 		// send sync pulse
 		sync_channels(15);
 
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
+
 	// power off
 	} else {
 		// kill the channel
@@ -3076,6 +3130,24 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 
 		// send sync pulse
 		sync_channels(15);
+
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
