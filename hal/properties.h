@@ -28,6 +28,8 @@
 #include <net/if.h>
 #include "comm_manager.h"
 #include "common.h"
+#include "decim_gain_lut.h"
+#include "interp_gain_lut.h"
 
 typedef enum {RW, RO, WO} perm_t;
 typedef enum {POLL, NO_POLL} poll_t;
