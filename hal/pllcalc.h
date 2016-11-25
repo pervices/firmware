@@ -42,7 +42,7 @@
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to 
 // used during approximation, and has the largest impact on overall tuning
 // accuracy.
-#define _PLL_RATS_MAX_DENOM 1023 // 40 // 16383 // 4095 // 2047 // 1023 // 511
+#define _PLL_RATS_MAX_DENOM 126 // 40 // 16383 // 4095 // 2047 // 1023 // 511
 
 // For further accuracy, one may also adjust the PLL1_N_MAX parameter. 
 // Increasing both will lead to better frequency accuracy on the radio side, 
@@ -51,7 +51,7 @@
 #define _PLL_OUT_MAX_DEVIATION  500000
 
 //Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ	325000000 //Default Reference Frequency used.
+#define PLL_CORE_REF_FREQ_HZ	322265625 //Default Reference Frequency used.
 
 //ADF4355 PLL Specifications
 #define PLL1_REF_MAX_HZ		600000000ULL
@@ -63,7 +63,7 @@
 #define PLL1_PD_MIN_HZ		10000000ULL	// To Maximize PD spur width
 #define PLL1_PD_MAX_HZ		120000000ULL
 #define PLL1_N_MIN		23	 //Minimum allowable N value (per datasheet)
-#define PLL1_N_MAX		1580 // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
+#define PLL1_N_MAX		4024 // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
 #define PLL1_R_MIN		1
 //#define PLL1_DIV_STEPS		2
 #define PLL1_DIV_MAX		64
@@ -72,7 +72,7 @@
 #define PLL_PARAM_GOOD		0
 
 // ADF4355 Default specs
-#define PLL1_R_DEFAULT		( 13 )		// R value (we aim to minimize this)
+#define PLL1_R_DEFAULT		( 1 )		// R value (we aim to minimize this)
 #define PLL1_N_DEFAULT		( 60 )         // N value (N^2 contribution to PLL noise) [16..4096]
 #define PLL1_D_DEFAULT		( 1 )		// RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL1_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))

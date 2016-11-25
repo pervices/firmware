@@ -50,26 +50,22 @@ pllparam_t pll_def = {
 int main (void)
 {
 	uint64_t reqFreq = 250e6;
-	pllparam_t pll;
-
-	double max_diff = 0;
-	for (reqFreq = 200000000; reqFreq <= 600000000; reqFreq += 5000000)
+        pllparam_t pll;
+        
+        //Debug parameters;
+        double max_diff = 0;
+        double max_N = PLL1_N_MIN;
+        double max_R = PLL1_R_MIN;
+        int printdebug = 0;
+        uint64_t stepFreq = (322265625/125);
+        
+	for (reqFreq = stepFreq * 1000; reqFreq <= stepFreq * 1200; reqFreq += stepFreq)
 	{
 
 		// This is the main function, everything after is for statistics
 		setFreq(&reqFreq, &pll);
 
 		double actual_reference = (double)(uint64_t)PLL_CORE_REF_FREQ_HZ;
-
-                #ifdef _PLL_DEBUG
-			printf("PLL SETTINGS: PLL1: N: %li, R: %i, D: %i, x2en: %i, VCO: %li.\n"
-				, pll.N
-				, pll.R
-				, pll.d
-				, pll.x2en
-				, pll.outFreq);
-			//printf("MAIN: actref: %lf.\n", actual_reference);
-		#endif
 
                 //actual_reference = 325000000ULL;
 		double actual_output = (double)pll.outFreq / (double)pll.d;
@@ -91,6 +87,7 @@ int main (void)
 
 		dbc_noise1 = dbc_noise1 / 10000;
 
+                #ifdef _PLL_DEBUG
                 printf("Requested: %"PRIu64", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, Noise: %.10lf, Noise (dBc): %.10lf \n",
 				reqFreq,
 				actual_reference,
@@ -99,17 +96,61 @@ int main (void)
 				20 * log10(noise),
 				20 * log10(dbc_noise1)
 			);
-                
+                printf("\t Using: VcoFreq: %li, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n",
+				pll.outFreq,
+				pll.d,
+				pll.R,
+				pll.N,
+                                pll.x2en
+			);
+                #endif
+
 		if (diff < 0) {
 			diff *= -1.0;
 		}
-		if (diff > max_diff) {
+
+		if (diff > max_diff)  {
 			max_diff = diff;
+                        printdebug = 1;
+                }
+
+                if (pll.R > max_R)  {
+                        max_R = pll.R;
+                        printdebug = 1;
+                }
+
+                if (pll.N > max_N)  {
+                        max_N = pll.N;
+                        printdebug = 1;
+                }
+
+                #ifdef _PLL_DEBUG
+                if (printdebug) {
+                printf("Requested: %"PRIu64", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, Noise: %.10lf, Noise (dBc): %.10lf \n",
+				reqFreq,
+				actual_reference,
+				actual_output,
+				diff,
+				20 * log10(noise),
+				20 * log10(dbc_noise1)
+			);
+                printf("\t Using: VcoFreq: %li, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n",
+				pll.outFreq,
+				pll.d,
+				pll.R,
+				pll.N,
+                                pll.x2en
+			);
+                printdebug = 0;
 		}
+                #endif
 	}
 
+        #ifdef _PLL_DEBUG
 	fprintf(stderr, "MAXIMUM ERROR: %.10lf.\n", max_diff);
+        #endif
 	return 0;
+        
 };
 #endif
 
@@ -171,7 +212,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
         uint64_t pd_input = pll->outFreq / (uint64_t)pll->N;
 
 	// Calculate the necessary Reference Divider (R) value within the restrictions defined
-        R1 = PLL_CORE_REF_FREQ_HZ / pd_input; // floor happens as its an integer operation
+        R1 = PLL_CORE_REF_FREQ_HZ / pd_input; // use floor happens as it is an integer operation
 
         if (R1 > _PLL_RATS_MAX_DENOM) pll->R = _PLL_RATS_MAX_DENOM;
 	else if (R1 < PLL1_R_MIN) pll->R = PLL1_R_MIN;
@@ -180,8 +221,8 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 
     //// Determine the values of the N and R dividers for PLL1
 
-    // Determine the Reference Frequency required
-	uint64_t reference = (uint64_t)PLL_CORE_REF_FREQ_HZ;    
+    // Use the LMK PLL provided reference frequency;
+	uint64_t reference = (uint64_t)PLL_CORE_REF_FREQ_HZ;
     
     //uint64_t reference = (pll0->outFreq * (uint64_t)(pll0->x2en + 1)) / (uint64_t)pll0->d;
     double pll_ratio = (double)pll->outFreq / (double)reference;
@@ -191,26 +232,14 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
     //// Massage the N1 and R1 values to fit within the specified restrictions
     pll_ConformDividers(&N1, &R1, 1);
 
+
     //// Assign the new N1 and R1 values to PLL1
     pll->N = (uint32_t)N1;
     pll->R = (uint16_t)R1;
 
     //// Recalculate the VCO frequency as there is a dependency on N1/R1
     pll->outFreq = (reference * pll->N) / pll->R;
-    
-#ifndef _PLL_DEBUG_STANDALONE
-    PRINT( VERBOSE,"setFreq PLL1-N: %li, PLL1-R: %i.\n", pll->N, pll->R);
-    PRINT( VERBOSE,"setFreq PLL1-VCO: %li.\n",pll->outFreq); // PLL1-N/R: %lf.\n", pll1->outFreq, pll1_ratio);
-    PRINT( VERBOSE,"setFreq RefFreq: %llu.\n", reference);
-    PRINT( VERBOSE,"setFreq PLL1-VCO: %li, PLL1-D: %i.\n", pll->outFreq, pll->d);
-#else
-#ifdef _PLLDEBUG_ON
-    printf("setFreq PLL1-N: %li, PLL1-R: %i.\n", pll->N, pll->R);
-    printf("setFreq PLL1-VCO: %li.\n",pll->outFreq); // PLL1-N/R: %lf.\n", pll1->outFreq, pll1_ratio);
-    printf("setFreq RefFreq: %llu.\n", reference);
-    printf("setFreq PLL1-VCO: %li, PLL1-D: %i.\n", pll->outFreq, pll->d);
-#endif
-#endif
+
 
     if (!pll_CheckParams(pll, 1)) {
 #ifndef _PLL_DEBUG_STANDALONE
@@ -400,6 +429,7 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1) {
             PRINT( VERBOSE,"Reducing Current-MAX_R: %i.\n", MAX_R);
 #else
             printf("Reducing Current-MAX_R: %i.\n", MAX_R);
+
 #endif
             if (MAX_R < (50)) {
 				Nt = Nmin;
@@ -412,7 +442,6 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1) {
             }
         }
     }
-
         *N = Nt;
 	*R = Rt;
 
