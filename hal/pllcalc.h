@@ -31,8 +31,13 @@
 #include <stdlib.h>
 #include <math.h>
 
-//#define _PLL_DEBUG_STANDALONE
-//#define _PLL_DEBUG
+
+// For stand alone operation;
+//#define _PLL_DEBUG_STANDALONE //Standalone program, compile with: gcc -lm pllcalc.c
+//#define _PLL_DEBUG_INFO
+//#define _PLL_DEBUG_VERBOSE
+
+
 
 #ifndef _PLL_DEBUG_STANDALONE
 #include "common.h"
@@ -62,10 +67,10 @@
 #define PLL1_VCO_MAX_HZ		6800000000ULL
 #define PLL1_PD_MIN_HZ		10000000ULL	// To Maximize PD spur width
 #define PLL1_PD_MAX_HZ		120000000ULL
-#define PLL1_N_MIN		23	 //Minimum allowable N value (per datasheet)
-#define PLL1_N_MAX		4024 // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
+#define PLL1_N_MIN		23   //Minimum allowable N value (per datasheet)
+#define PLL1_N_MAX		4024    // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
 #define PLL1_R_MIN		1
-//#define PLL1_DIV_STEPS		2
+#define PLL1_R_MAX		1023
 #define PLL1_DIV_MAX		64
 #define PLL1_DIV_MIN		1
 
@@ -77,6 +82,7 @@
 #define PLL1_D_DEFAULT		( 1 )		// RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL1_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
 #define PLL1_OUTFREQ_DEFAULT	( 1500000000 )	// Resulting VCO Output Frequency
+#define PLL1_FB_DEFAULT         ( 0 )           // VCO divider feedback
 
 /*
 
@@ -96,7 +102,8 @@
    	uint32_t N;	//VCO Frequency divider N
 	uint16_t d;	//VCO Output Frequency divider
 	uint8_t  x2en;	//VCO Output Frequency doubler (enabled when 1)
-	uint64_t outFreq; //Resulting VCO Output Frequency
+	uint64_t vcoFreq; //Resulting VCO Output Frequency
+	uint8_t divFBen; //Feedback from divider (enabled when 1, default 0)
 } pllparam_t;
 
 // Set Output Frequency
@@ -112,7 +119,7 @@ void rat_approx(double f, uint64_t md, uint64_t* num, uint64_t* denom);
 uint8_t pll_CheckParams(pllparam_t* pllparam, uint8_t is_pll1);
 
 // Massage the N and R values to satisfy restrictions while keeping the ratio constant
-void pll_ConformDividers(uint64_t* N, uint64_t* R, uint8_t is_pll1);
+void pll_ConformDividers(uint64_t* N, uint64_t* R, pllparam_t* pll);
 
 // Determine the VCO and Output Settings of the PLL
 void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pllparam);

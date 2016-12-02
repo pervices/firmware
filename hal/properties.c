@@ -4019,7 +4019,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->outFreq / pll->d) / 1000)); // Send output frequency in kHz
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     usleep(100000);
