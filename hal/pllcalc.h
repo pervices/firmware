@@ -77,7 +77,7 @@
 #define PLL_PARAM_GOOD		0
 
 // ADF4355 Default specs
-#define PLL1_R_DEFAULT		( 1 )		// R value (we aim to minimize this)
+#define PLL1_R_DEFAULT		( 10 )		// R value (we aim to minimize this)
 #define PLL1_N_DEFAULT		( 60 )         // N value (N^2 contribution to PLL noise) [16..4096]
 #define PLL1_D_DEFAULT		( 1 )		// RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL1_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
