@@ -50,7 +50,7 @@ int main (void)
         double max_N = PLL1_N_MAX;
         double max_R = PLL1_R_MAX;
         int printdebug = 0;
-        uint64_t stepFreq = (322265625/125);
+        uint64_t stepFreq = (1000000);
         
 	for (reqFreq = stepFreq * 1000; reqFreq <= stepFreq * 1200; reqFreq += stepFreq)
 	{
@@ -519,7 +519,7 @@ void pll_NScoringFunction(pllparam_t* pll, uint64_t* N, double* score) {
 	
         double div_value = (double)pll->vcoFreq / (double) *N;
         if ( !pll->divFBen ) {
-            double div_value = div_value / (double)pll->d;
+            div_value = div_value / (double)pll->d;
         }
 
 	uint64_t remainder = 0;

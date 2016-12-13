@@ -56,7 +56,7 @@
 #define _PLL_OUT_MAX_DEVIATION  500000
 
 //Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ	322265625 //Default Reference Frequency used.
+#define PLL_CORE_REF_FREQ_HZ	325000000 //Default Reference Frequency used.
 
 //ADF4355 PLL Specifications
 #define PLL1_REF_MAX_HZ		600000000ULL
@@ -65,11 +65,11 @@
 #define PLL1_RFOUT_MIN_HZ	54000000ULL
 #define PLL1_VCO_MIN_HZ		3400000000ULL
 #define PLL1_VCO_MAX_HZ		6800000000ULL
-#define PLL1_PD_MIN_HZ		10000000ULL	// To Maximize PD spur width
+#define PLL1_PD_MIN_HZ		1000000ULL	// To Maximize PD spur width
 #define PLL1_PD_MAX_HZ		120000000ULL
 #define PLL1_N_MIN		23   //Minimum allowable N value (per datasheet)
 #define PLL1_N_MAX		4024    // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
-#define PLL1_R_MIN		1
+#define PLL1_R_MIN		10 //Require lower R divider for 
 #define PLL1_R_MAX		1023
 #define PLL1_DIV_MAX		64
 #define PLL1_DIV_MIN		1
