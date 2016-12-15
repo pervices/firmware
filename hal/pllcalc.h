@@ -69,7 +69,7 @@
 #define PLL1_PD_MAX_HZ		120000000ULL
 #define PLL1_N_MIN		23   //Minimum allowable N value (per datasheet)
 #define PLL1_N_MAX		4024    // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
-#define PLL1_R_MIN		10 //Require lower R divider for 
+#define PLL1_R_MIN		25 //Require lower R divider for 
 #define PLL1_R_MAX		1023
 #define PLL1_DIV_MAX		64
 #define PLL1_DIV_MIN		1
