@@ -3885,7 +3885,7 @@ inline void pass_uart_rx_fd(int fd) {
 }
 
 char* get_abs_path(prop_t* prop, char* path) {
-	strcpy(path, get_home_dir());
+	strcpy(path, "/var/crimson");
 	strcat(path, "/state/");
 	strcat(path, prop -> path);
 	return path;
@@ -3899,7 +3899,7 @@ char* get_abs_dir(prop_t* prop, char* path) {
 		i++;
 	}
 
-	strcpy(path, get_home_dir());
+	strcpy(path, "/var/crimson");
 	strcat(path, "/state/");
 
 	size_t temp_len = 0;

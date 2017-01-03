@@ -80,11 +80,21 @@ static inline void make_prop(prop_t* prop) {
 	system(cmd);
 	//PRINT( VERBOSE,"executing: %s\n", cmd);
 
+	//change group for folder
+	strcpy(cmd, "chgrp dev-grp0 -R ");
+	strcat(cmd, get_abs_dir(prop, path));
+	system(cmd);
+
 	// touch /home/root/state/*
 	strcpy(cmd, "touch ");
 	strcat(cmd, get_abs_path(prop, path));
 	system(cmd);
 	//PRINT( VERBOSE,"executing: %s\n", cmd);
+
+	//change group for properties
+	strcpy(cmd, "chgrp dev-grp0 ");
+	strcat(cmd, get_abs_path(prop, path));
+	system(cmd);
 
 	// if read only property, change permissions
 	if (prop -> permissions == RO) {
