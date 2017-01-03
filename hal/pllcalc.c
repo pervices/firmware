@@ -28,11 +28,11 @@
 // PLL Constructors
 
 pllparam_t pll_def = {
-	PLL1_R_DEFAULT,
-	PLL1_N_DEFAULT,
-	PLL1_D_DEFAULT,
-	PLL1_X2EN_DEFAULT,
-	PLL1_OUTFREQ_DEFAULT,
+        PLL1_R_DEFAULT,
+        PLL1_N_DEFAULT,
+        PLL1_D_DEFAULT,
+        PLL1_X2EN_DEFAULT,
+        PLL1_OUTFREQ_DEFAULT,
         PLL1_FB_DEFAULT
 };
 
@@ -42,7 +42,7 @@ pllparam_t pll_def = {
 // ==========================
 int main (void)
 {
-	uint64_t reqFreq = 250e6;
+        uint64_t reqFreq = 250e6;
         pllparam_t pll;
         
         //Debug parameters;
@@ -52,56 +52,56 @@ int main (void)
         int printdebug = 0;
         uint64_t stepFreq = (1000000);
         
-	for (reqFreq = stepFreq * 1000; reqFreq <= stepFreq * 1200; reqFreq += stepFreq)
-	{
+        for (reqFreq = stepFreq * 1000; reqFreq <= stepFreq * 1200; reqFreq += stepFreq)
+        {
 
-		// This is the main function, everything after is for statistics
-		setFreq(&reqFreq, &pll);
+                // This is the main function, everything after is for statistics
+                setFreq(&reqFreq, &pll);
 
-		double actual_reference = (double)(uint64_t)PLL_CORE_REF_FREQ_HZ;
-		double actual_output = (double)pll.vcoFreq / (double)pll.d;
+                double actual_reference = (double)(uint64_t)PLL_CORE_REF_FREQ_HZ;
+                double actual_output = (double)pll.vcoFreq / (double)pll.d;
 
-		//if (pll.x2en)	actual_output *= 2.0;
-		//else		actual_output /= (double)pll1.d;
+                //if (pll.x2en)	actual_output *= 2.0;
+                //else		actual_output /= (double)pll1.d;
 
-		double diff = (double)reqFreq - actual_output;
-		double noise = ((double)pll.N ) / ((double)pll.R);
-		double dbc_noise1 = (double) pll.N / (double) pll.R;
+                double diff = (double)reqFreq - actual_output;
+                double noise = ((double)pll.N ) / ((double)pll.R);
+                double dbc_noise1 = (double) pll.N / (double) pll.R;
 
-		if (pll.x2en) {
-			noise *= 2.0;
-			dbc_noise1 *= 2.0;
-		} else {
-			noise = noise / pll.d;
-			dbc_noise1 = dbc_noise1 / pll.d;
-		}
+                if (pll.x2en) {
+                        noise *= 2.0;
+                        dbc_noise1 *= 2.0;
+                } else {
+                        noise = noise / pll.d;
+                        dbc_noise1 = dbc_noise1 / pll.d;
+                }
 
-		dbc_noise1 = dbc_noise1 / 10000;
+                dbc_noise1 = dbc_noise1 / 10000;
 
                 #ifdef _PLL_DEBUG_VERBOSE
                 printf("Requested: %"PRIu64", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, Noise: %.10lf, Noise (dBc): %.10lf \n",
-				reqFreq,
-				actual_reference,
-				actual_output,
-				diff,
-				20 * log10(noise),
-				20 * log10(dbc_noise1)
-			);
+                                reqFreq,
+                                actual_reference,
+                                actual_output,
+                                diff,
+                                20 * log10(noise),
+                                20 * log10(dbc_noise1)
+                        );
                 printf("\t Using: VcoFreq: %li, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n",
-				pll.vcoFreq,
-				pll.d,
-				pll.R,
-				pll.N,
+                                pll.vcoFreq,
+                                pll.d,
+                                pll.R,
+                                pll.N,
                                 pll.x2en
-			);
+                        );
                 #endif
 
-		if (diff < 0) {
-			diff *= -1.0;
-		}
+                if (diff < 0) {
+                        diff *= -1.0;
+                }
 
-		if (diff > max_diff)  {
-			max_diff = diff;
+                if (diff > max_diff)  {
+                        max_diff = diff;
                         printdebug = 1;
                 }
 
@@ -134,14 +134,14 @@ int main (void)
                                     pll.x2en
                             );
                     printdebug = 0;
-		}
+                }
                 #endif
-	}
+        }
 
         #ifdef _PLL_DEBUG_INFO
             fprintf(stderr, "MAXIMUM ERROR: %.10lf.\n", max_diff);
         #endif
-	return 0;
+        return 0;
         
 };
 #endif
@@ -151,58 +151,58 @@ int main (void)
 // ==========================
 double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 
-  // Crimson has two PLLs feeding each other. The first PLL is used to generate
-  // a reference frequency that is used by the second PLL to synthesize a clean
-  // output mixing frequency.
+// Crimson has two PLLs feeding each other. The first PLL is used to generate
+// a reference frequency that is used by the second PLL to synthesize a clean
+// output mixing frequency.
 
-  // The procedure to calculate all the PLL parameters is this:
-  //
-  // 1. Determine the VCO frequency we need to tune the 2nd PLL (output) to.
-  //	-This also effectively sets the divider or doubler values.
-  //
-  // 1a. If the output falls between the natural VCO frequency, we just use the fundamental VCO frequency.
-  //
-  // 1b. If the output frequency is falls above the VCO band, we simply use the doubler and divide the desired output by 2 to obtain the fundamental VCO frequency.
-  //
-  // 1c. If the output is below the VCO band, we find the smallest divider we can use
-  // 
-  // 2. Once we've determined the doubler values, we need to select a reasonable N value.
-  //
-  // 2a. There exists a minimum N value.
-  //
-  // 2b. We have chosen the PFD frequency range to be between 2.5-70MHz. This effectively places an upper bound on N.
-  //	(This ensures we can use the same code when operating in Exact-Frequency Franctional mode, while also ensuring we don't do anything too crazy)
-  //
-  // 3. Once we have selected a reasonable N value, we can assume that to be the reference, which (in the ideal case) sees us setting R=1 (best phase performance).
-  //
-  // 4. Once we have figured out the reference, we can use that to calculate the PLL0 parameters, from which we have both PLL0 and PLL1 parameters.
+// The procedure to calculate all the PLL parameters is this:
+//
+// 1. Determine the VCO frequency we need to tune the 2nd PLL (output) to.
+//	-This also effectively sets the divider or doubler values.
+//
+// 1a. If the output falls between the natural VCO frequency, we just use the fundamental VCO frequency.
+//
+// 1b. If the output frequency is falls above the VCO band, we simply use the doubler and divide the desired output by 2 to obtain the fundamental VCO frequency.
+//
+// 1c. If the output is below the VCO band, we find the smallest divider we can use
+// 
+// 2. Once we've determined the doubler values, we need to select a reasonable N value.
+//
+// 2a. There exists a minimum N value.
+//
+// 2b. We have chosen the PFD frequency range to be between 2.5-70MHz. This effectively places an upper bound on N.
+//	(This ensures we can use the same code when operating in Exact-Frequency Franctional mode, while also ensuring we don't do anything too crazy)
+//
+// 3. Once we have selected a reasonable N value, we can assume that to be the reference, which (in the ideal case) sees us setting R=1 (best phase performance).
+//
+// 4. Once we have figured out the reference, we can use that to calculate the PLL0 parameters, from which we have both PLL0 and PLL1 parameters.
 
-	*pll = pll_def;
+        *pll = pll_def;
 
-	uint64_t temp = *reqFreq;
+        uint64_t temp = *reqFreq;
 
-        // round the required Frequency to the nearest MHz
-//        uint64_t mhzFreq = (*reqFreq / 1e6); // MHz truncation
-//        *reqFreq = mhzFreq * 1e6;
+        // round the required Frequency to the nearest 5MHz
+        uint64_t mhzFreq = (*reqFreq / 1e6); // MHz truncation
+        *reqFreq = mhzFreq * 1e6;
 
         // Sanitize the input to be within range
         if (*reqFreq > PLL1_RFOUT_MAX_HZ) 	*reqFreq = PLL1_REF_MAX_HZ;
         else if (*reqFreq < PLL1_RFOUT_MIN_HZ) 	*reqFreq = PLL1_RFOUT_MIN_HZ;
 
-	// 1. Determine VCO frequency, and also frequency doubler or output divider values.
-	pll_SetVCO(reqFreq, pll);
+        // 1. Determine VCO frequency, and also frequency doubler or output divider values.
+        pll_SetVCO(reqFreq, pll);
 
         // 2. Determine reasonable N value for the feedback divider (N)
-	uint64_t N1 = PLL1_N_MIN;
-	uint64_t R1 = PLL1_R_MIN;
+        uint64_t N1 = PLL1_N_MIN;
+        uint64_t R1 = PLL1_R_MIN;
 
-	if (pll_NCalc(reqFreq, pll, &N1))
+        if (pll_NCalc(reqFreq, pll, &N1))
             pll->N = N1;
 
         //This determines a reasonable phase detector frequency, and is bounded by N.
         uint64_t pd_freq = pll->vcoFreq / (uint64_t)pll->N;
 
-	// Calculate the necessary Reference Divider (R) value within the restrictions defined
+        // Calculate the necessary Reference Divider (R) value within the restrictions defined
         R1 = PLL_CORE_REF_FREQ_HZ / pd_freq; //use floor happens as it is an integer operation
 
         // We try and minimize R by bounding it here.
@@ -237,7 +237,7 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 
 //        *reqFreq = (reference * pll->N) / pll->R / pll->d;
 
-  //      pll_SetVCO( reqFreq , pll);
+//      pll_SetVCO( reqFreq , pll);
 
     if (!pll_CheckParams(pll, 1)) {
 #ifndef _PLL_DEBUG_STANDALONE
@@ -257,8 +257,8 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 #endif
     }
 
-	*reqFreq = temp;
-	double actual_output = ((double)pll->vcoFreq / (double)pll->d) + (pll->x2en)*((double)pll->vcoFreq / (double)pll->d) ;
+        *reqFreq = temp;
+        double actual_output = ((double)pll->vcoFreq / (double)pll->d) + (pll->x2en)*((double)pll->vcoFreq / (double)pll->d) ;
 
         return actual_output;
 };
@@ -317,54 +317,54 @@ void pll_RefCalc(uint64_t* reqFreq, pllparam_t* pll1) {
 
 //Modified from the Rosetta Code;
 void rat_approx(double f, uint64_t md, uint64_t* num, uint64_t* denom) {
-	/*  a: continued fraction coefficients. */ 
-	uint64_t a, h[3] = { 0, 1, 0 }, k[3] = { 1, 0, 0 };
-	uint64_t x, d, n = 1;
-	uint8_t i, neg = 0;
- 
+        /*  a: continued fraction coefficients. */ 
+        uint64_t a, h[3] = { 0, 1, 0 }, k[3] = { 1, 0, 0 };
+        uint64_t x, d, n = 1;
+        uint8_t i, neg = 0;
+
 //         //If the max denominator is <= 1, set the denominator to 1 and return the number
-	if (md <= 1) { *denom = 1; *num = (uint64_t) f; return; }
- 
-	if (f < 0) { neg = 1; f = -f; }
- 
-	while (f != floor(f)) { n <<= 1; f *= 2; }
-	d = f;
- 
-	/* continued fraction and check denominator each step */
-	for (i = 0; i < 64; i++) {
-		a = n ? d / n : 0;
-		if (i && !a) break;
- 
-		x = d; d = n; n = x % n;
- 
-		x = a;
-		if (k[1] * a + k[0] >= md) {
-			x = (md - k[0]) / k[1];
-			if (x * 2 >= a || k[1] >= md)
-				i = 65;
-			else
-				break;
-		}
- 
-		h[2] = x * h[1] + h[0]; h[0] = h[1]; h[1] = h[2];
-		k[2] = x * k[1] + k[0]; k[0] = k[1]; k[1] = k[2];
-	}
-	*denom = k[1];
-	*num = neg ? -h[1] : h[1];
+        if (md <= 1) { *denom = 1; *num = (uint64_t) f; return; }
+
+        if (f < 0) { neg = 1; f = -f; }
+
+        while (f != floor(f)) { n <<= 1; f *= 2; }
+        d = f;
+
+        /* continued fraction and check denominator each step */
+        for (i = 0; i < 64; i++) {
+                a = n ? d / n : 0;
+                if (i && !a) break;
+
+                x = d; d = n; n = x % n;
+
+                x = a;
+                if (k[1] * a + k[0] >= md) {
+                        x = (md - k[0]) / k[1];
+                        if (x * 2 >= a || k[1] >= md)
+                                i = 65;
+                        else
+                                break;
+                }
+
+                h[2] = x * h[1] + h[0]; h[0] = h[1]; h[1] = h[2];
+                k[2] = x * k[1] + k[0]; k[0] = k[1]; k[1] = k[2];
+        }
+        *denom = k[1];
+        *num = neg ? -h[1] : h[1];
 }
 
 uint8_t pll_CheckParams(pllparam_t* pllparam, uint8_t is_pll1) {
 
     if (is_pll1) {
         if ((pllparam->N > PLL1_N_MAX) 			||
-	    (pllparam->N < PLL1_N_MIN) 			||
+            (pllparam->N < PLL1_N_MIN) 			||
             (pllparam->R > _PLL_RATS_MAX_DENOM) 	||
             (pllparam->d > PLL1_DIV_MAX) 		||
-	    (pllparam->d < 1) 				||
+            (pllparam->d < 1) 				||
             (pllparam->d > 1 && (pllparam->d & 1) != 0) ||
             (pllparam->x2en > 1) 			||
             (pllparam->vcoFreq > PLL1_VCO_MAX_HZ) 	||
-	    (pllparam->vcoFreq < PLL1_VCO_MIN_HZ)) {
+            (pllparam->vcoFreq < PLL1_VCO_MIN_HZ)) {
                 return 0;
         }
     }
@@ -416,9 +416,9 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, pllparam_t* pll) {
             printf("Reducing Current-MAX_R: %i.\n", MAX_R);
 #endif
             if (MAX_R < (50)) {
-				Nt = Nmin;
-				Rt = NminR;
-				ratio = min_N_ratio;
+                                Nt = Nmin;
+                                Rt = NminR;
+                                ratio = min_N_ratio;
 #ifndef _PLL_DEBUG_STANDALONE
                 PRINT( ERROR, "ERROR: Unable to find proper solution (N too large): %"PRIu64", and unable to further reduce N.\n", Nmin);
 #endif
@@ -427,7 +427,7 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, pllparam_t* pll) {
         }
     }
         *N = Nt;
-	*R = Rt;
+        *R = Rt;
 
     // If the N and R minimum bounds are violated
     uint64_t MIN_N = PLL1_N_MIN;
@@ -439,8 +439,8 @@ void pll_ConformDividers(uint64_t* N, uint64_t* R, pllparam_t* pll) {
         Rt = *R * multiplier;
     }
 #ifndef _PLL_DEBUG_STANDALONE
-	PRINT( VERBOSE,"CD: Best N found: Nt: %li.\n", Nt);
-	PRINT( VERBOSE,"CD: Best R found: Rt: %li.\n", Rt);
+        PRINT( VERBOSE,"CD: Best N found: Nt: %li.\n", Nt);
+        PRINT( VERBOSE,"CD: Best R found: Rt: %li.\n", Rt);
 #endif
 
     *N = Nt;
@@ -504,31 +504,31 @@ uint8_t pll_NCalc(uint64_t* reqFreq, pllparam_t* pll1, uint64_t* N) {
         double best_score = score;
 
         for (Ntemp = Nmin; Ntemp <= Nmax; Ntemp++) {
-		pll_NScoringFunction(pll1, &Ntemp, &score);
-		if (score > best_score) {
-			Nbest = Ntemp;
-			best_score = score;
-		}
-	}
-	*N = Nbest;
+                pll_NScoringFunction(pll1, &Ntemp, &score);
+                if (score > best_score) {
+                        Nbest = Ntemp;
+                        best_score = score;
+                }
+        }
+        *N = Nbest;
 
-	return 0;
+        return 0;
 }
 
 void pll_NScoringFunction(pllparam_t* pll, uint64_t* N, double* score) {
-	
+        
         double div_value = (double)pll->vcoFreq / (double) *N;
         if ( !pll->divFBen ) {
             div_value = div_value / (double)pll->d;
         }
 
-	uint64_t remainder = 0;
-	uint64_t divisor = 1;
+        uint64_t remainder = 0;
+        uint64_t divisor = 1;
 
-	while (remainder == 0) {
-		remainder = fmodf(div_value,divisor);
-		divisor = divisor * 10;
-	}
+        while (remainder == 0) {
+                remainder = fmodf(div_value,divisor);
+                divisor = divisor * 10;
+        }
 
-	*score = (double)log10(divisor) / (double) *N;
+        *score = (double)log10(divisor) / (double) *N;
 }
