@@ -159,9 +159,8 @@ static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -l %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -l %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -178,9 +177,8 @@ static int hdlr_tx_a_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -3 %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -3 %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -197,9 +195,8 @@ static int hdlr_tx_a_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( sel < 0 || sel > 15 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -b %u", sel );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -b %u\r", sel );
+	sprintf( ret, "%u", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -966,9 +963,8 @@ static int hdlr_tx_b_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -l %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -l %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -985,9 +981,8 @@ static int hdlr_tx_b_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -3 %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -3 %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -1004,9 +999,8 @@ static int hdlr_tx_b_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( sel < 0 || sel > 15 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -b %u", sel );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -b %u\r", sel );
+	sprintf( ret, "%u", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -1733,9 +1727,8 @@ static int hdlr_tx_c_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -l %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -l %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -1752,9 +1745,8 @@ static int hdlr_tx_c_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -3 %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -3 %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -1771,9 +1763,8 @@ static int hdlr_tx_c_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( sel < 0 || sel > 15 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -b %u", sel );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -b %u\r", sel );
+	sprintf( ret, "%u", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -2500,9 +2491,8 @@ static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -l %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -l %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -2519,9 +2509,8 @@ static int hdlr_tx_d_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -3 %u", en );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -3 %u\r", en );
+	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -2538,9 +2527,8 @@ static int hdlr_tx_d_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( sel < 0 || sel > 15 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -b %u", sel );
-	sprintf( ret, "%s", buf );
-	strncat( buf, "\r", sizeof( buf ) - 1 );
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -b %u\r", sel );
+	sprintf( ret, "%u", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
