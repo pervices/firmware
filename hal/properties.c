@@ -192,11 +192,14 @@ static int hdlr_tx_a_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 0 || sel > 15 ) {
+	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -b %u\r", sel );
+
 	sprintf( ret, "%u", sel );
+	sel /= 6;  // each step is a 6 dB increment
+	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -996,11 +999,14 @@ static int hdlr_tx_b_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 0 || sel > 15 ) {
+	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -b %u\r", sel );
+
 	sprintf( ret, "%u", sel );
+	sel /= 6;  // each step is a 6 dB increment
+	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -1760,11 +1766,14 @@ static int hdlr_tx_c_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 0 || sel > 15 ) {
+	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -b %u\r", sel );
+
 	sprintf( ret, "%u", sel );
+	sel /= 6;  // each step is a 6 dB increment
+	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -2524,11 +2533,14 @@ static int hdlr_tx_d_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 0 || sel > 15 ) {
+	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -b %u\r", sel );
+
 	sprintf( ret, "%u", sel );
+	sel /= 6;  // each step is a 6 dB increment
+	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB) // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
+	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -3661,7 +3673,7 @@ static prop_t property_table[] = {
 	{"tx_a/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_a/rf/dac/dither_en", hdlr_tx_a_rf_dac_dither_en, RW, "0"},
 	{"tx_a/rf/dac/dither_mixer_en", hdlr_tx_a_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_a/rf/dac/dither_sra_sel", hdlr_tx_a_rf_dac_dither_sra_sel, RW, "0"},
+	{"tx_a/rf/dac/dither_sra_sel", hdlr_tx_a_rf_dac_dither_sra_sel, RW, "96"},
 	{"tx_a/rf/dac/nco", hdlr_tx_a_rf_dac_nco, RW, "15000000"},
 	{"tx_a/rf/dac/temp", hdlr_tx_a_rf_dac_temp, RW, "0"},
 	{"tx_a/rf/freq/val", hdlr_tx_a_rf_freq_val, RW, "0"},
@@ -3715,7 +3727,7 @@ static prop_t property_table[] = {
 	{"tx_b/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_b/rf/dac/dither_en", hdlr_tx_b_rf_dac_dither_en, RW, "0"},
 	{"tx_b/rf/dac/dither_mixer_en", hdlr_tx_b_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_b/rf/dac/dither_sra_sel", hdlr_tx_b_rf_dac_dither_sra_sel, RW, "0"},
+	{"tx_b/rf/dac/dither_sra_sel", hdlr_tx_b_rf_dac_dither_sra_sel, RW, "96"},
 	{"tx_b/rf/dac/nco", hdlr_tx_b_rf_dac_nco, RW, "15000000"},
 	{"tx_b/rf/dac/temp", hdlr_tx_b_rf_dac_temp, RW, "0"},
 	{"tx_b/rf/freq/val", hdlr_tx_b_rf_freq_val, RW, "0"},
@@ -3769,7 +3781,7 @@ static prop_t property_table[] = {
 	{"tx_c/sync", hdlr_tx_sync, WO, "0"},
 	{"tx_c/rf/dac/dither_en", hdlr_tx_c_rf_dac_dither_en, RW, "0"},
 	{"tx_c/rf/dac/dither_mixer_en", hdlr_tx_c_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_c/rf/dac/dither_sra_sel", hdlr_tx_c_rf_dac_dither_sra_sel, RW, "0"},
+	{"tx_c/rf/dac/dither_sra_sel", hdlr_tx_c_rf_dac_dither_sra_sel, RW, "96"},
 	{"tx_c/rf/dac/nco", hdlr_tx_c_rf_dac_nco, RW, "15000000"},
 	{"tx_c/rf/dac/temp", hdlr_tx_c_rf_dac_temp, RW, "0"},
 	{"tx_c/rf/freq/val", hdlr_tx_c_rf_freq_val, RW, "0"},
@@ -3823,7 +3835,7 @@ static prop_t property_table[] = {
 	{"tx_d/sync", hdlr_tx_sync, WO, "0"},	
 	{"tx_d/rf/dac/dither_en", hdlr_tx_d_rf_dac_dither_en, RW, "0"},
 	{"tx_d/rf/dac/dither_mixer_en", hdlr_tx_d_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_d/rf/dac/dither_sra_sel", hdlr_tx_d_rf_dac_dither_sra_sel, RW, "0"},
+	{"tx_d/rf/dac/dither_sra_sel", hdlr_tx_d_rf_dac_dither_sra_sel, RW, "96"},
 	{"tx_d/rf/dac/nco", hdlr_tx_d_rf_dac_nco, RW, "15000000"},
 	{"tx_d/rf/dac/temp", hdlr_tx_d_rf_dac_temp, RW, "0"},
 	{"tx_d/rf/freq/val", hdlr_tx_d_rf_freq_val, RW, "0"},
