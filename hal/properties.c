@@ -152,7 +152,7 @@ static int hdlr_invalid (const char* data, char* ret) {
 static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c a -l \0\r";
+	char buf[] = "dac -c a -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -161,7 +161,7 @@ static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -l %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c a -l %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -170,7 +170,7 @@ static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_a_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c a -3 \0\r";
+	char buf[] = "dac -c a -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -179,7 +179,7 @@ static int hdlr_tx_a_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -3 %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c a -3 %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -187,21 +187,24 @@ static int hdlr_tx_a_rf_dac_dither_mixer_en (const char* data, char* ret) {
 
 static int hdlr_tx_a_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
+	int db;
 	int sel;
-	char buf[] = "mcu -c a -b \0\0\r";
+	char buf[] = "dac -c a -b \0\0\r";
 
-	r = sscanf( data, "%d", &sel );
+	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
+	if ( db < 6 || db > 96 || 0 != db % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
 
-	sprintf( ret, "%u", sel );
-	sel /= 6;  // each step is a 6 dB increment
-	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c a -b %u\r", sel );
+	sprintf( ret, "%u", db );
+
+	 // 96 dB (max) := 0x0, 90 dB := 0x1, ... 6 dB (min) := 0xf
+	sel = 16 - ( db / 6 );
+
+	snprintf( buf, sizeof( buf ) - 1, "dac -c a -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -994,7 +997,7 @@ static int hdlr_rx_sync (const char* data, char* ret) {
 static int hdlr_tx_b_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c b -l \0\r";
+	char buf[] = "dac -c b -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1003,7 +1006,7 @@ static int hdlr_tx_b_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -l %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c b -l %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -1012,7 +1015,7 @@ static int hdlr_tx_b_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_b_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c b -3 \0\r";
+	char buf[] = "dac -c b -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1021,7 +1024,7 @@ static int hdlr_tx_b_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -3 %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c b -3 %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -1029,21 +1032,24 @@ static int hdlr_tx_b_rf_dac_dither_mixer_en (const char* data, char* ret) {
 
 static int hdlr_tx_b_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
+	int db;
 	int sel;
-	char buf[] = "mcu -c b -b \0\0\r";
+	char buf[] = "dac -c b -b \0\0\r";
 
-	r = sscanf( data, "%d", &sel );
+	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
+	if ( db < 6 || db > 96 || 0 != db % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
 
-	sprintf( ret, "%u", sel );
-	sel /= 6;  // each step is a 6 dB increment
-	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c b -b %u\r", sel );
+	sprintf( ret, "%u", db );
+
+	 // 96 dB (max) := 0x0, 90 dB := 0x1, ... 6 dB (min) := 0xf
+	sel = 16 - ( db / 6 );
+
+	snprintf( buf, sizeof( buf ) - 1, "dac -c b -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -1796,7 +1802,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 static int hdlr_tx_c_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c c -l \0\r";
+	char buf[] = "dac -c c -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1805,7 +1811,7 @@ static int hdlr_tx_c_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -l %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c c -l %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -1814,7 +1820,7 @@ static int hdlr_tx_c_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_c_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c c -3 \0\r";
+	char buf[] = "dac -c c -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1823,7 +1829,7 @@ static int hdlr_tx_c_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -3 %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c c -3 %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -1831,21 +1837,24 @@ static int hdlr_tx_c_rf_dac_dither_mixer_en (const char* data, char* ret) {
 
 static int hdlr_tx_c_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
+	int db;
 	int sel;
-	char buf[] = "mcu -c c -b \0\0\r";
+	char buf[] = "dac -c c -b \0\0\r";
 
-	r = sscanf( data, "%d", &sel );
+	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
+	if ( db < 6 || db > 96 || 0 != db % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
 
-	sprintf( ret, "%u", sel );
-	sel /= 6;  // each step is a 6 dB increment
-	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c c -b %u\r", sel );
+	sprintf( ret, "%u", db );
+
+	 // 96 dB (max) := 0x0, 90 dB := 0x1, ... 6 dB (min) := 0xf
+	sel = 16 - ( db / 6 );
+
+	snprintf( buf, sizeof( buf ) - 1, "dac -c c -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -2598,7 +2607,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c d -l \0\r";
+	char buf[] = "dac -c d -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -2607,7 +2616,7 @@ static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -l %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c d -l %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -2616,7 +2625,7 @@ static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_d_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "mcu -c d -3 \0\r";
+	char buf[] = "dac -c d -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -2625,7 +2634,7 @@ static int hdlr_tx_d_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	if ( en < 0 || en > 1 ) {
 		return RETURN_ERROR_PARAM;
 	}
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -3 %u\r", en );
+	snprintf( buf, sizeof( buf ) - 1, "dac -c d -3 %u\r", en );
 	sprintf( ret, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
@@ -2633,21 +2642,24 @@ static int hdlr_tx_d_rf_dac_dither_mixer_en (const char* data, char* ret) {
 
 static int hdlr_tx_d_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
+	int db;
 	int sel;
-	char buf[] = "mcu -c d -b \0\0\r";
+	char buf[] = "dac -c d -b \0\0\r";
 
-	r = sscanf( data, "%d", &sel );
+	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
 		return RETURN_ERROR;
 	}
-	if ( sel < 6 || sel > 96 || 0 != sel % 6 ) {
+	if ( db < 6 || db > 96 || 0 != db % 6 ) {
 		return RETURN_ERROR_PARAM;
 	}
 
-	sprintf( ret, "%u", sel );
-	sel /= 6;  // each step is a 6 dB increment
-	sel %= 16; // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB) // 1 := min (6dB), 2, ... , 16 := 0 := max (96dB)
-	snprintf( buf, sizeof( buf ) - 1, "mcu -c d -b %u\r", sel );
+	sprintf( ret, "%u", db );
+
+	 // 96 dB (max) := 0x0, 90 dB := 0x1, ... 6 dB (min) := 0xf
+	sel = 16 - ( db / 6 );
+
+	snprintf( buf, sizeof( buf ) - 1, "dac -c d -b %u\r", sel );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
