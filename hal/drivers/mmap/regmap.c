@@ -125,6 +125,9 @@ static const reg_t reg_table[] = {
 	{0xb40 + HPS2FPGA_GPR_OFST, "txd4", 0x00000200, "RW"},
 	{0xb50 + HPS2FPGA_GPR_OFST, "txd5", 0x0000a74c, "RW"},
 
+	{0xc00 + HPS2FPGA_GPR_OFST, "rxga", 0x80808080, "RW"},
+	{0xc10 + HPS2FPGA_GPR_OFST, "txga", 0x80808080, "RW"},
+
 	{0xf00 + HPS2FPGA_GPR_OFST, "res_rw0", 0x00000000, "RW"},
 	{0xf10 + HPS2FPGA_GPR_OFST, "res_rw1", 0x00000000, "RW"},
 	{0xf20 + HPS2FPGA_GPR_OFST, "res_rw2", 0x00000000, "RW"},

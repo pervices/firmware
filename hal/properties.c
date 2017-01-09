@@ -120,16 +120,18 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err
    if (lower_factor > max_factor || lower_factor < min_factor) lower_factor_violation = 1;
    if (upper_factor > max_factor || upper_factor < min_factor) upper_factor_violation = 1;
 
+   double lower_factor_error = (base_rate / (double)lower_factor) - rate;
+   double upper_factor_error = rate - (base_rate / (double)upper_factor);
+
    if (lower_factor_violation && upper_factor_violation) {
 	   return 0xffff;
    } else if (lower_factor_violation) {
+	   if (err) *err = upper_factor_error;
 	   return (uint16_t)(upper_factor - 1);
    } else if (upper_factor_violation) {
+	   if (err) *err = lower_factor_error;
 	   return (uint16_t)(lower_factor - 1);
    } else {		// Nothing is wrong, then
-	   double lower_factor_error = (base_rate / (double)lower_factor) - rate;
-	   double upper_factor_error = rate - (base_rate / (double)upper_factor);
-
 	   if (lower_factor_error < upper_factor_error) {
 		   if (err) *err = lower_factor_error;
 		   return (uint16_t)(lower_factor - 1);
@@ -322,21 +324,40 @@ static int hdlr_tx_a_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
 
-	write_hps_reg( "txa1", base_factor);
+	if (resamp_err < base_err) {
+		write_hps_reg( "txa1", resamp_factor);
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 0) ) | (interp_gain_lut[(resamp_factor)] << 0));
+	} else {
+		write_hps_reg( "txa1", base_factor);
+		read_hps_reg(  "txa4", &old_val);
+		write_hps_reg( "txa4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 0) ) | (interp_gain_lut[(base_factor)] << 0));
+	}
+
+	// DSP Reset
 	read_hps_reg(  "txa4", &old_val);
-	write_hps_reg( "txa4", old_val & ~(1 << 15));
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "txa4", old_val |  0x2);
+	write_hps_reg( "txa4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -423,7 +444,6 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
 	// check if power is already enabled
 	if (power >= PWR_ON  && tx_power[0] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[0] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -658,21 +678,40 @@ static int hdlr_rx_a_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
-   double rate;
-   sscanf(data, "%lf", &rate);
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
+	double rate;
+	sscanf(data, "%lf", &rate);
 
-   // get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-   // set the appropriate sample rate
-   memset(ret, 0, MAX_PROP_LEN);
+	// set the appropriate sample rate
+	memset(ret, 0, MAX_PROP_LEN);
 
-   write_hps_reg( "rxa1", base_factor);
-   read_hps_reg(  "rxa4", &old_val);
-   write_hps_reg( "rxa4", old_val & ~(1 << 15));
-   sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	if (resamp_err < base_err) {
+		write_hps_reg( "rxa1", resamp_factor);
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (decim_gain_lut[(resamp_factor)] << 0));
+	} else {
+		write_hps_reg( "rxa1", base_factor);
+		read_hps_reg(  "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (decim_gain_lut[(base_factor)] << 0));
+	}
+
+	// DSP Reset
+	read_hps_reg(  "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val |  0x2);
+	write_hps_reg( "rxa4", old_val & ~0x2);
 
    return RETURN_SUCCESS;
 }
@@ -822,51 +861,49 @@ static int hdlr_rx_a_stream (const char* data, char* ret) {
 static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
-	// check it power is already enabled
+	// check if power is already enabled
 	if (power >= PWR_ON  && rx_power[0] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[0] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[0] = PWR_ON;
-		rx_stream[0] = STREAM_ON;
 
-      // board command
+		// board command
 		strcpy(buf, "board -c a -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
-      sync_channels(15);
+		// send sync pulse
+		sync_channels(15);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
-	// power off
+	// power off & stream off
 	} else {
 		rx_power[0] = PWR_OFF;
 		rx_stream[0] = STREAM_OFF;
@@ -1072,21 +1109,40 @@ static int hdlr_tx_b_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
 
-	write_hps_reg( "txb1", base_factor);
+	if (resamp_err < base_err) {
+		write_hps_reg( "txb1", resamp_factor);
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 8) ) | (interp_gain_lut[(resamp_factor)] << 8));
+	} else {
+		write_hps_reg( "txb1", base_factor);
+		read_hps_reg(  "txb4", &old_val);
+		write_hps_reg( "txb4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 8) ) | (interp_gain_lut[(base_factor)] << 8));
+	}
+
+	// DSP Reset
 	read_hps_reg(  "txb4", &old_val);
-	write_hps_reg( "txb4", old_val & ~(1 << 15));
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "txb4", old_val |  0x2);
+	write_hps_reg( "txb4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -1164,7 +1220,6 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[1] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[1] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -1388,21 +1443,40 @@ static int hdlr_rx_b_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
 
-	write_hps_reg( "rxb1", base_factor);
+	if (resamp_err < base_err) {
+		write_hps_reg( "rxb1", resamp_factor);
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (decim_gain_lut[(resamp_factor)] << 8));
+	} else {
+		write_hps_reg( "rxb1", base_factor);
+		read_hps_reg(  "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (decim_gain_lut[(base_factor)] << 8));
+	}
+
+	// DSP Reset
 	read_hps_reg(  "rxb4", &old_val);
-	write_hps_reg( "rxb4", old_val & ~(1 << 15));
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "rxb4", old_val |  0x2);
+	write_hps_reg( "rxb4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -1543,49 +1617,47 @@ static int hdlr_rx_b_stream (const char* data, char* ret) {
 static int hdlr_rx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[1] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[1] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[1] = PWR_ON;
-		rx_stream[1] = STREAM_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "board -c b -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
-      sync_channels(15);
+		// send sync pulse
+		sync_channels(15);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
@@ -1782,21 +1854,40 @@ static int hdlr_tx_c_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
 
-	write_hps_reg( "txc1", base_factor);
+	if (resamp_err < base_err) {
+		write_hps_reg( "txc1", resamp_factor);
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 16) ) | (interp_gain_lut[(resamp_factor)] << 16));
+	} else {
+		write_hps_reg( "txc1", base_factor);
+		read_hps_reg(  "txc4", &old_val);
+		write_hps_reg( "txc4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 16) ) | (interp_gain_lut[(base_factor)] << 16));
+	}
+
+	// DSP Reset
 	read_hps_reg(  "txc4", &old_val);
-	write_hps_reg( "txc4", old_val & ~(1 << 15));
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "txc4", old_val |  0x2);
+	write_hps_reg( "txc4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -1874,7 +1965,6 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[2] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[2] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -2098,21 +2188,40 @@ static int hdlr_rx_c_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
 
-	write_hps_reg( "rxc1", base_factor);
+	if (resamp_err < base_err) {
+		write_hps_reg( "rxc1", resamp_factor);
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (decim_gain_lut[(resamp_factor)] << 16));
+	} else {
+		write_hps_reg( "rxc1", base_factor);
+		read_hps_reg(  "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (decim_gain_lut[(base_factor)] << 16));
+	}
+
+	// DSP Reset
 	read_hps_reg(  "rxc4", &old_val);
-	write_hps_reg( "rxc4", old_val & ~(1 << 15));
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "rxc4", old_val |  0x2);
+	write_hps_reg( "rxc4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -2253,49 +2362,47 @@ static int hdlr_rx_c_stream (const char* data, char* ret) {
 static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[2] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[2] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[2] = PWR_ON;
-		rx_stream[2] = STREAM_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "board -c c -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
-      sync_channels(15);
+		// send sync pulse
+		sync_channels(15);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
@@ -2492,21 +2599,40 @@ static int hdlr_tx_d_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
 
-	write_hps_reg( "txd1", base_factor);
+	if (resamp_err < base_err) {
+		write_hps_reg( "txd1", resamp_factor);
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(resamp_factor)] << 24));
+	} else {
+		write_hps_reg( "txd1", base_factor);
+		read_hps_reg(  "txd4", &old_val);
+		write_hps_reg( "txd4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(base_factor)] << 24));
+	}
+
+	// DSP Reset
 	read_hps_reg(  "txd4", &old_val);
-	write_hps_reg( "txd4", old_val & ~(1 << 15));
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "txd4", old_val |  0x2);
+	write_hps_reg( "txd4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -2584,7 +2710,6 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[3] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[3] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
@@ -2808,21 +2933,40 @@ static int hdlr_rx_d_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor;
-   double base_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
 	// get the error for base rate
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
 
-	write_hps_reg( "rxd1", base_factor);
+	if (resamp_err < base_err) {
+		write_hps_reg( "rxd1", resamp_factor);
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | (1 << 15));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (decim_gain_lut[(resamp_factor)] << 24));
+	} else {
+		write_hps_reg( "rxd1", base_factor);
+		read_hps_reg(  "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & ~(1 << 15));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (decim_gain_lut[(base_factor)] << 24));
+	}
+
+	// DSP Reset
 	read_hps_reg(  "rxd4", &old_val);
-	write_hps_reg( "rxd4", old_val & ~(1 << 15));
-	sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+	write_hps_reg( "rxd4", old_val |  0x2);
+	write_hps_reg( "rxd4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -2963,49 +3107,47 @@ static int hdlr_rx_d_stream (const char* data, char* ret) {
 static int hdlr_rx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[3] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[3] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
 		rx_power[3] = PWR_ON;
-		rx_stream[3] = STREAM_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "board -c d -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
-      sync_channels(15);
+		// send sync pulse
+		sync_channels(15);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
