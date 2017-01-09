@@ -33,6 +33,9 @@
 #define PWR_ON	1
 #define PWR_OFF	0
 
+#define STREAM_ON	1
+#define STREAM_OFF	0
+
 #define FREQ_XOVER_PNT 100000000	// 100 MHz is the crossover frequency for high and low band
 
 #define NUM_CHANNELS 4
@@ -45,6 +48,7 @@ static char buf[MAX_PROP_LEN] = {};
 // by default the board is powered off
 static uint8_t rx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 static uint8_t tx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+static uint8_t rx_stream[] = {STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF};
 const static char* reg4[] = {"rxa4", "rxb4", "rxc4", "rxd4", "txa4", "txb4", "txc4", "txd4"};
 static int i_bias[] = {17, 17, 17, 17};
 static int q_bias[] = {17, 17, 17, 17};
@@ -101,30 +105,38 @@ static int read_uart(int fwd) {
 
 // helper function to find the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err) {
-   uint16_t tot_factor = floor(base_rate / rate);
-   uint16_t max_factor = 256;
-   uint16_t min_factor = 1;
+	uint32_t max_factor = 65536;	// 2^16
+	uint32_t min_factor = 1;
+	uint8_t lower_factor_violation = 0;
+	uint8_t upper_factor_violation = 0;
 
-   // error bounds check
-   if (tot_factor > max_factor * max_factor || tot_factor < min_factor * min_factor)
-      return 0xffff;
+	uint32_t lower_factor = (uint32_t)floor(base_rate / rate);
+	uint32_t upper_factor = lower_factor + 1;
 
-   double min_error = rate;
-   uint16_t optimal = 0;
+	double lower_factor_error = (base_rate / (double)lower_factor) - rate;
+	double upper_factor_error = rate - (base_rate / (double)upper_factor);
 
-   uint32_t val = 0;
-   for (;val <= 0xffff; val++) {
-      uint16_t first  = (((val >> 0) & 0xff) + 1);
-      uint16_t second = (((val >> 8) & 0xff) + 1);
-      double error  = fabs( (base_rate / (double)(first * second)) - rate);
-      if (error < min_error) {
-         optimal = val;
-         min_error = error;
-      }
-   }
+	// error bounds check
+	if (lower_factor > max_factor || lower_factor < min_factor) lower_factor_violation = 1;
+	if (upper_factor > max_factor || upper_factor < min_factor) upper_factor_violation = 1;
 
-   if (err) *err = min_error;
-   return optimal;
+	if (lower_factor_violation && upper_factor_violation) {
+	   return 0xffff;
+	} else if (lower_factor_violation) {
+	   if (err) *err = upper_factor_error;
+	   return (uint16_t)(upper_factor - 1);
+	} else if (upper_factor_violation) {
+	   if (err) *err = lower_factor_error;
+	   return (uint16_t)(lower_factor - 1);
+	} else {		// Nothing is wrong, then
+	   if (lower_factor_error < upper_factor_error) {
+		   if (err) *err = lower_factor_error;
+		   return (uint16_t)(lower_factor - 1);
+	   } else {
+		   if (err) *err = upper_factor_error;
+		   return (uint16_t)(upper_factor - 1);
+	   }
+	}
 }
 
 // Beginning of property functions, very long because each property needs to be
@@ -135,17 +147,18 @@ static int hdlr_invalid (const char* data, char* ret) {
 }
 
 static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c a -e 0 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -343,51 +356,69 @@ static int hdlr_tx_a_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "txa1", resamp_factor);
 		read_hps_reg(  "txa4", &old_val);
 		write_hps_reg( "txa4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 0) ) | (interp_gain_lut[(resamp_factor)] << 0));
 	} else {
 		write_hps_reg( "txa1", base_factor);
 		read_hps_reg(  "txa4", &old_val);
 		write_hps_reg( "txa4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 0) ) | (interp_gain_lut[(base_factor)] << 0));
 	}
+
+	// DSP Reset
+	read_hps_reg(  "txa4", &old_val);
+	write_hps_reg( "txa4", old_val |  0x2);
+	write_hps_reg( "txa4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txa0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txa0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txa4", &old_val);
@@ -445,11 +476,10 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[0] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[0] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		tx_power[0] = PWR_ON;
+		tx_power[0]  = PWR_ON;
 
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c a -d'\r");
@@ -465,7 +495,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+	usleep(350000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -499,7 +529,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 		read_hps_reg ( "txa4", &old_val);
 		write_hps_reg( "txa4", old_val & (~0x100));
 
-		tx_power[0] = PWR_OFF;
+		tx_power[0]  = PWR_OFF;
 	}
 
 	return RETURN_SUCCESS;
@@ -701,51 +731,69 @@ static int hdlr_rx_a_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "rxa1", resamp_factor);
 		read_hps_reg(  "rxa4", &old_val);
 		write_hps_reg( "rxa4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (decim_gain_lut[(resamp_factor)] << 0));
 	} else {
 		write_hps_reg( "rxa1", base_factor);
 		read_hps_reg(  "rxa4", &old_val);
 		write_hps_reg( "rxa4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (decim_gain_lut[(base_factor)] << 0));
 	}
 
-	return RETURN_SUCCESS;
+	// DSP Reset
+	read_hps_reg(  "rxa4", &old_val);
+	write_hps_reg( "rxa4", old_val |  0x2);
+	write_hps_reg( "rxa4", old_val & ~0x2);
+
+   return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_a_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxa0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxa0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxa4", &old_val);
@@ -819,57 +867,101 @@ static int hdlr_rx_a_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_a_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[0]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[0]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[0] == PWR_ON) {
+			read_hps_reg ( reg4[0], &old_val);
+			write_hps_reg( reg4[0], old_val | 0x100);
+
+			read_hps_reg ( reg4[0], &old_val);
+			write_hps_reg( reg4[0], old_val | 0x2);
+			write_hps_reg( reg4[0], old_val & (~0x2));
+
+			rx_stream[0] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxa4", &old_val);
+		write_hps_reg( "rxa4", old_val & (~0x100));
+
+		rx_stream[0] = STREAM_OFF;
+	}
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[0] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[0] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		rx_power[0] = PWR_ON;
+		rx_power[0]  = PWR_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c a -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+		usleep(350000);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
-		rx_power[0] = PWR_OFF;
+		rx_power[0]  = PWR_OFF;
+		rx_stream[0] = STREAM_OFF;
 
 		// mute the board
 		strcpy(buf, "fwd -b 0 -m 'board -c a -m'\r");
@@ -898,17 +990,18 @@ static int hdlr_rx_sync (const char* data, char* ret) {
 }
 
 static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c b -e 1 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1106,51 +1199,69 @@ static int hdlr_tx_b_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "txb1", resamp_factor);
 		read_hps_reg(  "txb4", &old_val);
 		write_hps_reg( "txb4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 8) ) | (interp_gain_lut[(resamp_factor)] << 8));
 	} else {
 		write_hps_reg( "txb1", base_factor);
 		read_hps_reg(  "txb4", &old_val);
 		write_hps_reg( "txb4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 8) ) | (interp_gain_lut[(base_factor)] << 8));
 	}
+
+	// DSP Reset
+	read_hps_reg(  "txb4", &old_val);
+	write_hps_reg( "txb4", old_val |  0x2);
+	write_hps_reg( "txb4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txb0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txb0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txb4", &old_val);
@@ -1199,11 +1310,10 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[1] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[1] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		tx_power[1] = PWR_ON;
+		tx_power[1]  = PWR_ON;
 
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c b -d'\r");
@@ -1219,7 +1329,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+	usleep(350000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1253,7 +1363,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 		read_hps_reg ( "txb4", &old_val);
 		write_hps_reg( "txb4", old_val & (~0x100));
 
-		tx_power[1] = PWR_OFF;
+		tx_power[1]  = PWR_OFF;
 	}
 
 	return RETURN_SUCCESS;
@@ -1443,52 +1553,71 @@ static int hdlr_rx_b_dsp_gain (const char* data, char* ret) {
 }
 
 static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
+
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "rxb1", resamp_factor);
 		read_hps_reg(  "rxb4", &old_val);
 		write_hps_reg( "rxb4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (decim_gain_lut[(resamp_factor)] << 8));
 	} else {
 		write_hps_reg( "rxb1", base_factor);
 		read_hps_reg(  "rxb4", &old_val);
 		write_hps_reg( "rxb4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (decim_gain_lut[(base_factor)] << 8));
 	}
+
+	// DSP Reset
+	read_hps_reg(  "rxb4", &old_val);
+	write_hps_reg( "rxb4", old_val |  0x2);
+	write_hps_reg( "rxb4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_b_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxb0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxb0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxb4", &old_val);
@@ -1553,6 +1682,50 @@ static int hdlr_rx_b_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_b_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[1]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[1]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[1] == PWR_ON) {
+			read_hps_reg ( reg4[1], &old_val);
+			write_hps_reg( reg4[1], old_val | 0x100);
+
+			read_hps_reg ( reg4[1], &old_val);
+			write_hps_reg( reg4[1], old_val | 0x2);
+			write_hps_reg( reg4[1], old_val & (~0x2));
+
+			rx_stream[1] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxb4", &old_val);
+		write_hps_reg( "rxb4", old_val & (~0x100));
+
+		rx_stream[1] = STREAM_OFF;
+	}
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -1561,49 +1734,49 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[1] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[1] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		rx_power[1] = PWR_ON;
+		rx_power[1]  = PWR_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c b -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+		usleep(350000);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
-		rx_power[1] = PWR_OFF;
+		rx_power[1]  = PWR_OFF;
+		rx_stream[1] = STREAM_OFF;
 
 		// mute the board
 		strcpy(buf, "fwd -b 0 -m 'board -c b -m'\r");
@@ -1621,17 +1794,18 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c c -e 0 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1829,51 +2003,69 @@ static int hdlr_tx_c_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "txc1", resamp_factor);
 		read_hps_reg(  "txc4", &old_val);
 		write_hps_reg( "txc4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 16) ) | (interp_gain_lut[(resamp_factor)] << 16));
 	} else {
 		write_hps_reg( "txc1", base_factor);
 		read_hps_reg(  "txc4", &old_val);
 		write_hps_reg( "txc4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 16) ) | (interp_gain_lut[(base_factor)] << 16));
 	}
+
+	// DSP Reset
+	read_hps_reg(  "txc4", &old_val);
+	write_hps_reg( "txc4", old_val |  0x2);
+	write_hps_reg( "txc4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txc0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txc0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txc4", &old_val);
@@ -1922,11 +2114,10 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[2] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[2] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		tx_power[2] = PWR_ON;
+		tx_power[2]  = PWR_ON;
 
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c c -d'\r");
@@ -1942,7 +2133,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+	usleep(350000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -1976,7 +2167,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 		read_hps_reg ( "txc4", &old_val);
 		write_hps_reg( "txc4", old_val & (~0x100));
 
-		tx_power[2] = PWR_OFF;
+		tx_power[2]  = PWR_OFF;
 	}
 
 	return RETURN_SUCCESS;
@@ -2167,51 +2358,69 @@ static int hdlr_rx_c_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "rxc1", resamp_factor);
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (decim_gain_lut[(resamp_factor)] << 16));
 	} else {
 		write_hps_reg( "rxc1", base_factor);
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (decim_gain_lut[(base_factor)] << 16));
 	}
+
+	// DSP Reset
+	read_hps_reg(  "rxc4", &old_val);
+	write_hps_reg( "rxc4", old_val |  0x2);
+	write_hps_reg( "rxc4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_c_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxc0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxc0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxc4", &old_val);
@@ -2276,53 +2485,96 @@ static int hdlr_rx_c_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_c_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[2]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[2]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[2] == PWR_ON) {
+			read_hps_reg ( reg4[2], &old_val);
+			write_hps_reg( reg4[2], old_val | 0x100);
+
+			read_hps_reg ( reg4[2], &old_val);
+			write_hps_reg( reg4[2], old_val | 0x2);
+			write_hps_reg( reg4[2], old_val & (~0x2));
+
+			rx_stream[2] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxc4", &old_val);
+		write_hps_reg( "rxc4", old_val & (~0x100));
+
+		rx_stream[2] = STREAM_OFF;
+	}
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[2] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[2] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		rx_power[2] = PWR_ON;
+		rx_power[2]  = PWR_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c c -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+		usleep(350000);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
@@ -2338,23 +2590,25 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 		read_hps_reg ( "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val & (~0x100));
 
-		rx_power[2] = PWR_OFF;
+		rx_power[2]  = PWR_OFF;
+		rx_stream[2] = STREAM_OFF;
 	}
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret) {
-	uint64_t freq;
-	sscanf(data, "%"SCNd64"", &freq);
-	freq *= DAC_NCO_CONST;
+	double freq;
+	sscanf(data, "%lf", &freq);
+	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
+	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	strcpy(buf, "fwd -b 1 -m 'dac -c d -e 1 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq >> 32));
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 	strcpy(buf, "fwd -b 1 -m 'dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)freq);
+	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "'\r");
 	send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2552,51 +2806,69 @@ static int hdlr_tx_d_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "txd1", resamp_factor);
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(resamp_factor)] << 24));
 	} else {
 		write_hps_reg( "txd1", base_factor);
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "txga",  &old_val);
+		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(base_factor)] << 24));
 	}
+
+	// DSP Reset
+	read_hps_reg(  "txd4", &old_val);
+	write_hps_reg( "txd4", old_val |  0x2);
+	write_hps_reg( "txd4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "txd0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "txd0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "txd4", &old_val);
@@ -2645,11 +2917,10 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && tx_power[3] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && tx_power[3] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		tx_power[3] = PWR_ON;
+		tx_power[3]  = PWR_ON;
 
       // board commands
 		strcpy(buf, "fwd -b 1 -m 'board -c d -d'\r");
@@ -2665,7 +2936,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
       // send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+	usleep(350000);
 
 		// enable active dsp channels, and reset the DSP
       for(i = 0; i < NUM_CHANNELS; i++) {
@@ -2699,7 +2970,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 		read_hps_reg ( "txd4", &old_val);
 		write_hps_reg( "txd4", old_val & (~0x100));
 
-		tx_power[3] = PWR_OFF;
+		tx_power[3]  = PWR_OFF;
 	}
 	return RETURN_SUCCESS;
 }
@@ -2890,51 +3161,69 @@ static int hdlr_rx_d_dsp_gain (const char* data, char* ret) {
 
 static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 	uint32_t old_val;
-   uint16_t base_factor, resamp_factor;
-   double base_err, resamp_err;
+	uint16_t base_factor, resamp_factor;
+	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
 
-	// get the error for base and adj rates
-   base_factor = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
-   resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
+	// get the error for base rate
+	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
+	resamp_factor = get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);
 
-	// set the appropriate sample rate depending on which one is closer
+	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	if (rate < (BASE_SAMPLE_RATE / 5) && resamp_err < base_err) {
+
+	if (resamp_err < base_err) {
 		write_hps_reg( "rxd1", resamp_factor);
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)( (((resamp_factor >> 0) & 0xff) + 1) * (((resamp_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (decim_gain_lut[(resamp_factor)] << 24));
 	} else {
 		write_hps_reg( "rxd1", base_factor);
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)( (((base_factor >> 0) & 0xff) + 1) * (((base_factor >> 8) & 0xff) + 1) ));
+		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		//Set gain adjustment
+		read_hps_reg( "rxga",  &old_val);
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (decim_gain_lut[(base_factor)] << 24));
 	}
+
+	// DSP Reset
+	read_hps_reg(  "rxd4", &old_val);
+	write_hps_reg( "rxd4", old_val |  0x2);
+	write_hps_reg( "rxd4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_dsp_nco_adj (const char* data, char* ret) {
-	uint32_t freq;
+	double freq;
 	uint32_t old_val;
 	uint8_t direction;
 
 	// check for a minus or plus sign at the front
 	if (data[0] == '-') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 1;
 	} else if (data[0] == '+') {
-		sscanf(data + 1, "%"SCNd32"", &freq);
+		sscanf(data + 1, "%lf", &freq);
 		direction = 0;
 	} else {
-		sscanf(data, "%"SCNd32"", &freq);
+		sscanf(data, "%lf", &freq);
 		direction = 0;
 	}
 
 	// write NCO adj
-	write_hps_reg( "rxd0", freq * DSP_NCO_CONST);
+	uint32_t nco_steps =  (uint32_t)round(freq * DSP_NCO_CONST);
+	write_hps_reg( "rxd0", nco_steps);
+	if (direction > 0) {
+		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+	} else {
+		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+	}
 
 	// write direction
 	read_hps_reg(  "rxd4", &old_val);
@@ -2999,53 +3288,96 @@ static int hdlr_rx_d_link_mac_dest (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_d_stream (const char* data, char* ret) {
+	uint32_t old_val;
+	uint8_t stream;
+	sscanf(data, "%"SCNd8"", &stream);
+
+	// if stream > 1, check the status of the stream
+	if (stream > 1) {
+		sprintf(ret, "%u", rx_stream[3]);	// Alert File Tree
+		return RETURN_SUCCESS;
+	}
+
+	// Stream is already ON or OFF then return
+	if (stream == rx_stream[3]) return RETURN_SUCCESS;
+
+	// Otherwise make the change accordingly
+	if (stream > 0) {	// TURN THE STREAM ON
+		if (rx_power[3] == PWR_ON) {
+			read_hps_reg ( reg4[3], &old_val);
+			write_hps_reg( reg4[3], old_val | 0x100);
+
+			read_hps_reg ( reg4[3], &old_val);
+			write_hps_reg( reg4[3], old_val | 0x2);
+			write_hps_reg( reg4[3], old_val & (~0x2));
+
+			rx_stream[3] = STREAM_ON;
+		} else {
+			// Do not turn ON stream if channel is OFF
+			sprintf(ret, "%u", 0);	// Alert File Tree
+		}
+	} else {			// TURN THE STREAM OFF
+		// disable DSP core
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val | 0x2);
+
+		// disable channel
+		read_hps_reg ( "rxd4", &old_val);
+		write_hps_reg( "rxd4", old_val & (~0x100));
+
+		rx_stream[3] = STREAM_OFF;
+	}
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+	uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
 	if (power >= PWR_ON  && rx_power[3] == PWR_ON)  return RETURN_SUCCESS;
-	if (power == PWR_OFF && rx_power[3] == PWR_OFF) return RETURN_SUCCESS;
 
 	// power on
 	if (power >= PWR_ON) {
-		rx_power[3] = PWR_ON;
+		rx_power[3]  = PWR_ON;
 
-      // board commands
+		// board commands
 		strcpy(buf, "fwd -b 0 -m 'board -c d -d'\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+		usleep(200000);
 
 		// disable dsp channels
-      for(i = 0; i < (NUM_CHANNELS * 2); i++) {
-         read_hps_reg ( reg4[i], &old_val);
-		   write_hps_reg( reg4[i], old_val & ~0x100);
-      }
+		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
+			read_hps_reg ( reg4[i], &old_val);
+			write_hps_reg( reg4[i], old_val & ~0x100);
+		}
 
-      // send sync pulse
+		// send sync pulse
 		strcpy(buf, "fpga -o\r");
 		send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-	usleep(200000);
+		usleep(350000);
 
-		// enable active dsp channels, and reset the DSP
-      for(i = 0; i < NUM_CHANNELS; i++) {
-         if (tx_power[i] == PWR_ON) {
-            read_hps_reg ( reg4[i+4], &old_val);
-	         write_hps_reg( reg4[i+4], old_val | 0x100);
-        		read_hps_reg ( reg4[i+4], &old_val);
-   		   write_hps_reg( reg4[i+4], old_val | 0x2);
-	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
-         }
-         if (rx_power[i] == PWR_ON) {
-      		read_hps_reg ( reg4[i], &old_val);
-		      write_hps_reg( reg4[i], old_val | 0x100);
-        		read_hps_reg ( reg4[i], &old_val);
-   		   write_hps_reg( reg4[i], old_val | 0x2);
-	      	write_hps_reg( reg4[i], old_val & (~0x2));
-         }
-      }
+		// Enable active dsp channels, and reset DSP
+		for (i = 0; i < NUM_CHANNELS; i++) {
+			if (tx_power[i] == PWR_ON) {
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x100);
+				read_hps_reg ( reg4[i+4], &old_val);
+				write_hps_reg( reg4[i+4], old_val | 0x2);
+				write_hps_reg( reg4[i+4], old_val & (~0x2));
+			}
+			if (rx_stream[i] == STREAM_ON) {
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x100);
+				read_hps_reg ( reg4[i], &old_val);
+				write_hps_reg( reg4[i], old_val | 0x2);
+				write_hps_reg( reg4[i], old_val & (~0x2));
+			}
+		}
 
 	// power off
 	} else {
@@ -3061,7 +3393,8 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 		read_hps_reg ( "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val & (~0x100));
 
-		rx_power[3] = PWR_OFF;
+		rx_power[3]  = PWR_OFF;
+		rx_stream[3] = STREAM_OFF;
 	}
 	return RETURN_SUCCESS;
 }
@@ -3453,6 +3786,7 @@ static prop_t property_table[] = {
 	{"tx_a/link/iface", hdlr_tx_a_link_iface, RW, "sfpa"},
 	{"tx_a/link/port", hdlr_tx_a_link_port, RW, "42824"},
 	{"rx_a/pwr", hdlr_rx_a_pwr, RW, "0"},
+	{"rx_a/stream", hdlr_rx_a_stream, RW, "0"},
 	{"rx_a/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_a/rf/freq/val", hdlr_rx_a_rf_freq_val, RW, "0"},
 	{"rx_a/rf/freq/lna", hdlr_rx_a_rf_freq_lna, RW, "0"},
@@ -3502,6 +3836,7 @@ static prop_t property_table[] = {
 	{"tx_b/link/iface", hdlr_tx_b_link_iface, RW, "sfpb"},
 	{"tx_b/link/port", hdlr_tx_b_link_port, RW, "42825"},
 	{"rx_b/pwr", hdlr_rx_b_pwr, RW, "0"},
+	{"rx_b/stream", hdlr_rx_b_stream, RW, "0"},
 	{"rx_b/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_b/rf/freq/val", hdlr_rx_b_rf_freq_val, RW, "0"},
 	{"rx_b/rf/freq/lna", hdlr_rx_b_rf_freq_lna, RW, "0"},
@@ -3551,6 +3886,7 @@ static prop_t property_table[] = {
 	{"tx_c/link/iface", hdlr_tx_c_link_iface, RW, "sfpa"},
 	{"tx_c/link/port", hdlr_tx_c_link_port, RW, "42826"},
 	{"rx_c/pwr", hdlr_rx_c_pwr, RW, "0"},
+	{"rx_c/stream", hdlr_rx_c_stream, RW, "0"},
 	{"rx_c/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_c/rf/freq/val", hdlr_rx_c_rf_freq_val, RW, "0"},
 	{"rx_c/rf/freq/lna", hdlr_rx_c_rf_freq_lna, RW, "0"},
@@ -3600,6 +3936,7 @@ static prop_t property_table[] = {
 	{"tx_d/link/iface", hdlr_tx_d_link_iface, RW, "sfpb"},
 	{"tx_d/link/port", hdlr_tx_d_link_port, RW, "42827"},
 	{"rx_d/pwr", hdlr_rx_d_pwr, RW, "0"},
+	{"rx_d/stream", hdlr_rx_d_stream, RW, "0"},
 	{"rx_d/sync", hdlr_rx_sync, WO, "0"},
 	{"rx_d/rf/freq/val", hdlr_rx_d_rf_freq_val, RW, "0"},
 	{"rx_d/rf/freq/lna", hdlr_rx_d_rf_freq_lna, RW, "0"},
@@ -3645,6 +3982,7 @@ static prop_t property_table[] = {
 	{"fpga/board/jesd_sync", hdlr_fpga_board_jesd_sync, WO, "0"},
 	{"fpga/board/fw_rst", hdlr_fpga_board_fw_rst, WO, "0"},
 	{"fpga/board/sys_rstreq", hdlr_fpga_board_sys_rstreq, WO, "0"},
+	{"fpga/about/name", hdlr_invalid, RO, "crimson"},
 	{"fpga/about/id", hdlr_fpga_about_id, RW, "001"},
 	{"fpga/about/serial", hdlr_invalid, RO, "001"},
 	{"fpga/about/fw_ver", hdlr_fpga_about_fw_ver, RW, VERSION},
