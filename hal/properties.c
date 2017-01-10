@@ -152,7 +152,6 @@ static int hdlr_invalid (const char* data, char* ret) {
 static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c a -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -170,7 +169,6 @@ static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_a_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c a -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -189,7 +187,6 @@ static int hdlr_tx_a_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
 	int db;
 	int sel;
-	char buf[] = "dac -c a -b \0\0\r";
 
 	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
@@ -997,7 +994,6 @@ static int hdlr_rx_sync (const char* data, char* ret) {
 static int hdlr_tx_b_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c b -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1015,7 +1011,6 @@ static int hdlr_tx_b_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_b_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c b -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1034,7 +1029,6 @@ static int hdlr_tx_b_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
 	int db;
 	int sel;
-	char buf[] = "dac -c b -b \0\0\r";
 
 	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
@@ -1802,7 +1796,6 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 static int hdlr_tx_c_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c c -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1820,7 +1813,6 @@ static int hdlr_tx_c_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_c_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c c -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -1839,7 +1831,6 @@ static int hdlr_tx_c_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
 	int db;
 	int sel;
-	char buf[] = "dac -c c -b \0\0\r";
 
 	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
@@ -2607,7 +2598,6 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c d -l \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -2625,7 +2615,6 @@ static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret) {
 static int hdlr_tx_d_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	int r;
 	int en;
-	char buf[] = "dac -c d -3 \0\r";
 
 	r = sscanf( data, "%d", &en );
 	if ( 1 != r ) {
@@ -2644,7 +2633,6 @@ static int hdlr_tx_d_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	int r;
 	int db;
 	int sel;
-	char buf[] = "dac -c d -b \0\0\r";
 
 	r = sscanf( data, "%d", &db );
 	if ( 1 != r ) {
