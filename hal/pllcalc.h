@@ -47,7 +47,7 @@
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to 
 // used during approximation, and has the largest impact on overall tuning
 // accuracy.
-#define _PLL_RATS_MAX_DENOM 126 // 40 // 16383 // 4095 // 2047 // 1023 // 511
+#define _PLL_RATS_MAX_DENOM 257 // 40 // 16383 // 4095 // 2047 // 1023 // 511
 
 // For further accuracy, one may also adjust the PLL1_N_MAX parameter. 
 // Increasing both will lead to better frequency accuracy on the radio side, 
@@ -69,19 +69,19 @@
 #define PLL1_PD_MAX_HZ		120000000ULL
 #define PLL1_N_MIN		23   //Minimum allowable N value (per datasheet)
 #define PLL1_N_MAX		4024    // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
-#define PLL1_R_MIN		25 //Require lower R divider for 
-#define PLL1_R_MAX		1023
+#define PLL1_R_MIN		32   //Require lower R divider to ensure reliable PDF frequency
+#define PLL1_R_MAX		65
 #define PLL1_DIV_MAX		64
 #define PLL1_DIV_MIN		1
 
 #define PLL_PARAM_GOOD		0
 
 // ADF4355 Default specs
-#define PLL1_R_DEFAULT		( 10 )		// R value (we aim to minimize this)
-#define PLL1_N_DEFAULT		( 60 )         // N value (N^2 contribution to PLL noise) [16..4096]
-#define PLL1_D_DEFAULT		( 1 )		// RFoutput divider value (1,2,4,6..58,60,62)
+#define PLL1_R_DEFAULT		( 32 )		// R value (we aim to minimize this)
+#define PLL1_N_DEFAULT		( 572 )         // N value (N^2 contribution to PLL noise) [16..4096]
+#define PLL1_D_DEFAULT		( 2 )		// RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL1_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
-#define PLL1_OUTFREQ_DEFAULT	( 1500000000 )	// Resulting VCO Output Frequency
+#define PLL1_OUTFREQ_DEFAULT	( 2904700000 )	// Resulting VCO Output Frequency
 #define PLL1_FB_DEFAULT         ( 0 )           // VCO divider feedback
 
 /*

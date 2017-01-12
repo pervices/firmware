@@ -46,13 +46,13 @@ int main (void)
         pllparam_t pll;
         
         //Debug parameters;
-        double max_diff = 0;
+        double max_diff = 5000001;
         double max_N = PLL1_N_MAX;
         double max_R = PLL1_R_MAX;
         int printdebug = 0;
         uint64_t stepFreq = (1000000);
         
-        for (reqFreq = stepFreq * 1000; reqFreq <= stepFreq * 1200; reqFreq += stepFreq)
+        for (reqFreq = stepFreq * 100; reqFreq <= stepFreq * 6250; reqFreq += stepFreq)
         {
 
                 // This is the main function, everything after is for statistics
@@ -182,8 +182,8 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
         uint64_t temp = *reqFreq;
 
         // round the required Frequency to the nearest 5MHz
-        uint64_t mhzFreq = (*reqFreq / 1e6); // MHz truncation
-        *reqFreq = mhzFreq * 1e6;
+        uint64_t mhzFreq = (*reqFreq / 5e6); // MHz truncation
+        *reqFreq = mhzFreq * 5e6;
 
         // Sanitize the input to be within range
         if (*reqFreq > PLL1_RFOUT_MAX_HZ) 	*reqFreq = PLL1_REF_MAX_HZ;
