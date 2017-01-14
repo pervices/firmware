@@ -65,8 +65,8 @@
 #define PLL1_RFOUT_MIN_HZ	54000000ULL
 #define PLL1_VCO_MIN_HZ		3400000000ULL
 #define PLL1_VCO_MAX_HZ		6800000000ULL
-#define PLL1_PD_MIN_HZ		1000000ULL	// To Maximize PD spur width
-#define PLL1_PD_MAX_HZ		120000000ULL
+#define PLL1_PD_MIN_HZ		10000000ULL	// THIS MUST BE ADJUSTED TO ENSURE VALID PD FREQUENCY AND DEVICE STABILITY.
+#define PLL1_PD_MAX_HZ		20000000ULL
 #define PLL1_N_MIN		23   //Minimum allowable N value (per datasheet)
 #define PLL1_N_MAX		4024    // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
 #define PLL1_R_MIN		32   //Require lower R divider to ensure reliable PDF frequency
