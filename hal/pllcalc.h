@@ -47,7 +47,7 @@
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to 
 // used during approximation, and has the largest impact on overall tuning
 // accuracy.
-#define _PLL_RATS_MAX_DENOM 257 // 40 // 16383 // 4095 // 2047 // 1023 // 511
+#define _PLL_RATS_MAX_DENOM 511 // 40 // 16383 // 4095 // 2047 // 1023 // 511
 
 // For further accuracy, one may also adjust the PLL1_N_MAX parameter. 
 // Increasing both will lead to better frequency accuracy on the radio side, 
@@ -69,8 +69,8 @@
 #define PLL1_PD_MAX_HZ		20000000ULL
 #define PLL1_N_MIN		23   //Minimum allowable N value (per datasheet)
 #define PLL1_N_MAX		4024    // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per performance/judgement)
-#define PLL1_R_MIN		32   //Require lower R divider to ensure reliable PDF frequency
-#define PLL1_R_MAX		65
+#define PLL1_R_MIN		1   //Require lower R divider to ensure reliable PDF frequency
+#define PLL1_R_MAX		4096
 #define PLL1_DIV_MAX		64
 #define PLL1_DIV_MIN		1
 
