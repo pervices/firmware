@@ -46,13 +46,13 @@ int main (void)
         pllparam_t pll;
         
         //Debug parameters;
-        double max_diff = 0;
+        double max_diff = 5000001;
         double max_N = PLL1_N_MAX;
         double max_R = PLL1_R_MAX;
         int printdebug = 0;
         uint64_t stepFreq = (1000000);
         
-        for (reqFreq = stepFreq * 1000; reqFreq <= stepFreq * 1200; reqFreq += stepFreq)
+        for (reqFreq = stepFreq * 100; reqFreq <= stepFreq * 6250; reqFreq += stepFreq)
         {
 
                 // This is the main function, everything after is for statistics
@@ -157,8 +157,9 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 
 // The procedure to calculate all the PLL parameters is this:
 //
-// 1. Determine the VCO frequency we need to tune the 2nd PLL (output) to.
+// 1. Determine the VCO frequency we need to tune to.
 //	-This also effectively sets the divider or doubler values.
+//      -To ensure loop stability and coherency, we also set R
 //
 // 1a. If the output falls between the natural VCO frequency, we just use the fundamental VCO frequency.
 //
@@ -166,24 +167,19 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 //
 // 1c. If the output is below the VCO band, we find the smallest divider we can use
 // 
-// 2. Once we've determined the doubler values, we need to select a reasonable N value.
+// 2. Once we've determined the doubler values, we use the need to select a reasonable N value.
 //
-// 2a. There exists a minimum N value.
+//  - This will depend on our feedback network.
+//  - Assumes a single PLL design, and therefore fixed reference.
 //
-// 2b. We have chosen the PFD frequency range to be between 2.5-70MHz. This effectively places an upper bound on N.
-//	(This ensures we can use the same code when operating in Exact-Frequency Franctional mode, while also ensuring we don't do anything too crazy)
-//
-// 3. Once we have selected a reasonable N value, we can assume that to be the reference, which (in the ideal case) sees us setting R=1 (best phase performance).
-//
-// 4. Once we have figured out the reference, we can use that to calculate the PLL0 parameters, from which we have both PLL0 and PLL1 parameters.
 
         *pll = pll_def;
 
         uint64_t temp = *reqFreq;
 
         // round the required Frequency to the nearest 5MHz
-        uint64_t mhzFreq = (*reqFreq / 1e6); // MHz truncation
-        *reqFreq = mhzFreq * 1e6;
+        uint64_t mhzFreq = (*reqFreq / 5e6); // MHz truncation
+        *reqFreq = mhzFreq * 5e6;
 
         // Sanitize the input to be within range
         if (*reqFreq > PLL1_RFOUT_MAX_HZ) 	*reqFreq = PLL1_REF_MAX_HZ;
@@ -192,52 +188,21 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
         // 1. Determine VCO frequency, and also frequency doubler or output divider values.
         pll_SetVCO(reqFreq, pll);
 
-        // 2. Determine reasonable N value for the feedback divider (N)
-        uint64_t N1 = PLL1_N_MIN;
-        uint64_t R1 = PLL1_R_MIN;
 
-        if (pll_NCalc(reqFreq, pll, &N1))
-            pll->N = N1;
-
-        //This determines a reasonable phase detector frequency, and is bounded by N.
-        uint64_t pd_freq = pll->vcoFreq / (uint64_t)pll->N;
-
-        // Calculate the necessary Reference Divider (R) value within the restrictions defined
-        R1 = PLL_CORE_REF_FREQ_HZ / pd_freq; //use floor happens as it is an integer operation
-
-        // We try and minimize R by bounding it here.
-        if (R1 > _PLL_RATS_MAX_DENOM) pll->R = _PLL_RATS_MAX_DENOM;
-        else if (R1 < PLL1_R_MIN) pll->R = PLL1_R_MIN;
-        else pll->R = R1;
-
-        // Determine reasonable integer N reference
-        //uint64_t reference = (pll0->vcoFreq * (uint64_t)(pll0->x2en + 1)) / (uint64_t)pll0->d;
-
-        // Use the LMK PLL provided reference frequency;
+        // 2. Use the reference to determine R, N, and pfd frequency
         uint64_t reference = (uint64_t)PLL_CORE_REF_FREQ_HZ;
+        uint64_t pd_freq = PLL_CORE_REF_FREQ_HZ / (uint64_t)pll->R;
 
+        uint32_t N1 = 0;
         // Determine the values of the N and R dividers for PLL1
-        double pll_ratio = 0;
         if ( !pll->divFBen ) {
-            pll_ratio = (double)pll->vcoFreq / (double)reference;
+            N1  = (double)pll->vcoFreq / (double)pd_freq;
         } else {
-            pll_ratio = (double)pll->vcoFreq / (double)reference / (double) pll->d;
-            N1 = floor( N1 / (double) pll->d );
+            N1  = (double)pll->vcoFreq / (double)pll->d;
+            N1  = N1 / (double)pd_freq;
+            //N1 = floor( N1 / (double) pll->d );
         }
-
-        rat_approx(pll_ratio, (uint64_t)_PLL_RATS_MAX_DENOM, &N1, &R1);
-
-        //// Massage the N1 and R1 values to fit within the specified restrictions
-
-        pll_ConformDividers(&N1, &R1, pll);
-
-        //// Assign the new N1 and R1 values to PLL1
         pll->N = (uint32_t)N1;
-        pll->R = (uint16_t)R1;
-
-//        *reqFreq = (reference * pll->N) / pll->R / pll->d;
-
-//      pll_SetVCO( reqFreq , pll);
 
     if (!pll_CheckParams(pll, 1)) {
 #ifndef _PLL_DEBUG_STANDALONE
@@ -359,6 +324,8 @@ uint8_t pll_CheckParams(pllparam_t* pllparam, uint8_t is_pll1) {
         if ((pllparam->N > PLL1_N_MAX) 			||
             (pllparam->N < PLL1_N_MIN) 			||
             (pllparam->R > _PLL_RATS_MAX_DENOM) 	||
+            (pllparam->R > PLL1_R_MAX)           	||
+            (pllparam->R < PLL1_R_MIN)           	||
             (pllparam->d > PLL1_DIV_MAX) 		||
             (pllparam->d < 1) 				||
             (pllparam->d > 1 && (pllparam->d & 1) != 0) ||
