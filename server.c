@@ -107,6 +107,8 @@ int main(int argc, char *argv[]) {
 	// pass the profile pointers down to properties.c
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);
 
+	//Do final bring up actions
+	server_init_actions();
 	// let the user know the server is ready to receive commands
 	PRINT( INFO, "Crimson server is up\n");
 

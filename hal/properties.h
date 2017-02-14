@@ -57,5 +57,5 @@ inline void pass_uart_rx_fd(int fd);
 void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char* save_path);
 void sync_channels(uint8_t chan_mask);
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll);
-
+void server_prop_init_actions();
 #endif

@@ -4174,7 +4174,11 @@ void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char*
 void sync_channels(uint8_t chan_mask) {
 
     char str_chan_mask[MAX_PROP_LEN] = "";
-    sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", chan_mask);
+    sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
+
+    //Put FPGA JESD core in reset
+	write_hps_reg( "res_rw7",0x80000000);
+    //usleep(300000);		// Some wait time for the reset to be ready
 
     /* Bring the ADCs & DACs into 'demo' mode for JESD */
 
@@ -4203,7 +4207,10 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, " -s 1\r");
     send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
+
     /* Trigger a SYSREF pulse */
+    //JESD core out of reset
+	write_hps_reg( "res_rw7",0);
 
     usleep(100000);		// Some wait time for MCUs to be ready
     strcpy(buf, "clk -y -y -y\r");
@@ -4221,6 +4228,8 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 0\r");
     send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+
 
 }
 
@@ -4259,8 +4268,13 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
+    //sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->outFreq / pll->d) / 1000)); // Send output frequency in kHz
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     usleep(100000);
+}
+void server_prop_init_actions(){
+    strcpy(buf, "board -i\r");
+    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 }

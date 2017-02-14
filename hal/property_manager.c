@@ -413,3 +413,8 @@ int set_property(const char* prop, const char* data) {
 void pass_profile_pntr_manager(uint8_t* load, uint8_t* save, char* load_path, char* save_path) {
 	pass_profile_pntr_prop(load, save, load_path, save_path);
 }
+
+// Server Properties Finish
+void server_init_actions() {
+	server_prop_init_actions();
+}
