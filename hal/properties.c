@@ -3182,14 +3182,21 @@ static int hdlr_time_clk_cur_time (const char* data, char* ret) {
 	//read_hps_reg( "sys6", &fracpart);
 	//printf("Time is: %lf seconds\n", (double)intpart + ((double)fracpart / 100000000) );
 
-	double time;
-	sscanf(data, "%lf", &time);
-	write_hps_reg( "sys7", (uint32_t)time);
-	write_hps_reg( "sys8", time - (uint32_t)time);
+	//double time;
+	//sscanf(data, "%lf", &time);
+	//write_hps_reg( "sys7", (uint32_t)time);
+	//write_hps_reg( "sys8", time - (uint32_t)time);
 
+	long double time;
+	sscanf(data, "%Lf", &time);
+	write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+	write_hps_reg("sys10", (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
+	write_hps_reg("sys11", (uint32_t)(time-(uint64_t)time) & 0x00000000FFFFFFFF);
+	write_hps_reg("sys12", (uint32_t)((time-(uint64_t)time)>>32) & 0x00000000FFFFFFFF);
 	// toggle the set register
-	write_hps_reg( "sys9", 1);
-	write_hps_reg( "sys9", 0);
+	write_hps_reg( "sys13", 1);
+	write_hps_reg( "sys13", 0);
 	return RETURN_SUCCESS;
 }
 
@@ -3556,18 +3563,35 @@ static int hdlr_load_config (const char* data, char* ret) {
 }
 
 static int hdlr_fpga_board_gps_time (const char* data, char* ret) {
-	uint32_t gps_time = 0;
-	read_hps_reg( "sys5", &gps_time );
-	sprintf(ret, "%i", gps_time);
+	uint32_t gps_time_lh = 0, gps_time_uh = 0;
+	char gps_split[sizeof(uint32_t)+1];
+
+	read_hps_reg( "sys5", &gps_time_lh);
+	printf("Value of sys5: %d\n", gps_time_lh);
+	read_hps_reg( "sys6", &gps_time_uh );
+	printf("Value of sys6: %d\n", gps_time_uh);
+
+	snprintf(gps_split, sizeof(uint32_t)+1, "%i", gps_time_uh);
+	strncat(ret, gps_split, sizeof(uint32_t));
+	printf("Intermediate value of ret: %s\n", ret);
+	snprintf(gps_split, sizeof(uint32_t)+1, "%i", gps_time_lh);
+	strncat(ret, gps_split, sizeof(uint32_t));
+	printf("Final value of ret: %s\n", ret);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_gps_frac_time (const char* data, char* ret) {
-	uint32_t gps_frac_time = 0;
-	read_hps_reg( "sys6", &gps_frac_time );
-	sprintf(ret, "%i", gps_frac_time);
-
+	uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
+	char gps_split[sizeof(uint32_t)+1];
+	read_hps_reg( "sys7", &gps_frac_time_lh);
+	printf("Value of sys7: %d\n", gps_frac_time_lh);
+	read_hps_reg( "sys8", &gps_frac_time_uh);
+	printf("Value of sys8: %d\n", gps_frac_time_lh);
+	
+	snprintf(ret, gps_split, sizeof(uint32_t)+1, "%i", gps_frac_time_uh);
+	strncat(ret, gps_split, sizeof(uint32_t));
+	printf("Intermediate value of ret: %s\n", ret);
 	return RETURN_SUCCESS;
 }
 
