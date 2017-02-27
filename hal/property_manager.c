@@ -70,51 +70,87 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 }
 
 // Helper function to make properties
-static inline void make_prop(prop_t* prop) {
+static void make_prop(prop_t* prop) {
 	char cmd [MAX_PATH_LEN];
 	char path[MAX_PATH_LEN];
 
-	// TODO: @CF: insert switch for PROP_TYPE_FILE / PROP_TYPE_SYMLINK
+	switch( prop->type ) {
 
-	// TODO: @CF: use mkdir(2)
-	// mkdir -p /home/root/state/*
-	strcpy(cmd, "mkdir -p ");
-	strcat(cmd, get_abs_dir(prop, path));
-	system(cmd);
-	//PRINT( VERBOSE,"executing: %s\n", cmd);
+	case PROP_TYPE_FILE:
 
-	// TODO: @CF: use chown(2)
-	//change group for folder
-	strcpy(cmd, "chgrp dev-grp0 -R ");
-	strcat(cmd, get_abs_dir(prop, path));
-	system(cmd);
+		// TODO: @CF: The preferred way to build a directory tree relative to some path would be to use mkdirat(2), openat(2), etc. Here, we don't even check return values, which can be dangerous.
 
-	// touch /home/root/state/*
-	strcpy(cmd, "touch ");
-	strcat(cmd, get_abs_path(prop, path));
-	system(cmd);
-	//PRINT( VERBOSE,"executing: %s\n", cmd);
+		// TODO: @CF: use mkdir(2)
+		// mkdir -p /home/root/state/*
+		strcpy(cmd, "mkdir -p ");
+		strcat(cmd, get_abs_dir(prop, path));
+		system(cmd);
+		//PRINT( VERBOSE,"executing: %s\n", cmd);
 
-	// TODO: @CF: use chown(2)
-	//change group for properties
-	strcpy(cmd, "chgrp dev-grp0 ");
-	strcat(cmd, get_abs_path(prop, path));
-	system(cmd);
+		// TODO: @CF: use fchownat(2)
+		//change group for folder
+		strcpy(cmd, "chgrp dev-grp0 -R ");
+		strcat(cmd, get_abs_dir(prop, path));
+		system(cmd);
 
-	// TODO: @CF: use chmod(2)
-	// if read only property, change permissions
-	if (prop -> permissions == RO) {
-		// chmod a-w /home/root/state/*
-		strcpy(cmd, "chmod 0444 ");
+		// TODO: replace with openat(2)
+		// touch /home/root/state/*
+		strcpy(cmd, "touch ");
 		strcat(cmd, get_abs_path(prop, path));
 		system(cmd);
-	} else if (prop -> permissions == WO) {
-		// TODO: @CF: use chmod(2)
-		// chmod a-r /home/root/state/*
-		strcpy(cmd, "chmod 0222 ");
+		//PRINT( VERBOSE,"executing: %s\n", cmd);
+
+		// TODO: @CF: use fchownat(2)
+		//change group for properties
+		strcpy(cmd, "chgrp dev-grp0 ");
 		strcat(cmd, get_abs_path(prop, path));
 		system(cmd);
+
+		// TODO: @CF: use fchmodat(2)
+		// if read only property, change permissions
+		if (prop -> permissions == RO) {
+			// chmod a-w /home/root/state/*
+			strcpy(cmd, "chmod 0444 ");
+			strcat(cmd, get_abs_path(prop, path));
+			system(cmd);
+		} else if (prop -> permissions == WO) {
+			// TODO: @CF: use fchmodat(2)
+			// chmod a-r /home/root/state/*
+			strcpy(cmd, "chmod 0222 ");
+			strcat(cmd, get_abs_path(prop, path));
+			system(cmd);
+		}
+
+		break;
+
+	case PROP_TYPE_SYMLINK:
+
+		// TODO: @CF: The preferred way to build a directory tree relative to some path would be to use mkdirat(2), openat(2), etc. Here, we don't even check return values, which can be dangerous.
+
+		// TODO: @CF: use mkdir(2)
+		// mkdir -p /home/root/state/*
+		strcpy(cmd, "mkdir -p ");
+		strcat(cmd, get_abs_dir(prop, path));
+		system(cmd);
+		//PRINT( VERBOSE,"executing: %s\n", cmd);
+
+		// TODO: @CF: use fchownat(2)
+		//change group for folder
+		strcpy(cmd, "chgrp dev-grp0 -R ");
+		strcat(cmd, get_abs_dir(prop, path));
+		system(cmd);
+
+		snprintf( cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path );
+		system(cmd);
+
+		// TODO: replace with symlinkat(2)
+		snprintf( cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s", prop->symlink_target, prop->path );
+		system(cmd);
+		//PRINT( VERBOSE,"executing: %s\n", cmd);
+
+		break;
 	}
+
 }
 
 // Helper function to add the property to inotify
@@ -152,16 +188,21 @@ static void init_prop_val(prop_t* prop) {
 	}
 }
 
+// TODO: @CF: modify function to first open base directory and then to use relative ops (openat, mkdirat, fchownat, fchmodat, etc)
 // Helper function for building a tree in the home directory
 static void build_tree(void) {
 	PRINT(VERBOSE, "Building tree, %i properties found\n", get_num_prop());
+	prop_t *prop;
 
 	size_t i;
 	for (i = 0; i < get_num_prop(); i++) {
-		make_prop(get_prop(i));
-		add_prop_to_inotify(get_prop(i));
-		init_prop_val(get_prop(i));
-		PRINT(VERBOSE, "made prop: %s wd: %i\n", get_prop(i) -> path, get_prop(i) -> wd);
+		prop = get_prop( i );
+		make_prop( prop );
+		if ( PROP_TYPE_SYMLINK != prop->type ) {
+			add_prop_to_inotify( prop );
+		}
+		init_prop_val( prop );
+		PRINT(VERBOSE, "made prop: %s wd: %i\n", prop -> path, prop -> wd);
 	}
 
 	// force property initofy check (writing of defaults) after init
@@ -320,6 +361,17 @@ int load_properties(const char* file) {
 	// loop through all properties, if there are incompatibilities, error out
 	size_t i;
 	for (i = 0; i < get_num_prop(); i++) {
+
+		prop_t *cur_prop = get_prop( i );
+		if (!cur_prop) {
+			PRINT( ERROR,"invalid property %s\n", prop);
+			continue;
+		}
+
+		if ( PROP_TYPE_SYMLINK == cur_prop->type ) {
+			continue;
+		}
+
 		// read from file and update the property table
 		if (fscanf(fin, "%s", prop) == EOF) {
 			break;
@@ -334,15 +386,10 @@ int load_properties(const char* file) {
 		prop_val++;
 
 		// get pointer to current property
-		prop_t* cur_prop = get_prop_from_cmd(prop);
-		if (!cur_prop) {
-			PRINT( ERROR,"invalid property %s\n", prop);
-			continue;
-		}
 		strcpy(cur_prop -> def_val, prop_val);
 
 		// write the current property to device
-		init_prop_val(get_prop(i));
+		init_prop_val( cur_prop );
 	}
 
 	// close the file

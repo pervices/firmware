@@ -3821,7 +3821,7 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 // TODO: @CF: Alphabetically sort the properties
 // TODO: @CF: Enumerate properties and assign them via enumeration rather than automatic indexing
 #define DEFINE_RX_CHANNEL( _c, _p, _ip ) \
-	DEFINE_SYMLINK_PROP( "rx_a", "rx/a" ), \
+	DEFINE_SYMLINK_PROP( "rx_" #_c, "rx/" #_c ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/pwr",  hdlr_rx_ ## _c ## _pwr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
@@ -3854,7 +3854,7 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 // XXX: @CF: we should be using pmt's for arguments to refactor common parsing code.
 // XXX: @CF: handlers should be passed integers, doubles, and so on, not necessarily strings.
 #define DEFINE_TX_CHANNEL( _c, _p ) \
-	DEFINE_SYMLINK_PROP( "tx_a", "tx/a" ), \
+	DEFINE_SYMLINK_PROP( "tx_" #_c, "tx/" #_c ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/pwr",  hdlr_tx_ ## _c ##_pwr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/sync",  hdlr_tx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_en",  hdlr_tx_ ## _c ## _rf_dac_dither_en,  RW,  "0" ), \
