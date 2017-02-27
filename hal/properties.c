@@ -3809,270 +3809,142 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 
 	return RETURN_SUCCESS;
 }
+
+#define DEFINE_FILE_PROP( n, h, p, v ) \
+	{ .type = PROP_TYPE_FILE, .path = n, .handler = h, .permissions = p, .def_val = v, }
+
+#define DEFINE_SYMLINK_PROP( n, t ) \
+	{ .type = PROP_TYPE_SYMLINK, .path = n, .symlink_target = t, }
+
+// XXX: @CF: If the port were encoded as an integer it would be easier to define (possibly can still using some wild macro expansions)
+// TODO: @CF: We should be using pmt's for arguments to refactor common parsing code; handlers should be passed integers, doubles, and so on, not necessarily strings.
+// TODO: @CF: Alphabetically sort the properties
+// TODO: @CF: Enumerate properties and assign them via enumeration rather than automatic indexing
+#define DEFINE_RX_CHANNEL( _c, _p, _ip ) \
+	DEFINE_SYMLINK_PROP( "rx_a", "rx/a" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/pwr",  hdlr_rx_ ## _c ## _pwr,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/val",  hdlr_rx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/lna",  hdlr_rx_ ## _c ## _rf_freq_lna,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/atten/val",  hdlr_rx_ ## _c ## _rf_atten_val,  RW,  "127" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/board/dump",  hdlr_rx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/board/test",  hdlr_rx_ ## _c ## _rf_board_test,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/board/temp",  hdlr_rx_ ## _c ## _rf_board_temp,  RW,  "20" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/board/led",  hdlr_rx_ ## _c ## _rf_board_led,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/dsp/signed",  hdlr_rx_ ## _c ## _dsp_signed,  RW,  "1" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/dsp/gain",  hdlr_rx_ ## _c ## _dsp_gain,  RW,  "10" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/dsp/rate",  hdlr_rx_ ## _c ## _dsp_rate,  RW,  "1258850" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/dsp/nco_adj",  hdlr_rx_ ## _c ## _dsp_nco_adj,  RW,  "-15000000" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/dsp/rstreq",  hdlr_rx_ ## _c ## _dsp_rstreq,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/dsp/loopback",  hdlr_rx_ ## _c ## _dsp_loopback,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/id",  hdlr_rx_ ## _c ## _about_id,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/fw_ver",  hdlr_rx_about_fw_ver,  RW,  VERSION ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/link/vita_en",  hdlr_rx_ ## _c ## _link_vita_en,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/link/iface",  hdlr_rx_ ## _c ## _link_iface,  RW,  "sfpa" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/link/port",  hdlr_rx_ ## _c ## _link_port,  RW, #_p ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/link/ip_dest",  hdlr_rx_ ## _c ## _link_ip_dest,  RW,  _ip ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/link/mac_dest",  hdlr_rx_ ## _c ## _link_mac_dest,  RW,  "ff:ff:ff:ff:ff:ff" )
+
+// XXX: @CF: if the port were encoded as an integer it would be easier to define
+// XXX: @CF: we should be using pmt's for arguments to refactor common parsing code.
+// XXX: @CF: handlers should be passed integers, doubles, and so on, not necessarily strings.
+#define DEFINE_TX_CHANNEL( _c, _p ) \
+	DEFINE_SYMLINK_PROP( "tx_a", "tx/a" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/pwr",  hdlr_tx_ ## _c ##_pwr,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/sync",  hdlr_tx_sync,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_en",  hdlr_tx_ ## _c ## _rf_dac_dither_en,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_mixer_en",  hdlr_tx_ ## _c ## _rf_dac_dither_mixer_en,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_sra_sel",  hdlr_tx_ ## _c ## _rf_dac_dither_sra_sel,  RW,  "96" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/nco",  hdlr_tx_ ## _c ## _rf_dac_nco,  RW,  "15000000" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/temp",  hdlr_tx_ ## _c ## _rf_dac_temp,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/val",  hdlr_tx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/band",  hdlr_tx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/i_bias",  hdlr_tx_ ## _c ## _rf_freq_i_bias,  RW,  "17" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/q_bias",  hdlr_tx_ ## _c ## _rf_freq_q_bias,  RW,  "17" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/gain/val",  hdlr_tx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/board/dump",  hdlr_tx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/board/test",  hdlr_tx_ ## _c ## _rf_board_test,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/board/temp",  hdlr_tx_ ## _c ## _rf_board_temp,  RW,  "23" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/board/led",  hdlr_tx_ ## _c ## _rf_board_led,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/dsp/gain",  hdlr_tx_ ## _c ## _dsp_gain,  RW,  "10" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/dsp/rate",  hdlr_tx_ ## _c ## _dsp_rate,  RW,  "1258850" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/dsp/nco_adj",  hdlr_tx_ ## _c ## _dsp_nco_adj,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/dsp/rstreq",  hdlr_tx_ ## _c ## _dsp_rstreq,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/id",  hdlr_tx_ ## _c ## _about_id,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/fw_ver",  hdlr_tx_about_fw_ver,  RW,  VERSION ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/link/vita_en",  hdlr_tx_ ## _c ## _link_vita_en,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/link/iface",  hdlr_tx_ ## _c ## _link_iface,  RW,  "sfpa" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/link/port",  hdlr_tx_ ## _c ## _link_port,  RW,  #_p )
+
+#define DEFINE_TIME() \
+	DEFINE_FILE_PROP( "time/clk/pps",  hdlr_time_clk_pps,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "time/clk/cur_time",  hdlr_time_clk_cur_time,  RW,  "0.0" ), \
+	DEFINE_FILE_PROP( "time/source/ref",  hdlr_time_source_ref,  RW,  "internal" ), \
+	DEFINE_FILE_PROP( "time/board/dump",  hdlr_time_board_dump,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/board/test",  hdlr_time_board_test,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/board/temp",  hdlr_time_board_temp,  RW,  "20" ), \
+	DEFINE_FILE_PROP( "time/board/led",  hdlr_time_board_led,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/about/id",  hdlr_time_about_id,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/fw_ver",  hdlr_time_about_fw_ver,  RW,  VERSION ), \
+	DEFINE_FILE_PROP( "time/about/sw_ver",  hdlr_invalid,  RO,  VERSION )
+
+#define DEFINE_FPGA() \
+	DEFINE_FILE_PROP( "fpga/about/fw_ver",  hdlr_fpga_about_fw_ver,  RW,  VERSION ), \
+	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
+	DEFINE_FILE_PROP( "fpga/about/id",  hdlr_fpga_about_id,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "fpga/about/name",  hdlr_invalid,  RO,  "crimson_tng" ), \
+	DEFINE_FILE_PROP( "fpga/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "fpga/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
+	DEFINE_FILE_PROP( "fpga/board/dump",  hdlr_fpga_board_dump,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/fw_rst",  hdlr_fpga_board_fw_rst,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/gps_time",  hdlr_fpga_board_gps_time,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/gps_frac_time",  hdlr_fpga_board_gps_frac_time,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/gps_sync_time",  hdlr_fpga_board_gps_sync_time,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/jesd_sync",  hdlr_fpga_board_jesd_sync,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/led",  hdlr_fpga_board_led,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/rstreq",  hdlr_fpga_board_rstreq,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/sys_rstreq",  hdlr_fpga_board_sys_rstreq,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/test",  hdlr_fpga_board_test,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/temp",  hdlr_fpga_board_temp,  RW,  "20" ), \
+	DEFINE_FILE_PROP( "fpga/link/rate",  hdlr_fpga_link_rate,  RW,  "1250000000" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpa/ip_addr",  hdlr_fpga_link_sfpa_ip_addr,  RW,  "10.10.10.2" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpa/mac_addr",  hdlr_fpga_link_sfpa_mac_addr,  RW,  "aa:00:00:00:00:00" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpa/ver",  hdlr_fpga_link_sfpa_ver,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpa/pay_len",  hdlr_fpga_link_sfpa_pay_len,  RW,  "1400" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpb/ip_addr",  hdlr_fpga_link_sfpb_ip_addr,  RW,  "10.10.11.2" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpb/mac_addr",  hdlr_fpga_link_sfpb_mac_addr,  RW,  "aa:00:00:00:00:01" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpb/ver",  hdlr_fpga_link_sfpb_ver,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/link/sfpb/pay_len",  hdlr_fpga_link_sfpb_pay_len,  RW,  "1400" ), \
+	DEFINE_FILE_PROP( "fpga/link/net/dhcp_en",  hdlr_fpga_link_net_dhcp_en,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/link/net/hostname",  hdlr_fpga_link_net_hostname,  RW,  "crimson_tng" ), \
+	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" )
+
 // Beginning of property table
 static prop_t property_table[] = {
-	{"tx_a/pwr", hdlr_tx_a_pwr, RW, "0"},
-	{"tx_a/sync", hdlr_tx_sync, WO, "0"},
-	{"tx_a/rf/dac/dither_en", hdlr_tx_a_rf_dac_dither_en, RW, "0"},
-	{"tx_a/rf/dac/dither_mixer_en", hdlr_tx_a_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_a/rf/dac/dither_sra_sel", hdlr_tx_a_rf_dac_dither_sra_sel, RW, "96"},
-	{"tx_a/rf/dac/nco", hdlr_tx_a_rf_dac_nco, RW, "15000000"},
-	{"tx_a/rf/dac/temp", hdlr_tx_a_rf_dac_temp, RW, "0"},
-	{"tx_a/rf/freq/val", hdlr_tx_a_rf_freq_val, RW, "0"},
-	{"tx_a/rf/freq/band", hdlr_tx_a_rf_freq_band, RW, "1"},
-	{"tx_a/rf/freq/i_bias", hdlr_tx_a_rf_freq_i_bias, RW, "17"},
-	{"tx_a/rf/freq/q_bias", hdlr_tx_a_rf_freq_q_bias, RW, "17"},
-	{"tx_a/rf/gain/val", hdlr_tx_a_rf_gain_val, RW, "0"},
-	{"tx_a/board/dump", hdlr_tx_a_rf_board_dump, WO, "0"},
-	{"tx_a/board/test", hdlr_tx_a_rf_board_test, WO, "0"},
-	{"tx_a/board/temp", hdlr_tx_a_rf_board_temp, RW, "23"},
-	{"tx_a/board/led", hdlr_tx_a_rf_board_led, WO, "0"},
-	{"tx_a/dsp/gain", hdlr_tx_a_dsp_gain, RW, "10"},
-	{"tx_a/dsp/rate", hdlr_tx_a_dsp_rate, RW, "1258850"},
-	{"tx_a/dsp/nco_adj", hdlr_tx_a_dsp_nco_adj, RW, "0"},
-	{"tx_a/dsp/rstreq", hdlr_tx_a_dsp_rstreq, WO, "0"},
-	{"tx_a/about/id", hdlr_tx_a_about_id, RW, "001"},
-	{"tx_a/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_a/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
-	{"tx_a/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_a/link/vita_en", hdlr_tx_a_link_vita_en, RW, "0"},
-	{"tx_a/link/iface", hdlr_tx_a_link_iface, RW, "sfpa"},
-	{"tx_a/link/port", hdlr_tx_a_link_port, RW, "42824"},
-	{"rx_a/pwr", hdlr_rx_a_pwr, RW, "0"},
-	{"rx_a/stream", hdlr_rx_a_stream, RW, "0"},
-	{"rx_a/sync", hdlr_rx_sync, WO, "0"},
-	{"rx_a/rf/freq/val", hdlr_rx_a_rf_freq_val, RW, "0"},
-	{"rx_a/rf/freq/lna", hdlr_rx_a_rf_freq_lna, RW, "0"},
-	{"rx_a/rf/freq/band", hdlr_rx_a_rf_freq_band, RW, "1"},
-	{"rx_a/rf/gain/val", hdlr_rx_a_rf_gain_val, RW, "0"},
-	{"rx_a/rf/atten/val", hdlr_rx_a_rf_atten_val, RW, "127"},
-	{"rx_a/board/dump", hdlr_rx_a_rf_board_dump, WO, "0"},
-	{"rx_a/board/test", hdlr_rx_a_rf_board_test, WO, "0"},
-	{"rx_a/board/temp", hdlr_rx_a_rf_board_temp, RW, "20"},
-	{"rx_a/board/led", hdlr_rx_a_rf_board_led, WO, "0"},
-	{"rx_a/dsp/signed", hdlr_rx_a_dsp_signed, RW, "1"},
-	{"rx_a/dsp/gain", hdlr_rx_a_dsp_gain, RW, "10"},
-	{"rx_a/dsp/rate", hdlr_rx_a_dsp_rate, RW, "1258850"},
-	{"rx_a/dsp/nco_adj", hdlr_rx_a_dsp_nco_adj, RW, "-15000000"},
-	{"rx_a/dsp/rstreq", hdlr_rx_a_dsp_rstreq, WO, "0"},
-	{"rx_a/dsp/loopback", hdlr_rx_a_dsp_loopback, RW, "0"},
-	{"rx_a/about/id", hdlr_rx_a_about_id, RW, "001"},
-	{"rx_a/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_a/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
-	{"rx_a/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_a/link/vita_en", hdlr_rx_a_link_vita_en, RW, "0"},
-	{"rx_a/link/iface", hdlr_rx_a_link_iface, RW, "sfpa"},
-	{"rx_a/link/port", hdlr_rx_a_link_port, RW, "42820"},
-	{"rx_a/link/ip_dest", hdlr_rx_a_link_ip_dest, RW, "10.10.10.10"},
-	{"rx_a/link/mac_dest", hdlr_rx_a_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"tx_b/pwr", hdlr_tx_b_pwr, RW, "0"},
-	{"tx_b/sync", hdlr_tx_sync, WO, "0"},
-	{"tx_b/rf/dac/dither_en", hdlr_tx_b_rf_dac_dither_en, RW, "0"},
-	{"tx_b/rf/dac/dither_mixer_en", hdlr_tx_b_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_b/rf/dac/dither_sra_sel", hdlr_tx_b_rf_dac_dither_sra_sel, RW, "96"},
-	{"tx_b/rf/dac/nco", hdlr_tx_b_rf_dac_nco, RW, "15000000"},
-	{"tx_b/rf/dac/temp", hdlr_tx_b_rf_dac_temp, RW, "0"},
-	{"tx_b/rf/freq/val", hdlr_tx_b_rf_freq_val, RW, "0"},
-	{"tx_b/rf/freq/band", hdlr_tx_b_rf_freq_band, RW, "1"},
-	{"tx_b/rf/freq/i_bias", hdlr_tx_b_rf_freq_i_bias, RW, "17"},
-	{"tx_b/rf/freq/q_bias", hdlr_tx_b_rf_freq_q_bias, RW, "17"},
-	{"tx_b/rf/gain/val", hdlr_tx_b_rf_gain_val, RW, "0"},
-	{"tx_b/board/dump", hdlr_tx_b_rf_board_dump, WO, "0"},
-	{"tx_b/board/test", hdlr_tx_b_rf_board_test, WO, "0"},
-	{"tx_b/board/temp", hdlr_tx_b_rf_board_temp, RW, "23"},
-	{"tx_b/board/led", hdlr_tx_b_rf_board_led, WO, "0"},
-	{"tx_b/dsp/gain", hdlr_tx_b_dsp_gain, RW, "10"},
-	{"tx_b/dsp/rate", hdlr_tx_b_dsp_rate, RW, "1258850"},
-	{"tx_b/dsp/nco_adj", hdlr_tx_b_dsp_nco_adj, RW, "0"},
-	{"tx_b/dsp/rstreq", hdlr_tx_b_dsp_rstreq, WO, "0"},
-	{"tx_b/about/id", hdlr_tx_b_about_id, RW, "001"},
-	{"tx_b/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_b/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
-	{"tx_b/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_b/link/vita_en", hdlr_tx_b_link_vita_en, RW, "0"},
-	{"tx_b/link/iface", hdlr_tx_b_link_iface, RW, "sfpb"},
-	{"tx_b/link/port", hdlr_tx_b_link_port, RW, "42825"},
-	{"rx_b/pwr", hdlr_rx_b_pwr, RW, "0"},
-	{"rx_b/stream", hdlr_rx_b_stream, RW, "0"},
-	{"rx_b/sync", hdlr_rx_sync, WO, "0"},
-	{"rx_b/rf/freq/val", hdlr_rx_b_rf_freq_val, RW, "0"},
-	{"rx_b/rf/freq/lna", hdlr_rx_b_rf_freq_lna, RW, "0"},
-	{"rx_b/rf/freq/band", hdlr_rx_b_rf_freq_band, RW, "1"},
-	{"rx_b/rf/gain/val", hdlr_rx_b_rf_gain_val, RW, "0"},
-	{"rx_b/rf/atten/val", hdlr_rx_b_rf_atten_val, RW, "127"},
-	{"rx_b/board/dump", hdlr_rx_b_rf_board_dump, WO, "0"},
-	{"rx_b/board/test", hdlr_rx_b_rf_board_test, WO, "0"},
-	{"rx_b/board/temp", hdlr_rx_b_rf_board_temp, RW, "20"},
-	{"rx_b/board/led", hdlr_rx_b_rf_board_led, WO, "0"},
-	{"rx_b/dsp/signed", hdlr_rx_b_dsp_signed, RW, "1"},
-	{"rx_b/dsp/gain", hdlr_rx_b_dsp_gain, RW, "10"},
-	{"rx_b/dsp/rate", hdlr_rx_b_dsp_rate, RW, "1258850"},
-	{"rx_b/dsp/nco_adj", hdlr_rx_b_dsp_nco_adj, RW, "-15000000"},
-	{"rx_b/dsp/rstreq", hdlr_rx_b_dsp_rstreq, WO, "0"},
-	{"rx_b/dsp/loopback", hdlr_rx_b_dsp_loopback, RW, "0"},
-	{"rx_b/about/id", hdlr_rx_b_about_id, RW, "001"},
-	{"rx_b/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_b/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
-	{"rx_b/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_b/link/vita_en", hdlr_rx_b_link_vita_en, RW, "0"},
-	{"rx_b/link/iface", hdlr_rx_b_link_iface, RW, "sfpb"},
-	{"rx_b/link/port", hdlr_rx_b_link_port, RW, "42821"},
-	{"rx_b/link/ip_dest", hdlr_rx_b_link_ip_dest, RW, "10.10.11.10"},
-	{"rx_b/link/mac_dest", hdlr_rx_b_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"tx_c/pwr", hdlr_tx_c_pwr, RW, "0"},
-	{"tx_c/sync", hdlr_tx_sync, WO, "0"},
-	{"tx_c/rf/dac/dither_en", hdlr_tx_c_rf_dac_dither_en, RW, "0"},
-	{"tx_c/rf/dac/dither_mixer_en", hdlr_tx_c_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_c/rf/dac/dither_sra_sel", hdlr_tx_c_rf_dac_dither_sra_sel, RW, "96"},
-	{"tx_c/rf/dac/nco", hdlr_tx_c_rf_dac_nco, RW, "15000000"},
-	{"tx_c/rf/dac/temp", hdlr_tx_c_rf_dac_temp, RW, "0"},
-	{"tx_c/rf/freq/val", hdlr_tx_c_rf_freq_val, RW, "0"},
-	{"tx_c/rf/freq/band", hdlr_tx_c_rf_freq_band, RW, "1"},
-	{"tx_c/rf/freq/i_bias", hdlr_tx_c_rf_freq_i_bias, RW, "17"},
-	{"tx_c/rf/freq/q_bias", hdlr_tx_c_rf_freq_q_bias, RW, "17"},
-	{"tx_c/rf/gain/val", hdlr_tx_c_rf_gain_val, RW, "0"},
-	{"tx_c/board/dump", hdlr_tx_c_rf_board_dump, WO, "0"},
-	{"tx_c/board/test", hdlr_tx_c_rf_board_test, WO, "0"},
-	{"tx_c/board/temp", hdlr_tx_c_rf_board_temp, RW, "23"},
-	{"tx_c/board/led", hdlr_tx_c_rf_board_led, WO, "0"},
-	{"tx_c/dsp/gain", hdlr_tx_c_dsp_gain, RW, "10"},
-	{"tx_c/dsp/rate", hdlr_tx_c_dsp_rate, RW, "1258850"},
-	{"tx_c/dsp/nco_adj", hdlr_tx_c_dsp_nco_adj, RW, "0"},
-	{"tx_c/dsp/rstreq", hdlr_tx_c_dsp_rstreq, WO, "0"},
-	{"tx_c/about/id", hdlr_tx_c_about_id, RW, "001"},
-	{"tx_c/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_c/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
-	{"tx_c/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_c/link/vita_en", hdlr_tx_c_link_vita_en, RW, "0"},
-	{"tx_c/link/iface", hdlr_tx_c_link_iface, RW, "sfpa"},
-	{"tx_c/link/port", hdlr_tx_c_link_port, RW, "42826"},
-	{"rx_c/pwr", hdlr_rx_c_pwr, RW, "0"},
-	{"rx_c/stream", hdlr_rx_c_stream, RW, "0"},
-	{"rx_c/sync", hdlr_rx_sync, WO, "0"},
-	{"rx_c/rf/freq/val", hdlr_rx_c_rf_freq_val, RW, "0"},
-	{"rx_c/rf/freq/lna", hdlr_rx_c_rf_freq_lna, RW, "0"},
-	{"rx_c/rf/freq/band", hdlr_rx_c_rf_freq_band, RW, "1"},
-	{"rx_c/rf/gain/val", hdlr_rx_c_rf_gain_val, RW, "0"},
-	{"rx_c/rf/atten/val", hdlr_rx_c_rf_atten_val, RW, "127"},
-	{"rx_c/board/dump", hdlr_rx_c_rf_board_dump, WO, "0"},
-	{"rx_c/board/test", hdlr_rx_c_rf_board_test, WO, "0"},
-	{"rx_c/board/temp", hdlr_rx_c_rf_board_temp, RW, "20"},
-	{"rx_c/board/led", hdlr_rx_c_rf_board_led, WO, "0"},
-	{"rx_c/dsp/signed", hdlr_rx_c_dsp_signed, RW, "1"},
-	{"rx_c/dsp/gain", hdlr_rx_c_dsp_gain, RW, "10"},
-	{"rx_c/dsp/rate", hdlr_rx_c_dsp_rate, RW, "1258850"},
-	{"rx_c/dsp/nco_adj", hdlr_rx_c_dsp_nco_adj, RW, "-15000000"},
-	{"rx_c/dsp/rstreq", hdlr_rx_c_dsp_rstreq, WO, "0"},
-	{"rx_c/dsp/loopback", hdlr_rx_c_dsp_loopback, RW, "0"},
-	{"rx_c/about/id", hdlr_rx_c_about_id, RW, "001"},
-	{"rx_c/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_c/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
-	{"rx_c/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_c/link/vita_en", hdlr_rx_c_link_vita_en, RW, "0"},
-	{"rx_c/link/iface", hdlr_rx_c_link_iface, RW, "sfpa"},
-	{"rx_c/link/port", hdlr_rx_c_link_port, RW, "42822"},
-	{"rx_c/link/ip_dest", hdlr_rx_c_link_ip_dest, RW, "10.10.10.10"},
-	{"rx_c/link/mac_dest", hdlr_rx_c_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"tx_d/pwr", hdlr_tx_d_pwr, RW, "0"},
-	{"tx_d/sync", hdlr_tx_sync, WO, "0"},	
-	{"tx_d/rf/dac/dither_en", hdlr_tx_d_rf_dac_dither_en, RW, "0"},
-	{"tx_d/rf/dac/dither_mixer_en", hdlr_tx_d_rf_dac_dither_mixer_en, RW, "0"},
-	{"tx_d/rf/dac/dither_sra_sel", hdlr_tx_d_rf_dac_dither_sra_sel, RW, "96"},
-	{"tx_d/rf/dac/nco", hdlr_tx_d_rf_dac_nco, RW, "15000000"},
-	{"tx_d/rf/dac/temp", hdlr_tx_d_rf_dac_temp, RW, "0"},
-	{"tx_d/rf/freq/val", hdlr_tx_d_rf_freq_val, RW, "0"},
-	{"tx_d/rf/freq/band", hdlr_tx_d_rf_freq_band, RW, "1"},
-	{"tx_d/rf/freq/i_bias", hdlr_tx_d_rf_freq_i_bias, RW, "17"},
-	{"tx_d/rf/freq/q_bias", hdlr_tx_d_rf_freq_q_bias, RW, "17"},
-	{"tx_d/rf/gain/val", hdlr_tx_d_rf_gain_val, RW, "0"},
-	{"tx_d/board/dump", hdlr_tx_d_rf_board_dump, WO, "0"},
-	{"tx_d/board/test", hdlr_tx_d_rf_board_test, WO, "0"},
-	{"tx_d/board/temp", hdlr_tx_d_rf_board_temp, RW, "23"},
-	{"tx_d/board/led", hdlr_tx_d_rf_board_led, WO, "0"},
-	{"tx_d/dsp/gain", hdlr_tx_d_dsp_gain, RW, "10"},
-	{"tx_d/dsp/rate", hdlr_tx_d_dsp_rate, RW, "1258850"},
-	{"tx_d/dsp/nco_adj", hdlr_tx_d_dsp_nco_adj, RW, "0"},
-	{"tx_d/dsp/rstreq", hdlr_tx_d_dsp_rstreq, WO, "0"},
-	{"tx_d/about/id", hdlr_tx_d_about_id, RW, "001"},
-	{"tx_d/about/serial", hdlr_invalid, RO, "001"},
-	{"tx_d/about/fw_ver", hdlr_tx_about_fw_ver, RW, VERSION},
-	{"tx_d/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"tx_d/link/vita_en", hdlr_tx_d_link_vita_en, RW, "0"},
-	{"tx_d/link/iface", hdlr_tx_d_link_iface, RW, "sfpb"},
-	{"tx_d/link/port", hdlr_tx_d_link_port, RW, "42827"},
-	{"rx_d/pwr", hdlr_rx_d_pwr, RW, "0"},
-	{"rx_d/stream", hdlr_rx_d_stream, RW, "0"},
-	{"rx_d/sync", hdlr_rx_sync, WO, "0"},
-	{"rx_d/rf/freq/val", hdlr_rx_d_rf_freq_val, RW, "0"},
-	{"rx_d/rf/freq/lna", hdlr_rx_d_rf_freq_lna, RW, "0"},
-	{"rx_d/rf/freq/band", hdlr_rx_d_rf_freq_band, RW, "1"},
-	{"rx_d/rf/gain/val", hdlr_rx_d_rf_gain_val, RW, "0"},
-	{"rx_d/rf/atten/val", hdlr_rx_d_rf_atten_val, RW, "127"},
-	{"rx_d/board/dump", hdlr_rx_d_rf_board_dump, WO, "0"},
-	{"rx_d/board/test", hdlr_rx_d_rf_board_test, WO, "0"},
-	{"rx_d/board/temp", hdlr_rx_d_rf_board_temp, RW, "20"},
-	{"rx_d/board/led", hdlr_rx_d_rf_board_led, WO, "0"},
-	{"rx_d/dsp/signed", hdlr_rx_d_dsp_signed, RW, "1"},
-	{"rx_d/dsp/gain", hdlr_rx_d_dsp_gain, RW, "10"},
-	{"rx_d/dsp/rate", hdlr_rx_d_dsp_rate, RW, "1258850"},
-	{"rx_d/dsp/nco_adj", hdlr_rx_d_dsp_nco_adj, RW, "-15000000"},
-	{"rx_d/dsp/rstreq", hdlr_rx_d_dsp_rstreq, WO, "0"},
-	{"rx_d/dsp/loopback", hdlr_rx_d_dsp_loopback, RW, "0"},
-	{"rx_d/about/id", hdlr_rx_d_about_id, RW, "001"},
-	{"rx_d/about/serial", hdlr_invalid, RO, "001"},
-	{"rx_d/about/fw_ver", hdlr_rx_about_fw_ver, RW, VERSION},
-	{"rx_d/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"rx_d/link/vita_en", hdlr_rx_d_link_vita_en, RW, "0"},
-	{"rx_d/link/iface", hdlr_rx_d_link_iface, RW, "sfpb"},
-	{"rx_d/link/port", hdlr_rx_d_link_port, RW, "42823"},
-	{"rx_d/link/ip_dest", hdlr_rx_d_link_ip_dest, RW, "10.10.11.10"},
-	{"rx_d/link/mac_dest", hdlr_rx_d_link_mac_dest, RW, "ff:ff:ff:ff:ff:ff"},
-	{"time/clk/pps", hdlr_time_clk_pps, RW, "0"},
-	{"time/clk/cur_time", hdlr_time_clk_cur_time, RW, "0.0"},
-	//{"time/source/vco", hdlr_time_source_vco, RW, "external"},
-	//{"time/source/sync", hdlr_time_source_sync, RW, "external"},
-	{"time/source/ref", hdlr_time_source_ref, RW, "internal"},
-	//{"time/source/devclk", hdlr_time_source_devclk, RW, "external"},
-	//{"time/source/pll", hdlr_time_source_pll, RW, "external"},
-	{"time/board/dump", hdlr_time_board_dump, WO, "0"},
-	{"time/board/test", hdlr_time_board_test, WO, "0"},
-	{"time/board/temp", hdlr_time_board_temp, RW, "20"},
-	{"time/board/led", hdlr_time_board_led, WO, "0"},
-	{"time/about/id", hdlr_time_about_id, RW, "001"},
-	{"time/about/serial", hdlr_invalid, RO, "001"},
-	{"time/about/fw_ver", hdlr_time_about_fw_ver, RW, VERSION},
-	{"time/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"fpga/board/dump", hdlr_fpga_board_dump, WO, "0"},
-	{"fpga/board/test", hdlr_fpga_board_test, WO, "0"},
-	{"fpga/board/temp", hdlr_fpga_board_temp, RW, "20"},
-	{"fpga/board/led", hdlr_fpga_board_led, WO, "0"},
-	{"fpga/board/rstreq", hdlr_fpga_board_rstreq, WO, "0"},
-	{"fpga/board/jesd_sync", hdlr_fpga_board_jesd_sync, WO, "0"},
-	{"fpga/board/fw_rst", hdlr_fpga_board_fw_rst, WO, "0"},
-	{"fpga/board/sys_rstreq", hdlr_fpga_board_sys_rstreq, WO, "0"},
-	{"fpga/about/name", hdlr_invalid, RO, "crimson_tng"},
-	{"fpga/about/id", hdlr_fpga_about_id, RW, "001"},
-	{"fpga/about/serial", hdlr_invalid, RO, "001"},
-	{"fpga/about/fw_ver", hdlr_fpga_about_fw_ver, RW, VERSION},
-	{"fpga/about/hw_ver", hdlr_fpga_about_hw_ver, RW, VERSION},
-	{"fpga/about/sw_ver", hdlr_invalid, RO, VERSION},
-	{"fpga/link/rate", hdlr_fpga_link_rate, RW, "1250000000"},      // BPS (10G/8)
-	{"fpga/link/sfpa/ip_addr", hdlr_fpga_link_sfpa_ip_addr, RW, "10.10.10.2"},
-	{"fpga/link/sfpa/mac_addr", hdlr_fpga_link_sfpa_mac_addr, RW, "aa:00:00:00:00:00"},
-	{"fpga/link/sfpa/ver", hdlr_fpga_link_sfpa_ver, RW, "0"},
-	{"fpga/link/sfpa/pay_len", hdlr_fpga_link_sfpa_pay_len, RW, "1400"},
-	{"fpga/link/sfpb/ip_addr", hdlr_fpga_link_sfpb_ip_addr, RW, "10.10.11.2"},
-	{"fpga/link/sfpb/mac_addr", hdlr_fpga_link_sfpb_mac_addr, RW, "aa:00:00:00:00:01"},
-	{"fpga/link/sfpb/ver", hdlr_fpga_link_sfpb_ver, RW, "0"},
-	{"fpga/link/sfpb/pay_len", hdlr_fpga_link_sfpb_pay_len, RW, "1400"},
-	{"fpga/link/net/dhcp_en", hdlr_fpga_link_net_dhcp_en, RW, "0"},
-	{"fpga/link/net/hostname", hdlr_fpga_link_net_hostname, RW, "crimson_tng"},
-	{"fpga/link/net/ip_addr", hdlr_fpga_link_net_ip_addr, RW, "192.168.10.2"},
-	{"save_config", hdlr_save_config, RW, "/home/root/profile.cfg"},
-	{"load_config", hdlr_load_config, RW, "/home/root/profile.cfg"},
-	{"fpga/board/gps_time", hdlr_fpga_board_gps_time, RW, "0"},
-	{"fpga/board/gps_frac_time", hdlr_fpga_board_gps_frac_time, RW, "0"},
-	{"fpga/board/gps_sync_time", hdlr_fpga_board_gps_sync_time, RW, "0"}
+
+	DEFINE_RX_CHANNEL( a, 42820, "10.10.10.10" ),
+	DEFINE_RX_CHANNEL( b, 42821, "10.10.11.10" ),
+	DEFINE_RX_CHANNEL( c, 42822, "10.10.10.10" ),
+	DEFINE_RX_CHANNEL( d, 42823, "10.10.11.10" ),
+
+	DEFINE_TX_CHANNEL( a, 42824 ),
+	DEFINE_TX_CHANNEL( b, 42825 ),
+	DEFINE_TX_CHANNEL( c, 42826 ),
+	DEFINE_TX_CHANNEL( d, 42827 ),
+
+	DEFINE_TIME(),
+	DEFINE_FPGA(),
+
+	DEFINE_FILE_PROP( "save_config",  hdlr_save_config,  RW,  "/home/root/profile.cfg" ),
+	DEFINE_FILE_PROP( "load_config",  hdlr_load_config,  RW,  "/home/root/profile.cfg" ),
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 

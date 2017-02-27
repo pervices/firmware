@@ -74,12 +74,16 @@ static inline void make_prop(prop_t* prop) {
 	char cmd [MAX_PATH_LEN];
 	char path[MAX_PATH_LEN];
 
+	// TODO: @CF: insert switch for PROP_TYPE_FILE / PROP_TYPE_SYMLINK
+
+	// TODO: @CF: use mkdir(2)
 	// mkdir -p /home/root/state/*
 	strcpy(cmd, "mkdir -p ");
 	strcat(cmd, get_abs_dir(prop, path));
 	system(cmd);
 	//PRINT( VERBOSE,"executing: %s\n", cmd);
 
+	// TODO: @CF: use chown(2)
 	//change group for folder
 	strcpy(cmd, "chgrp dev-grp0 -R ");
 	strcat(cmd, get_abs_dir(prop, path));
@@ -91,11 +95,13 @@ static inline void make_prop(prop_t* prop) {
 	system(cmd);
 	//PRINT( VERBOSE,"executing: %s\n", cmd);
 
+	// TODO: @CF: use chown(2)
 	//change group for properties
 	strcpy(cmd, "chgrp dev-grp0 ");
 	strcat(cmd, get_abs_path(prop, path));
 	system(cmd);
 
+	// TODO: @CF: use chmod(2)
 	// if read only property, change permissions
 	if (prop -> permissions == RO) {
 		// chmod a-w /home/root/state/*
@@ -103,6 +109,7 @@ static inline void make_prop(prop_t* prop) {
 		strcat(cmd, get_abs_path(prop, path));
 		system(cmd);
 	} else if (prop -> permissions == WO) {
+		// TODO: @CF: use chmod(2)
 		// chmod a-r /home/root/state/*
 		strcpy(cmd, "chmod 0222 ");
 		strcat(cmd, get_abs_path(prop, path));
