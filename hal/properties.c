@@ -3811,7 +3811,7 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 }
 
 static uint16_t cm_chanmask_get( const char *path ) {
-	uint16_t r;
+	uint32_t r;
 
 	FILE* fp;
 
@@ -3828,16 +3828,18 @@ static uint16_t cm_chanmask_get( const char *path ) {
 }
 
 static int hdlr_cm_chanmask_rx (const char *data, char *ret) {
-	uint16_t mask;
+	uint32_t mask;
 	return
 		1 == sscanf( data, "%x", &mask )
+		&& 0 == ( mask & 0xffff0000 ) // only 16-bit masks allowed
 		? RETURN_SUCCESS
 		: RETURN_ERROR_PARAM;
 }
 static int hdlr_cm_chanmask_tx (const char *data, char *ret) {
-	uint16_t mask;
+	uint32_t mask;
 	return
 		1 == sscanf( data, "%x", &mask )
+		&& 0 == ( mask & 0xffff0000 ) // only 16-bit masks allowed
 		? RETURN_SUCCESS
 		: RETURN_ERROR_PARAM;
 }
@@ -3845,6 +3847,10 @@ static int hdlr_cm_rx_atten_val (const char *data, char *ret) {
 
 	uint16_t mask;
 	int atten;
+	prop_t *prop;
+	int wd_backup;
+	int (*hdlr)( const char *, char *);
+	int i;
 
 	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
 
@@ -3854,14 +3860,41 @@ static int hdlr_cm_rx_atten_val (const char *data, char *ret) {
 
 	sscanf(data, "%u", &atten);
 
+	if (atten > 127)		atten = 127;
+	else if (atten < 0) 	atten = 0;
+
 	sprintf(buf, "rf -c %x -a %u\r", mask, atten );
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+	for( i = 0; i < NUM_CHANNELS; i++ ) {
+		if ( 0 == ( mask & (1 << i) ) ) {
+			continue;
+		}
+		switch( i ) {
+		case 0: hdlr = hdlr_rx_a_rf_atten_val; break;
+		case 1: hdlr = hdlr_rx_b_rf_atten_val; break;
+		case 2: hdlr = hdlr_rx_c_rf_atten_val; break;
+		case 3: hdlr = hdlr_rx_d_rf_atten_val; break;
+		default: continue;
+		}
+		prop = get_prop_from_hdlr( hdlr );
+		wd_backup = prop->wd;
+		prop->wd = -1;
+		FILE *fp = fopen( prop->path, "r+" );
+		fprintf( fp, "%d", atten );
+		fclose( fp );
+		prop->wd = wd_backup;
+	}
 
 	return RETURN_SUCCESS;
 }
 static int hdlr_cm_rx_gain_val (const char *data, char *ret) {
 	uint16_t mask;
 	int gain;
+	int wd_backup;
+	prop_t *prop;
+	int (*hdlr)( const char *, char *);
+	int i;
 
 	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
 
@@ -3880,11 +3913,35 @@ static int hdlr_cm_rx_gain_val (const char *data, char *ret) {
 	sprintf(buf, "vga -c %x -g %d\r", mask, gain >> 1);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
+	for( i = 0; i < NUM_CHANNELS; i++ ) {
+		if ( 0 == ( mask & (1 << i) ) ) {
+			continue;
+		}
+		switch( i ) {
+		case 0: hdlr = hdlr_rx_a_rf_gain_val; break;
+		case 1: hdlr = hdlr_rx_b_rf_gain_val; break;
+		case 2: hdlr = hdlr_rx_c_rf_gain_val; break;
+		case 3: hdlr = hdlr_rx_d_rf_gain_val; break;
+		default: continue;
+		}
+		prop = get_prop_from_hdlr( hdlr );
+		wd_backup = prop->wd;
+		prop->wd = -1;
+		FILE *fp = fopen( prop->path, "r+" );
+		fprintf( fp, "%d", gain );
+		fclose( fp );
+		prop->wd = wd_backup;
+	}
+
 	return RETURN_SUCCESS;
 }
 static int hdlr_cm_tx_gain_val (const char *data, char *ret) {
 	uint16_t mask;
 	int gain;
+	int wd_backup;
+	prop_t *prop;
+	int (*hdlr)( const char *, char *);
+	int i;
 
 	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-tx" );
 	if ( 0 == mask ) {
@@ -3902,6 +3959,26 @@ static int hdlr_cm_tx_gain_val (const char *data, char *ret) {
 	sprintf(buf, "rf -c %x -a %d\r", mask, 127 - gain);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
+	for( i = 0; i < NUM_CHANNELS; i++ ) {
+		if ( 0 == ( mask & (1 << i) ) ) {
+			continue;
+		}
+		switch( i ) {
+		case 0: hdlr = hdlr_tx_a_rf_gain_val; break;
+		case 1: hdlr = hdlr_tx_b_rf_gain_val; break;
+		case 2: hdlr = hdlr_tx_c_rf_gain_val; break;
+		case 3: hdlr = hdlr_tx_d_rf_gain_val; break;
+		default: continue;
+		}
+		prop = get_prop_from_hdlr( hdlr );
+		wd_backup = prop->wd;
+		prop->wd = -1;
+		FILE *fp = fopen( prop->path, "r+" );
+		fprintf( fp, "%d", gain );
+		fclose( fp );
+		prop->wd = wd_backup;
+	}
+
 	return RETURN_SUCCESS;
 }
 static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
@@ -3915,6 +3992,11 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 
 	uint32_t mask_rx;
 	uint32_t mask_tx;
+
+	int wd_backup;
+	prop_t *prop;
+	int (*hdlr)( const char *, char *);
+	int i;
 
 	double freq = 0;
 
@@ -3994,6 +4076,46 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 		}
 	}
 
+	for( i = 0; i < NUM_CHANNELS; i++ ) {
+		if ( 0 == ( mask_rx & (1 << i) ) ) {
+			continue;
+		}
+		switch( i ) {
+		case 0: hdlr = hdlr_rx_a_rf_freq_val; break;
+		case 1: hdlr = hdlr_rx_b_rf_freq_val; break;
+		case 2: hdlr = hdlr_rx_c_rf_freq_val; break;
+		case 3: hdlr = hdlr_rx_d_rf_freq_val; break;
+		default: continue;
+		}
+		prop = get_prop_from_hdlr( hdlr );
+		wd_backup = prop->wd;
+		prop->wd = -1;
+		FILE *fp = fopen( prop->path, "r+" );
+		fprintf( fp, "%lf", freq );
+		fclose( fp );
+		prop->wd = wd_backup;
+	}
+
+	for( i = 0; i < NUM_CHANNELS; i++ ) {
+		if ( 0 == ( mask_tx & (1 << i) ) ) {
+			continue;
+		}
+		switch( i ) {
+		case 0: hdlr = hdlr_tx_a_rf_freq_val; break;
+		case 1: hdlr = hdlr_tx_b_rf_freq_val; break;
+		case 2: hdlr = hdlr_tx_c_rf_freq_val; break;
+		case 3: hdlr = hdlr_tx_d_rf_freq_val; break;
+		default: continue;
+		}
+		prop = get_prop_from_hdlr( hdlr );
+		wd_backup = prop->wd;
+		prop->wd = -1;
+		FILE *fp = fopen( prop->path, "r+" );
+		fprintf( fp, "%lf", freq );
+		fclose( fp );
+		prop->wd = wd_backup;
+	}
+
 	return RETURN_SUCCESS;
 }
 static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
@@ -4007,6 +4129,11 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 
 	uint32_t mask_rx;
 	uint32_t mask_tx;
+
+	int wd_backup;
+	prop_t *prop;
+	int (*hdlr)( const char *, char *);
+	int i;
 
 	double freq = 0;
 
@@ -4084,6 +4211,46 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
+	}
+
+	for( i = 0; i < NUM_CHANNELS; i++ ) {
+		if ( 0 == ( mask_rx & (1 << i) ) ) {
+			continue;
+		}
+		switch( i ) {
+		case 0: hdlr = hdlr_rx_a_dsp_nco_adj; break;
+		case 1: hdlr = hdlr_rx_b_dsp_nco_adj; break;
+		case 2: hdlr = hdlr_rx_c_dsp_nco_adj; break;
+		case 3: hdlr = hdlr_rx_d_dsp_nco_adj; break;
+		default: continue;
+		}
+		prop = get_prop_from_hdlr( hdlr );
+		wd_backup = prop->wd;
+		prop->wd = -1;
+		FILE *fp = fopen( prop->path, "r+" );
+		fprintf( fp, "%lf", freq );
+		fclose( fp );
+		prop->wd = wd_backup;
+	}
+
+	for( i = 0; i < NUM_CHANNELS; i++ ) {
+		if ( 0 == ( mask_tx & (1 << i) ) ) {
+			continue;
+		}
+		switch( i ) {
+		case 0: hdlr = hdlr_tx_a_dsp_nco_adj; break;
+		case 1: hdlr = hdlr_tx_b_dsp_nco_adj; break;
+		case 2: hdlr = hdlr_tx_c_dsp_nco_adj; break;
+		case 3: hdlr = hdlr_tx_d_dsp_nco_adj; break;
+		default: continue;
+		}
+		prop = get_prop_from_hdlr( hdlr );
+		wd_backup = prop->wd;
+		prop->wd = -1;
+		FILE *fp = fopen( prop->path, "r+" );
+		fprintf( fp, "%lf", freq );
+		fclose( fp );
+		prop->wd = wd_backup;
 	}
 
 	return RETURN_SUCCESS;
@@ -4252,6 +4419,18 @@ inline prop_t* get_prop_from_wd(int wd) {
 	for (i = 0; i < num_properties; i++) {
 		if (property_table[i].wd == wd)
 			return (property_table + i);
+	}
+
+	// no matching prop found
+	return NULL;
+}
+
+inline prop_t *get_prop_from_hdlr( int (*hdlr)(const char*, char*) ) {
+	size_t i;
+	for (i = 0; i < num_properties; i++) {
+		if ( property_table[ i ].handler == hdlr ) {
+			return & property_table[ i ];
+		}
 	}
 
 	// no matching prop found
