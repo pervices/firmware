@@ -3193,7 +3193,7 @@ static int hdlr_time_clk_cur_time (const char* data, char* ret) {
 	write_hps_reg("sys10", (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
 	write_hps_reg("sys11", (uint32_t)(time-(uint64_t)time) & 0x00000000FFFFFFFF);
-	write_hps_reg("sys12", (uint32_t)((time-(uint64_t)time)>>32) & 0x00000000FFFFFFFF);
+	//write_hps_reg("sys12", (uint32_t)((time-(uint64_t)time)>>32) & 0x00000000FFFFFFFF);
 	// toggle the set register
 	write_hps_reg( "sys13", 1);
 	write_hps_reg( "sys13", 0);
@@ -3564,18 +3564,18 @@ static int hdlr_load_config (const char* data, char* ret) {
 
 static int hdlr_fpga_board_gps_time (const char* data, char* ret) {
 	uint32_t gps_time_lh = 0, gps_time_uh = 0;
-	char gps_split[sizeof(uint32_t)+1];
+	char gps_split[MAX_PROP_LEN];
 
 	read_hps_reg( "sys5", &gps_time_lh);
 	printf("Value of sys5: %d\n", gps_time_lh);
 	read_hps_reg( "sys6", &gps_time_uh );
 	printf("Value of sys6: %d\n", gps_time_uh);
 
-	snprintf(gps_split, sizeof(uint32_t)+1, "%i", gps_time_uh);
-	strncat(ret, gps_split, sizeof(uint32_t));
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
+	strncpy(ret, gps_split, MAX_PROP_LEN);
 	printf("Intermediate value of ret: %s\n", ret);
-	snprintf(gps_split, sizeof(uint32_t)+1, "%i", gps_time_lh);
-	strncat(ret, gps_split, sizeof(uint32_t));
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
+	strncat(ret, gps_split, MAX_PROP_LEN);
 	printf("Final value of ret: %s\n", ret);
 
 	return RETURN_SUCCESS;
@@ -3583,26 +3583,48 @@ static int hdlr_fpga_board_gps_time (const char* data, char* ret) {
 
 static int hdlr_fpga_board_gps_frac_time (const char* data, char* ret) {
 	uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
-	char gps_split[sizeof(uint32_t)+1];
+	char gps_split[MAX_PROP_LEN];
 	read_hps_reg( "sys7", &gps_frac_time_lh);
 	printf("Value of sys7: %d\n", gps_frac_time_lh);
 	read_hps_reg( "sys8", &gps_frac_time_uh);
 	printf("Value of sys8: %d\n", gps_frac_time_lh);
 	
-	snprintf(ret, gps_split, sizeof(uint32_t)+1, "%i", gps_frac_time_uh);
-	strncat(ret, gps_split, sizeof(uint32_t));
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
+	strncpy(ret, gps_split, MAX_PROP_LEN);
 	printf("Intermediate value of ret: %s\n", ret);
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
+	strncat(ret, gps_split, MAX_PROP_LEN);
+	printf("Final value of ret: %s\n", ret);
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
-	uint32_t systime  = 0;
-	read_hps_reg( "sys5", &systime );
-	write_hps_reg( "sys7", systime );
-	write_hps_reg( "sys8", 0 ); // set frac_time to 0
-	write_hps_reg( "sys9", 1 ); // writing 1, then 0 to sys9 sets the time
-	write_hps_reg( "sys9", 0 ); // to what is written in sys7 and sys8
+	uint32_t systime_lh = 0;
+	uint32_t systime_uh = 0;
+	read_hps_reg( "sys5", &systime_lh );
+	read_hps_reg( "sys6", &systime_uh );
+	write_hps_reg( "sys9", systime_lh );
+	write_hps_reg( "sys10", systime_uh );
+	write_hps_reg( "sys11", 0 ); // set frac_time to 0
+	write_hps_reg( "sys12", 0 ); // set frac_time to 0
+	write_hps_reg( "sys13", 1 ); // writing 1, then 0 to sys9 sets the time
+	write_hps_reg( "sys13", 0 ); // to what is written in sys7 and sys8
 
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_pps_mode_test (const char* data, char* ret){
+	//test the case where the set time comes right before pps hopefully
+	write_hps_reg("sys13", 0x2);
+	write_hps_reg("sys13", 0x3); //set pps_mode and set_pps = 1	
+	write_hps_reg("sys13", 0x7); 
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_pps_mode_test2 (const char* data, char* ret){
+	//Hopefully test the case where set time and pps are on same edge
+	write_hps_reg("sys13", 0x2);
+	write_hps_reg("sys13", 0x7);
 	return RETURN_SUCCESS;
 }
 // Beginning of property table
@@ -3856,7 +3878,9 @@ static prop_t property_table[] = {
 	{"load_config", hdlr_load_config, RW, "/home/root/profile.cfg"},
 	{"fpga/board/gps_time", hdlr_fpga_board_gps_time, RW, "0"},
 	{"fpga/board/gps_frac_time", hdlr_fpga_board_gps_frac_time, RW, "0"},
-	{"fpga/board/gps_sync_time", hdlr_fpga_board_gps_sync_time, RW, "0"}
+	{"fpga/board/gps_sync_time", hdlr_fpga_board_gps_sync_time, RW, "0"},
+	{"fpga/board/pps_mode_test", hdlr_fpga_board_pps_mode_test, RW, "0"},
+	{"fpga/board/pps_mode_test2", hdlr_fpga_board_pps_mode_test2, RW, "0"}
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
