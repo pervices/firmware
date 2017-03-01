@@ -3905,9 +3905,187 @@ static int hdlr_cm_tx_gain_val (const char *data, char *ret) {
 	return RETURN_SUCCESS;
 }
 static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
+	int r;
+
+	char inbuf[ 256 ];
+	char outbuf[ 256 ];
+
+	uint32_t sync_mode;
+	uint32_t sync_mask;
+
+	uint32_t mask_rx;
+	uint32_t mask_tx;
+
+	double freq = 0;
+
+	read_hps_reg( "sync_mode", & sync_mode );
+	read_hps_reg( "sync_mask", & sync_mask );
+
+	mask_rx = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
+	mask_tx = cm_chanmask_get( "/var/crimson/state/cm/chanmask-tx" );
+
+	sync_mask = ( mask_tx << 16 ) | mask_rx;
+	if ( 0 == sync_mask ) {
+		return RETURN_SUCCESS;
+	}
+
+	sscanf( data, "%lf", & freq );
+
+	sync_mode |= 1; // internal sync
+	write_hps_reg( "sync_mode", sync_mode );
+
+	write_hps_reg( "sync_mask", sync_mask );
+
+	if ( mask_rx & 0x1 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_a_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_rx & 0x2 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_b_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_rx & 0x4 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_c_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_rx & 0x8 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_d_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+
+	if ( mask_tx & 0x1 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_a_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_tx & 0x2 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_b_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_tx & 0x4 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_c_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_tx & 0x8 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_d_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+
 	return RETURN_SUCCESS;
 }
 static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
+	int r;
+
+	char inbuf[ 256 ];
+	char outbuf[ 256 ];
+
+	uint32_t sync_mode;
+	uint32_t sync_mask;
+
+	uint32_t mask_rx;
+	uint32_t mask_tx;
+
+	double freq = 0;
+
+	read_hps_reg( "sync_mode", & sync_mode );
+	read_hps_reg( "sync_mask", & sync_mask );
+
+	mask_rx = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
+	mask_tx = cm_chanmask_get( "/var/crimson/state/cm/chanmask-tx" );
+
+	sync_mask = ( mask_tx << 16 ) | mask_rx;
+	if ( 0 == sync_mask ) {
+		return RETURN_SUCCESS;
+	}
+
+	sscanf( data, "%lf", & freq );
+
+	sync_mode |= 1; // internal sync
+	write_hps_reg( "sync_mode", sync_mode );
+
+	write_hps_reg( "sync_mask", sync_mask );
+
+	if ( mask_rx & 0x1 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_a_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_rx & 0x2 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_b_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_rx & 0x4 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_c_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_rx & 0x8 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_rx_d_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+
+	if ( mask_tx & 0x1 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_a_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_tx & 0x2 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_b_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_tx & 0x4 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_c_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+	if ( mask_tx & 0x8 ) {
+		sprintf( inbuf, "%lf", freq );
+		r = hdlr_tx_d_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+	}
+
 	return RETURN_SUCCESS;
 }
 
