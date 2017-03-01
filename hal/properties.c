@@ -3810,6 +3810,107 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static uint16_t cm_chanmask_get( const char *path ) {
+	uint16_t r;
+
+	FILE* fp;
+
+	r = 0;
+
+	if ( !(fp = fopen(path, "r")) ) {
+		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+		return r;
+	}
+	fscanf( fp, "%x", & r );
+	fclose( fp );
+
+	return r;
+}
+
+static int hdlr_cm_chanmask_rx (const char *data, char *ret) {
+	uint16_t mask;
+	return
+		1 == sscanf( data, "%x", &mask )
+		? RETURN_SUCCESS
+		: RETURN_ERROR_PARAM;
+}
+static int hdlr_cm_chanmask_tx (const char *data, char *ret) {
+	uint16_t mask;
+	return
+		1 == sscanf( data, "%x", &mask )
+		? RETURN_SUCCESS
+		: RETURN_ERROR_PARAM;
+}
+static int hdlr_cm_rx_atten_val (const char *data, char *ret) {
+
+	uint16_t mask;
+	int atten;
+
+	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
+
+	if ( 0 == mask ) {
+		return RETURN_SUCCESS;
+	}
+
+	sscanf(data, "%u", &atten);
+
+	sprintf(buf, "rf -c %x -a %u\r", mask, atten );
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+	return RETURN_SUCCESS;
+}
+static int hdlr_cm_rx_gain_val (const char *data, char *ret) {
+	uint16_t mask;
+	int gain;
+
+	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
+
+	if ( 0 == mask ) {
+		return RETURN_SUCCESS;
+	}
+
+	sscanf(data, "%i", &gain);
+
+	if (gain > 126)		gain = 126;
+	else if (gain < 0)	gain  = 0;
+
+	if (gain % 2) gain++;		// Odd Number
+
+	// 0 -> 126 gain
+	sprintf(buf, "vga -c %x -g %d\r", mask, gain >> 1);
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+
+	return RETURN_SUCCESS;
+}
+static int hdlr_cm_tx_gain_val (const char *data, char *ret) {
+	uint16_t mask;
+	int gain;
+
+	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-tx" );
+	if ( 0 == mask ) {
+		return RETURN_SUCCESS;
+	}
+
+	sscanf(data, "%i", &gain);
+
+	// 0   -> 126	attenuation only
+	// 127		0dB
+
+	if (gain > 127)		gain = 127;
+	else if (gain < 0) 	gain = 0;
+
+	sprintf(buf, "rf -c %x -a %d\r", mask, 127 - gain);
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+
+	return RETURN_SUCCESS;
+}
+static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
+	return RETURN_SUCCESS;
+}
+static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
+	return RETURN_SUCCESS;
+}
+
 #define DEFINE_FILE_PROP( n, h, p, v ) \
 	{ .type = PROP_TYPE_FILE, .path = n, .handler = h, .permissions = p, .def_val = v, }
 
@@ -3927,6 +4028,15 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 	DEFINE_FILE_PROP( "fpga/link/net/hostname",  hdlr_fpga_link_net_hostname,  RW,  "crimson_tng" ), \
 	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" )
 
+#define DEFINE_CM() \
+      DEFINE_FILE_PROP( "cm/chanmask-rx", hdlr_cm_chanmask_rx, RW, "0" ), \
+      DEFINE_FILE_PROP( "cm/chanmask-tx", hdlr_cm_chanmask_tx, RW, "0" ), \
+      DEFINE_FILE_PROP( "cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0" ), \
+      DEFINE_FILE_PROP( "cm/rx/gain/val", hdlr_cm_rx_gain_val, WO, "0" ), \
+      DEFINE_FILE_PROP( "cm/tx/gain/val", hdlr_cm_tx_gain_val, WO, "0" ), \
+      DEFINE_FILE_PROP( "cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0" ), \
+      DEFINE_FILE_PROP( "cm/trx/nco_adj", hdlr_cm_trx_nco_adj, WO, "0" )
+
 // Beginning of property table
 static prop_t property_table[] = {
 
@@ -3945,6 +4055,8 @@ static prop_t property_table[] = {
 
 	DEFINE_FILE_PROP( "save_config",  hdlr_save_config,  RW,  "/home/root/profile.cfg" ),
 	DEFINE_FILE_PROP( "load_config",  hdlr_load_config,  RW,  "/home/root/profile.cfg" ),
+
+	DEFINE_CM(),
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
