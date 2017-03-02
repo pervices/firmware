@@ -3837,6 +3837,7 @@ static int hdlr_cm_chanmask_rx (const char *data, char *ret) {
 		? RETURN_SUCCESS
 		: RETURN_ERROR_PARAM;
 }
+
 static int hdlr_cm_chanmask_tx (const char *data, char *ret) {
 	uint32_t mask;
 	return
@@ -3845,33 +3846,34 @@ static int hdlr_cm_chanmask_tx (const char *data, char *ret) {
 		? RETURN_SUCCESS
 		: RETURN_ERROR_PARAM;
 }
-static int hdlr_cm_rx_atten_val (const char *data, char *ret) {
 
-	uint16_t mask;
-	int atten;
-	prop_t *prop;
+static int hdlr_cm_rx_atten_val (const char *data, char *ret) {
+	int r;
+
+	char inbuf[ 256 ];
+	char outbuf[ 256 ];
+
+	uint32_t mask_rx;
+
 	int wd_backup;
+	prop_t *prop;
 	int (*hdlr)( const char *, char *);
 	int i;
 
-	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
+	int atten = 0;
 
-	if ( 0 == mask ) {
-		return RETURN_SUCCESS;
-	}
+	mask_rx = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
 
-	sscanf(data, "%u", &atten);
+	sscanf( data, "%lf", & atten );
 
-	if (atten > 127)		atten = 127;
-	else if (atten < 0) 	atten = 0;
-
-	sprintf(buf, "rf -c %x -a %u\r", mask, atten );
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	sprintf( inbuf, "%lf", atten );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
-		if ( 0 == ( mask & (1 << i) ) ) {
+
+		if ( 0 == ( mask_rx & (1 << i) ) ) {
 			continue;
 		}
+
 		switch( i ) {
 		case 0: hdlr = hdlr_rx_a_rf_atten_val; break;
 		case 1: hdlr = hdlr_rx_b_rf_atten_val; break;
@@ -3879,46 +3881,51 @@ static int hdlr_cm_rx_atten_val (const char *data, char *ret) {
 		case 3: hdlr = hdlr_rx_d_rf_atten_val; break;
 		default: continue;
 		}
+
+		// call the handler directly
+		r = hdlr( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+
+		// disable inotify, write the value back to the file, re-enable inotify
 		prop = get_prop_from_hdlr( hdlr );
 		wd_backup = prop->wd;
 		prop->wd = -1;
-		FILE *fp = fopen( prop->path, "r+" );
-		fprintf( fp, "%d", atten );
-		fclose( fp );
+		set_property( prop -> path, inbuf );
 		prop->wd = wd_backup;
 	}
 
 	return RETURN_SUCCESS;
 }
+
 static int hdlr_cm_rx_gain_val (const char *data, char *ret) {
-	uint16_t mask;
-	int gain;
+	int r;
+
+	char inbuf[ 256 ];
+	char outbuf[ 256 ];
+
+	uint32_t mask_rx;
+
 	int wd_backup;
 	prop_t *prop;
 	int (*hdlr)( const char *, char *);
 	int i;
 
-	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
+	double gain = 0;
 
-	if ( 0 == mask ) {
-		return RETURN_SUCCESS;
-	}
+	mask_rx = cm_chanmask_get( "/var/crimson/state/cm/chanmask-rx" );
 
-	sscanf(data, "%i", &gain);
+	sscanf( data, "%lf", & gain );
 
-	if (gain > 126)		gain = 126;
-	else if (gain < 0)	gain  = 0;
-
-	if (gain % 2) gain++;		// Odd Number
-
-	// 0 -> 126 gain
-	sprintf(buf, "vga -c %x -g %d\r", mask, gain >> 1);
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	sprintf( inbuf, "%lf", gain );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
-		if ( 0 == ( mask & (1 << i) ) ) {
+
+		if ( 0 == ( mask_rx & (1 << i) ) ) {
 			continue;
 		}
+
 		switch( i ) {
 		case 0: hdlr = hdlr_rx_a_rf_gain_val; break;
 		case 1: hdlr = hdlr_rx_b_rf_gain_val; break;
@@ -3926,45 +3933,51 @@ static int hdlr_cm_rx_gain_val (const char *data, char *ret) {
 		case 3: hdlr = hdlr_rx_d_rf_gain_val; break;
 		default: continue;
 		}
+
+		// call the handler directly
+		r = hdlr( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+
+		// disable inotify, write the value back to the file, re-enable inotify
 		prop = get_prop_from_hdlr( hdlr );
 		wd_backup = prop->wd;
 		prop->wd = -1;
-		FILE *fp = fopen( prop->path, "r+" );
-		fprintf( fp, "%d", gain );
-		fclose( fp );
+		set_property( prop -> path, inbuf );
 		prop->wd = wd_backup;
 	}
 
 	return RETURN_SUCCESS;
 }
+
 static int hdlr_cm_tx_gain_val (const char *data, char *ret) {
-	uint16_t mask;
-	int gain;
+	int r;
+
+	char inbuf[ 256 ];
+	char outbuf[ 256 ];
+
+	uint32_t mask_tx;
+
 	int wd_backup;
 	prop_t *prop;
 	int (*hdlr)( const char *, char *);
 	int i;
 
-	mask = cm_chanmask_get( "/var/crimson/state/cm/chanmask-tx" );
-	if ( 0 == mask ) {
-		return RETURN_SUCCESS;
-	}
+	double gain = 0;
 
-	sscanf(data, "%i", &gain);
+	mask_tx = cm_chanmask_get( "/var/crimson/state/cm/chanmask-tx" );
 
-	// 0   -> 126	attenuation only
-	// 127		0dB
+	sscanf( data, "%lf", & gain );
 
-	if (gain > 127)		gain = 127;
-	else if (gain < 0) 	gain = 0;
-
-	sprintf(buf, "rf -c %x -a %d\r", mask, 127 - gain);
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	sprintf( inbuf, "%lf", gain );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
-		if ( 0 == ( mask & (1 << i) ) ) {
+
+		if ( 0 == ( mask_tx & (1 << i) ) ) {
 			continue;
 		}
+
 		switch( i ) {
 		case 0: hdlr = hdlr_tx_a_rf_gain_val; break;
 		case 1: hdlr = hdlr_tx_b_rf_gain_val; break;
@@ -3972,24 +3985,29 @@ static int hdlr_cm_tx_gain_val (const char *data, char *ret) {
 		case 3: hdlr = hdlr_tx_d_rf_gain_val; break;
 		default: continue;
 		}
+
+		// call the handler directly
+		r = hdlr( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+
+		// disable inotify, write the value back to the file, re-enable inotify
 		prop = get_prop_from_hdlr( hdlr );
 		wd_backup = prop->wd;
 		prop->wd = -1;
-		FILE *fp = fopen( prop->path, "r+" );
-		fprintf( fp, "%d", gain );
-		fclose( fp );
+		set_property( prop -> path, inbuf );
 		prop->wd = wd_backup;
 	}
 
 	return RETURN_SUCCESS;
 }
+
 static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 	int r;
 
 	char inbuf[ 256 ];
 	char outbuf[ 256 ];
-
-	char path[ MAX_PATH_LEN ];
 
 	uint32_t sync_mode;
 	uint32_t sync_mask;
@@ -4039,7 +4057,7 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 		}
 
 		// call the handler directly
-		r = hdlr_rx_a_rf_freq_val( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf );
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4067,7 +4085,7 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 		}
 
 		// call the handler directly
-		r = hdlr_tx_a_rf_freq_val( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf );
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4088,8 +4106,6 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 
 	char inbuf[ 256 ];
 	char outbuf[ 256 ];
-
-	char path[ MAX_PATH_LEN ];
 
 	uint32_t sync_mode;
 	uint32_t sync_mask;
@@ -4139,7 +4155,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 		}
 
 		// call the handler directly
-		r = hdlr_rx_a_dsp_nco_adj( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf );
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4167,7 +4183,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 		}
 
 		// call the handler directly
-		r = hdlr_tx_a_dsp_nco_adj( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf );
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
