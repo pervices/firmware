@@ -4437,8 +4437,53 @@ inline prop_t *get_prop_from_hdlr( int (*hdlr)(const char*, char*) ) {
 	return NULL;
 }
 
+int resolve_symbolic_property_name( const char *prop, char *path, size_t n ) {
+
+	const char *vcs = "/var/crimson/state/";
+	const size_t vcsl = strlen( vcs );
+	char origcwd [MAX_PATH_LEN];
+	char *temp;
+	size_t path_strlen;
+	size_t delta;
+	int r;
+
+#if MAX_PATH_LEN < PATH_MAX
+#error MAX_PATH_LEN is too small
+#endif
+
+	getwd( origcwd );
+	chdir( vcs );
+	temp = (void *) realpath( prop, path );
+	chdir( origcwd );
+	if ( NULL == temp ) {
+		PRINT( ERROR, "unable to find a property corresponding to '%s'\n", prop );
+		return RETURN_ERROR_SET_PROP;
+	}
+
+	path_strlen = strlen( path );
+	r = strncmp( vcs, path, vcsl );
+	if ( 0 == r ) {
+		delta = path_strlen - vcsl;
+		memmove( path, path + vcsl, delta );
+		path[ delta ] = '\0';
+	}
+
+//	if ( 0 != strcmp( path, prop ) ) {
+//		PRINT( INFO, "%s(): resolved symbolic link: '%s' => '%s'\n", __func__, prop, path );
+//	}
+
+	return RETURN_SUCCESS;
+}
+
+
 inline prop_t* get_prop_from_cmd(const char* cmd) {
+	char path[ MAX_PATH_LEN ];
 	size_t i;
+
+	if ( RETURN_SUCCESS == resolve_symbolic_property_name( cmd, path, sizeof( path ) ) ) {
+		cmd = path;
+	}
+
 	for (i = 0; i < num_properties; i++) {
 		if ( (strcmp(property_table[i].path, cmd) == 0) &&
 			(strlen(property_table[i].path) == strlen(cmd)) )

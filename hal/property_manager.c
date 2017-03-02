@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <stdbool.h>
 #include <unistd.h>
 #include "common.h"
 #include "properties.h"
@@ -200,8 +201,8 @@ static void build_tree(void) {
 		make_prop( prop );
 		if ( PROP_TYPE_SYMLINK != prop->type ) {
 			add_prop_to_inotify( prop );
+			init_prop_val( prop );
 		}
-		init_prop_val( prop );
 		PRINT(VERBOSE, "made prop: %s wd: %i\n", prop -> path, prop -> wd);
 	}
 
@@ -388,8 +389,10 @@ int load_properties(const char* file) {
 		// get pointer to current property
 		strcpy(cur_prop -> def_val, prop_val);
 
-		// write the current property to device
-		init_prop_val( cur_prop );
+		if ( PROP_TYPE_FILE == cur_prop->type ) {
+			// write the current property to device
+			init_prop_val( cur_prop );
+		}
 	}
 
 	// close the file
@@ -422,6 +425,48 @@ int get_property(const char* prop, char* data, size_t max_len) {
 	return RETURN_SUCCESS;
 }
 
+int get_channel_for_path( const char *path ) {
+
+	if ( NULL == path ) {
+		return -1;
+	}
+	if ( strlen( path ) < 4 ) {
+		return -1;
+	}
+	if (
+		! (
+			0
+			|| 0 == strncmp( "rx/", path, 2 )
+			|| 0 == strncmp( "tx/", path, 2 )
+		)
+	) {
+		return -1;
+	}
+	return 'a' - path[ 3 ];
+}
+
+void power_on_channel( bool tx, int channel ) {
+	char buf[ MAX_PATH_LEN ];
+	prop_t *prop;
+
+	snprintf( buf, sizeof( buf ), "%s/%c/pwr", tx ? "tx" : "rx", 'a' + channel );
+	prop = get_prop_from_cmd( buf );
+	if ( NULL == prop ) {
+		return;
+	}
+	write_to_file(get_abs_path(prop, buf), "1");
+}
+
+void power_on_channel_fixup( char *path ) {
+	bool tx;
+	int channel = get_channel_for_path( path );
+	if ( -1 == channel ) {
+		return;
+	}
+	tx = 0 == strncmp( "tx", path, 2 );
+	power_on_channel( tx, channel );
+}
+
 // standard set property
 int set_property(const char* prop, const char* data) {
 	PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
@@ -443,19 +488,7 @@ int set_property(const char* prop, const char* data) {
 
 	// enable channel if it has not been enabled yet
 	// (enabling the channel later will erase the current channels, so enable now)
-	char root[MAX_PATH_LEN] = {0};
-	get_root(temp, root);
-
-	// check if the root is either rx or tx
-	root[2] = 0;	// temporarily end string at '_'
-	if ( !strcmp(root, "rx") || !strcmp(root, "tx") ) {
-		root[2] = '_';				// re-insert '_'
-		strcat(root + strlen(root), "/pwr");
-		prop_t* pwr_prop = get_prop_from_cmd(root);
-		char pwr_path[MAX_PATH_LEN] = {0};
-
-		write_to_file(get_abs_path(pwr_prop, pwr_path), "1");
-	}
+	power_on_channel_fixup( path );
 
 	write_to_file(get_abs_path(temp, path), data);
 	check_property_inotifies();
