@@ -18,6 +18,8 @@
 #include "mmap.h"
 #include "properties.h"
 
+#include "property_manager.h"
+
 #define BASE_SAMPLE_RATE 325000000.0	// SPS
 #define RESAMP_SAMPLE_RATE  260000000.0	// SPS
 #define IPVER_IPV4 0
@@ -3987,6 +3989,8 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 	char inbuf[ 256 ];
 	char outbuf[ 256 ];
 
+	char path[ MAX_PATH_LEN ];
+
 	uint32_t sync_mode;
 	uint32_t sync_mask;
 
@@ -4018,68 +4022,14 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 
 	write_hps_reg( "sync_mask", sync_mask );
 
-	if ( mask_rx & 0x1 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_a_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_rx & 0x2 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_b_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_rx & 0x4 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_c_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_rx & 0x8 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_d_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-
-	if ( mask_tx & 0x1 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_a_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_tx & 0x2 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_b_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_tx & 0x4 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_c_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_tx & 0x8 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_d_rf_freq_val( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
+	sprintf( inbuf, "%lf", freq );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
+
 		if ( 0 == ( mask_rx & (1 << i) ) ) {
 			continue;
 		}
+
 		switch( i ) {
 		case 0: hdlr = hdlr_rx_a_rf_freq_val; break;
 		case 1: hdlr = hdlr_rx_b_rf_freq_val; break;
@@ -4087,19 +4037,27 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 		case 3: hdlr = hdlr_rx_d_rf_freq_val; break;
 		default: continue;
 		}
+
+		// call the handler directly
+		r = hdlr_rx_a_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+
+		// disable inotify, write the value back to the file, re-enable inotify
 		prop = get_prop_from_hdlr( hdlr );
 		wd_backup = prop->wd;
 		prop->wd = -1;
-		FILE *fp = fopen( prop->path, "r+" );
-		fprintf( fp, "%lf", freq );
-		fclose( fp );
+		set_property( prop -> path, inbuf );
 		prop->wd = wd_backup;
 	}
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
+
 		if ( 0 == ( mask_tx & (1 << i) ) ) {
 			continue;
 		}
+
 		switch( i ) {
 		case 0: hdlr = hdlr_tx_a_rf_freq_val; break;
 		case 1: hdlr = hdlr_tx_b_rf_freq_val; break;
@@ -4107,22 +4065,31 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret) {
 		case 3: hdlr = hdlr_tx_d_rf_freq_val; break;
 		default: continue;
 		}
+
+		// call the handler directly
+		r = hdlr_tx_a_rf_freq_val( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+
+		// disable inotify, write the value back to the file, re-enable inotify
 		prop = get_prop_from_hdlr( hdlr );
 		wd_backup = prop->wd;
 		prop->wd = -1;
-		FILE *fp = fopen( prop->path, "r+" );
-		fprintf( fp, "%lf", freq );
-		fclose( fp );
+		set_property( prop -> path, inbuf );
 		prop->wd = wd_backup;
 	}
 
 	return RETURN_SUCCESS;
 }
+
 static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	int r;
 
 	char inbuf[ 256 ];
 	char outbuf[ 256 ];
+
+	char path[ MAX_PATH_LEN ];
 
 	uint32_t sync_mode;
 	uint32_t sync_mask;
@@ -4155,68 +4122,14 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 
 	write_hps_reg( "sync_mask", sync_mask );
 
-	if ( mask_rx & 0x1 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_a_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_rx & 0x2 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_b_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_rx & 0x4 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_c_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_rx & 0x8 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_rx_d_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-
-	if ( mask_tx & 0x1 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_a_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_tx & 0x2 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_b_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_tx & 0x4 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_c_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
-	if ( mask_tx & 0x8 ) {
-		sprintf( inbuf, "%lf", freq );
-		r = hdlr_tx_d_dsp_nco_adj( inbuf, outbuf );
-		if( RETURN_SUCCESS != r ) {
-			return r;
-		}
-	}
+	sprintf( inbuf, "%lf", freq );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
+
 		if ( 0 == ( mask_rx & (1 << i) ) ) {
 			continue;
 		}
+
 		switch( i ) {
 		case 0: hdlr = hdlr_rx_a_dsp_nco_adj; break;
 		case 1: hdlr = hdlr_rx_b_dsp_nco_adj; break;
@@ -4224,19 +4137,27 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 		case 3: hdlr = hdlr_rx_d_dsp_nco_adj; break;
 		default: continue;
 		}
+
+		// call the handler directly
+		r = hdlr_rx_a_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+
+		// disable inotify, write the value back to the file, re-enable inotify
 		prop = get_prop_from_hdlr( hdlr );
 		wd_backup = prop->wd;
 		prop->wd = -1;
-		FILE *fp = fopen( prop->path, "r+" );
-		fprintf( fp, "%lf", freq );
-		fclose( fp );
+		set_property( prop -> path, inbuf );
 		prop->wd = wd_backup;
 	}
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
+
 		if ( 0 == ( mask_tx & (1 << i) ) ) {
 			continue;
 		}
+
 		switch( i ) {
 		case 0: hdlr = hdlr_tx_a_dsp_nco_adj; break;
 		case 1: hdlr = hdlr_tx_b_dsp_nco_adj; break;
@@ -4244,12 +4165,18 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 		case 3: hdlr = hdlr_tx_d_dsp_nco_adj; break;
 		default: continue;
 		}
+
+		// call the handler directly
+		r = hdlr_tx_a_dsp_nco_adj( inbuf, outbuf );
+		if( RETURN_SUCCESS != r ) {
+			return r;
+		}
+
+		// disable inotify, write the value back to the file, re-enable inotify
 		prop = get_prop_from_hdlr( hdlr );
 		wd_backup = prop->wd;
 		prop->wd = -1;
-		FILE *fp = fopen( prop->path, "r+" );
-		fprintf( fp, "%lf", freq );
-		fclose( fp );
+		set_property( prop -> path, inbuf );
 		prop->wd = wd_backup;
 	}
 
