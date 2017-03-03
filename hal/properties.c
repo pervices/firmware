@@ -3831,20 +3831,28 @@ static uint16_t cm_chanmask_get( const char *path ) {
 
 static int hdlr_cm_chanmask_rx (const char *data, char *ret) {
 	uint32_t mask;
-	return
-		1 == sscanf( data, "%x", &mask )
-		&& 0 == ( mask & 0xffff0000 ) // only 16-bit masks allowed
-		? RETURN_SUCCESS
-		: RETURN_ERROR_PARAM;
+
+	if ( 1 != sscanf( data, "%x", &mask ) ) {
+		return RETURN_ERROR_PARAM;
+	}
+
+	mask &= 0xffff;
+	sprintf( ret, "%x", mask );
+
+	return RETURN_SUCCESS;
 }
 
 static int hdlr_cm_chanmask_tx (const char *data, char *ret) {
 	uint32_t mask;
-	return
-		1 == sscanf( data, "%x", &mask )
-		&& 0 == ( mask & 0xffff0000 ) // only 16-bit masks allowed
-		? RETURN_SUCCESS
-		: RETURN_ERROR_PARAM;
+
+	if ( 1 != sscanf( data, "%x", &mask ) ) {
+		return RETURN_ERROR_PARAM;
+	}
+
+	mask &= 0xffff;
+	sprintf( ret, "%x", mask );
+
+	return RETURN_SUCCESS;
 }
 
 static int hdlr_cm_rx_atten_val (const char *data, char *ret) {
