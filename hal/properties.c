@@ -3599,6 +3599,66 @@ static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_flow_control_sfpX_port (const char* data, char* ret, unsigned sfp_port) {
+
+	static const unsigned udp_port_max = (1 << 16) - 1;
+	static const unsigned sfp_port_max = 1;
+
+	unsigned udp_port;
+	uint32_t flc0_reg;
+	uint32_t mask;
+
+	if ( sfp_port > sfp_port_max ) {
+		return RETURN_ERROR_PARAM;
+	}
+	if ( 1 != sscanf( data, "%u", &udp_port ) ) {
+		return RETURN_ERROR_PARAM;
+	}
+
+	udp_port = udp_port > udp_port_max ? udp_port_max : udp_port;
+
+	// if number of sfp_ports ever changes, this code needs to be changed
+	// a good reason to use structures to access memory-mapped registers.
+	read_hps_reg( "flc0", & flc0_reg );
+	mask = 0xffff << ( sfp_port * 16 );
+	flc0_reg &= ~mask;
+	flc0_reg |= ( udp_port << ( sfp_port * 16 ) ) & mask;
+	write_hps_reg( "flc0", flc0_reg );
+
+	sprintf( ret, "%u", udp_port );
+
+	return RETURN_SUCCESS;
+}
+static inline int hdlr_fpga_board_flow_control_sfpa_port (const char* data, char* ret) {
+	return hdlr_fpga_board_flow_control_sfpX_port( data, ret, 0 );
+}
+static inline int hdlr_fpga_board_flow_control_sfpb_port (const char* data, char* ret) {
+	return hdlr_fpga_board_flow_control_sfpX_port( data, ret, 1 );
+}
+
+static int hdlr_fpga_board_flow_control_time_diff (const char* data, char* ret) {
+
+	struct xg_cmd {
+		uint64_t cmd;
+		uint64_t payload[2];
+	} __attribute__(( packed ));
+
+	struct xg_cmd_flc_time_diff {
+		uint64_t cmd;  // FLOW_CONTROL_TIME_DIFF := 1
+		int64_t sec;   // see <time.h>
+		int64_t nsec;
+	}__attribute__(( packed ));
+
+	struct xg_cmd_flc_time_diff flc_time_diff;
+
+	read_hps_reg( "flc1", &( (uint32_t *) & flc_time_diff.sec )[ 0 ] );
+	read_hps_reg( "flc2", &( (uint32_t *) & flc_time_diff.sec )[ 1 ] );
+	read_hps_reg( "flc3", &( (uint32_t *) & flc_time_diff.nsec )[ 0 ] );
+	read_hps_reg( "flc4", &( (uint32_t *) & flc_time_diff.nsec )[ 1 ] );
+
+	sprintf( ret, "%"PRIx64",%"PRIx64, flc_time_diff.sec, flc_time_diff.nsec );
+	return RETURN_SUCCESS;
+}
 
 static int hdlr_fpga_board_fw_rst (const char* data, char* ret) {
 	uint32_t old_val;
@@ -4050,6 +4110,9 @@ static prop_t property_table[] = {
 	{"fpga/board/jesd_sync", hdlr_fpga_board_jesd_sync, WO, "0"},
 	{"fpga/board/fw_rst", hdlr_fpga_board_fw_rst, WO, "0"},
 	{"fpga/board/sys_rstreq", hdlr_fpga_board_sys_rstreq, WO, "0"},
+	{"fpga/board/flow_control/sfpa_port", hdlr_fpga_board_flow_control_sfpa_port, RW, "42809"},
+	{"fpga/board/flow_control/sfpb_port", hdlr_fpga_board_flow_control_sfpb_port, RW, "42809"},
+	{"fpga/board/flow_control/time_diff", hdlr_fpga_board_flow_control_time_diff, RO, "0"},
 	{"fpga/about/name", hdlr_invalid, RO, "crimson_tng"},
 	{"fpga/about/id", hdlr_fpga_about_id, RW, "001"},
 	{"fpga/about/serial", hdlr_invalid, RO, "001"},
