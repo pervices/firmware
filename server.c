@@ -77,9 +77,23 @@ int port_nums[num_udp_ports] = {
 
 // main loop
 int main(int argc, char *argv[]) {
+
+	struct xg_cmd {
+		uint64_t cmd;
+		uint64_t payload[2];
+	} __attribute__(( packed ));
+
+	struct xg_cmd_flc_time_diff {
+		uint64_t cmd;  // FLOW_CONTROL_TIME_DIFF := 1
+		int64_t sec;   // see <time.h>
+		int64_t nsec;
+	}__attribute__(( packed ));
+
 	int ret = 0;
 	int i = 0;
 	cmd_t cmd;
+
+	struct xg_cmd_flc_time_diff flc_time_diff;
 
 	PRINT( INFO, "Starting Crimson server\n");
 
@@ -121,15 +135,25 @@ int main(int argc, char *argv[]) {
 			// if flow control request
 			if (port_nums[i] == UDP_FLOW_CNTRL_PORT) {
 
-				// service the flow control port
+				// read flow control time diff since last update
+				read_hps_reg( "flc1", &( (uint32_t *) & flc_time_diff.sec )[ 0 ] );
+				read_hps_reg( "flc2", &( (uint32_t *) & flc_time_diff.sec )[ 1 ] );
+				read_hps_reg( "flc3", &( (uint32_t *) & flc_time_diff.nsec )[ 0 ] );
+				read_hps_reg( "flc4", &( (uint32_t *) & flc_time_diff.nsec )[ 1 ] );
+
+				// read fifo levels
 				uint32_t fifo_lvl[4];
 				read_hps_reg("res_ro4", fifo_lvl + 0);
 				read_hps_reg("res_ro5", fifo_lvl + 1);
 				read_hps_reg("res_ro6", fifo_lvl + 2);
 				read_hps_reg("res_ro7", fifo_lvl + 3);
 
-				snprintf((char*)buffer, UDP_PAYLOAD_LEN, "flow,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n",
-					fifo_lvl[0], fifo_lvl[1], fifo_lvl[2], fifo_lvl[3]);
+				snprintf(
+					(char*)buffer, UDP_PAYLOAD_LEN,
+					"flow,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32",%"PRIx64",%"PRIx64"\n",
+					fifo_lvl[0], fifo_lvl[1], fifo_lvl[2], fifo_lvl[3],
+					flc_time_diff.sec, flc_time_diff.nsec
+				);
 
 				send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
 
