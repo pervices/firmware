@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 			// if flow control request
 			if (port_nums[i] == UDP_FLOW_CNTRL_PORT) {
 
-				// read flow control time diff since last update
+				// read flow control time diff
 				read_hps_reg( "flc1", &( (uint32_t *) & flc_time_diff.sec )[ 0 ] );
 				read_hps_reg( "flc2", &( (uint32_t *) & flc_time_diff.sec )[ 1 ] );
 				read_hps_reg( "flc3", &( (uint32_t *) & flc_time_diff.nsec )[ 0 ] );
