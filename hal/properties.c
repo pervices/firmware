@@ -3645,30 +3645,6 @@ static inline int hdlr_fpga_board_flow_control_sfpb_port (const char* data, char
 	return hdlr_fpga_board_flow_control_sfpX_port( data, ret, 1 );
 }
 
-static int hdlr_fpga_board_flow_control_time_diff (const char* data, char* ret) {
-
-	struct xg_cmd {
-		uint64_t cmd;
-		uint64_t payload[2];
-	} __attribute__(( packed ));
-
-	struct xg_cmd_flc_time_diff {
-		uint64_t cmd;  // FLOW_CONTROL_TIME_DIFF := 1
-		int64_t sec;   // see <time.h>
-		int64_t nsec;
-	}__attribute__(( packed ));
-
-	struct xg_cmd_flc_time_diff flc_time_diff;
-
-	read_hps_reg( "flc1", &( (uint32_t *) & flc_time_diff.sec )[ 0 ] );
-	read_hps_reg( "flc2", &( (uint32_t *) & flc_time_diff.sec )[ 1 ] );
-	read_hps_reg( "flc3", &( (uint32_t *) & flc_time_diff.nsec )[ 0 ] );
-	read_hps_reg( "flc4", &( (uint32_t *) & flc_time_diff.nsec )[ 1 ] );
-
-	sprintf( ret, "%"PRIx64",%"PRIx64, flc_time_diff.sec, flc_time_diff.nsec );
-	return RETURN_SUCCESS;
-}
-
 static int hdlr_fpga_board_fw_rst (const char* data, char* ret) {
 	uint32_t old_val;
 
@@ -4410,7 +4386,6 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/board/fw_rst",  hdlr_fpga_board_fw_rst,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/flow_control/sfpa_port", hdlr_fpga_board_flow_control_sfpa_port, RW, "42809" ), \
 	DEFINE_FILE_PROP( "fpga/board/flow_control/sfpb_port", hdlr_fpga_board_flow_control_sfpb_port, RW, "42809" ), \
-	DEFINE_FILE_PROP( "fpga/board/flow_control/time_diff", hdlr_fpga_board_flow_control_time_diff, RO, "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/gps_time",  hdlr_fpga_board_gps_time,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/gps_frac_time",  hdlr_fpga_board_gps_frac_time,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/gps_sync_time",  hdlr_fpga_board_gps_sync_time,  RW,  "0" ), \
