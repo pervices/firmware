@@ -4368,8 +4368,8 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/link/sfpb/pay_len",  hdlr_fpga_link_sfpb_pay_len,  RW,  "1400" ), \
 	DEFINE_FILE_PROP( "fpga/link/net/dhcp_en",  hdlr_fpga_link_net_dhcp_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/link/net/hostname",  hdlr_fpga_link_net_hostname,  RW,  "crimson_tng" ), \
-	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" ),.\
-	DEFINE_FILE_PROP(."fpga/board/pps_mode_test", hdlr_fpga_board_pps_mode_test, RW, "0"), \
+	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" ), \
+	DEFINE_FILE_PROP( "fpga/board/pps_mode_test", hdlr_fpga_board_pps_mode_test, RW, "0"), \
 	DEFINE_FILE_PROP( "fpga/board/pps_mode_test2", hdlr_fpga_board_pps_mode_test2, RW, "0")
 	
 #define DEFINE_CM() \
