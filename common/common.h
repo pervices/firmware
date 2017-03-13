@@ -133,7 +133,7 @@ typedef enum {
 // printf wrapper
 int PRINT( print_t priority, const char* format, ... );
 
-#define LOG_FILE	( "/home/root/crimson.log" )
-#define DUMP_FILE	( "/home/root/dump.log" )
+#define LOG_FILE	( "/var/crimson/crimson.log" )
+#define DUMP_FILE	( "/var/crimson/dump.log" )
 
 #endif /* COMMON_H_ */

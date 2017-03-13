@@ -29,12 +29,18 @@
 #include "comm_manager.h"
 #include "common.h"
 #include "pllcalc.h"
+#include "decim_gain_lut.h"
+#include "interp_gain_lut.h"
 
 typedef enum {RW, RO, WO} perm_t;
 typedef enum {POLL, NO_POLL} poll_t;
 
+typedef enum { PROP_TYPE_FILE, PROP_TYPE_SYMLINK, } prop_type_t;
+
 typedef struct prop {
+	prop_type_t type;
 	char path[MAX_PROP_LEN];
+	char symlink_target[MAX_PROP_LEN];
 	int (*handler)(const char* data, char* ret);
 	perm_t permissions;
 	char def_val[MAX_PROP_LEN];	// default value
@@ -45,6 +51,7 @@ typedef struct prop {
 inline size_t get_num_prop(void);
 inline prop_t* get_prop(size_t idx);
 inline prop_t* get_prop_from_wd(int wd);
+inline prop_t* get_prop_from_hdlr( int (*hdlr)(const char*, char*) );
 inline prop_t* get_prop_from_cmd(const char* cmd);
 char* get_abs_path(prop_t* prop, char* path);
 char* get_abs_dir(prop_t* prop, char* path);
@@ -55,5 +62,4 @@ inline void pass_uart_rx_fd(int fd);
 void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char* save_path);
 void sync_channels(uint8_t chan_mask);
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll);
-
 #endif
