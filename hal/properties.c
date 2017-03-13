@@ -3608,6 +3608,42 @@ static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_flow_control_sfpX_port (const char* data, char* ret, unsigned sfp_port) {
+
+	static const unsigned udp_port_max = (1 << 16) - 1;
+	static const unsigned sfp_port_max = 1;
+
+	unsigned udp_port;
+	uint32_t flc0_reg;
+	uint32_t mask;
+
+	if ( sfp_port > sfp_port_max ) {
+		return RETURN_ERROR_PARAM;
+	}
+	if ( 1 != sscanf( data, "%u", &udp_port ) ) {
+		return RETURN_ERROR_PARAM;
+	}
+
+	udp_port = udp_port > udp_port_max ? udp_port_max : udp_port;
+
+	// if number of sfp_ports ever changes, this code needs to be changed
+	// a good reason to use structures to access memory-mapped registers.
+	read_hps_reg( "flc0", & flc0_reg );
+	mask = 0xffff << ( sfp_port * 16 );
+	flc0_reg &= ~mask;
+	flc0_reg |= ( udp_port << ( sfp_port * 16 ) ) & mask;
+	write_hps_reg( "flc0", flc0_reg );
+
+	sprintf( ret, "%u", udp_port );
+
+	return RETURN_SUCCESS;
+}
+static inline int hdlr_fpga_board_flow_control_sfpa_port (const char* data, char* ret) {
+	return hdlr_fpga_board_flow_control_sfpX_port( data, ret, 0 );
+}
+static inline int hdlr_fpga_board_flow_control_sfpb_port (const char* data, char* ret) {
+	return hdlr_fpga_board_flow_control_sfpX_port( data, ret, 1 );
+}
 
 static int hdlr_fpga_board_fw_rst (const char* data, char* ret) {
 	uint32_t old_val;
@@ -4348,6 +4384,8 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/board/dump",  hdlr_fpga_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/fw_rst",  hdlr_fpga_board_fw_rst,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/flow_control/sfpa_port", hdlr_fpga_board_flow_control_sfpa_port, RW, "42809" ), \
+	DEFINE_FILE_PROP( "fpga/board/flow_control/sfpb_port", hdlr_fpga_board_flow_control_sfpb_port, RW, "42809" ), \
 	DEFINE_FILE_PROP( "fpga/board/gps_time",  hdlr_fpga_board_gps_time,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/gps_frac_time",  hdlr_fpga_board_gps_frac_time,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/gps_sync_time",  hdlr_fpga_board_gps_sync_time,  RW,  "0" ), \
@@ -4401,8 +4439,6 @@ static prop_t property_table[] = {
 	DEFINE_FILE_PROP( "load_config",  hdlr_load_config,  RW,  "/home/root/profile.cfg" ),
 
 	DEFINE_CM(),
-	
-	
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
