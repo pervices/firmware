@@ -3412,14 +3412,21 @@ static int hdlr_time_clk_cur_time (const char* data, char* ret) {
 	//read_hps_reg( "sys6", &fracpart);
 	//printf("Time is: %lf seconds\n", (double)intpart + ((double)fracpart / 100000000) );
 
-	double time;
-	sscanf(data, "%lf", &time);
-	write_hps_reg( "sys7", (uint32_t)time);
-	write_hps_reg( "sys8", time - (uint32_t)time);
+	//double time;
+	//sscanf(data, "%lf", &time);
+	//write_hps_reg( "sys7", (uint32_t)time);
+	//write_hps_reg( "sys8", time - (uint32_t)time);
 
+	long double time;
+	sscanf(data, "%Lf", &time);
+	write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+	write_hps_reg("sys10", (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
+	write_hps_reg("sys11", (uint32_t)(time-(uint64_t)time) & 0x00000000FFFFFFFF);
+	//write_hps_reg("sys12", (uint32_t)((time-(uint64_t)time)>>32) & 0x00000000FFFFFFFF);
 	// toggle the set register
-	write_hps_reg( "sys9", 1);
-	write_hps_reg( "sys9", 0);
+	write_hps_reg( "sys13", 1);
+	write_hps_reg( "sys13", 0);
 	return RETURN_SUCCESS;
 }
 
@@ -3786,32 +3793,70 @@ static int hdlr_load_config (const char* data, char* ret) {
 }
 
 static int hdlr_fpga_board_gps_time (const char* data, char* ret) {
-	uint32_t gps_time = 0;
-	read_hps_reg( "sys5", &gps_time );
-	sprintf(ret, "%i", gps_time);
+	uint32_t gps_time_lh = 0, gps_time_uh = 0;
+	char gps_split[MAX_PROP_LEN];
+
+	read_hps_reg( "sys5", &gps_time_lh);
+	printf("Value of sys5: %d\n", gps_time_lh);
+	read_hps_reg( "sys6", &gps_time_uh );
+	printf("Value of sys6: %d\n", gps_time_uh);
+
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
+	strncpy(ret, gps_split, MAX_PROP_LEN);
+	printf("Intermediate value of ret: %s\n", ret);
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
+	strncat(ret, gps_split, MAX_PROP_LEN);
+	printf("Final value of ret: %s\n", ret);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_gps_frac_time (const char* data, char* ret) {
-	uint32_t gps_frac_time = 0;
-	read_hps_reg( "sys6", &gps_frac_time );
-	sprintf(ret, "%i", gps_frac_time);
-
+	uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
+	char gps_split[MAX_PROP_LEN];
+	read_hps_reg( "sys7", &gps_frac_time_lh);
+	printf("Value of sys7: %d\n", gps_frac_time_lh);
+	read_hps_reg( "sys8", &gps_frac_time_uh);
+	printf("Value of sys8: %d\n", gps_frac_time_lh);
+	
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
+	strncpy(ret, gps_split, MAX_PROP_LEN);
+	printf("Intermediate value of ret: %s\n", ret);
+	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
+	strncat(ret, gps_split, MAX_PROP_LEN);
+	printf("Final value of ret: %s\n", ret);
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
-	uint32_t systime  = 0;
-	read_hps_reg( "sys5", &systime );
-	write_hps_reg( "sys7", systime );
-	write_hps_reg( "sys8", 0 ); // set frac_time to 0
-	write_hps_reg( "sys9", 1 ); // writing 1, then 0 to sys9 sets the time
-	write_hps_reg( "sys9", 0 ); // to what is written in sys7 and sys8
+	uint32_t systime_lh = 0;
+	uint32_t systime_uh = 0;
+	read_hps_reg( "sys5", &systime_lh );
+	read_hps_reg( "sys6", &systime_uh );
+	write_hps_reg( "sys9", systime_lh );
+	write_hps_reg( "sys10", systime_uh );
+	write_hps_reg( "sys11", 0 ); // set frac_time to 0
+	write_hps_reg( "sys12", 0 ); // set frac_time to 0
+	write_hps_reg( "sys13", 1 ); // writing 1, then 0 to sys9 sets the time
+	write_hps_reg( "sys13", 0 ); // to what is written in sys7 and sys8
 
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_pps_mode_test (const char* data, char* ret){
+	//test the case where the set time comes right before pps hopefully
+	write_hps_reg("sys13", 0x2);
+	write_hps_reg("sys13", 0x3); //set pps_mode and set_pps = 1	
+	write_hps_reg("sys13", 0x7); 
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_pps_mode_test2 (const char* data, char* ret){
+	//Hopefully test the case where set time and pps are on same edge
+	write_hps_reg("sys13", 0x2);
+	write_hps_reg("sys13", 0x7);
+	return RETURN_SUCCESS;
+}
 static uint16_t cm_chanmask_get( const char *path ) {
 	uint32_t r;
 
@@ -3828,6 +3873,7 @@ static uint16_t cm_chanmask_get( const char *path ) {
 
 	return r;
 }
+
 
 static int hdlr_cm_chanmask_rx (const char *data, char *ret) {
 	uint32_t mask;
@@ -4322,8 +4368,10 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/link/sfpb/pay_len",  hdlr_fpga_link_sfpb_pay_len,  RW,  "1400" ), \
 	DEFINE_FILE_PROP( "fpga/link/net/dhcp_en",  hdlr_fpga_link_net_dhcp_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/link/net/hostname",  hdlr_fpga_link_net_hostname,  RW,  "crimson_tng" ), \
-	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" )
-
+	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" ), \
+	DEFINE_FILE_PROP( "fpga/board/pps_mode_test", hdlr_fpga_board_pps_mode_test, RW, "0"), \
+	DEFINE_FILE_PROP( "fpga/board/pps_mode_test2", hdlr_fpga_board_pps_mode_test2, RW, "0")
+	
 #define DEFINE_CM() \
       DEFINE_FILE_PROP( "cm/chanmask-rx", hdlr_cm_chanmask_rx, RW, "0" ), \
       DEFINE_FILE_PROP( "cm/chanmask-tx", hdlr_cm_chanmask_tx, RW, "0" ), \
@@ -4353,6 +4401,8 @@ static prop_t property_table[] = {
 	DEFINE_FILE_PROP( "load_config",  hdlr_load_config,  RW,  "/home/root/profile.cfg" ),
 
 	DEFINE_CM(),
+	
+	
 };
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
