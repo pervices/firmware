@@ -52,10 +52,19 @@ INCLUDES += -I$(OUTDIR)/inc
 # Build order is: left --> right
 SUBDIRS += common hal parser
 
-all: $(EXECS)
+ENV= $(shell printenv SOCEDS_DEST_ROOT)
+
+all:
+	$(MAKE) check
+	@if [ -z "$(ENV)" ] ;\
+	then \
+		echo "Exit from embedded command shell" ;\
+	else \
+		$(MAKE) install ;\
+	fi
 
 install: $(EXECS)
-	$(foreach EXEC, $(EXECS), install -m 0755 $(EXEC) /usr/bin;)
+	#$(foreach EXEC, $(EXECS), install -m 0755 $(EXEC) /usr/bin;)
 
 # Links all the object files together for output
 define AUTO_TARGET
@@ -82,6 +91,14 @@ MAKE_OUTDIR:
 	@mkdir -p $(OUTDIR)/bin
 #find . -name '*\.h' | grep -v ./out | xargs -i cp -f {} $(OUTDIR)/inc/
 #find . -name '*\.c' | grep -v ./out | xargs -i cp -f {} $(OUTDIR)/src/
+
+check:
+ifdef SOCEDS_DEST_ROOT
+	@echo "Using existing embedded command shell"
+else
+	@echo "Loading new embedded command shell."
+	/opt/soceds/embedded/embedded_command_shell.sh
+endif
 
 # Clean the output directory
 clean:
