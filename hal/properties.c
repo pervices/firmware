@@ -237,7 +237,7 @@ static int hdlr_tx_a_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -248,8 +248,8 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -273,15 +273,16 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c a -p 0\r");
+	strcpy(buf, "rf -c a \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -572,7 +573,7 @@ static int hdlr_tx_sync (const char* data, char* ret) {
 }
 
 static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -583,8 +584,8 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -609,15 +610,16 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c a -p 0\r");
+	strcpy(buf, "rf -c a \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1079,7 +1081,7 @@ static int hdlr_tx_b_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -1090,8 +1092,8 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1115,15 +1117,16 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c b -p 0\r");
+	strcpy(buf, "rf -c b \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1394,7 +1397,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -1405,8 +1408,8 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1431,15 +1434,16 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c b -p 0\r");
+	strcpy(buf, "rf -c b \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1881,7 +1885,7 @@ static int hdlr_tx_c_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -1892,8 +1896,8 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1917,15 +1921,16 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c c -p 0\r");
+	strcpy(buf, "rf -c c \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2196,7 +2201,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -2207,8 +2212,8 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2233,15 +2238,16 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c c -p 0\r");
+	strcpy(buf, "rf -c c \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2683,7 +2689,7 @@ static int hdlr_tx_d_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -2694,8 +2700,8 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2719,15 +2725,16 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c d -p 0\r");
+	strcpy(buf, "rf -c d \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2997,7 +3004,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -3008,8 +3015,8 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -3034,15 +3041,16 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c d -p 0\r");
+	strcpy(buf, "rf -c d \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
