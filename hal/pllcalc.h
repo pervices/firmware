@@ -54,7 +54,7 @@
 #define _PLL_OUT_MAX_DEVIATION  500000
 
 //Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ	325000000ULL //Default Reference Frequency used.
+#define PLL_CORE_REF_FREQ_HZ	25000000ULL //Default Reference Frequency used.
 
 //ADF4355 PLL Specifications
 #define PLL1_REF_MAX_HZ		600000000ULL
@@ -73,7 +73,7 @@
 #define PLL_PARAM_GOOD		0
 
 // ADF4355 Default specs
-#define PLL1_R_FIXED		( 25 )		// R value must be fixed to ensure consistent PFD frequency (13MHz)
+#define PLL1_R_FIXED		( 1 )		// R value must be fixed to ensure consistent PFD frequency (13MHz)
 
 #define PLL1_N_DEFAULT		( 572 )         // N value (N^2 contribution to PLL noise) [16..4096]
 #define PLL1_D_DEFAULT		( 2 )		// RFoutput divider value (1,2,4,6..58,60,62)
