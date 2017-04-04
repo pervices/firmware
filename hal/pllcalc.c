@@ -193,18 +193,18 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
        long double pd_freq = (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
 	
 
-        uint32_t N1 = 0;
+        double N1 = 0;
         // Determine the values of the N and dividers for PLL1
         if ( !pll->divFBen ) {
             N1  = (double)pll->vcoFreq / (double)pd_freq;
         } else {
             N1  = (double)pll->vcoFreq / (double)pll->d;
             N1  = N1 / (long double)pd_freq;
+	    if (N1 < 1) N1 = 1;
         }
         pll->N = (uint32_t)N1;
 
         //Set correct, actual, VCO frequency based on output frequency
-	double vco_freq = 0;
 	if ( !pll->divFBen ) {
             pll->vcoFreq = (long double)pd_freq * (long double)pll->N;
         } else {
