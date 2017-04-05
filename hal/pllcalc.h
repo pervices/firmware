@@ -69,6 +69,7 @@
 #define PLL1_R_MAX		100
 #define PLL1_DIV_MAX		64
 #define PLL1_DIV_MIN		1
+#define PLL1_FB_THRESHOLD	575000000ULL
 
 #define PLL_PARAM_GOOD		0
 
