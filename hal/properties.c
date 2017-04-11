@@ -3879,20 +3879,7 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_board_pps_mode_test (const char* data, char* ret){
-	//test the case where the set time comes right before pps hopefully
-	write_hps_reg("sys13", 0x2);
-	write_hps_reg("sys13", 0x3); //set pps_mode and set_pps = 1	
-	write_hps_reg("sys13", 0x7); 
-	return RETURN_SUCCESS;
-}
 
-static int hdlr_fpga_board_pps_mode_test2 (const char* data, char* ret){
-	//Hopefully test the case where set time and pps are on same edge
-	write_hps_reg("sys13", 0x2);
-	write_hps_reg("sys13", 0x7);
-	return RETURN_SUCCESS;
-}
 static uint16_t cm_chanmask_get( const char *path ) {
 	uint32_t r;
 
@@ -4406,9 +4393,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/link/sfpb/pay_len",  hdlr_fpga_link_sfpb_pay_len,  RW,  "1400" ), \
 	DEFINE_FILE_PROP( "fpga/link/net/dhcp_en",  hdlr_fpga_link_net_dhcp_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/link/net/hostname",  hdlr_fpga_link_net_hostname,  RW,  "crimson_tng" ), \
-	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" ), \
-	DEFINE_FILE_PROP( "fpga/board/pps_mode_test", hdlr_fpga_board_pps_mode_test, RW, "0"), \
-	DEFINE_FILE_PROP( "fpga/board/pps_mode_test2", hdlr_fpga_board_pps_mode_test2, RW, "0")
+	DEFINE_FILE_PROP( "fpga/link/net/ip_addr",  hdlr_fpga_link_net_ip_addr,  RW,  "192.168.10.2" )
 	
 #define DEFINE_CM() \
       DEFINE_FILE_PROP( "cm/chanmask-rx", hdlr_cm_chanmask_rx, RW, "0" ), \
