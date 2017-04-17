@@ -164,7 +164,7 @@ static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c a -l %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -181,7 +181,7 @@ static int hdlr_tx_a_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c a -3 %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -204,7 +204,7 @@ static int hdlr_tx_a_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	sel = 16 - ( db / 6 );
 
 	snprintf( buf, sizeof( buf ), "dac -c a -b %u\r", sel );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -217,20 +217,19 @@ static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret) {
 	strcpy(buf, "dac -c a -e 0 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c a -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -243,7 +242,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c a -z\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -251,7 +250,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c a -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF TXA on HPS
 		uint32_t old_val;
@@ -276,7 +275,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c a -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -292,7 +291,7 @@ static int hdlr_tx_a_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c a -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -303,7 +302,7 @@ static int hdlr_tx_a_rf_freq_i_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[0]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -314,7 +313,7 @@ static int hdlr_tx_a_rf_freq_q_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[0]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -331,7 +330,7 @@ static int hdlr_tx_a_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "rf -c a -a ");
 	sprintf(buf + strlen(buf), "%i", 127 - gain);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -341,14 +340,12 @@ static int hdlr_tx_a_rf_board_dump (const char* data, char* ret) {
 
 	// DAC
 	strcpy(buf, "dump -c a -d\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c a -g\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -361,8 +358,7 @@ static int hdlr_tx_a_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_tx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c a -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -372,7 +368,7 @@ static int hdlr_tx_a_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -468,8 +464,7 @@ static int hdlr_tx_a_about_id (const char* data, char* ret) {
 
 static int hdlr_tx_about_fw_ver (const char* data, char* ret) {
 	strcpy(buf, "board -v\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -510,7 +505,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
       // board commands
 		strcpy(buf, "board -c a -d\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
       usleep(200000);
 
 		// disable dsp channels
@@ -544,7 +539,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 	} else {
 		// kill the channel
 		strcpy(buf, "board -c a -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable DSP cores
 		read_hps_reg ( "txa4", &old_val);
@@ -578,7 +573,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c a -z\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -586,7 +581,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c a -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF RXA on HPS
 		uint32_t old_val;
@@ -612,7 +607,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c a -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -628,7 +623,7 @@ static int hdlr_rx_a_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "rf -c a -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -636,7 +631,7 @@ static int hdlr_rx_a_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c a -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -653,7 +648,7 @@ static int hdlr_rx_a_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "vga -c a -g ");
 	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -668,7 +663,7 @@ static int hdlr_rx_a_rf_atten_val(const char* data, char* ret) {
 	strcpy(buf, "rf -c a -a ");
 	sprintf(buf + strlen(buf), "%i", atten);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -678,20 +673,17 @@ static int hdlr_rx_a_rf_board_dump (const char* data, char* ret) {
 
 	// ADC
 	strcpy(buf, "dump -c a -a\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c a -g\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c a -v\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -704,8 +696,7 @@ static int hdlr_rx_a_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c a -t\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -715,7 +706,7 @@ static int hdlr_rx_a_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -830,8 +821,7 @@ static int hdlr_rx_a_about_id (const char* data, char* ret) {
 
 static int hdlr_rx_about_fw_ver (const char* data, char* ret) {
 	strcpy(buf, "board -v\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -932,7 +922,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 
 		// board command
 		strcpy(buf, "board -c a -d\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 		usleep(200000);
 
 		// disable dsp channels
@@ -969,7 +959,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 
 		// kill the channel
 		strcpy(buf, "board -c a -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable DSP core
 		read_hps_reg ( "rxa4", &old_val);
@@ -1006,7 +996,7 @@ static int hdlr_tx_b_rf_dac_dither_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c b -l %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1023,7 +1013,7 @@ static int hdlr_tx_b_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c b -3 %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1046,7 +1036,7 @@ static int hdlr_tx_b_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	sel = 16 - ( db / 6 );
 
 	snprintf( buf, sizeof( buf ), "dac -c b -b %u\r", sel );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1059,20 +1049,19 @@ static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret) {
 	strcpy(buf, "dac -c b -e 1 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c b -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1085,7 +1074,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c b -z\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -1093,7 +1082,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c b -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF TXB on HPS
 		uint32_t old_val;
@@ -1118,7 +1107,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c b -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -1134,7 +1123,7 @@ static int hdlr_tx_b_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c b -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1145,7 +1134,7 @@ static int hdlr_tx_b_rf_freq_i_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[1]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1156,7 +1145,7 @@ static int hdlr_tx_b_rf_freq_q_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[1]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1173,7 +1162,7 @@ static int hdlr_tx_b_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "rf -c b -a ");
 	sprintf(buf + strlen(buf), "%i", 127 - gain);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -1183,14 +1172,12 @@ static int hdlr_tx_b_rf_board_dump (const char* data, char* ret) {
 
 	// DAC
 	strcpy(buf, "dump -c b -d\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_b Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c b -g\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1203,8 +1190,7 @@ static int hdlr_tx_b_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_tx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c b -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1214,7 +1200,7 @@ static int hdlr_tx_b_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1343,7 +1329,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 
       // board commands
 		strcpy(buf, "board -c b -d\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 		usleep(200000);
 
 		// disable dsp channels
@@ -1377,7 +1363,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 	} else {
 		// kill the channel
 		strcpy(buf, "board -c b -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
@@ -1400,7 +1386,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c b -z\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -1408,7 +1394,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c b -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF RXB on HPS
 		uint32_t old_val;
@@ -1434,7 +1420,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c b -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -1450,7 +1436,7 @@ static int hdlr_rx_b_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "rf -c b -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1458,7 +1444,7 @@ static int hdlr_rx_b_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c b -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1475,7 +1461,7 @@ static int hdlr_rx_b_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "vga -c b -g ");
 	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -1490,7 +1476,7 @@ static int hdlr_rx_b_rf_atten_val(const char* data, char* ret) {
 	strcpy(buf, "rf -c b -a ");
 	sprintf(buf + strlen(buf), "%i", atten);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -1500,20 +1486,17 @@ static int hdlr_rx_b_rf_board_dump (const char* data, char* ret) {
 
 	// ADC
 	strcpy(buf, "dump -c b -a\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_b Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c b -g\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c b -v\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_b Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1526,8 +1509,7 @@ static int hdlr_rx_b_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c b -t\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1537,7 +1519,7 @@ static int hdlr_rx_b_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1745,7 +1727,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 
 		// board commands
 		strcpy(buf, "board -c b -d\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 		usleep(200000);
 
 		// disable dsp channels
@@ -1782,7 +1764,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 
 		// kill the channel
 		strcpy(buf, "board -c b -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable DSP core
 		read_hps_reg ( "rxb4", &old_val);
@@ -1808,7 +1790,7 @@ static int hdlr_tx_c_rf_dac_dither_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c c -l %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1825,7 +1807,7 @@ static int hdlr_tx_c_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c c -3 %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1848,7 +1830,7 @@ static int hdlr_tx_c_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	sel = 16 - ( db / 6 );
 
 	snprintf( buf, sizeof( buf ), "dac -c c -b %u\r", sel );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1861,20 +1843,19 @@ static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret) {
 	strcpy(buf, "dac -c c -e 0 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c c -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1887,7 +1868,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c c -z\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -1895,7 +1876,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c c -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF TXC on HPS
 		uint32_t old_val;
@@ -1920,7 +1901,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c c -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -1936,7 +1917,7 @@ static int hdlr_tx_c_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c c -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1947,7 +1928,7 @@ static int hdlr_tx_c_rf_freq_i_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[2]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1958,7 +1939,7 @@ static int hdlr_tx_c_rf_freq_q_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[2]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -1975,7 +1956,7 @@ static int hdlr_tx_c_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "rf -c c -a ");
 	sprintf(buf + strlen(buf), "%i", 127 - gain);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -1985,14 +1966,12 @@ static int hdlr_tx_c_rf_board_dump (const char* data, char* ret) {
 
 	// DAC
 	strcpy(buf, "dump -c c -d\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_c Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c c -g\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2005,8 +1984,7 @@ static int hdlr_tx_c_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_tx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c c -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2016,7 +1994,7 @@ static int hdlr_tx_c_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2145,7 +2123,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 
       // board commands
 		strcpy(buf, "board -c c -d\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 		usleep(200000);
 
 		// disable dsp channels
@@ -2179,7 +2157,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 	} else {
 		// kill the channel
 		strcpy(buf, "board -c c -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
@@ -2202,7 +2180,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c c -z\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -2210,7 +2188,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c c -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF RXC on HPS
 		uint32_t old_val;
@@ -2236,7 +2214,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c c -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -2252,7 +2230,7 @@ static int hdlr_rx_c_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "rf -c c -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2260,7 +2238,7 @@ static int hdlr_rx_c_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c c -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2277,7 +2255,7 @@ static int hdlr_rx_c_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "vga -c c -g ");
 	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -2292,7 +2270,7 @@ static int hdlr_rx_c_rf_atten_val(const char* data, char* ret) {
 	strcpy(buf, "rf -c c -a ");
 	sprintf(buf + strlen(buf), "%i", atten);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -2302,20 +2280,17 @@ static int hdlr_rx_c_rf_board_dump (const char* data, char* ret) {
 
 	// ADC
 	strcpy(buf, "dump -c c -a\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_c Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c c -g\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c c -v\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_c Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2328,8 +2303,7 @@ static int hdlr_rx_c_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c c -t\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2339,7 +2313,7 @@ static int hdlr_rx_c_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2547,7 +2521,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 
 		// board commands
 		strcpy(buf, "board -c c -d\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 		usleep(200000);
 
 		// disable dsp channels
@@ -2581,7 +2555,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	} else {
 		// kill the channel
 		strcpy(buf, "board -c c -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable the DSP cores
 		read_hps_reg ( "rxc4", &old_val);
@@ -2610,7 +2584,7 @@ static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c d -l %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2627,7 +2601,7 @@ static int hdlr_tx_d_rf_dac_dither_mixer_en (const char* data, char* ret) {
 	}
 	snprintf( buf, sizeof( buf ), "dac -c d -3 %u\r", en );
 	sprintf( ret, "%u", en );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2650,7 +2624,7 @@ static int hdlr_tx_d_rf_dac_dither_sra_sel (const char* data, char* ret) {
 	sel = 16 - ( db / 6 );
 
 	snprintf( buf, sizeof( buf ), "dac -c d -b %u\r", sel );
-	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
+	send_uart_comm(  uart_tx_fd, (uint8_t*)buf, strlen(buf)  ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2663,20 +2637,19 @@ static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret) {
 	strcpy(buf, "dac -c d -e 1 -n ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	strcpy(buf, "dac -o ");
 	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_dac_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c d -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2689,7 +2662,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c d -z\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -2697,7 +2670,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c d -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF TXD on HPS
 		uint32_t old_val;
@@ -2722,7 +2695,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c d -p 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -2738,7 +2711,7 @@ static int hdlr_tx_d_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c d -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2749,7 +2722,7 @@ static int hdlr_tx_d_rf_freq_i_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[3]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2760,7 +2733,7 @@ static int hdlr_tx_d_rf_freq_q_bias (const char* data, char* ret) {
    strcat(buf, " -q ");
    sprintf(buf + strlen(buf), "%i", q_bias[3]);
    strcat(buf, " -m\r");
-   send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+   send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2777,7 +2750,7 @@ static int hdlr_tx_d_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "rf -c d -a ");
 	sprintf(buf + strlen(buf), "%i", 127 - gain);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -2787,14 +2760,12 @@ static int hdlr_tx_d_rf_board_dump (const char* data, char* ret) {
 
 	// DAC
 	strcpy(buf, "dump -c d -d\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_d Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c d -g\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: tx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2807,8 +2778,7 @@ static int hdlr_tx_d_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_tx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c d -t\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2818,7 +2788,7 @@ static int hdlr_tx_d_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -2947,7 +2917,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 
       // board commands
 		strcpy(buf, "board -c d -d\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 		usleep(200000);
 
 		// disable dsp channels
@@ -2981,7 +2951,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 	} else {
 		// kill the channel
 		strcpy(buf, "board -c d -k\r");
-		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
@@ -3003,7 +2973,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
 		strcpy(buf, "rf -c d -z\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		return RETURN_SUCCESS;
 	}
@@ -3011,7 +2981,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	// if freq is less than 53MHz, kill the channel
 	if ( freq < 53000000ULL ) {
 		strcpy(buf, "board -c d -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// Turn OFF RXD on HPS
 		uint32_t old_val;
@@ -3037,7 +3007,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	double outfreq = setFreq(&freq, &pll);
 
 	strcpy(buf, "rf -c d -p 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
@@ -3053,7 +3023,7 @@ static int hdlr_rx_d_rf_freq_lna (const char* data, char* ret) {
 	strcpy(buf, "rf -c d -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3061,7 +3031,7 @@ static int hdlr_rx_d_rf_freq_band (const char* data, char* ret) {
 	strcpy(buf, "rf -c d -b ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3078,7 +3048,7 @@ static int hdlr_rx_d_rf_gain_val (const char* data, char* ret) {
 	strcpy(buf, "vga -c d -g ");
 	sprintf(buf + strlen(buf), "%i", gain >> 1);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -3093,7 +3063,7 @@ static int hdlr_rx_d_rf_atten_val(const char* data, char* ret) {
 	strcpy(buf, "rf -c d -a ");
 	sprintf(buf + strlen(buf), "%i", atten);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 	return RETURN_SUCCESS;
 }
@@ -3103,20 +3073,17 @@ static int hdlr_rx_d_rf_board_dump (const char* data, char* ret) {
 
 	// ADC
 	strcpy(buf, "dump -c d -a\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_d Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
 	strcpy(buf, "dump -c d -g\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
 	strcpy(buf, "dump -c d -v\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: rx_d Chip: ADC Driver] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3129,8 +3096,7 @@ static int hdlr_rx_d_rf_board_test (const char* data, char* ret) {
 
 static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -c d -t\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_rx_fd);
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3140,7 +3106,7 @@ static int hdlr_rx_d_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3349,7 +3315,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 
 		// board commands
 		strcpy(buf, "board -c d -d\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 		usleep(200000);
 
 		// disable dsp channels
@@ -3383,7 +3349,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 	} else {
 		// kill the channel
 		strcpy(buf, "board -c d -k\r");
-		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+		send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 		// disable the DSP cores
 		read_hps_reg ( "rxd4", &old_val);
@@ -3436,7 +3402,7 @@ static int hdlr_time_source_vco (const char* data, char* ret) {
 	} else if (strcmp(data, "internal") == 0) {
 		strcpy(buf, "clk -v 0\r");
 	}
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3446,7 +3412,7 @@ static int hdlr_time_source_sync (const char* data, char* ret) {
 	} else if (strcmp(data, "internal") == 0) {
 		strcpy(buf, "clk -n 0\r");
 	}
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3457,7 +3423,7 @@ static int hdlr_time_source_ref (const char* data, char* ret) {
 	} else if (strcmp(data, "internal") == 0) {
 		strcpy(buf, "clk -t 0\r");
 	}
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3468,7 +3434,7 @@ static int hdlr_time_source_devclk (const char* data, char* ret) {
 	} else if (strcmp(data, "internal") == 0) {
 		strcpy(buf, "clk -t 0\r");
 	}
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3479,7 +3445,7 @@ static int hdlr_time_source_pll (const char* data, char* ret) {
 	} else if (strcmp(data, "internal") == 0) {
 		strcpy(buf, "clk -t 0\r");
 	}
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3488,14 +3454,12 @@ static int hdlr_time_board_dump (const char* data, char* ret) {
 
 	// FANOUT
 	strcpy(buf, "dump -f\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_synth_fd);
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: time Chip: FANOUT] %s\n", uart_ret_buf);
 
 	// CLK
 	strcpy(buf, "dump -c\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_synth_fd);
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	PRINT(DUMP, "[Board: time Chip: CLK] %s\n", uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3508,8 +3472,7 @@ static int hdlr_time_board_test (const char* data, char* ret) {
 
 static int hdlr_time_board_temp (const char* data, char* ret) {
 	strcpy(buf, "board -t\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_synth_fd);
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3519,7 +3482,7 @@ static int hdlr_time_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l ");
 	strcat(buf, data);
 	strcat(buf, "\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
@@ -3530,8 +3493,7 @@ static int hdlr_time_about_id (const char* data, char* ret) {
 
 static int hdlr_time_about_fw_ver (const char* data, char* ret) {
 	strcpy(buf, "board -v\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_synth_fd);
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3560,7 +3522,7 @@ static int hdlr_fpga_board_test (const char* data, char* ret) {
 
 static int hdlr_fpga_board_temp (const char* data, char* ret) {
 	//strcpy(buf, "board -t\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	//read_uart(NO_FWD_CMD);
 	//strcpy(ret, (char*)uart_ret_buf);
 
@@ -3571,13 +3533,13 @@ static int hdlr_fpga_board_led (const char* data, char* ret) {
 	//strcpy(buf, "board -l ");
 	//strcat(buf, data);
 	//strcat(buf, "\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_rstreq (const char* data, char* ret) {
 	//strcpy(buf, "fpga -r \r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	
 	/* TODO: Implement DIG Board FPGA Reset */
 
@@ -3586,22 +3548,22 @@ static int hdlr_fpga_board_rstreq (const char* data, char* ret) {
 
 static int hdlr_fpga_board_jesd_sync (const char* data, char* ret) {
 	//strcpy(buf, "fpga -o \r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	sync_channels(15);
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
 	strcpy(buf, "board -r\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	usleep(700000);
 
 	strcpy(buf, "board -r\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	usleep(50000);
 
 	strcpy(buf, "board -r\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	usleep(50000);
 
 	/* TODO: Implement DIG board Reset */
@@ -3664,7 +3626,7 @@ static int hdlr_fpga_about_id (const char* data, char* ret) {
 // TODO: Move FWversion code to ARM, edit MAKE file with version info, refer to MCU code
 static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
 	//strcpy(buf, "board -v\r");
-	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+	//send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 	//read_uart(NO_FWD_CMD);
 	//strcpy(ret, (char*)uart_ret_buf);
 
@@ -4605,13 +4567,13 @@ void sync_channels(uint8_t chan_mask) {
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -a 1\r");
-    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     // TX - DACs
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -d 1\r");
-    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     /* Initiate the SYSREF sequence for jesd
      * Set all boards' SYSREF detection gate to ON */
@@ -4619,18 +4581,18 @@ void sync_channels(uint8_t chan_mask) {
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 1\r");
-    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 1\r");
-    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     /* Trigger a SYSREF pulse */
 
     usleep(100000);		// Some wait time for MCUs to be ready
     strcpy(buf, "clk -y -y -y\r");
-    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_synth_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
     usleep(100000);
 
     /* Turn off all boards' SYSREF detection gates */
@@ -4638,12 +4600,12 @@ void sync_channels(uint8_t chan_mask) {
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 0\r");
-    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_rx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 0\r");
-    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
 }
 
@@ -4654,36 +4616,36 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     strcpy(buf, "rf -v ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference/1000)); // Send reference in kHz
     strcat(buf, "\r");
-    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     // write ADF4355/5355 R
     strcpy(buf, "rf -r ");
     sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
     strcat(buf, "\r");
-    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     // write ADF4355/ADF5355 N
     strcpy(buf, "rf -n ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
     strcat(buf, "\r");
-    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     // write ADF4355/ADF5355 D
     strcpy(buf, "rf -d ");
     sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
     strcat(buf, "\r");
-    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     // write ADF4355/ADF5355 Output RF Power
     strcpy(buf, "rf -g ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);    // default to lower mid power
     strcat(buf, "\r");
-    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
     strcat(buf, "\r");
-    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    send_uart_comm( uart_fd, (uint8_t*)buf, strlen(buf) ); read_uart( uart_tx_fd );
     usleep(100000);
 }
