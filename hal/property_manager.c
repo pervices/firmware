@@ -426,17 +426,14 @@ int get_property(const char* prop, char* data, size_t max_len) {
 }
 
 int get_channel_for_path( const char *path ) {
-	int r;
 
 	PRINT( VERBOSE,"%s(): %s\n", __func__, NULL == path ? "(null)" : path );
 
 	if ( NULL == path ) {
-		r = -1;
-		goto out;
+		return -1;
 	}
 	if ( strlen( path ) < 4 ) {
-		r = -1;
-		goto out;
+		return -1;
 	}
 	if (
 		1
@@ -446,16 +443,12 @@ int get_channel_for_path( const char *path ) {
 		&& 0 != strncmp( "tx_", path, 3 )
 	) {
 		PRINT( ERROR,"%s(): %s does not begin with {rt}x{_/}\n", __func__, NULL == path ? "(null)" : path );
-		r = -1;
-		goto out;
+		return -1;
 	}
 
-	r = path[ 3 ] - 'a';
+	PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" : path, path[ 3 ] - 'a' );
 
-	PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" : path, r );
-
-out:
-	return r;
+	return path[ 3 ] - 'a';
 }
 
 void power_on_channel( bool tx, int channel ) {
