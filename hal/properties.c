@@ -481,6 +481,9 @@ static int hdlr_tx_a_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txa4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | (1 << 14));
 	else				write_hps_reg( "txa4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -844,6 +847,9 @@ static int hdlr_rx_a_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxa4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | (1 << 14));
 	else				write_hps_reg( "rxa4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -1316,6 +1322,9 @@ static int hdlr_tx_b_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txb4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | (1 << 14));
 	else				write_hps_reg( "txb4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -1659,6 +1668,9 @@ static int hdlr_rx_b_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxb4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | (1 << 14));
 	else				write_hps_reg( "rxb4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -2120,6 +2132,9 @@ static int hdlr_tx_c_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txc4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | (1 << 14));
 	else				write_hps_reg( "txc4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -2463,6 +2478,9 @@ static int hdlr_rx_c_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxc4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | (1 << 14));
 	else				write_hps_reg( "rxc4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -2924,6 +2942,9 @@ static int hdlr_tx_d_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txd4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | (1 << 14));
 	else				write_hps_reg( "txd4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -3267,6 +3288,9 @@ static int hdlr_rx_d_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxd4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | (1 << 14));
 	else				write_hps_reg( "rxd4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -4333,7 +4357,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_en",  hdlr_tx_ ## _c ## _rf_dac_dither_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_mixer_en",  hdlr_tx_ ## _c ## _rf_dac_dither_mixer_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_sra_sel",  hdlr_tx_ ## _c ## _rf_dac_dither_sra_sel,  RW,  "96" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/nco",  hdlr_tx_ ## _c ## _rf_dac_nco,  RW,  "15000000" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/nco",  hdlr_tx_ ## _c ## _rf_dac_nco,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/temp",  hdlr_tx_ ## _c ## _rf_dac_temp,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/val",  hdlr_tx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/band",  hdlr_tx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
@@ -4598,42 +4622,41 @@ void sync_channels(uint8_t chan_mask) {
 	strcpy(buf, "power -c ");
 	strcat(buf, str_chan_mask);
 	strcat(buf, " -a 1\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
 
 	// TX - DACs
 	strcpy(buf, "power -c ");
 	strcat(buf, str_chan_mask);
 	strcat(buf, " -d 1\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
 	/* Initiate the SYSREF sequence for jesd
 	* Set all boards' SYSREF detection gate to ON */
 	strcpy(buf, "board -c ");
 	strcat(buf, str_chan_mask);
 	strcat(buf, " -s 1\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
 	strcpy(buf, "board -c ");
 	strcat(buf, str_chan_mask);
 	strcat(buf, " -s 1\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
 	/* Trigger a SYSREF pulse */
 	//JESD core out of reset
 	write_hps_reg( "res_rw7",0);
 	usleep(100000); // Some wait time for MCUs to be ready
 	strcpy(buf, "clk -y -y -y\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	usleep(100000);
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
 
 	/* Turn off all boards' SYSREF detection gates */
 	strcpy(buf, "board -c ");
 	strcat(buf, str_chan_mask);
 	strcat(buf, " -s 0\r");
-	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
 	strcpy(buf, "board -c ");
 	strcat(buf, str_chan_mask);
 	strcat(buf, " -s 0\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
