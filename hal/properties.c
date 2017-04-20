@@ -4323,7 +4323,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/val",  hdlr_rx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/lna",  hdlr_rx_ ## _c ## _rf_freq_lna,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/lna",  hdlr_rx_ ## _c ## _rf_freq_lna,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/atten/val",  hdlr_rx_ ## _c ## _rf_atten_val,  RW,  "127" ), \
@@ -4356,7 +4356,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/sync",  hdlr_tx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_en",  hdlr_tx_ ## _c ## _rf_dac_dither_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_mixer_en",  hdlr_tx_ ## _c ## _rf_dac_dither_mixer_en,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_sra_sel",  hdlr_tx_ ## _c ## _rf_dac_dither_sra_sel,  RW,  "96" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_sra_sel",  hdlr_tx_ ## _c ## _rf_dac_dither_sra_sel,  RW,  "6" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/nco",  hdlr_tx_ ## _c ## _rf_dac_nco,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/temp",  hdlr_tx_ ## _c ## _rf_dac_temp,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/val",  hdlr_tx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
