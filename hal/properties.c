@@ -3703,6 +3703,22 @@ static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_server_about_fw_ver (const char* data, char* ret) {
+	FILE *fp=NULL;
+	char buf[MAX_PROP_LEN] = {0};
+	if((fp = popen("/usr/bin/server -v", "r")) == NULL){
+		PRINT(ERROR, "Error opening pipe!\n");
+		return RETURN_ERROR;
+	}
+	while(fgets(buf, MAX_PROP_LEN, fp) != NULL){
+		strncat(ret, buf, MAX_PROP_LEN);
+	}
+	if(pclose(fp)){
+		return RETURN_ERROR;
+	}
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_about_hw_ver (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg ( "sys1", &old_val);
@@ -4395,6 +4411,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 
 #define DEFINE_FPGA() \
 	DEFINE_FILE_PROP( "fpga/about/fw_ver",  hdlr_fpga_about_fw_ver,  RW,  VERSION ), \
+	DEFINE_FILE_PROP( "fpga/about/server_ver",  hdlr_server_about_fw_ver,  RW, NULL), \
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/id",  hdlr_fpga_about_id,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "fpga/about/name",  hdlr_invalid,  RO,  "crimson_tng" ), \
