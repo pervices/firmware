@@ -160,7 +160,7 @@ static const reg_t reg_table[] = {
 static size_t num_regs = sizeof(reg_table)/sizeof(reg_table[0]);
 
 // Gets the number of registers
-inline size_t get_num_regs(void) {
+size_t get_num_regs(void) {
 	return num_regs;
 }
 

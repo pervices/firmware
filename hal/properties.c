@@ -4459,15 +4459,15 @@ static prop_t property_table[] = {
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
 // Beginning of functions
-inline size_t get_num_prop(void) {
+size_t get_num_prop(void) {
 	return num_properties;
 }
 
-inline prop_t* get_prop(size_t idx) {
+prop_t* get_prop(size_t idx) {
 	return (property_table + idx);
 }
 
-inline prop_t* get_prop_from_wd(int wd) {
+prop_t* get_prop_from_wd(int wd) {
 	size_t i;
 	for (i = 0; i < num_properties; i++) {
 		if (property_table[i].wd == wd)
@@ -4478,7 +4478,7 @@ inline prop_t* get_prop_from_wd(int wd) {
 	return NULL;
 }
 
-inline prop_t *get_prop_from_hdlr( int (*hdlr)(const char*, char*) ) {
+prop_t *get_prop_from_hdlr( int (*hdlr)(const char*, char*) ) {
 	size_t i;
 	for (i = 0; i < num_properties; i++) {
 		if ( property_table[ i ].handler == hdlr ) {
@@ -4529,7 +4529,7 @@ int resolve_symbolic_property_name( const char *prop, char *path, size_t n ) {
 }
 
 
-inline prop_t* get_prop_from_cmd(const char* cmd) {
+prop_t* get_prop_from_cmd(const char* cmd) {
 	char path[ MAX_PATH_LEN ];
 	size_t i;
 
@@ -4551,15 +4551,15 @@ static inline const char* get_home_dir(void) {
 	return getpwuid(getuid()) -> pw_dir;
 }
 
-inline void pass_uart_synth_fd(int fd) {
+void pass_uart_synth_fd(int fd) {
 	uart_synth_fd = fd;
 }
 
-inline void pass_uart_tx_fd(int fd) {
+void pass_uart_tx_fd(int fd) {
 	uart_tx_fd = fd;
 }
 
-inline void pass_uart_rx_fd(int fd) {
+void pass_uart_rx_fd(int fd) {
 	uart_rx_fd = fd;
 }
 
