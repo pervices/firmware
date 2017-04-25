@@ -23,6 +23,7 @@
 RemoteSystemsTempFiles/*
 boot/.dep/*
 tags
+out/*
 
 #Ignore hex (programming files) in this directory
 *.hex
