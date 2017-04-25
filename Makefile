@@ -25,6 +25,9 @@ CFLAGS = -c -O0 -g3 -Wall -fmessage-length=0
 # Linker flags
 LDFLAGS = -lm -lrt
 
+# Root Directory
+export CRIMSON_ROOTDIR = $(shell pwd)
+
 # Out Directory
 OUTDIR = $(CRIMSON_ROOTDIR)/out
 
@@ -33,9 +36,6 @@ SHELL = /bin/sh
 
 # Object files are source files with .c replaced with .o
 OBJECTS = $(addprefix $(OUTDIR)/obj/main/,$(SOURCES:.c=.o))
-
-# Root Directory
-export CRIMSON_ROOTDIR = $(shell pwd)
 
 # Output Executable
 EXECS = $(addprefix $(OUTDIR)/bin/,$(SOURCES:.c=))
@@ -72,7 +72,7 @@ $(OUTDIR)/obj/main/%.o: %.c | MAKE_SUBDIR
 
 # Recursive build of all the sub_directories
 MAKE_SUBDIR: MAKE_OUTDIR
-	$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile;)
+	$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile CC=$(CC);)
 
 # Generates the output directory
 MAKE_OUTDIR:
@@ -87,3 +87,7 @@ MAKE_OUTDIR:
 # Clean the output directory
 clean:
 	rm -rf $(OUTDIR)
+
+# Print the value of any MAKEFILE variable
+# Useful for debugging makefiles.
+print-%: ; @echo $*=$($*)
