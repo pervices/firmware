@@ -17,7 +17,7 @@
 
 # Cross compile toolchain
 #CC = $(CRIMSON_ROOTDIR)/build/gcc/bin/arm-linux-gnueabihf-gcc
-CC = arm-linux-gnueabihf-gcc
+CC = arm-unknown-linux-gnueabihf-gcc
 
 # Cross compile flags
 CFLAGS = -c -O0 -g3 -Wall -fmessage-length=0
@@ -53,6 +53,7 @@ INCLUDES += -I$(OUTDIR)/inc
 SUBDIRS += common hal parser
 
 all: $(EXECS)
+
 
 install: $(EXECS)
 	$(foreach EXEC, $(EXECS), install -m 0755 $(EXEC) /usr/bin;)
