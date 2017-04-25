@@ -52,6 +52,22 @@ INCLUDES += -I$(OUTDIR)/inc
 # Build order is: left --> right
 SUBDIRS += common hal parser
 
+# Specify Current branch
+VERSION_GIT_BRANCH := $(shell git branch | grep \* | cut -d ' ' -f2)
+
+# Specify Git revision
+VERSION_GIT_REVISION := $(shell git describe --abbrev=8 --dirty --always --long)
+
+# Specify build date and time
+VERSION_DATE := $(shell TZ=UTC date "+%F-%T")
+
+
+# Append to internal CFLAGS;
+iCFLAGS = $(CFLAGS)
+iCFLAGS += -DVERSIONGITBRANCH=$(VERSION_GIT_BRANCH)
+iCFLAGS += -DVERSIONGITREVISION=$(VERSION_GIT_REVISION)
+iCFLAGS += -DVERSIONDATE=$(VERSION_DATE)
+
 all: $(EXECS)
 
 
@@ -67,7 +83,7 @@ $(foreach TARGET, $(TARGETS), $(eval $(call AUTO_TARGET, $(TARGET)) ))
 
 # Generates all of the object files from the source files
 $(OUTDIR)/obj/main/%.o: %.c | MAKE_SUBDIR
-	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
+	$(CC) $(iCFLAGS) $(INCLUDES) $< -o $@
 	@cp -f $< $(OUTDIR)/src
 
 # Recursive build of all the sub_directories
