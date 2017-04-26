@@ -53,7 +53,7 @@ INCLUDES += -I$(OUTDIR)/inc
 SUBDIRS += common hal parser
 
 # Specify Current branch
-VERSION_GIT_BRANCH := $(shell git branch | grep \* | cut -d ' ' -f2)
+VERSION_GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
 # Specify Git revision
 VERSION_GIT_REVISION := $(shell git describe --abbrev=8 --dirty --always --long)
