@@ -4662,7 +4662,7 @@ void sync_channels(uint8_t chan_mask) {
 	//JESD core out of reset
 	write_hps_reg( "res_rw7",0);
 	usleep(100000); // Some wait time for MCUs to be ready
-	strcpy(buf, "clk -y -y -y\r");
+	strcpy(buf, "clk -y\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
 
 	/* Turn off all boards' SYSREF detection gates */
