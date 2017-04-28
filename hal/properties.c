@@ -3616,6 +3616,19 @@ static int hdlr_fpga_board_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_reboot (const char* data, char* ret){
+    if(strcmp(data, "1") == 0){
+	uint32_t reboot;
+
+	//Write 0 to bit[16] of sys 0 in order to reboot
+	read_hps_reg("sys0", &reboot);
+	reboot = (reboot & 0xFFFEFFFF);
+	write_hps_reg("sys0", reboot);
+	return RETURN_SUCCESS;
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_jesd_sync (const char* data, char* ret) {
 	//strcpy(buf, "fpga -o \r");
 	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -4427,6 +4440,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/board/jesd_sync",  hdlr_fpga_board_jesd_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/led",  hdlr_fpga_board_led,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/rstreq",  hdlr_fpga_board_rstreq,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/reboot",  hdlr_fpga_board_reboot,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/sys_rstreq",  hdlr_fpga_board_sys_rstreq,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/test",  hdlr_fpga_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/temp",  hdlr_fpga_board_temp,  RW,  "20" ), \
