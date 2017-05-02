@@ -40,7 +40,7 @@ typedef struct reg {
 	bits_t field;
 } reg_t;
 
-inline size_t get_num_regs(void);
+size_t get_num_regs(void);
 const reg_t* get_reg_from_name(const char* name);
 const reg_t* get_reg_from_addr(uint32_t addr);
 const reg_t* get_reg_from_index(uint32_t index);

@@ -417,7 +417,7 @@ int get_property(const char* prop, char* data, size_t max_len) {
 
 	// check if WO property
 	if (temp -> permissions == WO) {
-		PRINT( ERROR,"Cannot invoke a get on this property\n");
+		PRINT( ERROR,"Cannot invoke a get on property '%s'\n", prop);
 		return RETURN_ERROR_GET_PROP;
 	}
 
@@ -427,6 +427,8 @@ int get_property(const char* prop, char* data, size_t max_len) {
 
 int get_channel_for_path( const char *path ) {
 
+	PRINT( VERBOSE,"%s(): %s\n", __func__, NULL == path ? "(null)" : path );
+
 	if ( NULL == path ) {
 		return -1;
 	}
@@ -434,15 +436,19 @@ int get_channel_for_path( const char *path ) {
 		return -1;
 	}
 	if (
-		! (
-			0
-			|| 0 == strncmp( "rx/", path, 2 )
-			|| 0 == strncmp( "tx/", path, 2 )
-		)
+		1
+		&& 0 != strncmp( "rx/", path, 3 )
+		&& 0 != strncmp( "tx/", path, 3 )
+		&& 0 != strncmp( "rx_", path, 3 )
+		&& 0 != strncmp( "tx_", path, 3 )
 	) {
+		PRINT( ERROR,"%s(): %s does not begin with {rt}x{_/}\n", __func__, NULL == path ? "(null)" : path );
 		return -1;
 	}
-	return 'a' - path[ 3 ];
+
+	PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" : path, path[ 3 ] - 'a' );
+
+	return path[ 3 ] - 'a';
 }
 
 void power_on_channel( bool tx, int channel ) {
@@ -452,6 +458,7 @@ void power_on_channel( bool tx, int channel ) {
 	snprintf( buf, sizeof( buf ), "%s/%c/pwr", tx ? "tx" : "rx", 'a' + channel );
 	prop = get_prop_from_cmd( buf );
 	if ( NULL == prop ) {
+		PRINT( ERROR,"Cannot find prop for command '%s'\n", buf);
 		return;
 	}
 	write_to_file(get_abs_path(prop, buf), "1");
@@ -461,6 +468,7 @@ void power_on_channel_fixup( char *path ) {
 	bool tx;
 	int channel = get_channel_for_path( path );
 	if ( -1 == channel ) {
+		PRINT( ERROR,"Cannot find channel for path '%s'\n", path);
 		return;
 	}
 	tx = 0 == strncmp( "tx", path, 2 );
@@ -488,9 +496,10 @@ int set_property(const char* prop, const char* data) {
 
 	// enable channel if it has not been enabled yet
 	// (enabling the channel later will erase the current channels, so enable now)
-	power_on_channel_fixup( path );
+	power_on_channel_fixup( temp->path );
 
-	write_to_file(get_abs_path(temp, path), data);
+	write_to_file( get_abs_path( temp, path ), data );
+
 	check_property_inotifies();
 
 	return RETURN_SUCCESS;

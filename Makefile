@@ -17,13 +17,16 @@
 
 # Cross compile toolchain
 #CC = $(CRIMSON_ROOTDIR)/build/gcc/bin/arm-linux-gnueabihf-gcc
-CC = arm-linux-gnueabihf-gcc
+CC = arm-unknown-linux-gnueabihf-gcc
 
 # Cross compile flags
 CFLAGS = -c -O0 -g3 -Wall -fmessage-length=0
 
 # Linker flags
 LDFLAGS = -lm -lrt
+
+# Root Directory
+export CRIMSON_ROOTDIR = $(shell pwd)
 
 # Out Directory
 OUTDIR = $(CRIMSON_ROOTDIR)/out
@@ -33,9 +36,6 @@ SHELL = /bin/sh
 
 # Object files are source files with .c replaced with .o
 OBJECTS = $(addprefix $(OUTDIR)/obj/main/,$(SOURCES:.c=.o))
-
-# Root Directory
-export CRIMSON_ROOTDIR = $(shell pwd)
 
 # Output Executable
 EXECS = $(addprefix $(OUTDIR)/bin/,$(SOURCES:.c=))
@@ -52,7 +52,24 @@ INCLUDES += -I$(OUTDIR)/inc
 # Build order is: left --> right
 SUBDIRS += common hal parser
 
+# Specify Current branch
+VERSION_GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+
+# Specify Git revision
+VERSION_GIT_REVISION := $(shell git describe --abbrev=8 --dirty --always --long)
+
+# Specify build date and time
+VERSION_DATE := $(shell TZ=UTC date "+%F-%T")
+
+
+# Append to internal CFLAGS;
+iCFLAGS = $(CFLAGS)
+iCFLAGS += -DVERSIONGITBRANCH=\"$(VERSION_GIT_BRANCH)\"
+iCFLAGS += -DVERSIONGITREVISION=\"$(VERSION_GIT_REVISION)\"
+iCFLAGS += -DVERSIONDATE=\"$(VERSION_DATE)\"
+
 all: $(EXECS)
+
 
 install: $(EXECS)
 	$(foreach EXEC, $(EXECS), install -m 0755 $(EXEC) /usr/bin;)
@@ -66,12 +83,12 @@ $(foreach TARGET, $(TARGETS), $(eval $(call AUTO_TARGET, $(TARGET)) ))
 
 # Generates all of the object files from the source files
 $(OUTDIR)/obj/main/%.o: %.c | MAKE_SUBDIR
-	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
+	$(CC) $(iCFLAGS) $(INCLUDES) $< -o $@
 	@cp -f $< $(OUTDIR)/src
 
 # Recursive build of all the sub_directories
 MAKE_SUBDIR: MAKE_OUTDIR
-	$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile;)
+	$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile CC=$(CC);)
 
 # Generates the output directory
 MAKE_OUTDIR:
@@ -86,3 +103,7 @@ MAKE_OUTDIR:
 # Clean the output directory
 clean:
 	rm -rf $(OUTDIR)
+
+# Print the value of any MAKEFILE variable
+# Useful for debugging makefiles.
+print-%: ; @echo $*=$($*)

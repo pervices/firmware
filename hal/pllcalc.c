@@ -88,7 +88,7 @@ int main (void)
                                 20 * log10(noise),
                                 20 * log10(dbc_noise1)
                         );
-                printf("\t Using: VcoFreq: %lf, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n",
+                printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n",
                                 pll.vcoFreq,
                                 pll.d,
                                 pll.R,
@@ -127,7 +127,7 @@ int main (void)
                                     20 * log10(noise),
                                     20 * log10(dbc_noise1)
                             );
-                    printf("\t Using: VcoFreq: %li, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n",
+                    printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n",
                                     pll.vcoFreq,
                                     pll.d,
                                     pll.R,
@@ -193,19 +193,19 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
        long double pd_freq = (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
 	
 
-        uint32_t N1 = 0;
+        double N1 = 0;
         // Determine the values of the N and dividers for PLL1
-        if ( !pll->divFBen ) {
+        if ( !pll->divFBen || *reqFreq < PLL1_FB_THRESHOLD ) {
             N1  = (double)pll->vcoFreq / (double)pd_freq;
         } else {
             N1  = (double)pll->vcoFreq / (double)pll->d;
             N1  = N1 / (long double)pd_freq;
+	    if (N1 < 1) N1 = 1;
         }
         pll->N = (uint32_t)N1;
 
         //Set correct, actual, VCO frequency based on output frequency
-	double vco_freq = 0;
-	if ( !pll->divFBen ) {
+	if ( !pll->divFBen || *reqFreq < PLL1_FB_THRESHOLD ) {
             pll->vcoFreq = (long double)pd_freq * (long double)pll->N;
         } else {
             pll->vcoFreq = (long double)pd_freq * (uint64_t)pll->N * (uint64_t)pll->d;
@@ -213,14 +213,14 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 
     if (!pll_CheckParams(pll, 1)) {
 #ifndef _PLL_DEBUG_STANDALONE
-        PRINT( ERROR, "BAD PLL SETTINGS: PLL1: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
+        PRINT( ERROR, "BAD PLL SETTINGS: PLL1: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %Lf.\n",
                 pll->N,
                 pll->R,
                 pll->d,
                 pll->x2en,
                 pll->vcoFreq);
 #else
-        printf("BAD PLL SETTINGS: PLL1: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %"PRIu64".\n",
+        printf("BAD PLL SETTINGS: PLL1: N: %"PRIu32", R: %"PRIu16", D: %"PRIu16", x2en: %"PRIu8", VCO: %Lf.\n",
                 pll->N,
                 pll->R,
                 pll->d,

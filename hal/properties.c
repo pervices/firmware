@@ -237,7 +237,7 @@ static int hdlr_tx_a_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -248,8 +248,8 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -273,15 +273,16 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c a -p 0\r");
+	strcpy(buf, "rf -c a \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -480,6 +481,9 @@ static int hdlr_tx_a_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txa4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | (1 << 14));
 	else				write_hps_reg( "txa4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -572,7 +576,7 @@ static int hdlr_tx_sync (const char* data, char* ret) {
 }
 
 static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -583,8 +587,8 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -609,15 +613,16 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c a -p 0\r");
+	strcpy(buf, "rf -c a \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -842,6 +847,9 @@ static int hdlr_rx_a_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxa4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | (1 << 14));
 	else				write_hps_reg( "rxa4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -1079,7 +1087,7 @@ static int hdlr_tx_b_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -1090,8 +1098,8 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1115,15 +1123,16 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c b -p 0\r");
+	strcpy(buf, "rf -c b \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1313,6 +1322,9 @@ static int hdlr_tx_b_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txb4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | (1 << 14));
 	else				write_hps_reg( "txb4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -1394,7 +1406,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -1405,8 +1417,8 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c b -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1431,15 +1443,16 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c b -p 0\r");
+	strcpy(buf, "rf -c b \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1655,6 +1668,9 @@ static int hdlr_rx_b_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxb4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | (1 << 14));
 	else				write_hps_reg( "rxb4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -1881,7 +1897,7 @@ static int hdlr_tx_c_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -1892,8 +1908,8 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -1917,15 +1933,16 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c c -p 0\r");
+	strcpy(buf, "rf -c c \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2115,6 +2132,9 @@ static int hdlr_tx_c_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txc4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | (1 << 14));
 	else				write_hps_reg( "txc4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -2196,7 +2216,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -2207,8 +2227,8 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2233,15 +2253,16 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c c -p 0\r");
+	strcpy(buf, "rf -c c \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2457,6 +2478,9 @@ static int hdlr_rx_c_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxc4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | (1 << 14));
 	else				write_hps_reg( "rxc4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -2683,7 +2707,7 @@ static int hdlr_tx_d_rf_dac_temp (const char* data, char* ret) {
 }
 
 static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -2694,8 +2718,8 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -2719,15 +2743,16 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c d -p 0\r");
+	strcpy(buf, "rf -c d \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2917,6 +2942,9 @@ static int hdlr_tx_d_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "txd4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | (1 << 14));
 	else				write_hps_reg( "txd4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -2997,7 +3025,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 }
 
 static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
-	uint64_t freq;
+	uint64_t freq = 0;
 	sscanf(data, "%"SCNd64"", &freq);
 
 	// if freq = 0, mute PLL
@@ -3008,8 +3036,8 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-	// if freq is less than 53MHz, kill the channel
-	if ( freq < 53000000ULL ) {
+        // if freq out of bounds, kill channel
+        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -3034,15 +3062,16 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 
 	// run the pll calc algorithm
 	pllparam_t pll;
-	double outfreq = setFreq(&freq, &pll);
+        long double outfreq = 0;
+	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c d -p 0\r");
+	strcpy(buf, "rf -c d \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)325000000ULL, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -3259,6 +3288,9 @@ static int hdlr_rx_d_link_vita_en (const char* data, char* ret) {
 	read_hps_reg(  "rxd4", &old_val);
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | (1 << 14));
 	else				write_hps_reg( "rxd4", old_val & ~(1 << 14));
+
+	sync_channels( 15 );
+
 	return RETURN_SUCCESS;
 }
 
@@ -3584,6 +3616,19 @@ static int hdlr_fpga_board_rstreq (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_reboot (const char* data, char* ret){
+    if(strcmp(data, "1") == 0){
+	uint32_t reboot;
+
+	//Write 0 to bit[16] of sys 0 in order to reboot
+	read_hps_reg("sys0", &reboot);
+	reboot = (reboot & 0xFFFEFFFF);
+	write_hps_reg("sys0", reboot);
+	return RETURN_SUCCESS;
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_jesd_sync (const char* data, char* ret) {
 	//strcpy(buf, "fpga -o \r");
 	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -3668,6 +3713,22 @@ static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
 	//read_uart(NO_FWD_CMD);
 	//strcpy(ret, (char*)uart_ret_buf);
 
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_server_about_fw_ver (const char* data, char* ret) {
+	FILE *fp=NULL;
+	char buf[MAX_PROP_LEN] = {0};
+	if((fp = popen("/usr/bin/server -v", "r")) == NULL){
+		PRINT(ERROR, "Error opening pipe!\n");
+		return RETURN_ERROR;
+	}
+	while(fgets(buf, MAX_PROP_LEN, fp) != NULL){
+		strncat(ret, buf, MAX_PROP_LEN);
+	}
+	if(pclose(fp)){
+		return RETURN_ERROR;
+	}
 	return RETURN_SUCCESS;
 }
 
@@ -3878,7 +3939,6 @@ static int hdlr_fpga_board_gps_sync_time (const char* data, char* ret) {
 
 	return RETURN_SUCCESS;
 }
-
 
 static uint16_t cm_chanmask_get( const char *path ) {
 	uint32_t r;
@@ -4292,7 +4352,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/val",  hdlr_rx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/lna",  hdlr_rx_ ## _c ## _rf_freq_lna,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/lna",  hdlr_rx_ ## _c ## _rf_freq_lna,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/atten/val",  hdlr_rx_ ## _c ## _rf_atten_val,  RW,  "127" ), \
@@ -4325,8 +4385,8 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/sync",  hdlr_tx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_en",  hdlr_tx_ ## _c ## _rf_dac_dither_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_mixer_en",  hdlr_tx_ ## _c ## _rf_dac_dither_mixer_en,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_sra_sel",  hdlr_tx_ ## _c ## _rf_dac_dither_sra_sel,  RW,  "96" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/nco",  hdlr_tx_ ## _c ## _rf_dac_nco,  RW,  "15000000" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_sra_sel",  hdlr_tx_ ## _c ## _rf_dac_dither_sra_sel,  RW,  "6" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/nco",  hdlr_tx_ ## _c ## _rf_dac_nco,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/temp",  hdlr_tx_ ## _c ## _rf_dac_temp,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/val",  hdlr_tx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/band",  hdlr_tx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
@@ -4364,6 +4424,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 
 #define DEFINE_FPGA() \
 	DEFINE_FILE_PROP( "fpga/about/fw_ver",  hdlr_fpga_about_fw_ver,  RW,  VERSION ), \
+	DEFINE_FILE_PROP( "fpga/about/server_ver",  hdlr_server_about_fw_ver,  RW, NULL), \
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/id",  hdlr_fpga_about_id,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "fpga/about/name",  hdlr_invalid,  RO,  "crimson_tng" ), \
@@ -4379,6 +4440,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/board/jesd_sync",  hdlr_fpga_board_jesd_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/led",  hdlr_fpga_board_led,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/rstreq",  hdlr_fpga_board_rstreq,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/board/reboot",  hdlr_fpga_board_reboot,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/sys_rstreq",  hdlr_fpga_board_sys_rstreq,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/test",  hdlr_fpga_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/temp",  hdlr_fpga_board_temp,  RW,  "20" ), \
@@ -4428,15 +4490,15 @@ static prop_t property_table[] = {
 static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
 // Beginning of functions
-inline size_t get_num_prop(void) {
+size_t get_num_prop(void) {
 	return num_properties;
 }
 
-inline prop_t* get_prop(size_t idx) {
+prop_t* get_prop(size_t idx) {
 	return (property_table + idx);
 }
 
-inline prop_t* get_prop_from_wd(int wd) {
+prop_t* get_prop_from_wd(int wd) {
 	size_t i;
 	for (i = 0; i < num_properties; i++) {
 		if (property_table[i].wd == wd)
@@ -4447,7 +4509,7 @@ inline prop_t* get_prop_from_wd(int wd) {
 	return NULL;
 }
 
-inline prop_t *get_prop_from_hdlr( int (*hdlr)(const char*, char*) ) {
+prop_t *get_prop_from_hdlr( int (*hdlr)(const char*, char*) ) {
 	size_t i;
 	for (i = 0; i < num_properties; i++) {
 		if ( property_table[ i ].handler == hdlr ) {
@@ -4498,7 +4560,7 @@ int resolve_symbolic_property_name( const char *prop, char *path, size_t n ) {
 }
 
 
-inline prop_t* get_prop_from_cmd(const char* cmd) {
+prop_t* get_prop_from_cmd(const char* cmd) {
 	char path[ MAX_PATH_LEN ];
 	size_t i;
 
@@ -4520,15 +4582,15 @@ static inline const char* get_home_dir(void) {
 	return getpwuid(getuid()) -> pw_dir;
 }
 
-inline void pass_uart_synth_fd(int fd) {
+void pass_uart_synth_fd(int fd) {
 	uart_synth_fd = fd;
 }
 
-inline void pass_uart_tx_fd(int fd) {
+void pass_uart_tx_fd(int fd) {
 	uart_tx_fd = fd;
 }
 
-inline void pass_uart_rx_fd(int fd) {
+void pass_uart_rx_fd(int fd) {
 	uart_rx_fd = fd;
 }
 
@@ -4580,56 +4642,52 @@ void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char*
 }
 
 void sync_channels(uint8_t chan_mask) {
+	char str_chan_mask[MAX_PROP_LEN] = "";
+	sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
+	//Put FPGA JESD core in reset
+	write_hps_reg( "res_rw7",0x80000000);
+	//usleep(300000); // Some wait time for the reset to be ready
+	/* Bring the ADCs & DACs into 'demo' mode for JESD */
 
-    char str_chan_mask[MAX_PROP_LEN] = "";
-    sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", chan_mask);
+	// RX - ADCs
+	strcpy(buf, "power -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -a 1\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
 
-    /* Bring the ADCs & DACs into 'demo' mode for JESD */
+	// TX - DACs
+	strcpy(buf, "power -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -d 1\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
-    // RX - ADCs
-    strcpy(buf, "power -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -a 1\r");
-    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	/* Initiate the SYSREF sequence for jesd
+	* Set all boards' SYSREF detection gate to ON */
+	strcpy(buf, "board -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -s 1\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
+	strcpy(buf, "board -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -s 1\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
-    // TX - DACs
-    strcpy(buf, "power -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -d 1\r");
-    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	/* Trigger a SYSREF pulse */
+	//JESD core out of reset
+	write_hps_reg( "res_rw7",0);
+	usleep(100000); // Some wait time for MCUs to be ready
+	strcpy(buf, "clk -y\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
 
-    /* Initiate the SYSREF sequence for jesd
-     * Set all boards' SYSREF detection gate to ON */
-
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 1\r");
-    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 1\r");
-    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
-    /* Trigger a SYSREF pulse */
-
-    usleep(100000);		// Some wait time for MCUs to be ready
-    strcpy(buf, "clk -y -y -y\r");
-    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-    usleep(100000);
-
-    /* Turn off all boards' SYSREF detection gates */
-
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-
+	/* Turn off all boards' SYSREF detection gates */
+	strcpy(buf, "board -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -s 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
+	strcpy(buf, "board -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -s 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {

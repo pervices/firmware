@@ -78,6 +78,16 @@ int port_nums[num_udp_ports] = {
 // main loop
 int main(int argc, char *argv[]) {
 
+	// check for firmware version
+	if (argc >= 2) {
+		if (strcmp(argv[1], "-v") == 0) {
+			printf("Branch: %s\n", VERSIONGITBRANCH);
+			printf("Revision: %s\n", VERSIONGITREVISION);
+			printf("Date: %s UTC\n", VERSIONDATE);
+			return 0;
+		}
+	}
+
 	struct xg_cmd {
 		uint64_t cmd;
 		uint64_t payload[2];
