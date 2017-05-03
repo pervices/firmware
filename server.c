@@ -75,6 +75,16 @@ int port_nums[num_udp_ports] = {
 	UDP_TXD_PORT,
 	UDP_FLOW_CNTRL_PORT};
 
+void server_init_led(){
+    write_hps_reg("led1", 0x1); //Solid green
+    write_hps_reg("led0", 0x00070003); //Flashing green
+}
+
+void server_ready_led(){
+    write_hps_reg("led1", 0x1);
+    write_hps_reg("led0", 0x1);
+}
+
 // main loop
 int main(int argc, char *argv[]) {
 
@@ -106,6 +116,8 @@ int main(int argc, char *argv[]) {
 	struct xg_cmd_flc_time_diff flc_time_diff;
 
 	PRINT( INFO, "Starting Crimson server\n");
+	
+	server_init_led();
 
 	// check for an argument for debug mode
 	if (argc >= 2) {
@@ -133,6 +145,8 @@ int main(int argc, char *argv[]) {
 
 	// let the user know the server is ready to receive commands
 	PRINT( INFO, "Crimson server is up\n");
+
+	server_ready_led();
 
 	i = 0;
 	// main loop, look for commands, if exists, service it and respond
