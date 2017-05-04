@@ -439,7 +439,7 @@ int get_channel_for_path( const char *path ) {
 		&& 0 != strncmp( "rx", path, 2 )
 		&& 0 != strncmp( "tx", path, 2 )
 	) {
-		// note: this is not necessarily an error
+		// note: this is not necessarily an error (some paths do not begin with rx or tx)
 		return -1;
 	}
 
