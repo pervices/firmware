@@ -417,7 +417,6 @@ int get_property(const char* prop, char* data, size_t max_len) {
 
 	// check if WO property
 	if (temp -> permissions == WO) {
-		PRINT( ERROR,"Cannot invoke a get on property '%s'\n", prop);
 		return RETURN_ERROR_GET_PROP;
 	}
 
@@ -437,12 +436,10 @@ int get_channel_for_path( const char *path ) {
 	}
 	if (
 		1
-		&& 0 != strncmp( "rx/", path, 3 )
-		&& 0 != strncmp( "tx/", path, 3 )
-		&& 0 != strncmp( "rx_", path, 3 )
-		&& 0 != strncmp( "tx_", path, 3 )
+		&& 0 != strncmp( "rx", path, 2 )
+		&& 0 != strncmp( "tx", path, 2 )
 	) {
-		PRINT( ERROR,"%s(): %s does not begin with {rt}x{_/}\n", __func__, NULL == path ? "(null)" : path );
+		// note: this is not necessarily an error
 		return -1;
 	}
 
@@ -468,7 +465,7 @@ void power_on_channel_fixup( char *path ) {
 	bool tx;
 	int channel = get_channel_for_path( path );
 	if ( -1 == channel ) {
-		PRINT( ERROR,"Cannot find channel for path '%s'\n", path);
+		// note: this is not necessarily an error (some paths do not have a channel)
 		return;
 	}
 	tx = 0 == strncmp( "tx", path, 2 );
