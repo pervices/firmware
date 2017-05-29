@@ -3592,7 +3592,6 @@ static int hdlr_fpga_board_test (const char* data, char* ret) {
 static int hdlr_fpga_board_gle (const char* data, char* ret) {
 		
 	if (strcmp(data, "1") == 0) {
-	    printf("setting mcu gle mode\n");
 	    strcpy(buf, "board -g 1\r");
 	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
@@ -3606,7 +3605,6 @@ static int hdlr_fpga_board_gle (const char* data, char* ret) {
 	    usleep(50000);
 	}
 	if (strcmp(data, "2") == 0) {
-	    printf("setting fpga gle mode\n");
 	    strcpy(buf, "board -g 2\r");
 	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
