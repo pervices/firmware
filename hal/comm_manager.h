@@ -25,7 +25,7 @@
 #include <string.h>
 
 #define UDP_PAYLOAD_LEN 1472
-#define MAX_UART_RET_LEN 256
+#define MAX_UART_RET_LEN 4096
 
 int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options);
 int close_udp_comm(int fd);
