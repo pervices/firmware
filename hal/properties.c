@@ -103,8 +103,7 @@ static int read_uart(int uartfd) {
 	//}
 
 	printf("%s\n", buf);
-	strcpy((char*)uart_ret_buf, buf);
-
+	strncpy((char*)uart_ret_buf, buf, MAX_UART_RET_LEN-1);
 	return RETURN_SUCCESS;
 }
 
@@ -3590,6 +3589,38 @@ static int hdlr_fpga_board_test (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_gle (const char* data, char* ret) {
+		
+	if (strcmp(data, "1") == 0) {
+	    strcpy(buf, "board -g 1\r");
+	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	    usleep(50000);
+
+	    strcpy(buf, "board -g 1\r");
+	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	    usleep(50000);
+
+	    strcpy(buf, "board -g 1\r");
+	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	    usleep(50000);
+	}
+	if (strcmp(data, "2") == 0) {
+	    strcpy(buf, "board -g 2\r");
+	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	    usleep(50000);
+
+	    strcpy(buf, "board -g 2\r");
+	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	    usleep(50000);
+
+	    strcpy(buf, "board -g 2\r");
+	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	    usleep(50000);
+	}
+	return RETURN_SUCCESS;
+}
+
+
 static int hdlr_fpga_board_temp (const char* data, char* ret) {
 	//strcpy(buf, "board -t\r");
 	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
@@ -3894,16 +3925,12 @@ static int hdlr_fpga_board_gps_time (const char* data, char* ret) {
 	char gps_split[MAX_PROP_LEN];
 
 	read_hps_reg( "sys5", &gps_time_lh);
-	printf("Value of sys5: %d\n", gps_time_lh);
 	read_hps_reg( "sys6", &gps_time_uh );
-	printf("Value of sys6: %d\n", gps_time_uh);
 
 	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
 	strncpy(ret, gps_split, MAX_PROP_LEN);
-	printf("Intermediate value of ret: %s\n", ret);
 	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
 	strncat(ret, gps_split, MAX_PROP_LEN);
-	printf("Final value of ret: %s\n", ret);
 
 	return RETURN_SUCCESS;
 }
@@ -3912,16 +3939,12 @@ static int hdlr_fpga_board_gps_frac_time (const char* data, char* ret) {
 	uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
 	char gps_split[MAX_PROP_LEN];
 	read_hps_reg( "sys7", &gps_frac_time_lh);
-	printf("Value of sys7: %d\n", gps_frac_time_lh);
 	read_hps_reg( "sys8", &gps_frac_time_uh);
-	printf("Value of sys8: %d\n", gps_frac_time_lh);
 	
 	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
 	strncpy(ret, gps_split, MAX_PROP_LEN);
-	printf("Intermediate value of ret: %s\n", ret);
 	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
 	strncat(ret, gps_split, MAX_PROP_LEN);
-	printf("Final value of ret: %s\n", ret);
 	return RETURN_SUCCESS;
 }
 
@@ -4444,6 +4467,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/board/sys_rstreq",  hdlr_fpga_board_sys_rstreq,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/test",  hdlr_fpga_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/temp",  hdlr_fpga_board_temp,  RW,  "20" ), \
+	DEFINE_FILE_PROP( "fpga/board/gle",  hdlr_fpga_board_gle,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/link/rate",  hdlr_fpga_link_rate,  RW,  "1250000000" ), \
 	DEFINE_FILE_PROP( "fpga/link/sfpa/ip_addr",  hdlr_fpga_link_sfpa_ip_addr,  RW,  "10.10.10.2" ), \
 	DEFINE_FILE_PROP( "fpga/link/sfpa/mac_addr",  hdlr_fpga_link_sfpa_mac_addr,  RW,  "aa:00:00:00:00:00" ), \
