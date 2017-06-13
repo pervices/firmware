@@ -171,7 +171,10 @@ int main(int argc, char *argv[]) {
 				read_hps_reg("res_ro5", fifo_lvl + 1);
 				read_hps_reg("res_ro6", fifo_lvl + 2);
 				read_hps_reg("res_ro7", fifo_lvl + 3);
-
+				fifo_lvl[0] = fifo_lvl[0] & 0xffff;
+				fifo_lvl[1] = fifo_lvl[0] & 0xffff;
+				fifo_lvl[2] = fifo_lvl[0] & 0xffff;
+				fifo_lvl[3] = fifo_lvl[0] & 0xffff;
 				snprintf(
 					(char*)buffer, UDP_PAYLOAD_LEN,
 					"flow,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32",%"PRIx64",%"PRIx64"\n",
@@ -200,7 +203,6 @@ int main(int argc, char *argv[]) {
 				}
 
 				build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
-
 				send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
 			}
 		}
