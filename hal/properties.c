@@ -752,7 +752,7 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	double gain_factor;
+	int gain_factor;
 
 	if (resamp_err < base_err) {
 		write_hps_reg( "rxa1", resamp_factor);
@@ -762,7 +762,7 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;
 		read_hps_reg( "rxga",  &old_val);
-		write_hps_reg( "rxga", (old_val & ~(0xff << 0) )  | (((uint16_t)gain_factor) << 16));
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) )  | (((uint16_t)gain_factor) << 0));
 	} else {
 		write_hps_reg( "rxa1", base_factor);
 		read_hps_reg(  "rxa4", &old_val);
@@ -771,7 +771,7 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)];
 		read_hps_reg( "rxga",  &old_val);
-		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (((uint16_t)gain_factor) << 16));
+		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (((uint16_t)gain_factor) << 0));
 	}
 
 	// DSP Reset
@@ -1585,7 +1585,7 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	double gain_factor;
+	int gain_factor;
 
 	if (resamp_err < base_err) {
 		write_hps_reg( "rxb1", resamp_factor);
@@ -1595,7 +1595,7 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;
 		read_hps_reg( "rxga",  &old_val);
-		write_hps_reg( "rxga", (old_val & ~(0xff << 8) )  | (((uint16_t)gain_factor) << 16));
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) )  | (((uint16_t)gain_factor) << 8));
 	} else {
 		write_hps_reg( "rxb1", base_factor);
 		read_hps_reg(  "rxb4", &old_val);
@@ -1604,7 +1604,7 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)];
 		read_hps_reg( "rxga",  &old_val);
-		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (((uint16_t)gain_factor) << 16));
+		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (((uint16_t)gain_factor) << 8));
 	}
 
 	// DSP Reset
@@ -2398,7 +2398,7 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	double gain_factor;
+	int gain_factor;
 	if (resamp_err < base_err) {
 		write_hps_reg( "rxc1", resamp_factor);
 		read_hps_reg(  "rxc4", &old_val);
@@ -3210,7 +3210,7 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 
 	// set the appropriate sample rate
 	memset(ret, 0, MAX_PROP_LEN);
-	double gain_factor;
+	int gain_factor;
 
 	if (resamp_err < base_err) {
 		write_hps_reg( "rxd1", resamp_factor);
@@ -3220,7 +3220,7 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;
 		read_hps_reg( "rxga",  &old_val);
-		write_hps_reg( "rxga", (old_val & ~(0xff << 24) )  | (((uint16_t)gain_factor) << 16));
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) )  | (((uint16_t)gain_factor) << 24));
 	} else {
 		write_hps_reg( "rxd1", base_factor);
 		read_hps_reg(  "rxd4", &old_val);
@@ -3229,7 +3229,7 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)];
 		read_hps_reg( "rxga",  &old_val);
-		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (((uint16_t)gain_factor) << 16));
+		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (((uint16_t)gain_factor) << 24));
 	}
 
 	// DSP Reset
