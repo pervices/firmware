@@ -167,14 +167,14 @@ int main(int argc, char *argv[]) {
 
 				// read fifo levels
 				uint32_t fifo_lvl[4];
-				read_hps_reg("res_ro4", fifo_lvl + 0);
-				read_hps_reg("res_ro5", fifo_lvl + 1);
-				read_hps_reg("res_ro6", fifo_lvl + 2);
-				read_hps_reg("res_ro7", fifo_lvl + 3);
-				fifo_lvl[0] = fifo_lvl[0] & 0xffff;
-				fifo_lvl[1] = fifo_lvl[0] & 0xffff;
-				fifo_lvl[2] = fifo_lvl[0] & 0xffff;
-				fifo_lvl[3] = fifo_lvl[0] & 0xffff;
+				read_hps_reg("res_ro0", fifo_lvl + 0);
+				read_hps_reg("res_ro1", fifo_lvl + 1);
+				read_hps_reg("res_ro2", fifo_lvl + 2);
+				read_hps_reg("res_ro3", fifo_lvl + 3);
+				fifo_lvl[0] = (fifo_lvl[0] & 0xffff) >> 0;
+				fifo_lvl[1] = (fifo_lvl[0] & 0xffff) >> 0;
+				fifo_lvl[2] = (fifo_lvl[0] & 0xffff) >> 0;
+				fifo_lvl[3] = (fifo_lvl[0] & 0xffff) >> 0;
 				snprintf(
 					(char*)buffer, UDP_PAYLOAD_LEN,
 					"flow,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32",%"PRIx64",%"PRIx64"\n",
