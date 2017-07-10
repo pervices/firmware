@@ -26,80 +26,31 @@
 /**************************************
  * UDP Driver Manager
  **************************************/
-// Array of UDP devices
-static udp_dev_t* udp_devices[MAX_DEVICES];
-static uint8_t used_udp_devices[MAX_DEVICES] = {FREE_DEVICE};
 
-// Gets the next available file descriptor
-static int get_next_udp_fd (int* fd) {
-	int i;
-	for (i = 0; i < MAX_DEVICES; i++) {
-		if (used_udp_devices[i] == FREE_DEVICE) {
-			*fd = i;
-			return RETURN_SUCCESS;
-		}
-	}
-	return RETURN_ERROR_INSUFFICIENT_RESOURCES;
-}
-
-int init_udp_comm(int* fd, const char* dev, uint32_t port, uint16_t options) {
-	if (get_next_udp_fd(fd) < 0)
-		return RETURN_ERROR_INSUFFICIENT_RESOURCES;
-
+int init_udp_comm(int* fd, const char* dev, in_port_t port, uint16_t options) {
 	int ret = RETURN_SUCCESS;
 
-	PRINT( VERBOSE,"Found file descriptor %i\n", *fd);
-
-	used_udp_devices[*fd] = USED_DEVICE;
-
 	// Allocate space for udp device
-	udp_devices[*fd] = malloc (sizeof(*udp_devices[*fd]));
-	udp_dev_t* mydev = udp_devices[*fd];
-
-	mydev -> eth = malloc (sizeof(*mydev -> eth));
-
-	strcpy(mydev -> eth -> iface, dev);
-	mydev -> eth -> port = port;
-	mydev -> opt = options;
+	udp_dev_t mydev = { .sockfd = -1, };
 
 	PRINT( VERBOSE,"Calling establish_udp_connection()\n");
 
-	ret = establish_udp_connection(mydev);
+	ret = establish_udp_connection( & mydev, port );
 	if (ret < 0) {
 		close_udp_comm(*fd);
 	}
+
+	*fd = mydev.sockfd;
+
 	return ret;
 }
 
 int close_udp_comm(int fd) {
-	if (fd < 0 || !udp_devices[fd]) return RETURN_ERROR_PARAM;
 
-	PRINT( VERBOSE,"Closing udp network %s()\n", __func__);
-
-	udp_dev_t* mydev = udp_devices[fd];
-	severe_udp_connection(mydev);
-
-	free(mydev -> eth);
-	free(mydev);
-	used_udp_devices[fd] = FREE_DEVICE;
+	close( fd );
 
 	return RETURN_SUCCESS;
 }
-
-int recv_udp_comm(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
-	if (fd < 0 || !udp_devices[fd]) return RETURN_ERROR_PARAM;
-
-	udp_dev_t* mydev = udp_devices[fd];
-	return recv_udp(mydev, data, size, max_size);
-}
-
-int send_udp_comm(int fd, uint8_t* data, uint16_t size) {
-	if (fd < 0 || !udp_devices[fd]) return RETURN_ERROR_PARAM;
-
-	udp_dev_t* mydev = udp_devices[fd];
-	return send_udp(mydev, data, size);
-}
-
 
 /**************************************
  * UART Driver Manager

@@ -93,7 +93,7 @@ int parse_cmd(cmd_t* cmd, uint8_t* data) {
 
 	// if command did not receive everything it expects
 	if (finish == 0) {
-		PRINT( ERROR,"%s, currupt command\n", __func__);
+		PRINT( ERROR,"%s, corrupt command '%s'\n", __func__, data );
 		cmd -> status = CMD_ERROR;
 		return RETURN_ERROR_CMD_CURRUPT;
 	} else {

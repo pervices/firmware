@@ -105,29 +105,8 @@ int get_gate (eth_t* eth, char* str, int size) {
 	return RETURN_SUCCESS;
 }
 
-int establish_udp_connection(udp_dev_t* udp) {
+int establish_udp_connection( udp_dev_t* udp, in_port_t port ) {
 	int ret = 0;
-
-	PRINT( VERBOSE,"Calling establish_eth_settings()\n");
-
-	// initialize ethernet parameters
-	ret = establish_eth_settings(udp -> eth);
-	if (ret < 0) return ret;
-
-	// verbose debugging messages
-	char test[256];
-	get_ip(udp -> eth, test, 256);
-	PRINT( VERBOSE,"IP Address: %s\n", test);
-	get_bcast(udp -> eth, test, 256);
-	PRINT( VERBOSE,"Broadcast Address: %s\n", test);
-	get_nmask(udp -> eth, test, 256);
-	PRINT( VERBOSE,"Netmask Address: %s\n", test);
-	get_mac(udp -> eth, test, 256);
-	PRINT( VERBOSE,"MAC Address: %s\n", test);
-	get_gate(udp -> eth, test, 256);
-	PRINT( VERBOSE,"Gateway Address: %s\n", test);
-	PRINT( VERBOSE,"Port: %i\n", udp -> eth -> port);
-	PRINT( VERBOSE,"Interface: %s\n", udp -> eth -> iface);
 
 	// open the socket
 	udp -> sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -136,16 +115,11 @@ int establish_udp_connection(udp_dev_t* udp) {
 		return RETURN_ERROR_COMM_INIT;
 	}
 
-	// non-blocking
-	int flags = fcntl(udp -> sockfd, F_GETFL);
-	flags |= O_NONBLOCK;
-	fcntl(udp -> sockfd, F_SETFL,  flags);
-
 	// zero out the structure and apply the configurations for the socket
 	memset((char *) &(udp -> si), 0, sizeof(udp -> si));
 	udp -> si.sin_family = AF_INET;
-	udp -> si.sin_port = htons(udp -> eth -> port);
- 	udp -> si.sin_addr.s_addr = htonl(INADDR_ANY);
+	udp -> si.sin_port = htons( port );
+ 	udp -> si.sin_addr.s_addr = htonl( INADDR_ANY );
 
 	// bind the settings to the socket
 	if (bind(udp -> sockfd, (struct sockaddr *) &(udp -> si), sizeof(udp -> si)) < 0) {

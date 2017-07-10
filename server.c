@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
+#include <sys/select.h>
 #include <sys/time.h>
 #include "common.h"
 #include "mmap.h"
@@ -61,6 +62,19 @@ char save_profile_path[MAX_PROP_LEN];
 // execution options
 uint8_t options = 0;
 
+enum {
+	MGMT,
+	RXA,
+	RXB,
+	RXC,
+	RXD,
+	TXA,
+	TXB,
+	TXC,
+	TXD,
+	FLOW_CNTRL,
+};
+
 // comm ports
 int comm_fds[num_udp_ports] = {0};
 int port_nums[num_udp_ports] = {
@@ -73,7 +87,8 @@ int port_nums[num_udp_ports] = {
 	UDP_TXB_PORT,
 	UDP_TXC_PORT,
 	UDP_TXD_PORT,
-	UDP_FLOW_CNTRL_PORT};
+	UDP_FLOW_CNTRL_PORT,
+};
 
 void server_init_led(){
     write_hps_reg("led1", 0x1); //Solid green
@@ -87,6 +102,8 @@ void server_ready_led(){
 
 // main loop
 int main(int argc, char *argv[]) {
+
+	fd_set rfds;
 
 	// check for firmware version
 	if (argc >= 2) {
@@ -136,28 +153,77 @@ int main(int argc, char *argv[]) {
 	// Buffer used for read/write
 	uint8_t buffer[UDP_PAYLOAD_LEN];
 	uint16_t received_bytes = 0;
+	int highest_fd = -1;
+	int inotify_fd;
+	int ret2;
+	struct sockaddr_in sa;
+	socklen_t sa_len;
 
 	// initialize the properties, which is implemented as a Linux file structure
 	init_property(options);
+	inotify_fd = get_inotify_fd();
 
 	// pass the profile pointers down to properties.c
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);
+
 
 	// let the user know the server is ready to receive commands
 	PRINT( INFO, "Crimson server is up\n");
 
 	server_ready_led();
 
-	i = 0;
 	// main loop, look for commands, if exists, service it and respond
-	while (1) {
-		// prevent busy wait, taking up too much CPU resources
-		usleep(1);
+	for( ;; ) {
 
-		// check for input commands from UDP
-		if (recv_udp_comm(comm_fds[i], buffer, &received_bytes, UDP_PAYLOAD_LEN) >= 0) {
-			// if flow control request
-			if (port_nums[i] == UDP_FLOW_CNTRL_PORT) {
+		PRINT( VERBOSE, "creating read fd set\n" );
+
+		// set up read file descriptor set for select(2)
+		FD_ZERO( & rfds );
+		for( i = 0; i < num_udp_ports; i++ ) {
+			PRINT( VERBOSE, "adding fd %d for port %d\n", comm_fds[ i ], port_nums[ i ] );
+			FD_SET( comm_fds[ i ], & rfds );
+			if ( comm_fds[ i ] >= highest_fd ) {
+				highest_fd = comm_fds[ i ];
+			}
+		}
+		FD_SET( inotify_fd, & rfds );
+		if ( inotify_fd >= highest_fd ) {
+			PRINT( VERBOSE, "adding inotify fd %d\n", inotify_fd );
+			highest_fd = inotify_fd;
+		}
+
+		PRINT( VERBOSE, "calling select(2)..\n" );
+		ret = select( highest_fd + 1, & rfds, NULL, NULL, NULL );
+
+		switch( ret ) {
+
+		case 0:
+		case -1:
+
+			if ( 0 == ret ) {
+				// timeout has expired (although we have provided no timeout)
+				PRINT( VERBOSE, "select timed-out\n" );
+			} else {
+				PRINT( VERBOSE, "select failed on fd %d: %s (%d)\n", comm_fds[ i ], strerror( errno ), errno );
+			}
+
+			continue;
+			break;
+
+		default:
+
+			// service flow control first because it is quick & easy
+			if ( FD_ISSET( comm_fds[ FLOW_CNTRL ], & rfds ) ) {
+
+				PRINT( VERBOSE, "flow control file descriptor has data\n" );
+
+				sa_len = sizeof( sa );
+				ret2 = recvfrom( comm_fds[ FLOW_CNTRL ], buffer, sizeof( buffer ), 0, (struct sockaddr *) & sa, & sa_len );
+				if ( ret2 < 0 ) {
+					PRINT( ERROR, "recvfrom failed: %s (%d)\n", strerror( errno ), errno );
+					ret--;
+					continue;
+				}
 
 				// read flow control time diff
 				read_hps_reg( "flc1", &( (uint32_t *) & flc_time_diff.tv_sec )[ 0 ] );
@@ -182,11 +248,45 @@ int main(int argc, char *argv[]) {
 					flc_time_diff.tv_sec, flc_time_diff.tv_tick
 				);
 
-				send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
+				ret2 = sendto( comm_fds[ FLOW_CNTRL ], buffer, strlen( (char *) buffer ), 0, (struct sockaddr *) & sa, sa_len );
+				if ( ret2 < 0 ) {
+					PRINT( ERROR, "sendto failed: %s (%d)\n", strerror( errno ), errno );
+					ret--;
+					continue;
+				}
 
-			// if UHD command request
-			} else {
-				if (parse_cmd(&cmd, buffer) != RETURN_SUCCESS) break;
+				PRINT( VERBOSE, "sent reply on flow control port\n" );
+
+				ret--;
+			}
+
+			// service other management requests
+			for( i = 0; i < num_udp_ports; i++ ) {
+
+				if ( FLOW_CNTRL == i ) {
+					continue;
+				}
+
+				if ( ! FD_ISSET( comm_fds[ i ], & rfds ) ) {
+					continue;
+				}
+
+				PRINT( VERBOSE, "port %d has data\n", port_nums[ i ] );
+
+				sa_len = sizeof( sa );
+				ret2 = recvfrom( comm_fds[ i ], buffer, sizeof( buffer ), 0, (struct sockaddr *) & sa, & sa_len );
+				if ( ret2 < 0 ) {
+					PRINT( ERROR, "recvfrom failed: %s (%d)\n", strerror( errno ), errno );
+					ret--;
+					continue;
+				}
+
+				if ( RETURN_SUCCESS != parse_cmd(&cmd, buffer) ) {
+
+					PRINT( VERBOSE, "failed to parse command\n" );
+					ret--;
+					continue;
+				}
 
 				// Debug print
 				PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
@@ -195,35 +295,61 @@ int main(int argc, char *argv[]) {
 				cmd.status = CMD_SUCCESS;
 
 				if (cmd.op == OP_GET) {
-					if (get_property(cmd.prop, cmd.data, MAX_PROP_LEN) != RETURN_SUCCESS)
+					if (get_property(cmd.prop, cmd.data, MAX_PROP_LEN) != RETURN_SUCCESS) {
 						cmd.status = CMD_ERROR;
+					}
 				} else {
-					if (set_property(cmd.prop, cmd.data) != RETURN_SUCCESS)
+					if (set_property(cmd.prop, cmd.data) != RETURN_SUCCESS) {
 						cmd.status = CMD_ERROR;
+					}
 				}
 
 				build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
-				send_udp_comm(comm_fds[i], buffer, strlen((char*)buffer));
+				ret2 = sendto( comm_fds[ i ], buffer, strlen( (char *) buffer ), 0, (struct sockaddr *) & sa, sa_len );
+				if ( ret2 < 0 ) {
+					PRINT( ERROR, "sendto failed: %s (%d)\n", strerror( errno ), errno );
+					ret--;
+					continue;
+				}
+
+				PRINT( VERBOSE, "sent reply on port %d\n", port_nums[ i ] );
+
+				ret--;
 			}
+
+
+			// service inotify
+			if ( FD_ISSET( inotify_fd, & rfds ) ) {
+
+				PRINT( VERBOSE, "inotify has data\n" );
+
+				// check if any files/properties have been modified through shell
+				check_property_inotifies();
+
+				// check if any of the writes/reads were made to save/load profiles
+				// priority given to saving profile
+				if (save_profile) {
+					save_properties(save_profile_path);
+					save_profile = 0;
+				}
+
+				if (load_profile) {
+					load_properties(load_profile_path);
+					load_profile = 0;
+				}
+
+				ret--;
+			}
+
+			if ( 0 != ret ) {
+				// sanity check: this should be zero after servicing fd's!!
+				PRINT( VERBOSE, "did not service all channels\n" );
+			}
+
+			break;
 		}
 
-		// check if any files/properties have been modified through shell
-		check_property_inotifies();
-
-		// check if any of the writes/reads were made to save/load profiles
-		// priority given to saving profile
-		if (save_profile) {
-			save_properties(save_profile_path);
-			save_profile = 0;
-		}
-
-		if (load_profile) {
-			load_properties(load_profile_path);
-			load_profile = 0;
-		}
-
-		// increment to service the other ports
-		i = (i + 1) % (num_udp_ports);
+		PRINT( VERBOSE, "processed return from select\n" );
 	}
 
 	// close the file descriptors
@@ -231,5 +357,5 @@ int main(int argc, char *argv[]) {
 		close_udp_comm(comm_fds[i]);
 	}
 
-	return ret;
+	return 0;
 }
