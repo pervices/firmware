@@ -213,6 +213,10 @@ static void build_tree(void) {
 	PRINT( VERBOSE, "Done building tree\n");
 }
 
+int get_inotify_fd() {
+	return inotify_fd;
+}
+
 // Initialize handler functions
 int init_property(uint8_t options) {
 	// uart transactions
@@ -247,13 +251,10 @@ int init_property(uint8_t options) {
 	PRINT(VERBOSE, "Initializing Inotify\n");
 
 	// inotify
-	if ( (inotify_fd = inotify_init()) < 0) {
+	if ( ( inotify_fd = inotify_init() ) < 0 ) {
 		PRINT( ERROR,"%s, cannot initialize inotify\n", __func__);
 		return RETURN_ERROR_INOTIFY;
 	}
-
-	// set inotify to non-blocking
-	fcntl(inotify_fd, F_SETFL, fcntl(inotify_fd, F_GETFL) | O_NONBLOCK);
 
 	// pass the uart handler to the property handlers
 	pass_uart_synth_fd(uart_synth_comm_fd);

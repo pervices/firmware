@@ -59,7 +59,7 @@ int get_nmask (eth_t* eth, char* str, int size);
 int get_mac (eth_t* eth, char* str, int size);
 int get_gate (eth_t* eth, char* str, int size);
 
-int establish_udp_connection(udp_dev_t* udp);
+int establish_udp_connection(udp_dev_t* udp, unsigned short port);
 int severe_udp_connection(udp_dev_t* udp);
 
 int recv_udp(udp_dev_t* udp, uint8_t* data, uint16_t* size, uint16_t max_size);

@@ -30,6 +30,8 @@
 #define UART_TX "/dev/ttycrimson-tx"
 #define UART_RX "/dev/ttycrimson-rx"
 
+int get_inotify_fd();
+
 int init_property(uint8_t options);
 void check_property_inotifies(void);
 void update_status_properties(void);
