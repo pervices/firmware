@@ -310,7 +310,7 @@ static void flow_request_process( struct flow_context *fc ) {
 		goto out;
 	}
 
-	D( "received %d bytes from %s", r, inet_ntoa( ( (struct sockaddr_in *) & sa )->sin_addr ) );
+	//D( "received %d bytes from %s", r, inet_ntoa( ( (struct sockaddr_in *) & sa )->sin_addr ) );
 
 	// XXX: @CF: 20170711: This is ugly. Use struct pointers to access memory-mapped registers.
 
@@ -350,7 +350,7 @@ static void flow_request_process( struct flow_context *fc ) {
 		goto out;
 	}
 
-	D( "sent %d bytes to %s", r, inet_ntoa( ( (struct sockaddr_in *) & sa )->sin_addr ) );
+	//D( "sent %d bytes to %s", r, inet_ntoa( ( (struct sockaddr_in *) & sa )->sin_addr ) );
 
 	r = EXIT_SUCCESS;
 
