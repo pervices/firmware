@@ -19,6 +19,7 @@
 ifdef CRIMSON_ROOTDIR
 
 CFLAGS = -c -O0 -g3 -Wall -c -fmessage-length=0 -DVERSION=\"$(DATE_VERSION)--$(GIT_VERSION)\"
+CFLAGS += -Wno-missing-braces -Wno-unused-function
 LDFLAGS = -lm -lrt
 OUTDIR = $(CRIMSON_ROOTDIR)/out
 SHELL = /bin/sh
