@@ -41,7 +41,7 @@ OBJECTS = $(addprefix $(OUTDIR)/obj/main/,$(SOURCES:.c=.o))
 EXECS = $(addprefix $(OUTDIR)/bin/,$(SOURCES:.c=))
 
 # Source Files
-SOURCES = server.c mem.c mcu.c
+SOURCES = server.c mem.c mcu.c flow.c
 TARGETS = $(SOURCES:.c=)
 
 # Includes

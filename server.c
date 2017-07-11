@@ -72,7 +72,6 @@ enum {
 	TXB,
 	TXC,
 	TXD,
-	FLOW_CNTRL,
 };
 
 // comm ports
@@ -87,7 +86,6 @@ int port_nums[num_udp_ports] = {
 	UDP_TXB_PORT,
 	UDP_TXC_PORT,
 	UDP_TXD_PORT,
-	UDP_FLOW_CNTRL_PORT,
 };
 
 void server_init_led(){
@@ -115,22 +113,9 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	struct xg_cmd {
-		uint64_t cmd;
-		uint64_t payload[2];
-	} __attribute__(( packed ));
-
-	struct xg_cmd_flc_time_diff {
-		uint64_t cmd;     // FLOW_CONTROL_TIME_DIFF := 1
-		int64_t tv_sec;   // see <time.h>
-		int64_t tv_tick;  // same order of magnitude as tv_nsec
-	}__attribute__(( packed ));
-
 	int ret = 0;
 	int i = 0;
 	cmd_t cmd;
-
-	struct xg_cmd_flc_time_diff flc_time_diff;
 
 	PRINT( INFO, "Starting Crimson server\n");
 	
@@ -152,7 +137,6 @@ int main(int argc, char *argv[]) {
 
 	// Buffer used for read/write
 	uint8_t buffer[UDP_PAYLOAD_LEN];
-	uint16_t received_bytes = 0;
 	int highest_fd = -1;
 	int inotify_fd;
 	int ret2;
@@ -212,60 +196,8 @@ int main(int argc, char *argv[]) {
 
 		default:
 
-			// service flow control first because it is quick & easy
-			if ( FD_ISSET( comm_fds[ FLOW_CNTRL ], & rfds ) ) {
-
-				PRINT( VERBOSE, "flow control file descriptor has data\n" );
-
-				sa_len = sizeof( sa );
-				ret2 = recvfrom( comm_fds[ FLOW_CNTRL ], buffer, sizeof( buffer ), 0, (struct sockaddr *) & sa, & sa_len );
-				if ( ret2 < 0 ) {
-					PRINT( ERROR, "recvfrom failed: %s (%d)\n", strerror( errno ), errno );
-					ret--;
-					continue;
-				}
-
-				// read flow control time diff
-				read_hps_reg( "flc1", &( (uint32_t *) & flc_time_diff.tv_sec )[ 0 ] );
-				read_hps_reg( "flc2", &( (uint32_t *) & flc_time_diff.tv_sec )[ 1 ] );
-				read_hps_reg( "flc3", &( (uint32_t *) & flc_time_diff.tv_tick )[ 0 ] );
-				read_hps_reg( "flc4", &( (uint32_t *) & flc_time_diff.tv_tick )[ 1 ] );
-
-				// read fifo levels
-				uint32_t fifo_lvl[4];
-				read_hps_reg("res_ro0", fifo_lvl + 0);
-				read_hps_reg("res_ro1", fifo_lvl + 1);
-				read_hps_reg("res_ro2", fifo_lvl + 2);
-				read_hps_reg("res_ro3", fifo_lvl + 3);
-				fifo_lvl[0] = (fifo_lvl[0] & 0xffff) >> 0;
-				fifo_lvl[1] = (fifo_lvl[0] & 0xffff) >> 0;
-				fifo_lvl[2] = (fifo_lvl[0] & 0xffff) >> 0;
-				fifo_lvl[3] = (fifo_lvl[0] & 0xffff) >> 0;
-				snprintf(
-					(char*)buffer, UDP_PAYLOAD_LEN,
-					"flow,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32",%"PRIx64",%"PRIx64"\n",
-					fifo_lvl[0], fifo_lvl[1], fifo_lvl[2], fifo_lvl[3],
-					flc_time_diff.tv_sec, flc_time_diff.tv_tick
-				);
-
-				ret2 = sendto( comm_fds[ FLOW_CNTRL ], buffer, strlen( (char *) buffer ), 0, (struct sockaddr *) & sa, sa_len );
-				if ( ret2 < 0 ) {
-					PRINT( ERROR, "sendto failed: %s (%d)\n", strerror( errno ), errno );
-					ret--;
-					continue;
-				}
-
-				PRINT( VERBOSE, "sent reply on flow control port\n" );
-
-				ret--;
-			}
-
 			// service other management requests
 			for( i = 0; i < num_udp_ports; i++ ) {
-
-				if ( FLOW_CNTRL == i ) {
-					continue;
-				}
 
 				if ( ! FD_ISSET( comm_fds[ i ], & rfds ) ) {
 					continue;
