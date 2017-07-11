@@ -36,12 +36,12 @@ static int reg_read(uint32_t addr, uint32_t* data, uint32_t bytes_to_read) {
 	uint32_t span = bytes_to_read / PAGE_SIZE;
 	if (span < bytes_to_read) span += PAGE_SIZE;
 
-	if( ( fd = open( MEM_DEV, ( O_RDWR | O_SYNC ) ) ) < 0 ) {
+	if( ( fd = open( MEM_DEV, O_RDONLY | O_SYNC ) ) < 0 ) {
 		PRINT(ERROR, "%s(), opening, %s\n", __func__, strerror(errno));
 		return RETURN_ERROR_COMM_MMAP;
 	}
 
-	virtual_base = mmap( NULL, span, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, addr & ~(span-1) );
+	virtual_base = mmap( NULL, span, PROT_READ, MAP_SHARED, fd, addr & ~(span-1) );
 
 	if( virtual_base == MAP_FAILED ) {
 		PRINT(ERROR, "%s(), mmap, %s\n", __func__, strerror(errno));
