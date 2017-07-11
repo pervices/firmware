@@ -4570,7 +4570,7 @@ int resolve_symbolic_property_name( const char *prop, char *path, size_t n ) {
 #error MAX_PATH_LEN is too small
 #endif
 
-	getwd( origcwd );
+	getcwd( origcwd, sizeof( origcwd ) );
 	chdir( vcs );
 	temp = (void *) realpath( prop, path );
 	chdir( origcwd );
