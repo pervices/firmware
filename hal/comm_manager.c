@@ -80,7 +80,7 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 	PRINT( VERBOSE,"Opening UART port: %s\n", dev);
 
 	// Allocate space for uart device
-	uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC );
+	uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
 	if (uart_devices[*fd] < 0)
 	{
 		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
