@@ -499,6 +499,30 @@ static int hdlr_tx_a_link_port (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_a_qa_fifo_lvl (const char* data, char* ret) {
+	uint32_t lvl;
+	read_hps_reg( "res_ro4", & lvl );
+	lvl &= 0xffff;
+	sprintf( ret, "%u", lvl );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_qa_oflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc14", & count );
+	sprintf( ret, "%u", count );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_qa_uflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc6", & count );
+	sprintf( ret, "%u", count );
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -1343,6 +1367,30 @@ static int hdlr_tx_b_link_port (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_b_qa_fifo_lvl (const char* data, char* ret) {
+	uint32_t lvl;
+	read_hps_reg( "res_ro5", & lvl );
+	lvl &= 0xffff;
+	sprintf( ret, "%u", lvl );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_qa_oflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc16", & count );
+	sprintf( ret, "%u", count );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_qa_uflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc8", & count );
+	sprintf( ret, "%u", count );
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -2156,6 +2204,30 @@ static int hdlr_tx_c_link_port (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_c_qa_fifo_lvl (const char* data, char* ret) {
+	uint32_t lvl;
+	read_hps_reg( "res_ro6", & lvl );
+	lvl &= 0xffff;
+	sprintf( ret, "%u", lvl );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_qa_oflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc18", & count );
+	sprintf( ret, "%u", count );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_qa_uflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc10", & count );
+	sprintf( ret, "%u", count );
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -2965,6 +3037,30 @@ static int hdlr_tx_d_link_port (const char* data, char* ret) {
 	uint32_t port;
 	sscanf(data, "%"SCNd32"", &port);
 	write_hps_reg( "txd5", port);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_qa_fifo_lvl (const char* data, char* ret) {
+	uint32_t lvl;
+	read_hps_reg( "res_ro7", & lvl );
+	lvl &= 0xffff;
+	sprintf( ret, "%u", lvl );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_qa_oflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc20", & count );
+	sprintf( ret, "%u", count );
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_qa_uflow (const char* data, char* ret) {
+	uint32_t count;
+	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
+	read_hps_reg( "flc12", & count );
+	sprintf( ret, "%u", count );
 	return RETURN_SUCCESS;
 }
 
@@ -4418,7 +4514,10 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/link/vita_en",  hdlr_tx_ ## _c ## _link_vita_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/link/iface",  hdlr_tx_ ## _c ## _link_iface,  RW,  "sfpa" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/link/port",  hdlr_tx_ ## _c ## _link_port,  RW,  #_p )
+	DEFINE_FILE_PROP( "tx/" #_c "/link/port",  hdlr_tx_ ## _c ## _link_port,  RW,  #_p ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/qa/fifo_lvl",  hdlr_tx_ ## _c ## _qa_fifo_lvl,  RW,  #_p ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/qa/oflow",  hdlr_tx_ ## _c ## _qa_oflow,  RW,  #_p ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/qa/uflow",  hdlr_tx_ ## _c ## _qa_uflow,  RW,  #_p )
 
 #define DEFINE_TIME() \
 	DEFINE_FILE_PROP( "time/clk/pps",  hdlr_time_clk_pps,  RW,  "0" ), \
