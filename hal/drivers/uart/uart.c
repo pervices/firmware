@@ -72,26 +72,31 @@ int set_uart_interface_attribs (int fd, int speed, int parity)
 
 void set_uart_blocking (int fd, int should_block)
 {
-        struct termios tty;
-        memset (&tty, 0, sizeof tty);
-        if (tcgetattr (fd, &tty) != 0)
-        {
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-                return;
-        }
+	int r;
+	int flags;
+	int oldflags;
 
-        tty.c_cc[VMIN]  = should_block ? 1 : 0;
+	r = fcntl( fd, F_GETFL, 0 );
+	if ( -1 == r ) {
+		PRINT(ERROR, "%s(), fcntl( F_GETFL ): %s\n", __func__, strerror(errno));
+		return;
+	}
+	oldflags = r;
+	flags = oldflags;
 
-//        if ( ! should_block ) {
-//        	if ( -1 == fcntl( fd, F_SETFL, O_NONBLOCK ) ) {
-//        		PRINT(ERROR, "%s(), fcntl: %s\n", __func__, strerror(errno));
-//        	}
-//        }
+	if ( should_block ) {
+		flags |= O_NONBLOCK;
+	} else {
+		flags &= ~O_NONBLOCK;
+	}
 
-        if (tcsetattr (fd, TCSANOW, &tty) != 0)
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-
-        return;
+	if ( flags ^ oldflags ) {
+		r = fcntl( fd, F_SETFL, flags );
+		if ( -1 == r ) {
+			PRINT(ERROR, "%s(), fcntl( F_SETFL ): %s\n", __func__, strerror(errno));
+			return;
+		}
+	}
 }
 
 int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
@@ -156,8 +161,6 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 int send_uart(int fd, uint8_t* data, uint16_t size) {
 
 	int r;
-
-	fd_set wfds;
 
 	struct timespec now, then, dt;
 	struct timespec timeout = TIMEOUT_TS;
