@@ -50,8 +50,8 @@ int set_uart_interface_attribs (int fd, int speed, int parity)
         tty.c_lflag = 0;                // no signaling chars, no echo,
                                         // no canonical processing
         tty.c_oflag = 0;                // no remapping, no delays
-        tty.c_cc[VMIN]  = 0;            // read doesn't block
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+        tty.c_cc[VMIN]  = 1;            // return when there is at least 1 char
+        tty.c_cc[VTIME] = 1;            // return when 0.1s elapses without receiving a char
 
         tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
@@ -81,7 +81,6 @@ void set_uart_blocking (int fd, int should_block)
         }
 
         tty.c_cc[VMIN]  = should_block ? 1 : 0;
-        tty.c_cc[VTIME] = 1;            // 0.5 seconds read timeout
 
 //        if ( ! should_block ) {
 //        	if ( -1 == fcntl( fd, F_SETFL, O_NONBLOCK ) ) {
