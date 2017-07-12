@@ -15,18 +15,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <sys/select.h>
+
 #include "uart.h"
 
+#include "../../../common/timespec_ops.h"
 
-// Maximum before a UART command is considered a fail
-#define TIMEOUT 1000000UL	// us, 1.0 seconds
-
-// Minimum time between UART commands
-#define TIME_INTERVAL 50000 // us, 0.05 seconds
-
-static struct timeval tprev;	// time since previous UART command
-static struct timeval tstart;	// time since the beginning of a UART send attempt
-static struct timeval tend;
+#define TIMEOUT_TS { .tv_sec = 0, .tv_nsec = 500000, }
 
 // Options passed from server.c
 static uint8_t _options = 0;
@@ -35,26 +30,8 @@ void set_uart_debug_opt(uint8_t options) {
 	_options = options;
 }
 
-// return 1 if timeout, 0 if not
-static uint8_t timeout(struct timeval* t, long long int time) {
-	gettimeofday(&tend, NULL);
-
-	// overflow issue when computing all within the same statement
-	long long int cur = (t->tv_usec + 1000000UL * t->tv_sec);
-	long long int pre = (tend.tv_usec + 1000000UL * tend.tv_sec);
-	long long int elapsed = pre - cur;
-
-	if ( elapsed > time || elapsed < 0) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
 int set_uart_interface_attribs (int fd, int speed, int parity)
 {
-	gettimeofday(&tprev, NULL);	// on config, reset the prev timer
-
         struct termios tty;
         memset (&tty, 0, sizeof tty);
         if (tcgetattr (fd, &tty) != 0)
@@ -73,8 +50,8 @@ int set_uart_interface_attribs (int fd, int speed, int parity)
         tty.c_lflag = 0;                // no signaling chars, no echo,
                                         // no canonical processing
         tty.c_oflag = 0;                // no remapping, no delays
-        tty.c_cc[VMIN]  = 0;            // read doesn't block
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+        tty.c_cc[VMIN]  = 1;            // return when there is at least 1 char
+        tty.c_cc[VTIME] = 1;            // return when 0.1s elapses without receiving a char
 
         tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
@@ -95,74 +72,121 @@ int set_uart_interface_attribs (int fd, int speed, int parity)
 
 void set_uart_blocking (int fd, int should_block)
 {
-        struct termios tty;
-        memset (&tty, 0, sizeof tty);
-        if (tcgetattr (fd, &tty) != 0)
-        {
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-                return;
-        }
+	int r;
+	int flags;
+	int oldflags;
 
-        tty.c_cc[VMIN]  = should_block ? 1 : 0;
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+	r = fcntl( fd, F_GETFL, 0 );
+	if ( -1 == r ) {
+		PRINT(ERROR, "%s(), fcntl( F_GETFL ): %s\n", __func__, strerror(errno));
+		return;
+	}
+	oldflags = r;
+	flags = oldflags;
 
-        if (tcsetattr (fd, TCSANOW, &tty) != 0)
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+	if ( should_block ) {
+		flags |= O_NONBLOCK;
+	} else {
+		flags &= ~O_NONBLOCK;
+	}
 
-        return;
+	if ( flags ^ oldflags ) {
+		r = fcntl( fd, F_SETFL, flags );
+		if ( -1 == r ) {
+			PRINT(ERROR, "%s(), fcntl( F_SETFL ): %s\n", __func__, strerror(errno));
+			return;
+		}
+	}
 }
 
 int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
-	gettimeofday(&tstart, NULL);
 
-	int rd_len = 0;
-	while (!rd_len && !timeout(&tstart, TIMEOUT)) {
-		rd_len += read(fd, data, max_size);
+	int r;
+
+	fd_set rfds;
+
+	struct timespec now, then, dt;
+	struct timespec timeout = TIMEOUT_TS;
+
+	//PRINT( INFO, "%s() called...\n", __func__ );
+
+	for(
+		clock_gettime( CLOCK_MONOTONIC, & now ),
+			timesadd( & now, & timeout, & then ),
+			*size = 0
+			;
+		*size < max_size && timescmp( & now, & then, < )
+			;
+		clock_gettime( CLOCK_MONOTONIC, & now )
+	) {
+
+		timessub( & then, & now, & dt );
+
+		FD_ZERO( & rfds );
+		FD_SET( fd, & rfds );
+
+		r = pselect( fd + 1, & rfds, NULL, NULL, & dt, NULL );
+		switch( r ) {
+		case -1:
+			PRINT(ERROR, "%s(), pselect: %s\n", __func__, strerror( errno ) );
+			return RETURN_ERROR;
+			break;
+
+		case 0:
+			//PRINT(ERROR, "%s(), pselect(2) timedout\n", __func__);
+			break;
+
+		default:
+
+			r = read( fd, data, max_size );
+			if ( -1 == r ) {
+				PRINT(ERROR, "%s(), read: %s\n", __func__, strerror( errno ) );
+			} else {
+
+//				PRINT( INFO, "%s(), read %u bytes\n", __func__, r );
+
+				*size += r;
+				data += r;
+			}
+
+			break;
+
+		}
 	}
 
-	/*int i;
-	PRINT( VERBOSE,"got %i characters, uart: ", rd_len);
-	for (i = 0; i < rd_len; i++) PRINT( VERBOSE,"%c", data[i]);
-	PRINT( VERBOSE,"\n");*/
-
-	// if nothing to be read
-	if (rd_len < 0) rd_len = 0;
-
-	if (timeout(&tstart, TIMEOUT)) {
-		PRINT(ERROR, "%s(), timedout\n", __func__);
-		*size = rd_len;
-		return RETURN_ERROR_UART_TIMEOUT;
-	}
-
-	*size = rd_len;
 	return RETURN_SUCCESS;
 }
 
 int send_uart(int fd, uint8_t* data, uint16_t size) {
-	//if (_options & SERVER_DEBUG_OPT)
-	PRINT(DEBUG, "%s(): %s\n", __func__, data);
 
-	// wait for previous command to finish
-	while (!timeout(&tprev, TIME_INTERVAL)){}
+	int r;
 
-	// clear receive buffer first, for old data from previous commands
-	flush_uart(fd);
+	struct timespec now, then, dt;
+	struct timespec timeout = TIMEOUT_TS;
 
-	// begin timer for timeout
-	gettimeofday(&tstart, NULL);
+	//PRINT( INFO, "%s() called...\n", __func__ );
 
-	int wr_len = 0;
-	while (wr_len != size && !timeout(&tstart, TIMEOUT)) {
-		wr_len += write(fd, data + wr_len, size - wr_len);
-	}
+	for(
+		clock_gettime( CLOCK_MONOTONIC, & now ),
+			timesadd( & now, & timeout, & then )
+			;
+		size > 0 && timescmp( & now, & then, < )
+			;
+		clock_gettime( CLOCK_MONOTONIC, & now )
+	) {
 
-	// reset the tprev timer
-	gettimeofday(&tprev, NULL);
+		timessub( & then, & now, & dt );
 
-	// if it timedout, print out a message
-	if (timeout(&tstart, TIMEOUT)) {
-		PRINT(ERROR, "%s(): timedout\n", __func__);
-		return RETURN_ERROR_UART_TIMEOUT;
+		r = write( fd, data, size );
+		if ( -1 == r ) {
+			PRINT(ERROR, "%s(), write: %s\n", __func__, strerror( errno ) );
+		} else {
+
+			//PRINT( INFO, "%s(), wrote %u bytes\n", __func__, r );
+
+			size -= r;
+			data += r;
+		}
 	}
 
 	return RETURN_SUCCESS;
