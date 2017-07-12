@@ -80,7 +80,7 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 	PRINT( VERBOSE,"Opening UART port: %s\n", dev);
 
 	// Allocate space for uart device
-	uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
+	uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC );
 	if (uart_devices[*fd] < 0)
 	{
 		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
@@ -91,7 +91,9 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 	PRINT( VERBOSE,"Configuring UART\n");
 
 	set_uart_interface_attribs (mydev, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
-	set_uart_blocking (mydev, 0);               	 // set no blocking
+	set_uart_blocking (mydev, 1);               	 // set no blocking
+
+	tcflush( uart_devices[*fd], TCIOFLUSH );
 
 	return RETURN_SUCCESS;
 }
