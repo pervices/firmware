@@ -107,7 +107,6 @@ int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
 
 	struct timespec now, then, dt;
 	struct timespec timeout = TIMEOUT_TS;
-	struct timespec req, rem;
 
 	//PRINT( INFO, "%s() called...\n", __func__ );
 
