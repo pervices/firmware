@@ -91,7 +91,7 @@ int init_uart_comm(int* fd, const char* dev, uint16_t options) {
 	PRINT( VERBOSE,"Configuring UART\n");
 
 	set_uart_interface_attribs (mydev, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
-	set_uart_blocking (mydev, 1);               	 // set no blocking
+	set_uart_blocking (mydev, 1);
 
 	tcflush( uart_devices[*fd], TCIOFLUSH );
 
