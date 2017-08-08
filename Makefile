@@ -17,7 +17,7 @@
 
 # Cross compile toolchain
 #CC = $(CRIMSON_ROOTDIR)/build/gcc/bin/arm-linux-gnueabihf-gcc
-CC = arm-unknown-linux-gnueabihf-gcc
+CC ?= arm-unknown-linux-gnueabihf-gcc
 
 # Cross compile flags
 CFLAGS = -c -O0 -g3 -Wall -fmessage-length=0
