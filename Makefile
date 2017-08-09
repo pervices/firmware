@@ -88,7 +88,7 @@ $(OUTDIR)/obj/main/%.o: %.c | MAKE_SUBDIR
 
 # Recursive build of all the sub_directories
 MAKE_SUBDIR: MAKE_OUTDIR
-	$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile CC="'$(CC)'";)
+	$(foreach SUBDIR, $(SUBDIRS), $(MAKE) --no-print-directory -C $(SUBDIR) -f Makefile CC="$(CC)";)
 
 # Generates the output directory
 MAKE_OUTDIR:
