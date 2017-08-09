@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
+AC_INIT([crimson-firmware], [9999], [solutions@pervices.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_SRCDIR([mem.c])
 AC_CONFIG_HEADERS([config.h])
@@ -14,11 +14,12 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AM_PROG_AR
 
+AC_CHECK_PROG([GIT],git,git,AC_MSG_ERROR([git executable not in PATH]))
+AC_CHECK_PROG([date],date,date,AC_MSG_ERROR([date executable not in PATH]))
+
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lm':
-AC_CHECK_LIB([m], [main])
-# FIXME: Replace `main' with a function in `-lrt':
-AC_CHECK_LIB([rt], [main])
+AC_CHECK_LIB([m], [pow])
+AC_CHECK_LIB([rt], [clock_gettime])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h termios.h unistd.h])
