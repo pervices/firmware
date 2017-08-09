@@ -1,0 +1,4 @@
+SUBDIRS = \
+	mmap \
+	uart \
+	udp
