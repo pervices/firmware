@@ -11,3 +11,5 @@ libhal_la_SOURCES = \
 	property_manager.c
 libhal_la_CFLAGS = \
 	-DVERSION=VERSIONDATE
+libhal_la_LIBADD = \
+	../common/libcommon.la

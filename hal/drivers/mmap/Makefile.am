@@ -6,3 +6,5 @@ libmmap_la_SOURCES = \
 	mmap.h \
 	regmap.c \
 	regmap.h
+libmmap_la_LIBADD = \
+	../../../common/libcommon.la
