@@ -109,6 +109,14 @@ int main(int argc, char *argv[]) {
 			printf("Branch: %s\n", VERSIONGITBRANCH);
 			printf("Revision: %s\n", VERSIONGITREVISION);
 			printf("Date: %s UTC\n", VERSIONDATE);
+
+		    uint64_t ver39_32, ver31_0;
+		    uint64_t fpgaver;
+			read_hps_reg( "sys3", &ver39_32);
+			read_hps_reg( "sys4", &ver31_0);
+			fpgaver =   ( (ver39_32 & 0xff)<< 32) | ( (ver31_0 & 0xffffffff)<< 0);
+			printf("FPGA: %llx\n", fpgaver);
+
 			return 0;
 		}
 	}
