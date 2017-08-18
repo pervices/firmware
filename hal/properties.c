@@ -4779,7 +4779,7 @@ void sync_channels(uint8_t chan_mask) {
 	char str_chan_mask[MAX_PROP_LEN] = "";
 	sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
 	//Put FPGA JESD core in reset
-	write_hps_reg( "res_rw7",0x80000000);
+	write_hps_reg( "res_rw7",0x40000000);
 	//usleep(300000); // Some wait time for the reset to be ready
 	/* Bring the ADCs & DACs into 'demo' mode for JESD */
 
