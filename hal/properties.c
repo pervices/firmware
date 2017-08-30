@@ -18,6 +18,9 @@
 #include "mmap.h"
 #include "properties.h"
 
+#include <string.h>
+#include <stdio.h>
+
 #include "property_manager.h"
 
 #define BASE_SAMPLE_RATE 325000000.0	// SPS
@@ -482,7 +485,7 @@ static int hdlr_tx_a_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txa4", old_val | (1 << 14));
 	else				write_hps_reg( "txa4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -875,7 +878,7 @@ static int hdlr_rx_a_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxa4", old_val | (1 << 14));
 	else				write_hps_reg( "rxa4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -1350,7 +1353,7 @@ static int hdlr_tx_b_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txb4", old_val | (1 << 14));
 	else				write_hps_reg( "txb4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -1723,7 +1726,7 @@ static int hdlr_rx_b_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxb4", old_val | (1 << 14));
 	else				write_hps_reg( "rxb4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -2187,7 +2190,7 @@ static int hdlr_tx_c_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txc4", old_val | (1 << 14));
 	else				write_hps_reg( "txc4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -2559,7 +2562,7 @@ static int hdlr_rx_c_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxc4", old_val | (1 << 14));
 	else				write_hps_reg( "rxc4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -3023,7 +3026,7 @@ static int hdlr_tx_d_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "txd4", old_val | (1 << 14));
 	else				write_hps_reg( "txd4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -3396,7 +3399,7 @@ static int hdlr_rx_d_link_vita_en (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0)	write_hps_reg( "rxd4", old_val | (1 << 14));
 	else				write_hps_reg( "rxd4", old_val & ~(1 << 14));
 
-	sync_channels( 15 );
+	//sync_channels( 15 );
 
 	return RETURN_SUCCESS;
 }
@@ -4754,8 +4757,6 @@ void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char*
 void sync_channels(uint8_t chan_mask) {
 	char str_chan_mask[MAX_PROP_LEN] = "";
 	sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
-	//Put FPGA JESD core in reset
-	write_hps_reg( "res_rw7",0x40000000);
 	//usleep(300000); // Some wait time for the reset to be ready
 	/* Bring the ADCs & DACs into 'demo' mode for JESD */
 
@@ -4771,6 +4772,87 @@ void sync_channels(uint8_t chan_mask) {
 	strcat(buf, " -d 1\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
+	/***********************************
+	 * Start loop.
+	 * Issue JESD, then read to see if
+	 * bad
+	 **********************************/
+	char key[]  = "00\r";
+	char dacalarmA[]  = "ff\r";
+	char dacalarmB[]  = "ff\r";
+
+
+#ifdef SYNC_CHECK_DAC_LOOP
+	for (int i = 0; i < 15; i += 1){
+
+		//Put FPGA JESD core in reset
+		write_hps_reg( "res_rw7",0x40000000);
+		write_hps_reg( "res_rw7",0);
+
+		/* Initiate the SYSREF sequence for jesd
+		* Set all boards' SYSREF detection gate to ON */
+		strcpy(buf, "board -c ");
+		strcat(buf, str_chan_mask);
+		strcat(buf, " -s 1\r");
+		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
+		strcpy(buf, "board -c ");
+		strcat(buf, str_chan_mask);
+		strcat(buf, " -s 1\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
+
+		/* Trigger a SYSREF pulse */
+		//JESD core out of reset
+		usleep(100000); // Some wait time for MCUs to be ready
+		strcpy(buf, "clk -y\r");
+		send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
+
+		//Do it again
+
+		strcpy(buf, "board -c ");
+		strcat(buf, str_chan_mask);
+		strcat(buf, " -s 1\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
+		usleep(100000); // Some wait time for MCUs to be ready
+		strcpy(buf, "clk -y\r");
+		send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
+		usleep(100000); // Some wait time for MCUs to be ready
+
+		//CHECK IF ALARMS
+		strcpy(buf, "dac -c a -s\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
+
+		strcpy(dacalarmA, (char*)uart_ret_buf);
+
+		//CHECK IF ALARMS
+		strcpy(buf, "dac -c d -s\r");
+		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
+
+		strcpy(dacalarmB, (char*)uart_ret_buf);
+
+		if ((dacalarmA[0] == key[0]) &&  (dacalarmA[1] == key[1]) &&
+			(dacalarmB[0] == key[0]) &&  (dacalarmB[1] == key[1])	){
+			break;
+		}
+		else{
+			usleep(200000); // Some wait time for MCUs to be ready
+		}
+	}
+	/* Turn off all boards' SYSREF detection gates */
+	strcpy(buf, "board -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -s 0\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
+	strcpy(buf, "board -c ");
+	strcat(buf, str_chan_mask);
+	strcat(buf, " -s 0\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
+
+
+#else
+	//Put FPGA JESD core in reset
+	write_hps_reg( "res_rw7",0x40000000);
+	write_hps_reg( "res_rw7",0);
+
 	/* Initiate the SYSREF sequence for jesd
 	* Set all boards' SYSREF detection gate to ON */
 	strcpy(buf, "board -c ");
@@ -4785,6 +4867,7 @@ void sync_channels(uint8_t chan_mask) {
 	/* Trigger a SYSREF pulse */
 	//JESD core out of reset
 	write_hps_reg( "res_rw7",0);
+
 	usleep(100000); // Some wait time for MCUs to be ready
 	strcpy(buf, "clk -y\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
@@ -4798,6 +4881,9 @@ void sync_channels(uint8_t chan_mask) {
 	strcat(buf, str_chan_mask);
 	strcat(buf, " -s 0\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
+
+#endif
+
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
