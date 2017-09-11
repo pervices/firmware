@@ -4851,6 +4851,12 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+    // write ADF4355/ADF5355 feedback mode
+    strcpy(buf, "rf -t ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
     // write ADF4355/ADF5355 Output RF Power
     strcpy(buf, "rf -g ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);    // default to lower mid power
@@ -4862,5 +4868,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+
     usleep(100000);
 }

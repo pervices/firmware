@@ -46,14 +46,14 @@ int main (void)
         pllparam_t pll;
         
         //Debug parameters;
-        double max_diff = 5000001;
+        double max_diff = PLL_CORE_REF_FREQ_HZ/PLL1_R_FIXED;
         double max_N = PLL1_N_MAX;
         double max_R = PLL1_R_MAX;
         int printdebug = 0;
         uint64_t stepFreq = (1000000);
         
         //for (reqFreq = stepFreq * 100; reqFreq <= stepFreq * 6250; reqFreq += stepFreq)
-	for (reqFreq = 2600000000; reqFreq <= 2900000000; reqFreq += stepFreq)
+	for (reqFreq = 700e6; reqFreq <= 6800000000; reqFreq += stepFreq)
         {
 
                 // This is the main function, everything after is for statistics
@@ -191,11 +191,12 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 	
         // 2. Use the reference to determine R, N, and pfd frequency
        long double pd_freq = (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
-	
 
         double N1 = 0;
+
         // Determine the values of the N and dividers for PLL1
         if ( !pll->divFBen || *reqFreq < PLL1_FB_THRESHOLD ) {
+            pll->divFBen = 0;
             N1  = (double)pll->vcoFreq / (double)pd_freq;
         } else {
             N1  = (double)pll->vcoFreq / (double)pll->d;
