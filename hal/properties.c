@@ -4827,6 +4827,11 @@ void sync_channels(uint8_t chan_mask) {
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
+	//DANIEL FREQ PHASE COH HACK:
+
+	strcpy(buf, "rf -c 15 \r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
     // Send Reference to MCU ( No Need ATM since fixed reference )
     strcpy(buf, "rf -v ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference/1000)); // Send reference in kHz
