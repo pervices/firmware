@@ -12,18 +12,47 @@
 *.swo
 *.eep
 *.elf
+*.la
+*.lo
 *.lss
+*.log
 *.sym
 *.cproject
 *.project
 *.settings*
 */Debug/*
 *.sw?
+*.in
+*.cache
+*.guess
+*.sub
+*.m4
+.deps
+.libs
 .metadata/*
 RemoteSystemsTempFiles/*
 boot/.dep/*
-tags
 out/*
+tags
+ar-lib
+compile
+configure
+depcomp
+Makefile
+missing
+libtool
+ltmain.sh
+install-sh
+
+#Ignore output binaries
+mcu
+mem
+server
+
+#Ignore generated headers
+config.status
+config.h
+stamp-h1
 
 #Ignore hex (programming files) in this directory
 *.hex

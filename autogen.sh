@@ -29,6 +29,7 @@ if [ "$1" = "clean" ]; then
       -o -name 'ltsugar.m4' \
       -o -name 'ltversion.m4' \
       -o -name 'lt~obsolete.m4' \
+      -o -name 'm4' \
       -o -name 'missing' \
       -o -name 'stamp-h1' \
       -o -name 'test-driver' \
