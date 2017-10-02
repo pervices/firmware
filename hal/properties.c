@@ -371,8 +371,17 @@ static int hdlr_tx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_a_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c a -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_a_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -742,8 +751,18 @@ static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_a_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c a -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+
 static int hdlr_rx_a_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -1248,8 +1267,18 @@ static int hdlr_tx_b_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+
+static int hdlr_tx_b_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c b -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_b_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -1599,8 +1628,17 @@ static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_b_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c b -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_b_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -2085,8 +2123,17 @@ static int hdlr_tx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_c_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c c -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_c_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -2436,8 +2483,17 @@ static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_c_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c c -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_c_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -2921,8 +2977,17 @@ static int hdlr_tx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_d_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c d -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_d_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -3271,8 +3336,17 @@ static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_d_rf_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -c d -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_d_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -3602,6 +3676,67 @@ static int hdlr_time_source_ref (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+// External Source Buffer Select
+static int hdlr_time_source_extsine (const char* data, char* ret) {
+	if (strcmp(data, "sine") == 0) {
+		strcpy(buf, "HMC -h 1 -b 0\r");
+                send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	} else if (strcmp(data, "LVPECL") == 0) {
+		strcpy(buf, "HMC -h 1 -b 1\r");
+                send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	} else {
+                strcpy(buf, "HMC -h 1 -B\r");
+                send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+                read_uart(uart_synth_fd);
+                strcpy(ret, (char*)uart_ret_buf);
+        }
+	return RETURN_SUCCESS;
+}
+
+// Toggle SPI Sync
+static int hdlr_time_sync_lmk_sync_tgl_jesd (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -k\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+// Toggle SPI Sync
+static int hdlr_time_sync_lmk_sync_tgl_pll (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -q\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_jesd (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -j\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_pll (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -p\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_all (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -r\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
 // TODO: Enable DevClock Output
 static int hdlr_time_source_devclk (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
@@ -3622,24 +3757,99 @@ static int hdlr_time_source_pll (const char* data, char* ret) {
 	}
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
+
+}
+
+static int hdlr_time_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -l\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -l 11\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -l 12\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -l 21\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -l 22\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol (const char* data, char* ret) {
+	strcpy(buf, "status -o\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -o 11\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -o 12\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -o 21\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -o 22\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
-	// FANOUT
-	strcpy(buf, "dump -f\r");
+	// Diagnostic Dump of Clk Board
+	strcpy(buf, "board -e\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	PRINT(DUMP, "[Board: time Chip: FANOUT] %s\n", uart_ret_buf);
+	PRINT(DUMP, "[Board: Time Regdump] %s\n", uart_ret_buf);
 
-	// CLK
-	strcpy(buf, "dump -c\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_synth_fd);
-	PRINT(DUMP, "[Board: time Chip: CLK] %s\n", uart_ret_buf);
-
-	return RETURN_SUCCESS;
+        return RETURN_SUCCESS;
 }
 
 static int hdlr_time_board_test (const char* data, char* ret) {
@@ -4489,6 +4699,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/atten/val",  hdlr_rx_ ## _c ## _rf_atten_val,  RW,  "127" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/status/lockdetect",  hdlr_rx_ ## _c ## _rf_status_ld,  RO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/dump",  hdlr_rx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/test",  hdlr_rx_ ## _c ## _rf_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/temp",  hdlr_rx_ ## _c ## _rf_board_temp,  RW,  "20" ), \
@@ -4526,6 +4737,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/i_bias",  hdlr_tx_ ## _c ## _rf_freq_i_bias,  RW,  "17" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/q_bias",  hdlr_tx_ ## _c ## _rf_freq_q_bias,  RW,  "17" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/gain/val",  hdlr_tx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/status/lockdetect",  hdlr_tx_ ## _c ## _rf_status_ld,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/dump",  hdlr_tx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/test",  hdlr_tx_ ## _c ## _rf_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/temp",  hdlr_tx_ ## _c ## _rf_board_temp,  RW,  "23" ), \
@@ -4548,7 +4760,23 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 #define DEFINE_TIME() \
 	DEFINE_FILE_PROP( "time/clk/pps",  hdlr_time_clk_pps,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "time/clk/cur_time",  hdlr_time_clk_cur_time,  RW,  "0.0" ), \
-	DEFINE_FILE_PROP( "time/source/ref",  hdlr_time_source_ref,  RW,  "internal" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect",  hdlr_time_status_ld,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock",  hdlr_time_status_lol,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_jesd_pll1",  hdlr_time_status_ld_jesd_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_jesd_pll2",  hdlr_time_status_ld_jesd_pll2,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_pll_pll1",  hdlr_time_status_ld_pll_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_pll_pll2",  hdlr_time_status_ld_pll_pll2,  RW,  "unlocked" ), \
+        DEFINE_FILE_PROP( "time/status/lmk_lossoflock_jesd_pll1",  hdlr_time_status_lol_jesd_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_jesd_pll2",  hdlr_time_status_lol_jesd_pll2,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_pll_pll1",  hdlr_time_status_lol_pll_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_pll_pll2",  hdlr_time_status_lol_pll_pll2,  RW,  "unlocked" ), \
+        DEFINE_FILE_PROP( "time/source/ref",  hdlr_time_source_ref,  RW,  "internal" ), \
+	DEFINE_FILE_PROP( "time/source/extsine",  hdlr_time_source_extsine,  RW,  "sine" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_tgl_jesd",  hdlr_time_sync_lmk_sync_tgl_jesd,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_tgl_pll",  hdlr_time_sync_lmk_sync_tgl_pll,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_resync_jesd",  hdlr_time_sync_lmk_resync_jesd,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_resync_pll",  hdlr_time_sync_lmk_resync_pll,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_resync_all",  hdlr_time_sync_lmk_resync_all,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/board/dump",  hdlr_time_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/board/test",  hdlr_time_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/board/temp",  hdlr_time_board_temp,  RW,  "20" ), \
@@ -4564,7 +4792,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/id",  hdlr_fpga_about_id,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "fpga/about/name",  hdlr_invalid,  RO,  "crimson_tng" ), \
-	DEFINE_FILE_PROP( "fpga/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "fpga/about/serial",  hdlr_invalid,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "fpga/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/board/dump",  hdlr_fpga_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/fw_rst",  hdlr_fpga_board_fw_rst,  WO,  "0" ), \
