@@ -478,6 +478,42 @@ static int hdlr_tx_a_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_about_serial (const char* data, char* ret) {
+	strcpy(buf, "status -s\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_about_mcudevid (const char* data, char* ret) {
+	strcpy(buf, "status -d\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_about_mcurev (const char* data, char* ret) {
+	strcpy(buf, "status -v\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_about_mcufuses (const char* data, char* ret) {
+	strcpy(buf, "status -f\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_about_fw_ver (const char* data, char* ret) {
 	strcpy(buf, "board -v\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -878,6 +914,42 @@ static int hdlr_rx_a_dsp_loopback (const char* data, char* ret) {
 
 static int hdlr_rx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_serial (const char* data, char* ret) {
+	strcpy(buf, "status -s\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_mcudevid (const char* data, char* ret) {
+	strcpy(buf, "status -d\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_mcurev (const char* data, char* ret) {
+	strcpy(buf, "status -v\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_mcufuses (const char* data, char* ret) {
+	strcpy(buf, "status -f\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -3875,7 +3947,43 @@ static int hdlr_time_board_led (const char* data, char* ret) {
 }
 
 static int hdlr_time_about_id (const char* data, char* ret) {
-	// don't need to do anything, save the ID in the file system
+	// Do Nothing, store in filesystem
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_serial (const char* data, char* ret) {
+	strcpy(buf, "status -s\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcudevid (const char* data, char* ret) {
+	strcpy(buf, "status -d\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcurev (const char* data, char* ret) {
+	strcpy(buf, "status -v\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+        return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcufuses (const char* data, char* ret) {
+	strcpy(buf, "status -f\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -4711,7 +4819,10 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/dsp/rstreq",  hdlr_rx_ ## _c ## _dsp_rstreq,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/dsp/loopback",  hdlr_rx_ ## _c ## _dsp_loopback,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/about/id",  hdlr_rx_ ## _c ## _about_id,  RW,  "001" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/serial",  hdlr_rx_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/mcudevid",  hdlr_rx_about_mcudevid,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/mcurev",  hdlr_rx_about_mcurev,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/mcufuses",  hdlr_rx_about_mcufuses,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/about/fw_ver",  hdlr_rx_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/link/vita_en",  hdlr_rx_ ## _c ## _link_vita_en,  RW,  "0" ), \
@@ -4747,7 +4858,10 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/dsp/nco_adj",  hdlr_tx_ ## _c ## _dsp_nco_adj,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/dsp/rstreq",  hdlr_tx_ ## _c ## _dsp_rstreq,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/about/id",  hdlr_tx_ ## _c ## _about_id,  RW,  "001" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/serial",  hdlr_tx_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/mcudevid",  hdlr_tx_about_mcudevid,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/mcurev",  hdlr_tx_about_mcurev,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/mcufuses",  hdlr_tx_about_mcufuses,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/about/fw_ver",  hdlr_tx_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/link/vita_en",  hdlr_tx_ ## _c ## _link_vita_en,  RW,  "0" ), \
@@ -4781,8 +4895,11 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "time/board/test",  hdlr_time_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/board/temp",  hdlr_time_board_temp,  RW,  "20" ), \
 	DEFINE_FILE_PROP( "time/board/led",  hdlr_time_board_led,  WO,  "0" ), \
-	DEFINE_FILE_PROP( "time/about/id",  hdlr_time_about_id,  RW,  "001" ), \
-	DEFINE_FILE_PROP( "time/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/id",   hdlr_time_about_id,  RO,   "001" ), \
+	DEFINE_FILE_PROP( "time/about/serial",  hdlr_time_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/mcudevid",  hdlr_time_about_mcudevid,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/mcurev",  hdlr_time_about_mcurev,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/mcufuses",  hdlr_time_about_mcufuses,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "time/about/fw_ver",  hdlr_time_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "time/about/sw_ver",  hdlr_invalid,  RO,  VERSION )
 
