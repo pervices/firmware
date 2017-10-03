@@ -789,8 +789,8 @@ static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
 
 static int hdlr_rx_a_rf_status_ld (const char* data, char* ret) {
 	strcpy(buf, "status -c a -l\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -1702,8 +1702,8 @@ static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
 
 static int hdlr_rx_b_rf_status_ld (const char* data, char* ret) {
 	strcpy(buf, "status -c b -l\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -2557,8 +2557,8 @@ static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
 
 static int hdlr_rx_c_rf_status_ld (const char* data, char* ret) {
 	strcpy(buf, "status -c c -l\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -3410,8 +3410,8 @@ static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
 
 static int hdlr_rx_d_rf_status_ld (const char* data, char* ret) {
 	strcpy(buf, "status -c d -l\r");
-	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_tx_fd);
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
@@ -4807,7 +4807,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/atten/val",  hdlr_rx_ ## _c ## _rf_atten_val,  RW,  "127" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/rf/status/lockdetect",  hdlr_rx_ ## _c ## _rf_status_ld,  RO,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/status/lockdetect",  hdlr_rx_ ## _c ## _rf_status_ld,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/dump",  hdlr_rx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/test",  hdlr_rx_ ## _c ## _rf_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/temp",  hdlr_rx_ ## _c ## _rf_board_temp,  RW,  "20" ), \
