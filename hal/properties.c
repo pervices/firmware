@@ -371,8 +371,26 @@ static int hdlr_tx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_a_rf_status_ld (const char* data, char* ret) {
+static int hdlr_tx_a_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c a -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c a -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c a -e\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
@@ -787,7 +805,7 @@ static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_a_rf_status_ld (const char* data, char* ret) {
+static int hdlr_rx_a_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c a -l\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
@@ -796,6 +814,14 @@ static int hdlr_rx_a_rf_status_ld (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_a_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c a -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
 
 static int hdlr_rx_a_rf_board_led (const char* data, char* ret) {
 	strcpy(buf, "board -l\r");
@@ -1340,8 +1366,26 @@ static int hdlr_tx_b_rf_board_temp (const char* data, char* ret) {
 }
 
 
-static int hdlr_tx_b_rf_status_ld (const char* data, char* ret) {
+static int hdlr_tx_b_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c b -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c b -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c b -e\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
@@ -1700,8 +1744,17 @@ static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_b_rf_status_ld (const char* data, char* ret) {
+static int hdlr_rx_b_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c b -l\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_b_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c b -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
@@ -2195,8 +2248,26 @@ static int hdlr_tx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_c_rf_status_ld (const char* data, char* ret) {
+static int hdlr_tx_c_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c c -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c c -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c c -e\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
@@ -2555,8 +2626,17 @@ static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_c_rf_status_ld (const char* data, char* ret) {
+static int hdlr_rx_c_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c c -l\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_c_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c c -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
@@ -3049,8 +3129,26 @@ static int hdlr_tx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_d_rf_status_ld (const char* data, char* ret) {
+static int hdlr_tx_d_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c d -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c d -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c d -e\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
@@ -3408,8 +3506,17 @@ static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_d_rf_status_ld (const char* data, char* ret) {
+static int hdlr_rx_d_status_rfld (const char* data, char* ret) {
 	strcpy(buf, "status -c d -l\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_d_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c d -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	strcpy(ret, (char*)uart_ret_buf);
@@ -4807,7 +4914,8 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/atten/val",  hdlr_rx_ ## _c ## _rf_atten_val,  RW,  "127" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/rf/status/lockdetect",  hdlr_rx_ ## _c ## _rf_status_ld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/status/rfpll_lock",  hdlr_rx_ ## _c ## _status_rfld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/status/adc_alarm",  hdlr_rx_ ## _c ## _status_adcalarm,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/dump",  hdlr_rx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/test",  hdlr_rx_ ## _c ## _rf_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/temp",  hdlr_rx_ ## _c ## _rf_board_temp,  RW,  "20" ), \
@@ -4848,7 +4956,9 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/i_bias",  hdlr_tx_ ## _c ## _rf_freq_i_bias,  RW,  "17" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/q_bias",  hdlr_tx_ ## _c ## _rf_freq_q_bias,  RW,  "17" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/gain/val",  hdlr_tx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/rf/status/lockdetect",  hdlr_tx_ ## _c ## _rf_status_ld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/status/rfpll_lock",  hdlr_tx_ ## _c ## _status_rfld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/status/dacpll_lock",  hdlr_tx_ ## _c ## _status_dacld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/status/dacpll_centre",  hdlr_tx_ ## _c ## _status_dacctr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/dump",  hdlr_tx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/test",  hdlr_tx_ ## _c ## _rf_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/temp",  hdlr_tx_ ## _c ## _rf_board_temp,  RW,  "23" ), \
