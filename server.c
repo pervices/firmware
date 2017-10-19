@@ -98,6 +98,9 @@ void server_ready_led(){
     write_hps_reg("led0", 0x1);
 }
 
+
+extern int verbose;
+
 // main loop
 int main(int argc, char *argv[]) {
 
@@ -118,6 +121,9 @@ int main(int argc, char *argv[]) {
 			printf("FPGA: %llx\n", fpgaver);
 
 			return 0;
+		}
+		if (strcmp(argv[1], "-d") == 0){
+			verbose = 1;
 		}
 	}
 
@@ -300,3 +306,4 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+

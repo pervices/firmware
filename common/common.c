@@ -20,6 +20,8 @@
 static FILE* fout = NULL;
 static FILE* dout = NULL;
 
+int verbose;
+
 int PRINT( print_t priority, const char* format, ... ) {
 	int ret = 0;
 	va_list args;
@@ -82,8 +84,8 @@ int PRINT( print_t priority, const char* format, ... ) {
 		ret = vfprintf(dout, newfmt, args);
 	}
 
-	if (priority == VERBOSE) {
-		// do nothing as of now
+	if (priority == VERBOSE && verbose) {
+		ret = vfprintf(stdout, newfmt, args );
 	}
 
 	// flush the file
