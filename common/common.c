@@ -33,10 +33,6 @@ void PRINT_WRAPPER( print_t priority, const char* format, ... ) {
 			o = stderr;
 			break;
 
-		case DUMP:
-			o = fopen( DUMP_FILE, "a" );
-			break;
-
 		case VERBOSE:
 			if ( verbose >= 1 ){
 				o = stdout;
@@ -50,6 +46,7 @@ void PRINT_WRAPPER( print_t priority, const char* format, ... ) {
 			break;
 
 		case INFO:
+		case DUMP:
 		default:
 			o = stdout;
 			break;
@@ -57,9 +54,6 @@ void PRINT_WRAPPER( print_t priority, const char* format, ... ) {
 
 	if ( NULL != o ) {
 		vfprintf( o, format, args );
-		if ( priority == DUMP ){
-			fclose( o );
-		}
 	}
 
 	va_end( args );
