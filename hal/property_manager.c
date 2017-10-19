@@ -276,7 +276,7 @@ void check_property_inotifies(void) {
 	int n;
 
 	//returns if inotify_fd has no bytes to read to prevent server from hanging
-
+	ioctl(inotify_fd, FIONREAD, &n);
 	if (n == 0){
 		PRINT(INFO, "No bytes available for read on inotify_fd\n");
 		return;
