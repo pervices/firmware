@@ -103,12 +103,12 @@ extern int verbose;
 
 // main loop
 int main(int argc, char *argv[]) {
-
+	verbose = 0;
 	fd_set rfds;
 
 	// check for firmware version
-	if (argc >= 2) {
-		if (strcmp(argv[1], "-v") == 0) {
+	for( int i = 1; i < argc; i++ ) {
+		if (strcmp(argv[i], "-v") == 0) {
 			printf("Branch: %s\n", VERSIONGITBRANCH);
 			printf("Revision: %s\n", VERSIONGITREVISION);
 			printf("Date: %s UTC\n", VERSIONDATE);
@@ -122,8 +122,8 @@ int main(int argc, char *argv[]) {
 
 			return 0;
 		}
-		if (strcmp(argv[1], "-d") == 0){
-			verbose = 1;
+		if (strcmp(argv[i], "-d") == 0){
+			verbose++;
 		}
 	}
 

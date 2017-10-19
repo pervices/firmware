@@ -26,26 +26,40 @@ void PRINT_WRAPPER( print_t priority, const char* format, ... ) {
 	va_list args;
 	va_start( args, format );
 
+	o = NULL;
+
 	switch( priority ){
 		case ERROR:
 			o = stderr;
 			break;
+
 		case DUMP:
 			o = fopen( DUMP_FILE, "a" );
-
 			break;
-		case INFO:
-		case DEBUG:
+
 		case VERBOSE:
+			if ( verbose >= 1 ){
+				o = stdout;
+			}
+			break;
+
+		case DEBUG:
+			if ( verbose >= 2 ){
+				o = stdout;
+			}
+			break;
+
+		case INFO:
 		default:
 			o = stdout;
 			break;
 	}
 
-	vfprintf( o, format, args );
-
-	if ( priority == DUMP ){
-		fclose( o );
+	if ( NULL != o ) {
+		vfprintf( o, format, args );
+		if ( priority == DUMP ){
+			fclose( o );
+		}
 	}
 
 	va_end( args );
