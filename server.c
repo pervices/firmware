@@ -214,7 +214,8 @@ int main(int argc, char *argv[]) {
 				PRINT( VERBOSE, "port %d has data\n", port_nums[ i ] );
 
 				sa_len = sizeof( sa );
-				ret2 = recvfrom( comm_fds[ i ], buffer, sizeof( buffer ), 0, (struct sockaddr *) & sa, & sa_len );
+				memset( buffer, 0, sizeof( buffer ) );
+				ret2 = recvfrom( comm_fds[ i ], buffer, sizeof( buffer ) - 1, 0, (struct sockaddr *) & sa, & sa_len );
 				if ( ret2 < 0 ) {
 					PRINT( ERROR, "recvfrom failed: %s (%d)\n", strerror( errno ), errno );
 					ret--;
