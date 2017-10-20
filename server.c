@@ -98,14 +98,17 @@ void server_ready_led(){
     write_hps_reg("led0", 0x1);
 }
 
+
+extern int verbose;
+
 // main loop
 int main(int argc, char *argv[]) {
-
+	verbose = 0;
 	fd_set rfds;
 
 	// check for firmware version
-	if (argc >= 2) {
-		if (strcmp(argv[1], "-v") == 0) {
+	for( int i = 1; i < argc; i++ ) {
+		if (strcmp(argv[i], "-v") == 0) {
 			printf("Branch: %s\n", VERSIONGITBRANCH);
 			printf("Revision: %s\n", VERSIONGITREVISION);
 			printf("Date: %s UTC\n", VERSIONDATE);
@@ -118,6 +121,9 @@ int main(int argc, char *argv[]) {
 			printf("FPGA: %llx\n", fpgaver);
 
 			return 0;
+		}
+		if (strcmp(argv[i], "-d") == 0){
+			verbose++;
 		}
 	}
 
@@ -300,3 +306,4 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+

@@ -134,7 +134,14 @@ typedef enum {
 } print_t;
 
 // printf wrapper
-int PRINT( print_t priority, const char* format, ... );
+void PRINT_WRAPPER( print_t priority, const char* format, ... );
+
+#define PRINT( prio, fmt, args ... ) \
+	do { \
+		struct timespec _ts;  \
+		clock_gettime( CLOCK_REALTIME, & _ts ); \
+		PRINT_WRAPPER( prio, "[%6ld.%03ld] %s: " fmt, (long)_ts.tv_sec, _ts.tv_nsec / 1000000UL, #prio, ##args ); \
+	} while( 0 )
 
 #define LOG_FILE	( "/var/crimson/crimson.log" )
 #define DUMP_FILE	( "/var/crimson/dump.log" )
