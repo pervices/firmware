@@ -4161,6 +4161,22 @@ static int hdlr_fpga_board_temp (const char* data, char* ret) {
 	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	//read_uart(NO_FWD_CMD);
 	//strcpy(ret, (char*)uart_ret_buf);
+	uint32_t old_val;
+	read_hps_reg ( "sys14", &old_val);
+
+	//mask off temp
+	old_val = old_val & 0xff;
+
+	//if value >= 0x80 (=128), subtract 0x80 and convert to int
+	if (old_val >= 128){
+		old_val = old_val - 128;
+		sprintf(ret, "temp +%lu degC\n", old_val);
+	}
+	//if value < 0x80, subtract 0x3a (=58) and convert to negative int
+	else if (old_val < 128){
+		old_val = old_val - 58;
+		sprintf(ret, "temp -%lu degC\n", old_val);
+	}
 
 	return RETURN_SUCCESS;
 }
@@ -4272,13 +4288,64 @@ static int hdlr_fpga_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_about_cmp_time (const char* data, char* ret) {
+	uint32_t old_val;
+	int year, month, day, hour, min;
+	read_hps_reg ( "sys15", &old_val);
+	//get year
+	year  = (old_val & 0xfff00000) >> 20;
+	month = (old_val & 0x000f0000) >> 16;
+	day   = (old_val & 0x0000f800) >> 11;
+	hour  = (old_val & 0x000007c0) >>  6;
+	min   =  old_val & 0x0000003f;
+
+	sprintf(ret, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month, day, hour, min);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_conf_info (const char* data, char* ret){
+	uint64_t old_val;
+	read_hps_reg ( "sys18", &old_val);
+
+	sprintf(ret,  "config. info. 0x%02x \n", old_val);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_serial (const char* data, char* ret){
+	uint64_t old_val;
+	uint32_t old_val1;
+	uint32_t old_val2;
+	read_hps_reg ( "sys16", &old_val1);
+	read_hps_reg ( "sys17", &old_val2);
+
+	//append values
+	old_val = (old_val2 << 32) | old_val1;
+
+	sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
+	return RETURN_SUCCESS;
+}
+
 // TODO: Move FWversion code to ARM, edit MAKE file with version info, refer to MCU code
 static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
 	//strcpy(buf, "board -v\r");
 	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	//read_uart(NO_FWD_CMD);
 	//strcpy(ret, (char*)uart_ret_buf);
+	uint64_t old_val;
+	uint32_t old_val1;
+	uint32_t old_val2;
+	read_hps_reg ( "sys3", &old_val2);
+	read_hps_reg ( "sys4", &old_val1);
 
+	// bits sys3[7:0]
+	old_val2 = old_val2 & 0xff;
+
+	//append values
+	old_val = (old_val2 << 32) | old_val1;
+
+
+	sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
 	return RETURN_SUCCESS;
 }
 
@@ -4990,11 +5057,11 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_jesd_pll2",  hdlr_time_status_ld_jesd_pll2,  RW,  "unlocked" ), \
 	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_pll_pll1",  hdlr_time_status_ld_pll_pll1,  RW,  "unlocked" ), \
 	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_pll_pll2",  hdlr_time_status_ld_pll_pll2,  RW,  "unlocked" ), \
-        DEFINE_FILE_PROP( "time/status/lmk_lossoflock_jesd_pll1",  hdlr_time_status_lol_jesd_pll1,  RW,  "unlocked" ), \
+    DEFINE_FILE_PROP( "time/status/lmk_lossoflock_jesd_pll1",  hdlr_time_status_lol_jesd_pll1,  RW,  "unlocked" ), \
 	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_jesd_pll2",  hdlr_time_status_lol_jesd_pll2,  RW,  "unlocked" ), \
 	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_pll_pll1",  hdlr_time_status_lol_pll_pll1,  RW,  "unlocked" ), \
 	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_pll_pll2",  hdlr_time_status_lol_pll_pll2,  RW,  "unlocked" ), \
-        DEFINE_FILE_PROP( "time/source/ref",  hdlr_time_source_ref,  RW,  "internal" ), \
+    DEFINE_FILE_PROP( "time/source/ref",  hdlr_time_source_ref,  RW,  "internal" ), \
 	DEFINE_FILE_PROP( "time/source/extsine",  hdlr_time_source_extsine,  RW,  "sine" ), \
 	DEFINE_FILE_PROP( "time/sync/lmk_sync_tgl_jesd",  hdlr_time_sync_lmk_sync_tgl_jesd,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/sync/lmk_sync_tgl_pll",  hdlr_time_sync_lmk_sync_tgl_pll,  WO,  "0" ), \
@@ -5019,8 +5086,9 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/id",  hdlr_fpga_about_id,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "fpga/about/name",  hdlr_invalid,  RO,  "crimson_tng" ), \
-	DEFINE_FILE_PROP( "fpga/about/serial",  hdlr_invalid,  RW,  "001" ), \
-	DEFINE_FILE_PROP( "fpga/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
+	DEFINE_FILE_PROP( "fpga/about/serial",  hdlr_fpga_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "fpga/about/cmp_time",  hdlr_fpga_about_cmp_time,  RW,  "yyyy-mm-dd-hh-mm" ), \
+	DEFINE_FILE_PROP( "fpga/about/conf_info",  hdlr_fpga_about_conf_info,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/dump",  hdlr_fpga_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/fw_rst",  hdlr_fpga_board_fw_rst,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/flow_control/sfpa_port", hdlr_fpga_board_flow_control_sfpa_port, RW, "42809" ), \
