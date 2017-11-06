@@ -147,6 +147,74 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err
    }
 }
 
+static uint32_t get_edge_backoff( bool tx, char chan ) {
+	int r;
+	uint32_t val;
+
+	char regname[ 8 ];
+
+	snprintf( regname, sizeof( regname ), "%s%c9", tx ? "tx" : "rx", chan );
+
+	r = read_hps_reg( regname, & val );
+	if ( RETURN_SUCCESS != r ) {
+		PRINT( ERROR, "read_hps_reg( %s ) failed: %d\n", regname, r );
+		return 0;
+	}
+
+	r >>= 8;
+	r &= 0xffffff;
+	return r;
+}
+
+static void set_edge_backoff( char chan, bool tx, uint32_t backoff ) {
+	int r;
+	uint32_t val;
+
+	char regname[ 8 ];
+
+	snprintf( regname, sizeof( regname ), "%s%c9", tx ? "tx" : "rx", chan );
+
+	r = read_hps_reg( regname, & val );
+	if ( RETURN_SUCCESS != r ) {
+		PRINT( ERROR, "read_hps_reg( %s ) failed: %d\n", regname, r );
+		return;
+	}
+	val &= ~( 0xffffff << 8 );
+	val |= (backoff << 8);
+
+	r = write_hps_reg( regname, & val );
+	if ( RETURN_SUCCESS != r ) {
+		PRINT( ERROR, "write_hps_reg( %s ) failed: %d\n", regname, r );
+		return;
+	}
+}
+
+static void set_edge_sample_num( char chan, bool tx, uint64_t num ) {
+	int r;
+	uint32_t val_msw;
+	uint32_t val_lsw;
+
+	char regname_msw[ 8 ];
+	char regname_lsw[ 8 ];
+
+	snprintf( regname_msw, sizeof( regname_msw ), "%s%c7", tx ? "tx" : "rx", chan );
+	snprintf( regname_lsw, sizeof( regname_lsw ), "%s%c8", tx ? "tx" : "rx", chan );
+
+	val_msw = num >> 32;
+	val_lsw = num & 0xffffffff;
+
+	r = write_hps_reg( regname_msw, & val_msw );
+	if ( RETURN_SUCCESS != r ) {
+		PRINT( ERROR, "write_hps_reg( %s ) failed: %d\n", regname_msw, r );
+		return;
+	}
+	r = write_hps_reg( regname_lsw, & val_lsw );
+	if ( RETURN_SUCCESS != r ) {
+		PRINT( ERROR, "write_hps_reg( %s ) failed: %d\n", regname_lsw, r );
+		return;
+	}
+}
+
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
 static int hdlr_invalid (const char* data, char* ret) {
@@ -599,6 +667,8 @@ static int hdlr_tx_a_trigger_edge_backoff (const char *data, char* ret) {
 		return RETURN_ERROR_PARAM;
 	}
 
+	set_edge_backoff( true, 'a', val );
+
 	return RETURN_SUCCESS;
 }
 
@@ -611,6 +681,8 @@ static int hdlr_tx_a_trigger_edge_sample_num (const char *data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+
+	set_edge_sample_num( true, 'a', val );
 
 	return RETURN_SUCCESS;
 }
@@ -626,6 +698,7 @@ static int hdlr_tx_a_trigger_gating (const char *data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+	// TODO: Needs register spec for implementation
 	return RETURN_SUCCESS;
 }
 
@@ -640,6 +713,9 @@ static int hdlr_tx_a_trigger_mode_sma (const char *data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+
+	// TODO: needs register spec for implementation
+
 	return RETURN_SUCCESS;
 }
 
@@ -654,6 +730,9 @@ static int hdlr_tx_a_trigger_mode_ufl (const char *data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+
+	// TODO: needs register spec for implementation
+
 	return RETURN_SUCCESS;
 }
 
@@ -682,6 +761,8 @@ static int hdlr_tx_a_trigger_trig_sel (const char *data, char* ret) {
 		break;
 	}
 
+	// TODO: needs register spec for implementation
+
 	return RETURN_SUCCESS;
 }
 
@@ -696,6 +777,9 @@ static int hdlr_tx_a_trigger_ufl_dir (const char *data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+
+	// TODO: needs register spec for implementation
+
 	return RETURN_SUCCESS;
 }
 
@@ -712,6 +796,9 @@ static int hdlr_tx_a_trigger_ufl_pol (const char *data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+
+	// TODO: needs register spec for implementation
+
 	return RETURN_SUCCESS;
 }
 
@@ -4673,6 +4760,9 @@ static int hdlr_fpga_trigger_sma_dir (const char* data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+
+	// TODO: needs register spec for implementation
+
 	return RETURN_SUCCESS;
 }
 static int hdlr_fpga_trigger_sma_pol (const char* data, char* ret) {
@@ -4688,6 +4778,9 @@ static int hdlr_fpga_trigger_sma_pol (const char* data, char* ret) {
 		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
 		return RETURN_ERROR_PARAM;
 	}
+
+	// TODO: needs register spec for implementation
+
 	return RETURN_SUCCESS;
 }
 
