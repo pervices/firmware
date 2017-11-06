@@ -18,6 +18,7 @@
 #include "mmap.h"
 #include "properties.h"
 
+#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -588,19 +589,129 @@ static int hdlr_tx_a_qa_uflow (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_a_trigger_mode (const char* data, char* ret) {
+static int hdlr_tx_a_trigger_edge_backoff (const char *data, char* ret) {
+	uint32_t val;
+	int r;
+
+	r = sscanf( data, "%" PRIu32, & val );
+	if ( 1 != r ) {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_a_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_tx_a_trigger_edge_sample_num (const char *data, char* ret) {
+	uint64_t val;
+	int r;
+
+	r = sscanf( data, "%" PRIu64, & val );
+	if ( 1 != r ) {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_a_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_tx_a_trigger_gating (const char *data, char* ret) {
+	bool val;
+	if ( false ) {
+	} else if ( 0 == strncmp( "dsp", data, strlen( "dsp" ) ) ) {
+		val = true;
+	} else if ( 0 == strncmp( "output", data, strlen( "output" ) ) ) {
+		val = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_a_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_tx_a_trigger_mode_sma (const char *data, char* ret) {
+	bool val;
+	if ( false ) {
+	} else if ( 0 == strncmp( "edge", data, strlen( "edge" ) ) ) {
+		val = true;
+	} else if ( 0 == strncmp( "level", data, strlen( "level" ) ) ) {
+		val = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_trigger_mode_ufl (const char *data, char* ret) {
+	bool val;
+	if ( false ) {
+	} else if ( 0 == strncmp( "edge", data, strlen( "edge" ) ) ) {
+		val = true;
+	} else if ( 0 == strncmp( "level", data, strlen( "level" ) ) ) {
+		val = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_trigger_trig_sel (const char *data, char* ret) {
+	uint32_t val;
+	int r;
+
+	r = sscanf( data, "%" PRIu32, & val );
+	if ( 1 != r || val >= 4 ) {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+
+	switch( val ) {
+	case 0:
+		// 0 = Not triggered (SMA disabled, U.Fl. disabled).
+		break;
+	case 1:
+		// 1 = SMA only, U.Fl. disabled
+		break;
+	case 2:
+		// 2 = SMA disabled, U.Fl. only
+		break;
+	case 3:
+		// 3 = SMA enabled, U.Fl. enabled
+		break;
+	}
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_trigger_ufl_dir (const char *data, char* ret) {
+	bool val;
+	if ( false ) {
+	} else if ( 0 == strncmp( "in", data, strlen( "in" ) ) ) {
+		val = true;
+	} else if ( 0 == strncmp( "out", data, strlen( "out" ) ) ) {
+		val = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_trigger_ufl_pol (const char *data, char* ret) {
+	// this is a bit tricky. normally we want default values to be zero, corresponding to memset( .. 0 .. )
+	// but in this case, the semantics kind of clash
+	bool val;
+	if ( false ) {
+	} else if ( 0 == strncmp( "positive", data, strlen( "positive" ) ) ) {
+		val = true;
+	} else if ( 0 == strncmp( "negative", data, strlen( "negative" ) ) ) {
+		val = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
 	return RETURN_SUCCESS;
 }
 
@@ -1087,19 +1198,31 @@ static int hdlr_rx_a_stream (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_a_trigger_mode (const char* data, char* ret) {
+static int hdlr_rx_a_trigger_edge_backoff (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_a_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_rx_a_trigger_edge_sample_num (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_a_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_rx_a_trigger_mode_sma (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_a_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_rx_a_trigger_mode_ufl (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_a_trigger_trig_sel (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_a_trigger_ufl_dir (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_a_trigger_ufl_pol (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
@@ -1570,19 +1693,36 @@ static int hdlr_tx_b_qa_uflow (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_b_trigger_mode (const char* data, char* ret) {
+
+static int hdlr_tx_b_trigger_edge_backoff (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_b_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_tx_b_trigger_edge_sample_num (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_b_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_tx_b_trigger_gating (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_b_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_tx_b_trigger_mode_sma (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_trigger_mode_ufl (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_trigger_trig_sel (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_trigger_ufl_dir (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_trigger_ufl_pol (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
@@ -2013,19 +2153,31 @@ static int hdlr_rx_b_stream (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_b_trigger_mode (const char* data, char* ret) {
+static int hdlr_rx_b_trigger_edge_backoff (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_b_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_rx_b_trigger_edge_sample_num (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_b_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_rx_b_trigger_mode_sma (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_b_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_rx_b_trigger_mode_ufl (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_b_trigger_trig_sel (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_b_trigger_ufl_dir (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_b_trigger_ufl_pol (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
@@ -2484,19 +2636,35 @@ static int hdlr_tx_c_qa_uflow (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_c_trigger_mode (const char* data, char* ret) {
+static int hdlr_tx_c_trigger_edge_backoff (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_c_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_tx_c_trigger_edge_sample_num (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_c_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_tx_c_trigger_gating (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_c_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_tx_c_trigger_mode_sma (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_trigger_mode_ufl (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_trigger_trig_sel (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_trigger_ufl_dir (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_trigger_ufl_pol (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
@@ -2926,19 +3094,31 @@ static int hdlr_rx_c_stream (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_c_trigger_mode (const char* data, char* ret) {
+static int hdlr_rx_c_trigger_edge_backoff (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_c_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_rx_c_trigger_edge_sample_num (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_c_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_rx_c_trigger_mode_sma (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_c_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_rx_c_trigger_mode_ufl (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_c_trigger_trig_sel (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_c_trigger_ufl_dir (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_c_trigger_ufl_pol (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
@@ -3397,19 +3577,35 @@ static int hdlr_tx_d_qa_uflow (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_d_trigger_mode (const char* data, char* ret) {
+static int hdlr_tx_d_trigger_edge_backoff (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_d_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_tx_d_trigger_edge_sample_num (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_d_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_tx_d_trigger_gating (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_d_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_tx_d_trigger_mode_sma (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_trigger_mode_ufl (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_trigger_trig_sel (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_trigger_ufl_dir (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_trigger_ufl_pol (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
@@ -3840,19 +4036,31 @@ static int hdlr_rx_d_stream (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_d_trigger_mode (const char* data, char* ret) {
+static int hdlr_rx_d_trigger_edge_backoff (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_d_trigger_sma_en (const char* data, char* ret) {
+static int hdlr_rx_d_trigger_edge_sample_num (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_d_trigger_stream_edge (const char* data, char* ret) {
+static int hdlr_rx_d_trigger_mode_sma (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_rx_d_trigger_ufl_en (const char* data, char* ret) {
+static int hdlr_rx_d_trigger_mode_ufl (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_d_trigger_trig_sel (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_d_trigger_ufl_dir (const char *data, char* ret) {
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_d_trigger_ufl_pol (const char *data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
@@ -4454,10 +4662,32 @@ static int hdlr_fpga_about_serial (const char* data, char* ret){
 	return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_trigger_dir (const char* data, char* ret) {
+static int hdlr_fpga_trigger_sma_dir (const char* data, char* ret) {
+	bool val;
+	if ( false ) {
+	} else if ( 0 == strncmp( "in", data, strlen( "in" ) ) ) {
+		val = true;
+	} else if ( 0 == strncmp( "out", data, strlen( "out" ) ) ) {
+		val = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
 	return RETURN_SUCCESS;
 }
-static int hdlr_fpga_trigger_polarity (const char* data, char* ret) {
+static int hdlr_fpga_trigger_sma_pol (const char* data, char* ret) {
+	// this is a bit tricky. normally we want default values to be zero, corresponding to memset( .. 0 .. )
+	// but in this case, the semantics kind of clash
+	bool val;
+	if ( false ) {
+	} else if ( 0 == strncmp( "positive", data, strlen( "positive" ) ) ) {
+		val = true;
+	} else if ( 0 == strncmp( "negative", data, strlen( "negative" ) ) ) {
+		val = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
 	return RETURN_SUCCESS;
 }
 
@@ -5108,10 +5338,13 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 // TODO: @CF: Enumerate properties and assign them via enumeration rather than automatic indexing
 #define DEFINE_RX_CHANNEL( _c, _p, _ip ) \
 	DEFINE_SYMLINK_PROP( "rx_" #_c, "rx/" #_c ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/trigger/mode",  hdlr_rx_ ## _c ## _trigger_mode,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/trigger/sma_en",  hdlr_rx_ ## _c ## _trigger_sma_en,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/trigger/stream_edge",  hdlr_rx_ ## _c ## _trigger_stream_edge,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_en",  hdlr_rx_ ## _c ## _trigger_ufl_en,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/edge_backoff",  hdlr_rx_ ## _c ## _trigger_edge_backoff,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/edge_sample_num",  hdlr_rx_ ## _c ## _trigger_edge_sample_num,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/mode_sma",  hdlr_rx_ ## _c ## _trigger_mode_sma,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/mode_ufl",  hdlr_rx_ ## _c ## _trigger_mode_ufl,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/trig_sel",  hdlr_rx_ ## _c ## _trigger_trig_sel,  RW,  "3" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_dir",  hdlr_rx_ ## _c ## _trigger_ufl_dir,  RW,  "out" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_pol",  hdlr_rx_ ## _c ## _trigger_ufl_pol,  RW,  "positive" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/pwr",  hdlr_rx_ ## _c ## _pwr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
@@ -5150,10 +5383,14 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 // XXX: @CF: handlers should be passed integers, doubles, and so on, not necessarily strings.
 #define DEFINE_TX_CHANNEL( _c, _p ) \
 	DEFINE_SYMLINK_PROP( "tx_" #_c, "tx/" #_c ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/trigger/mode",  hdlr_tx_ ## _c ## _trigger_mode,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/trigger/sma_en",  hdlr_tx_ ## _c ## _trigger_sma_en,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/trigger/stream_edge",  hdlr_tx_ ## _c ## _trigger_stream_edge,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/trigger/ufl_en",  hdlr_tx_ ## _c ## _trigger_ufl_en,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/edge_backoff",  hdlr_tx_ ## _c ## _trigger_edge_backoff,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/edge_sample_num",  hdlr_tx_ ## _c ## _trigger_edge_sample_num,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/gating",  hdlr_tx_ ## _c ## _trigger_gating,  RW,  "output" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/mode_sma",  hdlr_tx_ ## _c ## _trigger_mode_sma,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/mode_ufl",  hdlr_tx_ ## _c ## _trigger_mode_ufl,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/trig_sel",  hdlr_tx_ ## _c ## _trigger_trig_sel,  RW,  "3" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/ufl_dir",  hdlr_tx_ ## _c ## _trigger_ufl_dir,  RW,  "out" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/ufl_pol",  hdlr_tx_ ## _c ## _trigger_ufl_pol,  RW,  "positive" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/pwr",  hdlr_tx_ ## _c ##_pwr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/sync",  hdlr_tx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_en",  hdlr_tx_ ## _c ## _rf_dac_dither_en,  RW,  "0" ), \
@@ -5224,8 +5461,8 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "time/about/sw_ver",  hdlr_invalid,  RO,  VERSION )
 
 #define DEFINE_FPGA() \
-	DEFINE_FILE_PROP( "fpga/trigger/dir",  hdlr_fpga_trigger_dir,  RW,  "0" ), \
-	DEFINE_FILE_PROP( "fpga/trigger/polarity",  hdlr_fpga_trigger_polarity,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "fpga/trigger/sma_dir",  hdlr_fpga_trigger_sma_dir,  RW,  "out" ), \
+	DEFINE_FILE_PROP( "fpga/trigger/sma_pol",  hdlr_fpga_trigger_sma_pol,  RW,  "positive" ), \
 	DEFINE_FILE_PROP( "fpga/about/fw_ver",  hdlr_fpga_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/server_ver",  hdlr_server_about_fw_ver,  RW, NULL), \
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
