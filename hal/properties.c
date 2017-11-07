@@ -147,6 +147,7 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err
    }
 }
 
+#if 0
 static uint32_t get_edge_backoff( bool tx, char chan ) {
 	int r;
 	uint32_t val;
@@ -165,6 +166,7 @@ static uint32_t get_edge_backoff( bool tx, char chan ) {
 	r &= 0xffffff;
 	return r;
 }
+#endif
 
 static void set_edge_backoff( char chan, bool tx, uint32_t backoff ) {
 	int r;
