@@ -54,6 +54,7 @@ void PRINT_WRAPPER( print_t priority, const char* format, ... ) {
 
 	if ( NULL != o ) {
 		vfprintf( o, format, args );
+		fflush( o );
 	}
 
 	va_end( args );
