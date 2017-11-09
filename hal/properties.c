@@ -234,6 +234,7 @@ static int valid_trigger_dir( const char *data, bool *in ) {
 #define set_reg_bits( name, shift, mask, val ) 	({ \
 	int _r; \
 	uint32_t _t; \
+	PRINT( VERBOSE, "%s(): set_reg_bits( %s, %u, %u, %x )\n", name, shift, mask, val ); \
 	_r = read_hps_reg( name, & _t ); \
 	if ( RETURN_SUCCESS != _r ) { \
 		PRINT( ERROR, "read_hps_reg( '%s' ) failed: %d\n", name, _r ); \
@@ -259,7 +260,7 @@ static int set_sma_pol( bool positive ) {
 static int set_edge_backoff( bool tx, const char *chan, uint32_t backoff ) {
 	char regname[ 8 ];
 	snprintf( regname, sizeof( regname ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 9 : 12 );
-	return set_reg_bits( regname, 0, 32, backoff );
+	return set_reg_bits( regname, 0, -1, backoff );
 }
 
 static int set_edge_sample_num( bool tx, const char *chan, uint64_t num ) {
@@ -276,7 +277,7 @@ static int set_edge_sample_num( bool tx, const char *chan, uint64_t num ) {
 	val_msw = num >> 32;
 	val_lsw = num & 0xffffffff;
 
-	return set_reg_bits( regname_msw, 0, 32, val_msw ) || set_reg_bits( regname_lsw, 0, 32, val_lsw );
+	return set_reg_bits( regname_msw, 0, -1, val_msw ) || set_reg_bits( regname_lsw, 0, -1, val_lsw );
 }
 
 static int set_trigger_ufl_dir( bool tx, const char *chan, bool in ) {
