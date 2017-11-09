@@ -234,7 +234,7 @@ static int valid_trigger_dir( const char *data, bool *in ) {
 #define set_reg_bits( name, shift, mask, val ) 	({ \
 	int _r; \
 	uint32_t _t; \
-	PRINT( VERBOSE, "%s(): set_reg_bits( %s, %u, %u, %x )\n", name, shift, mask, val ); \
+	PRINT( VERBOSE, "%s(): set_reg_bits( name: %s, shift: %u, mask: %p, val: %p )\n", __func__, name, shift, (void *)mask, (void *)val ); \
 	_r = read_hps_reg( name, & _t ); \
 	if ( RETURN_SUCCESS != _r ) { \
 		PRINT( ERROR, "read_hps_reg( '%s' ) failed: %d\n", name, _r ); \
