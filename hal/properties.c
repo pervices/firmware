@@ -249,7 +249,7 @@ static int valid_trigger_dir( const char *data, bool *in ) {
 })
 
 static int set_sma_dir( bool in ) {
-	return set_reg_bits( "sys2", 7, 1, in );
+	return set_reg_bits( "sys2", 4, 1, in );
 }
 
 static int set_sma_pol( bool positive ) {
