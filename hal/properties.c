@@ -5232,12 +5232,12 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 #define DEFINE_RX_CHANNEL( _c, _p, _ip ) \
 	DEFINE_SYMLINK_PROP( "rx_" #_c, "rx/" #_c ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/trigger/sma_mode",  hdlr_rx_ ## _c ## _trigger_sma_mode,  RW,  "level" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/trigger/trig_sel",  hdlr_rx_ ## _c ## _trigger_trig_sel,  RW,  "3" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/trig_sel",  hdlr_rx_ ## _c ## _trigger_trig_sel,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/trigger/edge_backoff",  hdlr_rx_ ## _c ## _trigger_edge_backoff,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/trigger/edge_sample_num",  hdlr_rx_ ## _c ## _trigger_edge_sample_num,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_mode",  hdlr_rx_ ## _c ## _trigger_ufl_mode,  RW,  "level" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_dir",  hdlr_rx_ ## _c ## _trigger_ufl_dir,  RW,  "out" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_pol",  hdlr_rx_ ## _c ## _trigger_ufl_pol,  RW,  "positive" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_pol",  hdlr_rx_ ## _c ## _trigger_ufl_pol,  RW,  "negative" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/pwr",  hdlr_rx_ ## _c ## _pwr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
@@ -5277,7 +5277,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 #define DEFINE_TX_CHANNEL( _c, _p ) \
 	DEFINE_SYMLINK_PROP( "tx_" #_c, "tx/" #_c ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/trigger/sma_mode",  hdlr_tx_ ## _c ## _trigger_sma_mode,  RW,  "level" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/trigger/trig_sel",  hdlr_tx_ ## _c ## _trigger_trig_sel,  RW,  "3" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/trig_sel",  hdlr_tx_ ## _c ## _trigger_trig_sel,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/trigger/edge_backoff",  hdlr_tx_ ## _c ## _trigger_edge_backoff,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/trigger/edge_sample_num",  hdlr_tx_ ## _c ## _trigger_edge_sample_num,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/trigger/ufl_dir",  hdlr_tx_ ## _c ## _trigger_ufl_dir,  RW,  "out" ), \
@@ -5355,7 +5355,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 
 #define DEFINE_FPGA() \
 	DEFINE_FILE_PROP( "fpga/trigger/sma_dir",  hdlr_fpga_trigger_sma_dir,  RW,  "out" ), \
-	DEFINE_FILE_PROP( "fpga/trigger/sma_pol",  hdlr_fpga_trigger_sma_pol,  RW,  "positive" ), \
+	DEFINE_FILE_PROP( "fpga/trigger/sma_pol",  hdlr_fpga_trigger_sma_pol,  RW,  "negative" ), \
 	DEFINE_FILE_PROP( "fpga/about/fw_ver",  hdlr_fpga_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/server_ver",  hdlr_server_about_fw_ver,  RW, NULL), \
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
