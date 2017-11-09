@@ -1315,7 +1315,6 @@ static int hdlr_rx_a_stream (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-
 static int hdlr_rx_a_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -1783,7 +1782,6 @@ static int hdlr_tx_b_qa_uflow (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-
 static int hdlr_tx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -2210,7 +2208,6 @@ static int hdlr_rx_b_stream (const char* data, char* ret) {
 
 	return RETURN_SUCCESS;
 }
-
 
 static int hdlr_rx_b_pwr (const char* data, char* ret) {
 	uint32_t old_val;
@@ -2667,7 +2664,6 @@ static int hdlr_tx_c_qa_uflow (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-
 static int hdlr_tx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -3093,7 +3089,6 @@ static int hdlr_rx_c_stream (const char* data, char* ret) {
 
 	return RETURN_SUCCESS;
 }
-
 
 static int hdlr_rx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
@@ -3550,7 +3545,6 @@ static int hdlr_tx_d_qa_uflow (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
-
 static int hdlr_tx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
@@ -3977,7 +3971,6 @@ static int hdlr_rx_d_stream (const char* data, char* ret) {
 
 	return RETURN_SUCCESS;
 }
-
 
 static int hdlr_rx_d_pwr (const char* data, char* ret) {
 	uint32_t old_val;
