@@ -4550,7 +4550,7 @@ static int hdlr_fpga_about_cmp_time (const char* data, char* ret) {
 }
 
 static int hdlr_fpga_about_conf_info (const char* data, char* ret){
-	uint64_t old_val;
+	uint32_t old_val;
 	read_hps_reg ( "sys18", &old_val);
 
 	sprintf(ret,  "config. info. 0x%02x \n", old_val);
@@ -4565,7 +4565,7 @@ static int hdlr_fpga_about_serial (const char* data, char* ret){
 	read_hps_reg ( "sys17", &old_val2);
 
 	//append values
-	old_val = (old_val2 << 32) | old_val1;
+	old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
 
 	sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
 	return RETURN_SUCCESS;
@@ -4601,7 +4601,7 @@ static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
 	old_val2 = old_val2 & 0xff;
 
 	//append values
-	old_val = (old_val2 << 32) | old_val1;
+	old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
 
 
 	sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);

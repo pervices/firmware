@@ -103,11 +103,16 @@ extern int verbose;
 
 // main loop
 int main(int argc, char *argv[]) {
+
+	int ret = 0;
+	int i = 0;
+	cmd_t cmd;
+
 	verbose = 0;
 	fd_set rfds;
 
 	// check for firmware version
-	for( int i = 1; i < argc; i++ ) {
+	for( i = 1; i < argc; i++ ) {
 		if (strcmp(argv[i], "-v") == 0) {
 			printf("Branch: %s\n", VERSIONGITBRANCH);
 			printf("Revision: %s\n", VERSIONGITREVISION);
@@ -126,10 +131,6 @@ int main(int argc, char *argv[]) {
 			verbose++;
 		}
 	}
-
-	int ret = 0;
-	int i = 0;
-	cmd_t cmd;
 
 	PRINT( INFO, "Starting Crimson server\n");
 	
