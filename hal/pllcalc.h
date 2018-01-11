@@ -76,10 +76,10 @@
 // ADF4355 Default specs
 #define PLL1_R_FIXED		( 13 )		// R value must be fixed to ensure consistent PFD frequency (13MHz)
 
-#define PLL1_N_DEFAULT		( 572 )         // N value (N^2 contribution to PLL noise) [16..4096]
+#define PLL1_N_DEFAULT		( 112 )         // N value (N^2 contribution to PLL noise) [16..4096]
 #define PLL1_D_DEFAULT		( 2 )		// RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL1_X2EN_DEFAULT	( 0 )           // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
-#define PLL1_OUTFREQ_DEFAULT	( 2904700000 )	// Resulting VCO Output Frequency
+#define PLL1_OUTFREQ_DEFAULT	( 2800000000 )	// Resulting VCO Output Frequency
 #define PLL1_FB_DEFAULT         ( 0 )           // VCO divider feedback
 
 

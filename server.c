@@ -98,14 +98,22 @@ void server_ready_led(){
     write_hps_reg("led0", 0x1);
 }
 
+
+extern int verbose;
+
 // main loop
 int main(int argc, char *argv[]) {
 
+	int ret = 0;
+	int i = 0;
+	cmd_t cmd;
+
+	verbose = 0;
 	fd_set rfds;
 
 	// check for firmware version
-	if (argc >= 2) {
-		if (strcmp(argv[1], "-v") == 0) {
+	for( i = 1; i < argc; i++ ) {
+		if (strcmp(argv[i], "-v") == 0) {
 			printf("Branch: %s\n", VERSIONGITBRANCH);
 			printf("Revision: %s\n", VERSIONGITREVISION);
 			printf("Date: %s UTC\n", VERSIONDATE);
@@ -119,11 +127,10 @@ int main(int argc, char *argv[]) {
 
 			return 0;
 		}
+		if (strcmp(argv[i], "-d") == 0){
+			verbose++;
+		}
 	}
-
-	int ret = 0;
-	int i = 0;
-	cmd_t cmd;
 
 	PRINT( INFO, "Starting Crimson server\n");
 	
@@ -214,7 +221,8 @@ int main(int argc, char *argv[]) {
 				PRINT( VERBOSE, "port %d has data\n", port_nums[ i ] );
 
 				sa_len = sizeof( sa );
-				ret2 = recvfrom( comm_fds[ i ], buffer, sizeof( buffer ), 0, (struct sockaddr *) & sa, & sa_len );
+				memset( buffer, 0, sizeof( buffer ) );
+				ret2 = recvfrom( comm_fds[ i ], buffer, sizeof( buffer ) - 1, 0, (struct sockaddr *) & sa, & sa_len );
 				if ( ret2 < 0 ) {
 					PRINT( ERROR, "recvfrom failed: %s (%d)\n", strerror( errno ), errno );
 					ret--;
@@ -299,3 +307,4 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+

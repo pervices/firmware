@@ -273,6 +273,15 @@ void check_property_inotifies(void) {
 	char prop_data[MAX_PROP_LEN];
 	char prop_ret[MAX_PROP_LEN];
 	char path[MAX_PATH_LEN];
+	int n;
+
+	//returns if inotify_fd has no bytes to read to prevent server from hanging
+	ioctl(inotify_fd, FIONREAD, &n);
+	if (n == 0){
+		PRINT(INFO, "No bytes available for read on inotify_fd\n");
+		return;
+	}
+
 	ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 
 	ssize_t i = 0;

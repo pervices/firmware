@@ -17,89 +17,79 @@
 
 #include "parser.h"
 
-#define DELIMINATOR ','
-#define STRING_GET "get"
-#define STRING_SET "set"
 
 typedef enum {STATE_SEQ, STATE_OP, STATE_PROP, STATE_DATA} state_t;
 
 // seq,op,prop,[data]
 int parse_cmd(cmd_t* cmd, uint8_t* data) {
+	int r;
+	char* tok;
+	char* saveptr = (char *)data;
+	// our packets are either "123,get,foo", or "123,set,foo,bar", so there are a maximum of 4 fields
+	const unsigned n_max = 4;
+	unsigned n;
+	int check;
+
 	if (!data || !cmd) return RETURN_ERROR_PARAM;
 
-	size_t pos = 0;
-	size_t start = 0;
-	state_t cur_state = STATE_SEQ;
-	uint8_t finish = 0;
+	for(
+		// for loop init
+		n = 0,
+		tok = strtok_r( saveptr, ",", & saveptr );
 
-	// default settings
-	cmd -> seq = 0;
-	cmd -> op = OP_ERROR;
-	cmd -> status = CMD_ERROR;
-	memset(cmd -> prop, 0, MAX_PATH_LEN);
-	memset(cmd -> data, 0, MAX_PROP_LEN);
+		// for loop condition
+		NULL != tok && n < n_max;
 
-	PRINT( VERBOSE,"Parsing: %s\n", data);
+		// for loop update
+		tok = strtok_r( saveptr, ",", & saveptr ),
+		n++
+	) {
+		switch( n ) {
 
-	while (data[pos] != 0 || pos - start != 0) {
-		// if a deliminator is found
-		if (data[pos] == DELIMINATOR || data[pos] == '\0') {
-			data[pos] = '\0';
-
-			// state machine
-			switch (cur_state) {
-			case STATE_SEQ:
-				sscanf((char*)(data + start), "%"SCNd32"", &(cmd -> seq));
-				cur_state = STATE_OP;
-				break;
-
-			case STATE_OP:
-				if (strcmp((char*)(data + start), STRING_GET) == 0) {
-					cmd -> op = OP_GET;
-				} else {
-					cmd -> op = OP_SET;
-				}
-				cur_state = STATE_PROP;
-				break;
-
-			case STATE_PROP:
-				strncpy(cmd -> prop, (char*)(data + start), MAX_PATH_LEN);
-				if(cmd -> op == OP_GET) {
-					cur_state = STATE_SEQ;
-					finish = 1;
-				} else {
-					cur_state = STATE_DATA;
-				}
-				break;
-
-			case STATE_DATA:
-				strncpy(cmd -> data, (char*)(data + start), MAX_PROP_LEN);
-				cur_state = STATE_SEQ;
-				finish = 1;
-				break;
-
-			default:
-				cur_state = STATE_SEQ;
-				break;
+		case 0:
+			// parse a number from a string
+			// sscanf
+			// on error, set r = ...ERROR...; goto out;
+			check = sscanf(tok, "%u", &cmd -> seq);
+			if (check != 1) {
+				PRINT(ERROR, "Unable to parse command.");
+				r = RETURN_ERROR;
+				goto out;
 			}
+			break;
 
-			// setup for the next parameter
-			start = pos+1;
+		case 1:
+			// convert "get" or "set" to cmd_op_t
+			// strncmp
+			// on error, set r = ...ERROR...; goto out;
+			if ( strncmp(tok, "get", 3) == 0 ){
+				cmd -> op = OP_GET;
+			}else if (strncmp(tok, "set", 3) == 0){
+				cmd -> op = OP_SET;
+			}else {
+				cmd -> op = OP_ERROR;
+				PRINT(ERROR, "Improper command format, options are get and set only.");
+				r = RETURN_ERROR;
+				goto out;
+			}
+			break;
+
+		case 2:
+			// strncpy
+			strncpy(cmd -> prop, tok, sizeof(cmd -> prop));
+			break;
+
+		case 3:
+			// strncpy
+			strncpy(cmd -> data, tok, sizeof(cmd -> data));
+			/* no break */
+		default:
+			break;
 		}
-		pos++;
 	}
-
-	PRINT( VERBOSE,"Parsing: %i characters\n", pos);
-
-	// if command did not receive everything it expects
-	if (finish == 0) {
-		PRINT( ERROR,"%s, corrupt command '%s'\n", __func__, data );
-		cmd -> status = CMD_ERROR;
-		return RETURN_ERROR_CMD_CURRUPT;
-	} else {
-		cmd -> status = CMD_SUCCESS;
-		return RETURN_SUCCESS;
-	}
+	r = RETURN_SUCCESS;
+out:
+	return r;
 }
 
 // seq,status,[data]

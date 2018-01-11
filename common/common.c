@@ -17,79 +17,45 @@
 
 #include "common.h"
 
-static FILE* fout = NULL;
-static FILE* dout = NULL;
+int verbose;
 
-int PRINT( print_t priority, const char* format, ... ) {
-	int ret = 0;
+void PRINT_WRAPPER( print_t priority, const char* format, ... ) {
+
+	FILE* o;
+
 	va_list args;
-	va_start(args, format);
+	va_start( args, format );
 
-	// open the file
-	if (!fout) {
-		fout = fopen(LOG_FILE, "a");
-	}
+	o = NULL;
 
-	if (!dout) {
-		dout = fopen(DUMP_FILE, "a");
-	}
-
-	// get the time
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
-
-	// pre-pend the print message with time and info
-	char newfmt[BUF_SIZE] = {0};
-	switch (priority) {
+	switch( priority ){
 		case ERROR:
-			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] ERROR: ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			o = stderr;
 			break;
-		case INFO:
-			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] INFO:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
-			break;
-		case DEBUG:
-			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] DEBUG: ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
-			break;
+
 		case VERBOSE:
-			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] VERB:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			if ( verbose >= 1 ){
+				o = stdout;
+			}
 			break;
+
+		case DEBUG:
+			if ( verbose >= 2 ){
+				o = stdout;
+			}
+			break;
+
+		case INFO:
 		case DUMP:
-			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] DUMP:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
-			break;
 		default:
-			snprintf(newfmt, BUF_SIZE, "[%6ld.%03ld] DFLT:  ", (long)ts.tv_sec, ts.tv_nsec / 1000000UL);
+			o = stdout;
 			break;
 	}
-	strcpy(newfmt + strlen(newfmt), format);
 
-	// DUMP or DEBUG or INFO or ERROR, file
-	if (fout && priority != VERBOSE) {
-		ret = vfprintf(fout, newfmt, args );
+	if ( NULL != o ) {
+		vfprintf( o, format, args );
+		fflush( o );
 	}
 
-	// INFO, stdout
-	if (priority == INFO) {
-		ret = vprintf(newfmt, args);
-	}
-
-	// ERROR, stderr
-	if (priority == ERROR ) {
-		ret = vfprintf(stderr, newfmt, args );
-	}
-
-	// DUMP, file
-	if (priority == DUMP) {
-		ret = vfprintf(dout, newfmt, args);
-	}
-
-	if (priority == VERBOSE) {
-		// do nothing as of now
-	}
-
-	// flush the file
-	fflush(fout);
-	fflush(dout);
-
-	va_end(args);
-	return ret;
+	va_end( args );
 }

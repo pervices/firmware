@@ -18,6 +18,7 @@
 #include "mmap.h"
 #include "properties.h"
 
+#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -145,6 +146,250 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate, double* err
 	   }
    }
 }
+
+static int valid_edge_backoff( const char *data, uint32_t *val ) {
+	if ( 1 == sscanf( data, "%" PRIu32, val ) ) {
+		return RETURN_SUCCESS;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" ); \
+		return RETURN_ERROR_PARAM; \
+	}
+}
+
+static int valid_edge_sample_num( const char *data, uint64_t *val ) {
+	if ( 1 == sscanf( data, "%" PRIu64, val ) ) {
+		return RETURN_SUCCESS;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+}
+
+static int valid_trigger_mode( const char *data, bool *edge ) {
+
+	if ( false ) {
+	} else if ( 0 == strncmp( "edge", data, strlen( "edge" ) ) ) {
+		*edge = true;
+	} else if ( 0 == strncmp( "level", data, strlen( "level" ) ) ) {
+		*edge = false;
+	} else {
+		return RETURN_ERROR_PARAM;
+	}
+
+	return RETURN_SUCCESS;
+}
+
+static int valid_trigger_pol( const char *data, bool *positive ) {
+
+	if ( false ) {
+	} else if ( 0 == strncmp( "positive", data, strlen( "positive" ) ) ) {
+		*positive = true;
+	} else if ( 0 == strncmp( "negative", data, strlen( "negative" ) ) ) {
+		*positive = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+	return RETURN_SUCCESS;
+}
+
+static int valid_gating_mode( const char *data, bool *dsp ) {
+	if ( false ) {
+	} else if ( 0 == strncmp( "dsp", data, strlen( "dsp" ) ) ) {
+		*dsp = true;
+	} else if ( 0 == strncmp( "output", data, strlen( "output" ) ) ) {
+		*dsp = false;
+	} else {
+		return RETURN_ERROR_PARAM;
+	}
+	return RETURN_SUCCESS;
+}
+
+static int valid_trigger_sel( const char *data, uint32_t *sel ) {
+	int r;
+
+	r = sscanf( data, "%" PRIu32, sel );
+	if ( 1 != r || *sel >= 4 ) {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+
+	return RETURN_SUCCESS;
+}
+
+static int valid_trigger_dir( const char *data, bool *in ) {
+	if ( false ) {
+	} else if ( 0 == strncmp( "in", data, strlen( "in" ) ) ) {
+		*in = true;
+	} else if ( 0 == strncmp( "out", data, strlen( "out" ) ) ) {
+		*in = false;
+	} else {
+		PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)" );
+		return RETURN_ERROR_PARAM;
+	}
+	return RETURN_SUCCESS;
+}
+
+// XXX: @CF: 20171108: Statement Expressions are bad... but this code will be replaced soon anyway
+#define set_reg_bits( name, shift, mask, val ) 	({ \
+	int _r; \
+	uint32_t _t; \
+	PRINT( VERBOSE, "%s(): set_reg_bits( name: %s, shift: %u, mask: %p, val: %p )\n", __func__, name, shift, (void *)mask, (void *)val ); \
+	_r = read_hps_reg( name, & _t ); \
+	if ( RETURN_SUCCESS != _r ) { \
+		PRINT( ERROR, "read_hps_reg( '%s' ) failed: %d\n", name, _r ); \
+	} else { \
+		_t &= ~( mask << shift ); \
+		_t |= val << shift; \
+		_r = write_hps_reg( name, _t ); \
+		if ( RETURN_SUCCESS != _r ) { \
+			PRINT( ERROR, "write_hps_reg( '%s' ) failed: %d\n", name, _r ); \
+		} \
+	} \
+	_r; \
+})
+
+static int set_sma_dir( bool in ) {
+	return set_reg_bits( "sys2", 4, 1, in );
+}
+
+static int set_sma_pol( bool positive ) {
+	return set_reg_bits( "sys2", 6, 1, positive );
+}
+
+static int set_edge_backoff( bool tx, const char *chan, uint32_t backoff ) {
+	char regname[ 8 ];
+	snprintf( regname, sizeof( regname ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 9 : 12 );
+	return set_reg_bits( regname, 0, -1, backoff );
+}
+
+static int set_edge_sample_num( bool tx, const char *chan, uint64_t num ) {
+	int r;
+	uint32_t val_msw;
+	uint32_t val_lsw;
+
+	char regname_msw[ 8 ];
+	char regname_lsw[ 8 ];
+
+	snprintf( regname_msw, sizeof( regname_msw ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 7 : 10 );
+	snprintf( regname_lsw, sizeof( regname_lsw ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 8 : 11 );
+
+	val_msw = num >> 32;
+	val_lsw = num & 0xffffffff;
+
+	return set_reg_bits( regname_msw, 0, -1, val_msw ) || set_reg_bits( regname_lsw, 0, -1, val_lsw );
+}
+
+static int set_trigger_ufl_dir( bool tx, const char *chan, bool in ) {
+	char reg_name[ 8 ];
+	snprintf( reg_name, sizeof( reg_name ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9 );
+	return set_reg_bits( reg_name, 9, 1, in );
+}
+
+static int set_trigger_sel( bool tx, const char *chan, uint32_t sel ) {
+	char reg_name[ 8 ];
+	snprintf( reg_name, sizeof( reg_name ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9 );
+	return set_reg_bits( reg_name, 10, 0b11, sel );
+}
+
+static int set_gating_mode( const char *chan, bool dsp ) {
+	char reg_name[ 8 ];
+	snprintf( reg_name, sizeof( reg_name ), "tx%s6", chan );
+	return set_reg_bits( reg_name, 12, 1, dsp );
+}
+
+static int set_trigger_mode( bool sma, bool tx, const char *chan, bool edge ) {
+	unsigned shift;
+	char reg_name[ 8 ];
+	snprintf( reg_name, sizeof( reg_name ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9 );
+	shift = sma ? 0 : 4;
+	return set_reg_bits( reg_name, shift, 1, edge );
+}
+
+static int set_trigger_ufl_pol( bool tx, const char *chan, bool positive ) {
+	char reg_name[ 8 ];
+	snprintf( reg_name, sizeof( reg_name ), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9 );
+	return set_reg_bits( reg_name, 8, 1, positive );
+}
+
+#define DEFINE_TRIGGER_FUNCS( _trx, _c ) \
+static int hdlr_ ## _trx ## _ ## _c ## _trigger_sma_mode( const char *data, char *ret ) { \
+	int r; \
+	bool val; \
+	r = valid_trigger_mode( data, & val ) || set_trigger_mode( true, ! strcmp( #_trx, "tx" ), #_c, val ); \
+	return r; \
+} \
+\
+static int hdlr_ ## _trx ## _ ## _c ## _trigger_edge_backoff (const char *data, char* ret) { \
+	uint32_t val; \
+	int r; \
+	r = valid_edge_backoff( data, & val ) || set_edge_backoff( ! strcmp( #_trx, "tx" ), #_c, val ); \
+	return r; \
+} \
+\
+static int hdlr_ ## _trx ## _ ## _c ## _trigger_edge_sample_num (const char *data, char* ret) { \
+	uint64_t val; \
+	int r; \
+	r = valid_edge_sample_num( data, & val ) || set_edge_sample_num( ! strcmp( #_trx, "tx" ), #_c, val ); \
+	return r; \
+} \
+\
+static int hdlr_ ## _trx ## _ ## _c ## _trigger_trig_sel (const char *data, char* ret) { \
+	uint32_t val; \
+	int r; \
+	r = valid_trigger_sel( data, & val ) || set_trigger_sel( ! strcmp( #_trx, "tx" ), #_c, val ); \
+	return r; \
+} \
+\
+static int hdlr_ ## _trx ## _ ## _c ## _trigger_ufl_dir (const char *data, char* ret) { \
+	int r; \
+	bool val; \
+	r = valid_trigger_dir( data, & val ) || set_trigger_ufl_dir( ! strcmp( #_trx, "tx" ), #_c, val ); \
+	return r; \
+} \
+\
+static int hdlr_ ## _trx ## _ ## _c ## _trigger_ufl_mode (const char *data, char* ret) { \
+	int r; \
+	bool val; \
+	r = valid_trigger_mode( data, & val ) || set_trigger_mode( false, ! strcmp( #_trx, "tx" ), #_c, val ); \
+	return r; \
+} \
+\
+static int hdlr_ ## _trx ## _ ## _c ## _trigger_ufl_pol (const char *data, char* ret) { \
+	int r; \
+	bool val; \
+	r = valid_trigger_pol( data, & val ) || set_trigger_ufl_pol( ! strcmp( #_trx, "tx" ), #_c, val ); \
+	return r; \
+}
+
+#define DEFINE_TX_GATING_FUNC( _c ) \
+static int hdlr_tx_ ## _c ## _trigger_gating (const char *data, char* ret) { \
+	int r; \
+	bool val; \
+	r = valid_gating_mode( data, & val ) || set_gating_mode( #_c, val ); \
+	return r; \
+}
+
+#define DEFINE_TX_TRIGGER_FUNCS() \
+	DEFINE_TRIGGER_FUNCS( tx, a ); \
+	DEFINE_TRIGGER_FUNCS( tx, b ); \
+	DEFINE_TRIGGER_FUNCS( tx, c ); \
+	DEFINE_TRIGGER_FUNCS( tx, d ); \
+	DEFINE_TX_GATING_FUNC( a ); \
+	DEFINE_TX_GATING_FUNC( b ); \
+	DEFINE_TX_GATING_FUNC( c ); \
+	DEFINE_TX_GATING_FUNC( d )
+
+
+#define DEFINE_RX_TRIGGER_FUNCS() \
+	DEFINE_TRIGGER_FUNCS( rx, a ); \
+	DEFINE_TRIGGER_FUNCS( rx, b ); \
+	DEFINE_TRIGGER_FUNCS( rx, c ); \
+	DEFINE_TRIGGER_FUNCS( rx, d )
+
+DEFINE_RX_TRIGGER_FUNCS();
+DEFINE_TX_TRIGGER_FUNCS();
+
 
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
@@ -371,8 +616,35 @@ static int hdlr_tx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_a_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c a -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c a -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_a_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c a -e\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_a_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -466,6 +738,42 @@ static int hdlr_tx_a_dsp_rstreq (const char* data, char* ret) {
 
 static int hdlr_tx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_about_serial (const char* data, char* ret) {
+	strcpy(buf, "status -s\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_about_mcudevid (const char* data, char* ret) {
+	strcpy(buf, "status -d\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_about_mcurev (const char* data, char* ret) {
+	strcpy(buf, "status -v\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_about_mcufuses (const char* data, char* ret) {
+	strcpy(buf, "status -f\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -742,8 +1050,26 @@ static int hdlr_rx_a_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_a_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c a -l\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_a_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c a -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_a_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -859,6 +1185,42 @@ static int hdlr_rx_a_dsp_loopback (const char* data, char* ret) {
 
 static int hdlr_rx_a_about_id (const char* data, char* ret) {
 	// don't need to do anything, save the ID in the file system
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_serial (const char* data, char* ret) {
+	strcpy(buf, "status -s\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_mcudevid (const char* data, char* ret) {
+	strcpy(buf, "status -d\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_mcurev (const char* data, char* ret) {
+	strcpy(buf, "status -v\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_about_mcufuses (const char* data, char* ret) {
+	strcpy(buf, "status -f\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -1248,8 +1610,36 @@ static int hdlr_tx_b_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+
+static int hdlr_tx_b_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c b -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c b -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_b_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c b -e\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_b_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -1599,8 +1989,26 @@ static int hdlr_rx_b_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_b_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c b -l\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_b_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c b -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_b_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -2085,8 +2493,35 @@ static int hdlr_tx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_c_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c c -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c c -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_c_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c c -e\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_c_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -2436,8 +2871,26 @@ static int hdlr_rx_c_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_c_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c c -l\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_c_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c c -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_c_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -2921,8 +3374,35 @@ static int hdlr_tx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_tx_d_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c d -l\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_status_dacld(const char* data, char* ret) {
+	strcpy(buf, "status -c d -p\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_tx_d_status_dacctr(const char* data, char* ret) {
+	strcpy(buf, "status -c d -e\r");
+	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_tx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_tx_d_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
@@ -3271,8 +3751,26 @@ static int hdlr_rx_d_rf_board_temp (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_rx_d_status_rfld (const char* data, char* ret) {
+	strcpy(buf, "status -c d -l\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_rx_d_status_adcalarm (const char* data, char* ret) {
+	strcpy(buf, "status -c d -a\r");
+	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_rx_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
 static int hdlr_rx_d_rf_board_led (const char* data, char* ret) {
-	strcpy(buf, "board -l ");
+	strcpy(buf, "board -l\r");
 	strcat(buf, data);
 	strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
@@ -3602,6 +4100,67 @@ static int hdlr_time_source_ref (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+// External Source Buffer Select
+static int hdlr_time_source_extsine (const char* data, char* ret) {
+	if (strcmp(data, "sine") == 0) {
+		strcpy(buf, "HMC -h 1 -b 0\r");
+                send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	} else if (strcmp(data, "LVPECL") == 0) {
+		strcpy(buf, "HMC -h 1 -b 1\r");
+                send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	} else {
+                strcpy(buf, "HMC -h 1 -B\r");
+                send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+                read_uart(uart_synth_fd);
+                strcpy(ret, (char*)uart_ret_buf);
+        }
+	return RETURN_SUCCESS;
+}
+
+// Toggle SPI Sync
+static int hdlr_time_sync_lmk_sync_tgl_jesd (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -k\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+// Toggle SPI Sync
+static int hdlr_time_sync_lmk_sync_tgl_pll (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -q\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_jesd (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -j\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_pll (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -p\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_all (const char* data, char* ret) {
+	if (strcmp(data, "0") != 0) {
+		strcpy(buf, "sync -r\r");
+	} 
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
 // TODO: Enable DevClock Output
 static int hdlr_time_source_devclk (const char* data, char* ret) {
 	if (strcmp(data, "external") == 0) {
@@ -3622,24 +4181,99 @@ static int hdlr_time_source_pll (const char* data, char* ret) {
 	}
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
+
+}
+
+static int hdlr_time_status_ld (const char* data, char* ret) {
+	strcpy(buf, "status -l\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -l 11\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -l 12\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -l 21\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -l 22\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol (const char* data, char* ret) {
+	strcpy(buf, "status -o\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -o 11\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -o 12\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll_pll1 (const char* data, char* ret) {
+	strcpy(buf, "status -o 21\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll_pll2 (const char* data, char* ret) {
+	strcpy(buf, "status -o 22\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_board_dump (const char* data, char* ret) {
 	// send the uart commands and read back the output and write to file
 
-	// FANOUT
-	strcpy(buf, "dump -f\r");
+	// Diagnostic Dump of Clk Board
+	strcpy(buf, "board -e\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	PRINT(DUMP, "[Board: time Chip: FANOUT] %s\n", uart_ret_buf);
+	PRINT(DUMP, "[Board: Time Regdump] %s\n", uart_ret_buf);
 
-	// CLK
-	strcpy(buf, "dump -c\r");
-	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	read_uart(uart_synth_fd);
-	PRINT(DUMP, "[Board: time Chip: CLK] %s\n", uart_ret_buf);
-
-	return RETURN_SUCCESS;
+        return RETURN_SUCCESS;
 }
 
 static int hdlr_time_board_test (const char* data, char* ret) {
@@ -3665,7 +4299,43 @@ static int hdlr_time_board_led (const char* data, char* ret) {
 }
 
 static int hdlr_time_about_id (const char* data, char* ret) {
-	// don't need to do anything, save the ID in the file system
+	// Do Nothing, store in filesystem
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_serial (const char* data, char* ret) {
+	strcpy(buf, "status -s\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcudevid (const char* data, char* ret) {
+	strcpy(buf, "status -d\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcurev (const char* data, char* ret) {
+	strcpy(buf, "status -v\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
+        return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcufuses (const char* data, char* ret) {
+	strcpy(buf, "status -f\r");
+	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
+	read_uart(uart_synth_fd);
+	strcpy(ret, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
@@ -3736,6 +4406,22 @@ static int hdlr_fpga_board_temp (const char* data, char* ret) {
 	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	//read_uart(NO_FWD_CMD);
 	//strcpy(ret, (char*)uart_ret_buf);
+	uint32_t old_val;
+	read_hps_reg ( "sys14", &old_val);
+
+	//mask off temp
+	old_val = old_val & 0xff;
+
+	//if value >= 0x80 (=128), subtract 0x80 and convert to int
+	if (old_val >= 128){
+		old_val = old_val - 128;
+		sprintf(ret, "temp +%lu degC\n", old_val);
+	}
+	//if value < 0x80, subtract 0x3a (=58) and convert to negative int
+	else if (old_val < 128){
+		old_val = old_val - 58;
+		sprintf(ret, "temp -%lu degC\n", old_val);
+	}
 
 	return RETURN_SUCCESS;
 }
@@ -3847,13 +4533,78 @@ static int hdlr_fpga_about_id (const char* data, char* ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_about_cmp_time (const char* data, char* ret) {
+	uint32_t old_val;
+	int year, month, day, hour, min;
+	read_hps_reg ( "sys15", &old_val);
+	//get year
+	year  = (old_val & 0xfff00000) >> 20;
+	month = (old_val & 0x000f0000) >> 16;
+	day   = (old_val & 0x0000f800) >> 11;
+	hour  = (old_val & 0x000007c0) >>  6;
+	min   =  old_val & 0x0000003f;
+
+	sprintf(ret, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month, day, hour, min);
+
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_conf_info (const char* data, char* ret){
+	uint32_t old_val;
+	read_hps_reg ( "sys18", &old_val);
+
+	sprintf(ret,  "config. info. 0x%02x \n", old_val);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_serial (const char* data, char* ret){
+	uint64_t old_val;
+	uint32_t old_val1;
+	uint32_t old_val2;
+	read_hps_reg ( "sys16", &old_val1);
+	read_hps_reg ( "sys17", &old_val2);
+
+	//append values
+	old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
+
+	sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
+	return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_trigger_sma_dir (const char* data, char* ret) {
+	int r;
+	bool val;
+	r = valid_trigger_dir( data, & val ) || set_sma_dir( val );
+	return r;
+}
+
+static int hdlr_fpga_trigger_sma_pol (const char* data, char* ret) {
+	int r;
+	bool val;
+	r = valid_trigger_pol( data, & val ) || set_sma_pol( val );
+	return r;
+}
+
 // TODO: Move FWversion code to ARM, edit MAKE file with version info, refer to MCU code
 static int hdlr_fpga_about_fw_ver (const char* data, char* ret) {
 	//strcpy(buf, "board -v\r");
 	//send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 	//read_uart(NO_FWD_CMD);
 	//strcpy(ret, (char*)uart_ret_buf);
+	uint64_t old_val;
+	uint32_t old_val1;
+	uint32_t old_val2;
+	read_hps_reg ( "sys3", &old_val2);
+	read_hps_reg ( "sys4", &old_val1);
 
+	// bits sys3[7:0]
+	old_val2 = old_val2 & 0xff;
+
+	//append values
+	old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
+
+
+	sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
 	return RETURN_SUCCESS;
 }
 
@@ -4481,6 +5232,13 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 // TODO: @CF: Enumerate properties and assign them via enumeration rather than automatic indexing
 #define DEFINE_RX_CHANNEL( _c, _p, _ip ) \
 	DEFINE_SYMLINK_PROP( "rx_" #_c, "rx/" #_c ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/sma_mode",  hdlr_rx_ ## _c ## _trigger_sma_mode,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/trig_sel",  hdlr_rx_ ## _c ## _trigger_trig_sel,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/edge_backoff",  hdlr_rx_ ## _c ## _trigger_edge_backoff,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/edge_sample_num",  hdlr_rx_ ## _c ## _trigger_edge_sample_num,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_mode",  hdlr_rx_ ## _c ## _trigger_ufl_mode,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_dir",  hdlr_rx_ ## _c ## _trigger_ufl_dir,  RW,  "out" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/trigger/ufl_pol",  hdlr_rx_ ## _c ## _trigger_ufl_pol,  RW,  "negative" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/pwr",  hdlr_rx_ ## _c ## _pwr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
@@ -4489,6 +5247,8 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/atten/val",  hdlr_rx_ ## _c ## _rf_atten_val,  RW,  "127" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/status/rfpll_lock",  hdlr_rx_ ## _c ## _status_rfld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/status/adc_alarm",  hdlr_rx_ ## _c ## _status_adcalarm,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/dump",  hdlr_rx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/test",  hdlr_rx_ ## _c ## _rf_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/board/temp",  hdlr_rx_ ## _c ## _rf_board_temp,  RW,  "20" ), \
@@ -4500,7 +5260,10 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/dsp/rstreq",  hdlr_rx_ ## _c ## _dsp_rstreq,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/dsp/loopback",  hdlr_rx_ ## _c ## _dsp_loopback,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/about/id",  hdlr_rx_ ## _c ## _about_id,  RW,  "001" ), \
-	DEFINE_FILE_PROP( "rx/" #_c "/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/serial",  hdlr_rx_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/mcudevid",  hdlr_rx_about_mcudevid,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/mcurev",  hdlr_rx_about_mcurev,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/about/mcufuses",  hdlr_rx_about_mcufuses,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/about/fw_ver",  hdlr_rx_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/link/vita_en",  hdlr_rx_ ## _c ## _link_vita_en,  RW,  "0" ), \
@@ -4514,6 +5277,14 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 // XXX: @CF: handlers should be passed integers, doubles, and so on, not necessarily strings.
 #define DEFINE_TX_CHANNEL( _c, _p ) \
 	DEFINE_SYMLINK_PROP( "tx_" #_c, "tx/" #_c ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/sma_mode",  hdlr_tx_ ## _c ## _trigger_sma_mode,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/trig_sel",  hdlr_tx_ ## _c ## _trigger_trig_sel,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/edge_backoff",  hdlr_tx_ ## _c ## _trigger_edge_backoff,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/edge_sample_num",  hdlr_tx_ ## _c ## _trigger_edge_sample_num,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/ufl_dir",  hdlr_tx_ ## _c ## _trigger_ufl_dir,  RW,  "out" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/ufl_mode",  hdlr_tx_ ## _c ## _trigger_ufl_mode,  RW,  "level" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/ufl_pol",  hdlr_tx_ ## _c ## _trigger_ufl_pol,  RW,  "negative" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/trigger/gating",  hdlr_tx_ ## _c ## _trigger_gating,  RW,  "output" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/pwr",  hdlr_tx_ ## _c ##_pwr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/sync",  hdlr_tx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/dither_en",  hdlr_tx_ ## _c ## _rf_dac_dither_en,  RW,  "0" ), \
@@ -4526,6 +5297,9 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/i_bias",  hdlr_tx_ ## _c ## _rf_freq_i_bias,  RW,  "17" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/q_bias",  hdlr_tx_ ## _c ## _rf_freq_q_bias,  RW,  "17" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/gain/val",  hdlr_tx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/status/rfpll_lock",  hdlr_tx_ ## _c ## _status_rfld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/status/dacpll_lock",  hdlr_tx_ ## _c ## _status_dacld,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/status/dacpll_centre",  hdlr_tx_ ## _c ## _status_dacctr,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/dump",  hdlr_tx_ ## _c ## _rf_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/test",  hdlr_tx_ ## _c ## _rf_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/board/temp",  hdlr_tx_ ## _c ## _rf_board_temp,  RW,  "23" ), \
@@ -4535,7 +5309,10 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/dsp/nco_adj",  hdlr_tx_ ## _c ## _dsp_nco_adj,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/dsp/rstreq",  hdlr_tx_ ## _c ## _dsp_rstreq,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/about/id",  hdlr_tx_ ## _c ## _about_id,  RW,  "001" ), \
-	DEFINE_FILE_PROP( "tx/" #_c "/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/serial",  hdlr_tx_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/mcudevid",  hdlr_tx_about_mcudevid,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/mcurev",  hdlr_tx_about_mcurev,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/about/mcufuses",  hdlr_tx_about_mcufuses,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/about/fw_ver",  hdlr_tx_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/link/vita_en",  hdlr_tx_ ## _c ## _link_vita_en,  RW,  "0" ), \
@@ -4548,24 +5325,46 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 #define DEFINE_TIME() \
 	DEFINE_FILE_PROP( "time/clk/pps",  hdlr_time_clk_pps,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "time/clk/cur_time",  hdlr_time_clk_cur_time,  RW,  "0.0" ), \
-	DEFINE_FILE_PROP( "time/source/ref",  hdlr_time_source_ref,  RW,  "internal" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect",  hdlr_time_status_ld,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock",  hdlr_time_status_lol,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_jesd_pll1",  hdlr_time_status_ld_jesd_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_jesd_pll2",  hdlr_time_status_ld_jesd_pll2,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_pll_pll1",  hdlr_time_status_ld_pll_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lockdetect_pll_pll2",  hdlr_time_status_ld_pll_pll2,  RW,  "unlocked" ), \
+    DEFINE_FILE_PROP( "time/status/lmk_lossoflock_jesd_pll1",  hdlr_time_status_lol_jesd_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_jesd_pll2",  hdlr_time_status_lol_jesd_pll2,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_pll_pll1",  hdlr_time_status_lol_pll_pll1,  RW,  "unlocked" ), \
+	DEFINE_FILE_PROP( "time/status/lmk_lossoflock_pll_pll2",  hdlr_time_status_lol_pll_pll2,  RW,  "unlocked" ), \
+    DEFINE_FILE_PROP( "time/source/ref",  hdlr_time_source_ref,  RW,  "internal" ), \
+	DEFINE_FILE_PROP( "time/source/extsine",  hdlr_time_source_extsine,  RW,  "sine" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_tgl_jesd",  hdlr_time_sync_lmk_sync_tgl_jesd,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_tgl_pll",  hdlr_time_sync_lmk_sync_tgl_pll,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_resync_jesd",  hdlr_time_sync_lmk_resync_jesd,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_sync_resync_pll",  hdlr_time_sync_lmk_resync_pll,  WO,  "0" ), \
+	DEFINE_FILE_PROP( "time/sync/lmk_resync_all",  hdlr_time_sync_lmk_resync_all,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/board/dump",  hdlr_time_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/board/test",  hdlr_time_board_test,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "time/board/temp",  hdlr_time_board_temp,  RW,  "20" ), \
 	DEFINE_FILE_PROP( "time/board/led",  hdlr_time_board_led,  WO,  "0" ), \
-	DEFINE_FILE_PROP( "time/about/id",  hdlr_time_about_id,  RW,  "001" ), \
-	DEFINE_FILE_PROP( "time/about/serial",  hdlr_invalid,  RO,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/id",   hdlr_time_about_id,  RO,   "001" ), \
+	DEFINE_FILE_PROP( "time/about/serial",  hdlr_time_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/mcudevid",  hdlr_time_about_mcudevid,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/mcurev",  hdlr_time_about_mcurev,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "time/about/mcufuses",  hdlr_time_about_mcufuses,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "time/about/fw_ver",  hdlr_time_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "time/about/sw_ver",  hdlr_invalid,  RO,  VERSION )
 
 #define DEFINE_FPGA() \
+	DEFINE_FILE_PROP( "fpga/trigger/sma_dir",  hdlr_fpga_trigger_sma_dir,  RW,  "out" ), \
+	DEFINE_FILE_PROP( "fpga/trigger/sma_pol",  hdlr_fpga_trigger_sma_pol,  RW,  "negative" ), \
 	DEFINE_FILE_PROP( "fpga/about/fw_ver",  hdlr_fpga_about_fw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/server_ver",  hdlr_server_about_fw_ver,  RW, NULL), \
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/id",  hdlr_fpga_about_id,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "fpga/about/name",  hdlr_invalid,  RO,  "crimson_tng" ), \
-	DEFINE_FILE_PROP( "fpga/about/serial",  hdlr_invalid,  RO,  "001" ), \
-	DEFINE_FILE_PROP( "fpga/about/sw_ver",  hdlr_invalid,  RO,  VERSION ), \
+	DEFINE_FILE_PROP( "fpga/about/serial",  hdlr_fpga_about_serial,  RW,  "001" ), \
+	DEFINE_FILE_PROP( "fpga/about/cmp_time",  hdlr_fpga_about_cmp_time,  RW,  "yyyy-mm-dd-hh-mm" ), \
+	DEFINE_FILE_PROP( "fpga/about/conf_info",  hdlr_fpga_about_conf_info,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/dump",  hdlr_fpga_board_dump,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/fw_rst",  hdlr_fpga_board_fw_rst,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "fpga/board/flow_control/sfpa_port", hdlr_fpga_board_flow_control_sfpa_port, RW, "42809" ), \
@@ -4937,6 +5736,12 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+    // write ADF4355/ADF5355 feedback mode
+    strcpy(buf, "rf -t ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
     // write ADF4355/ADF5355 Output RF Power
     strcpy(buf, "rf -g ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);    // default to lower mid power
@@ -4948,5 +5753,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+
     usleep(100000);
 }
