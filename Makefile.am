@@ -9,7 +9,9 @@ bin_PROGRAMS = \
 	mem
 
 server_SOURCES = \
-	server.c
+	server.c \
+	synth_lut.c
+
 server_LDADD = \
 	common/libcommon.la \
 	hal/libhal.la \

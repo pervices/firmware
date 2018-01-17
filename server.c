@@ -34,6 +34,7 @@
 #include "comm_manager.h"
 #include "property_manager.h"
 #include "parser.h"
+#include "synth_lut.h"
 
 #define ENET_DEV "eth0"
 
@@ -130,6 +131,13 @@ int main(int argc, char *argv[]) {
 		if (strcmp(argv[i], "-d") == 0){
 			verbose++;
 		}
+	}
+
+	atexit( synth_lut_fini );
+	ret = synth_lut_init();
+	if ( EXIT_SUCCESS != ret ) {
+		PRINT( ERROR, "Stopping Crimson server\n");
+		return ret;
 	}
 
 	PRINT( INFO, "Starting Crimson server\n");
