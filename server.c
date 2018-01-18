@@ -133,13 +133,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	atexit( synth_lut_fini );
-	ret = synth_lut_init();
-	if ( EXIT_SUCCESS != ret ) {
-		PRINT( ERROR, "Stopping Crimson server\n");
-		return ret;
-	}
-
 	PRINT( INFO, "Starting Crimson server\n");
 	
 	server_init_led();
@@ -169,6 +162,15 @@ int main(int argc, char *argv[]) {
 	// initialize the properties, which is implemented as a Linux file structure
 	init_property(options);
 	inotify_fd = get_inotify_fd();
+
+	// perform autocalibration of the frequency synthesizers
+	// N.B. this must be done after init_property() because uart init is mixed in with it for some reason
+	atexit( synth_lut_fini );
+	ret = synth_lut_init();
+	if ( EXIT_SUCCESS != ret ) {
+		PRINT( ERROR, "Stopping Crimson server\n");
+		return ret;
+	}
 
 	// pass the profile pointers down to properties.c
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);

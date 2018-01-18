@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <linux/limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -12,10 +14,18 @@
 
 #include "array-utils.h"
 #include "common.h"
+#include "comm_manager.h"
 #include "synth_lut.h"
 
-#ifndef SYNTH_LUT_LEN
-#define SYNTH_LUT_LEN ( 6000000000 / 25000000 )
+extern int get_uart_rx_fd();
+extern int get_uart_tx_fd();
+
+// this should really be a conditional defined in configure.ac based on the hardware revision we're targetting, but ATM this is all I care about
+#ifndef hw_rev_defined_
+#define hw_rev_defined_
+
+#define CRIMSON_TNG
+
 #endif
 
 #define SYNTH_LUT_PATH( trx, ch ) \
@@ -33,11 +43,12 @@ enum {
 
 
 /**
- * id - a single char describing the channel (e.g. 'A')
- * fn - path to calibration data for the channel
+ * tx - true if the lut is for a TX channel
+ * id - a string describing the channel (e.g. "A")
+ * fn - file name, including full path, to calibration data for the channel
  * fd - file descriptor for the file named in fn
- * fm - mmap(2) for the file named in fn
- * ms - array size of fm
+ * fm - file map via mmap(2) for the file named in fn
+ * fs - file size of file named in fn
  */
 struct synth_lut_ctx {
 	const bool tx;
@@ -48,15 +59,15 @@ struct synth_lut_ctx {
 	size_t fs;
 };
 
-// the two tables below are sufficient for Crimson TNG
-
+// Crimson TNG specific defines
+#define FREQ_TOP 6000000000
+#define LO_STEP_SIZE 25000000
 static struct synth_lut_ctx rx_ctx[] = {
 	DEF_RX_CTX( A ),
 	DEF_RX_CTX( B ),
 	DEF_RX_CTX( C ),
 	DEF_RX_CTX( D ),
 };
-
 static struct synth_lut_ctx tx_ctx[] = {
 	DEF_TX_CTX( A ),
 	DEF_TX_CTX( B ),
@@ -64,18 +75,162 @@ static struct synth_lut_ctx tx_ctx[] = {
 	DEF_TX_CTX( D ),
 };
 
-static void synth_lut_fini_one_board( struct synth_lut_ctx *ctx );
+#define SYNTH_LUT_LEN ( FREQ_TOP / LO_STEP_SIZE )
 
-static int synth_lut_calibrate_one_board( struct synth_lut_ctx *ctx, const bool manual ) {
+/**
+ * Returns the channel number (e.g. 0 for 'A')
+ * @return the channel number
+ */
+static size_t synth_lut_get_channel( const struct synth_lut_ctx * const ctx ) {
+	return ctx->id[ 0 ] - 'A';
+}
 
-	if ( manual ) {
+static int synth_lut_uart_cmd( const int fd, char *query, char *resp, const size_t resp_max_sz ) {
+	int r;
 
-		PRINT( INFO, "Calibrating %s %c using data stored in %s\n", ctx->tx ? "TX" : "RX", ctx->id, ctx->fn );
+	uint16_t resp_sz = 0;
 
-	} else {
+	memset( resp, '\0', resp_max_sz );
 
-		PRINT( INFO, "Performing initial calibration of %s %c..\n", ctx->tx ? "TX" : "RX", ctx->id, ctx->fn );
+	PRINT( INFO, "writing '%s' to fd %d\n", query, fd );
 
+	query[ strlen( query ) ] = '\r';
+
+	r = write( fd, query, strlen( query ) );
+	if ( strlen( query ) != r ) {
+		PRINT( ERROR, "failed to send query '%s' on uart_fd %d\n", query, fd, errno, strerror( errno ) );
+		r = errno;
+		goto out;
+	}
+
+	int tries = 10;
+	for( resp_sz = 0, tries = 10; NULL == strstr( resp, ">" ) && tries; tries-- ) {
+		// read_uart_comm is super annoying and does not seem to work for this, only returning partial strings
+		int rr = read( fd, & resp[ resp_sz ], resp_max_sz - resp_sz );
+
+		//PRINT( INFO, "read() returned %d: resp: '%s'\n", rr, resp );
+
+		switch( rr ) {
+
+		case 0:
+			// end of file
+			break;
+
+		case -1:
+			// error
+			if ( ETIMEDOUT == errno || EAGAIN == errno ) {
+				break;
+			}
+			PRINT( ERROR, "failed to receive response to command '%s' on uart_fd %d\n", query, fd );
+			r = errno;
+			goto out;
+
+		default:
+
+			resp_sz += rr;
+			break;
+		}
+		usleep( 10000 );
+	}
+
+	r = EXIT_SUCCESS;
+
+out:
+	return r;
+}
+
+static int synth_lut_get_calibration_for_freq( const bool tx, const size_t chan_i, const size_t freq, synth_rec_t *rec ) {
+	int r;
+
+	char cmd_buf[ PATH_MAX ];
+	char resp_buf[ PATH_MAX ];
+
+	int core, band, bias;
+	int uart_fd;
+
+	uart_fd = tx ? get_uart_tx_fd() : get_uart_rx_fd();
+
+	// tell the mcu to use autocal
+	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -A 1", 'a' + chan_i );
+	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
+	if ( EXIT_SUCCESS != r ) {
+		goto out;
+	}
+
+	// set the frequency, in khz
+	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -f %u", 'a' + chan_i, freq / 1000 );
+	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
+	if ( EXIT_SUCCESS != r ) {
+		goto out;
+	}
+
+	// read the value back
+	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -p", 'a' + chan_i );
+	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
+	if ( EXIT_SUCCESS != r ) {
+		goto out;
+	}
+
+	if ( 3 != sscanf( resp_buf, "%u,%u,%u", & core, & band, & bias ) ) {
+		PRINT( ERROR, "unable to parse response '%s', expecting number,number,number\n", resp_buf );
+		r = EINVAL;
+		goto out;
+	}
+
+	rec->core = core;
+	rec->band = band;
+	rec->bias = bias;
+
+	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -A 0", 'a' + chan_i );
+	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
+	if ( EXIT_SUCCESS != r ) {
+		goto out;
+	}
+
+	r = EXIT_SUCCESS;
+
+out:
+	return r;
+}
+
+static int synth_lut_calibrate_one_board( struct synth_lut_ctx *ctx ) {
+
+	int r;
+
+	size_t i;
+	size_t freq;
+	size_t chan_i;
+
+	synth_rec_t *rec;
+
+	PRINT( INFO, "Performing initial calibration of %s %s..\n", ctx->tx ? "TX" : "RX", ctx->id, ctx->fn );
+
+	for( i = 0; i < SYNTH_LUT_LEN; i++ ) {
+
+		freq = ( i + 1 ) * LO_STEP_SIZE;
+		chan_i = synth_lut_get_channel( ctx );
+		rec = & ctx->fm[ i ];
+
+		r = synth_lut_get_calibration_for_freq( ctx->tx, chan_i, freq, rec );
+		if ( EXIT_SUCCESS != r ) {
+			PRINT( ERROR, "%s %s @ %u MHz failed (%d,%s)\n",
+				ctx->tx ? "TX" : "RX",
+				ctx->id,
+				freq / 1000000,
+				r,
+				strerror( r )
+			);
+			return r;
+		}
+
+		PRINT( INFO, "%s %s @ %u MHz: { %u, %u, %u }\n",
+			ctx->tx ? "TX" : "RX",
+			ctx->id,
+			freq / 1000000,
+			rec->core,
+			rec->band,
+			rec->bias
+		);
 	}
 
 	return EXIT_SUCCESS;
@@ -83,15 +238,14 @@ static int synth_lut_calibrate_one_board( struct synth_lut_ctx *ctx, const bool 
 
 static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 
-	static const bool manual = true;
-	static const bool automatic = false;
-
 	static const size_t n = SYNTH_LUT_LEN;
 
 	int r;
 
 	struct stat st;
 	synth_rec_t *rec = NULL;
+	char *cmdbuf = NULL;
+	size_t cmdbuf_sz;
 
 	r = stat( ctx->fn, & st );
 	if ( EXIT_SUCCESS != r ) {
@@ -102,9 +256,9 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 		}
 
 		// In this case, no calibration data exists on file, so we have to create a file of calibration data
-		// We assume that after going through autocalibration once for each frequency, that the micro stores a copy of the calibration table
+		// We assume that after going through autocalibration once for each frequency, that the micro stores a copy of the calibrated values
 
-		PRINT( INFO, "Creating calibration data for %s %c\n", ctx->tx ? "TX" : "RX", ctx->id );
+		PRINT( INFO, "Creating calibration data for %s %s\n", ctx->tx ? "TX" : "RX", ctx->id );
 
 		rec = calloc( n, sizeof( *rec ) );
 		if ( NULL == rec ) {
@@ -113,14 +267,36 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 			goto out;
 		}
 
-		r = synth_lut_calibrate_one_board( ctx, automatic );
+		// we temporarily put our buffer inside the ctx
+		ctx->fm = rec;
+
+		r = synth_lut_calibrate_one_board( ctx );
+
+		// we temporarily put our buffer inside the ctx
+		ctx->fm = MAP_FAILED;
+
 		if ( EXIT_SUCCESS != r ) {
-			PRINT( ERROR, "Failed to generate calibration data (%d,%s)\n", errno, strerror( errno ) );
+			PRINT( ERROR, "Failed to generate calibration data (%d,%s)\n", r, strerror( r ) );
+			goto out;
+		}
+
+		cmdbuf_sz = strlen( "'mkdir -p $(dirname " ) + strlen( ctx->fn ) + strlen( ")'" ) + sizeof( '\0' );
+		cmdbuf = malloc( cmdbuf_sz );
+		if ( NULL == cmdbuf ) {
+			PRINT( ERROR, "Failed to allocate memory for mkdir -p <> (%d,%s)\n", errno, strerror( errno ) );
+			goto out;
+		}
+		snprintf( cmdbuf, cmdbuf_sz, "mkdir -p $(dirname %s)", ctx->fn );
+		PRINT( INFO, "Running cmd %s\n", cmdbuf );
+		r = system( cmdbuf );
+		if ( EXIT_SUCCESS != r ) {
+			errno = EIO;
+			PRINT( ERROR, "Failed to run command %s\n", cmdbuf, errno, strerror( errno ) );
 			goto out;
 		}
 
 		// when stat sets errno to ENOENT, it means the file does not exist
-		// we must create the file, write calibration data to it, and then close the file
+		// we must create the file, write calibration data to it, close, and then reopen the file, read-only
 
 		r = open( ctx->fn, O_RDWR | O_SYNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP |  S_IWGRP );
 		if ( -1 == r ) {
@@ -134,13 +310,13 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 		if ( -1 == r ) {
 			r = errno;
 			PRINT( ERROR, "Failed to write calibration data (%d,%s)\n", errno, strerror( errno ) );
-			goto out;
+			goto remove_file;
 		}
 
 		if ( n * sizeof( *rec ) != r ) {
 			r = EINVAL;
 			PRINT( ERROR, "Wrote wrong number of bytes to calibration data file. Expected: %u, Actual: %u\n", n * sizeof( *rec ), r );
-			goto out;
+			goto remove_file;
 		}
 
 		r = close( ctx->fd );
@@ -149,10 +325,7 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 		}
 		ctx->fd = -1;
 
-		PRINT( INFO, "Created calibration data for %s %c\n", ctx->tx ? "TX" : "RX", ctx->id );
-
-		r = EXIT_SUCCESS;
-		goto out;
+		PRINT( INFO, "Created calibration data for %s %s\n", ctx->tx ? "TX" : "RX", ctx->id );
 	}
 
 	// we have an existing calibration table on file
@@ -166,7 +339,7 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 	}
 	ctx->fd = r;
 
-	ctx->fm = mmap( NULL, ctx->fs, PROT_READ, MAP_SHARED, ctx->fd, 0 );
+	ctx->fm = mmap( NULL, n * sizeof( *rec ), PROT_READ, MAP_SHARED, ctx->fd, 0 );
 	if ( MAP_FAILED == ctx->fm ) {
 		r = errno;
 		PRINT( ERROR, "Failed to map calibration file %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
@@ -174,15 +347,24 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 	}
 	ctx->fs = n * sizeof( *rec );
 
-	r = synth_lut_calibrate_one_board( ctx, manual );
-	if ( EXIT_SUCCESS != r ) {
-		PRINT( ERROR, "Failed to calibrate %s %c (%d,%s)\n", ctx->tx ? "TX" : "RX", ctx->id, r, strerror( r ) );
-		goto out;
-	}
+	PRINT( INFO, "Mapped %u records of calibration data for %s %s at %p\n", n, ctx->tx ? "TX" : "RX", ctx->id, ctx->fm );
 
-	synth_lut_fini_one_board( ctx );
+	r = EXIT_SUCCESS;
+
+	goto out;
+
+remove_file:
+	// XXX: fail-safe to ensure we do not have a corrupt calibration file
+	close( ctx->fd );
+	ctx->fd = -1;
+	remove( ctx->fn );
+	sync();
 
 out:
+	if ( NULL != cmdbuf ) {
+		free( cmdbuf );
+		cmdbuf = NULL;
+	}
 	if ( NULL != rec ) {
 		free( rec );
 		rec = NULL;
@@ -251,4 +433,52 @@ void synth_lut_fini() {
 	FOR_EACH( it, rx_ctx ) {
 		synth_lut_fini_one_board( it );
 	}
+}
+
+int synth_lut_get_rec( const bool tx, const uint8_t channel, const double freq, synth_rec_t *rec ) {
+	int r;
+
+	struct synth_lut_ctx *it;
+	double integral;
+	double fractional;
+	size_t k;
+
+	if ( tx ) {
+		FOR_EACH( it, tx_ctx ) {
+			if ( channel == ARRAY_OFFSET( it, tx_ctx ) ) {
+				break;
+			}
+		}
+	} else {
+		FOR_EACH( it, rx_ctx ) {
+			if ( channel == ARRAY_OFFSET( it, rx_ctx ) ) {
+				break;
+			}
+		}
+	}
+	if ( NULL == it ) {
+		PRINT( ERROR, "unable to find calibration data for %s %c\n", tx ? "TX" : "RX", 'A' + channel );
+		r = ENOENT;
+		goto out;
+	}
+
+	if (
+		false
+		|| (double)LO_STEP_SIZE > freq
+		|| 0 != ( fractional = modf( freq / (double)LO_STEP_SIZE, & integral ) )
+		|| integral >= it->fs / sizeof( *rec )
+	) {
+		PRINT( ERROR, "unable to find calibration data for %s %c at frequency %f\n", tx ? "TX" : "RX", 'A' + channel, freq );
+		r = EINVAL;
+		goto out;
+	}
+
+	k = integral;
+
+	*rec = it->fm[ k ];
+
+	r = EXIT_SUCCESS;
+
+out:
+	return r;
 }
