@@ -13,33 +13,50 @@ typedef struct synth_rec {
 } synth_rec_t;
 
 /**
- * Initialize the synth calibration table for each board on the system. This
- * implementation performs auto-calibration if the calibration for a specific
- * table does not exist.
+ * Enable usage of synthesizer calibration tables when setting frequency.
+ *
+ * If the calibration tables do not exist, they will be created.
+ * Auto-calibration generates tables for the entire frequency range
+ * and can take some time as a result.
+ *
+ * @param channel The channel to enable calibration on
+ * @return        0 on success or an errno value on error
+ */
+int synth_lut_enable( const bool tx, const size_t channel );
+/**
+ * Enable usage of synthesizer calibration tables when setting frequency
+ * for all channels.
  *
  * @return 0 on success or an errno value on error
  */
-int synth_lut_init();
+int synth_lut_enable_all();
 
 /**
- * Discard any resources required for synth calibration tables.
+ * Enable usage of synthesizer calibration tables when setting frequency.
  */
-void synth_lut_fini();
+void synth_lut_disable( const bool tx, const size_t channel );
 
 /**
- * Get the step size of the local oscillator
- * @return the step size in Hz
+ * Disable usage of synthesizer calibration tables when setting frequency
+ * for all channels.
  */
-double synth_lut_get_lo_step_size();
+void synth_lut_disable_all();
 
 /**
- * Get highest frequency that the board is capable of.
- * @return the highest frequency in Hz
+ * Check whether the synthesizer calibration tables are enabled.
+ *
+ * @return true when enabled, false otherwise.
  */
-double synth_lut_get_freq_top();
+bool synth_lut_is_enabled( const bool tx, const size_t channel );
 
 /**
- * Get the optimized synth settings for a specific frequency.
+ * Clear all synth calibration tables. This will call synth_lut_disable()
+ * internally.
+ */
+void synth_lut_erase( const bool tx, const size_t channel );
+
+/**
+ * Get the calibrated synthesizer settings for a specific frequency on a specific channel.
  *
  * @param tx      true if the setting is for tx
  * @param channel the channel (number, i.e. 0, rather than 'A')
@@ -50,6 +67,6 @@ double synth_lut_get_freq_top();
  *                EINVAL if channel is out of range.
  *                EINVAL if freq is not an exact positive multiple of the LO step size.
  */
-int synth_lut_get_rec( const bool tx, const uint8_t channel, const double freq, synth_rec_t *rec );
+int synth_lut_get( const bool tx, const uint8_t channel, const double freq, synth_rec_t *rec );
 
 #endif /* SYNTH_LUT_H_ */

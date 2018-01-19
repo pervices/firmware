@@ -22,7 +22,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "array-utils.h"
+
 #include "property_manager.h"
+#include "synth_lut.h"
 
 #define BASE_SAMPLE_RATE 325000000.0	// SPS
 #define RESAMP_SAMPLE_RATE  260000000.0	// SPS
@@ -529,7 +532,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, 0 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -921,8 +924,8 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-        // if freq out of bounds, kill channel
-        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
+	// if freq out of bounds, kill channel
+	if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -956,7 +959,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, 0 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1523,7 +1526,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, 1 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -1895,7 +1898,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, 1 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2406,7 +2409,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, 2 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -2777,7 +2780,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, 2 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -3287,7 +3290,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, 3 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -3657,7 +3660,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, 3 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -5220,6 +5223,48 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	return RETURN_SUCCESS;
 }
 
+static int hdlr_XX_X_rf_freq_lut_en ( const char *data, char *ret, const bool tx, const size_t channel ) {
+	int r = RETURN_SUCCESS;
+
+	bool en = '0' != data[ 0 ];
+
+	if ( en ) {
+		r = synth_lut_enable( tx, channel );
+		if ( EXIT_SUCCESS != r ) {
+			sprintf( ret, "%c", '0' );
+		}
+	} else {
+		synth_lut_disable( tx, channel );
+	}
+
+	return r;
+}
+
+static int hdlr_rx_a_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, false, 0 );
+}
+static int hdlr_rx_b_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, false, 1 );
+}
+static int hdlr_rx_c_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, false, 2 );
+}
+static int hdlr_rx_d_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, false, 3 );
+}
+static int hdlr_tx_a_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, true, 0 );
+}
+static int hdlr_tx_b_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, true, 1 );
+}
+static int hdlr_tx_c_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, true, 2 );
+}
+static int hdlr_tx_d_rf_freq_lut_en ( const char *data, char *ret ) {
+	return hdlr_XX_X_rf_freq_lut_en( data, ret, true, 3 );
+}
+
 #define DEFINE_FILE_PROP( n, h, p, v ) \
 	{ .type = PROP_TYPE_FILE, .path = n, .handler = h, .permissions = p, .def_val = v, }
 
@@ -5243,6 +5288,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "rx/" #_c "/stream",  hdlr_rx_ ## _c ## _stream,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/sync",  hdlr_rx_sync,  WO,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/val",  hdlr_rx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/lut_en",  hdlr_rx_ ## _c ## _rf_freq_lut_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/lna",  hdlr_rx_ ## _c ## _rf_freq_lna,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/freq/band",  hdlr_rx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "rx/" #_c "/rf/gain/val",  hdlr_rx_ ## _c ## _rf_gain_val,  RW,  "0" ), \
@@ -5293,6 +5339,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret) {
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/nco",  hdlr_tx_ ## _c ## _rf_dac_nco,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/dac/temp",  hdlr_tx_ ## _c ## _rf_dac_temp,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/val",  hdlr_tx_ ## _c ## _rf_freq_val,  RW,  "0" ), \
+	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/lut_en",  hdlr_tx_ ## _c ## _rf_freq_lut_en,  RW,  "0" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/band",  hdlr_tx_ ## _c ## _rf_freq_band,  RW,  "1" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/i_bias",  hdlr_tx_ ## _c ## _rf_freq_i_bias,  RW,  "17" ), \
 	DEFINE_FILE_PROP( "tx/" #_c "/rf/freq/q_bias",  hdlr_tx_ ## _c ## _rf_freq_q_bias,  RW,  "17" ), \
@@ -5709,7 +5756,7 @@ void sync_channels(uint8_t chan_mask) {
 
 }
 
-void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
+void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll, bool tx, size_t channel) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )
@@ -5748,9 +5795,23 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
+    double freq = pll->vcoFreq / pll->d;
+
+    if ( synth_lut_is_enabled( tx, channel ) ) {
+    	synth_rec_t rec;
+    	int ret = synth_lut_get( tx, channel, freq, & rec );
+    	if ( EXIT_SUCCESS != ret ) {
+    		PRINT( ERROR, "synth_lut_get( %u, %u, %f ) failed (%d,%s)\n", tx, channel, freq, ret, strerror( ret ) );
+    	} else {
+    		PRINT( ERROR, "Setting %s %c @ %u MHz with parameters { %u, %u, %u }\n", tx ? "TX" : "RX", 'A' + channel, (unsigned)( freq / 1000000 ), rec.core, rec.band, rec.bias );
+			snprintf(buf, sizeof(buf), "rf -c %c -C %u -B %u -I %u\r", 'a' + channel, rec.core, rec.band, rec.bias );
+			send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    	}
+    }
+
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)( freq / 1000 ) ); // Send output frequency in kHz
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
@@ -5834,5 +5895,64 @@ out:
 		PRINT( ERROR, "failed to send command '%s' (%d,%s)\n", buf, errno, strerror( errno ) );
 	}
 
+	return r;
+}
+
+int set_freq_internal( const bool tx, const unsigned channel, const double freq ) {
+
+	typedef int (*fp_t)(const char*, char*);
+
+	static const fp_t rx_fp[] = {
+		hdlr_rx_a_rf_freq_val,
+		hdlr_rx_b_rf_freq_val,
+		hdlr_rx_c_rf_freq_val,
+		hdlr_rx_d_rf_freq_val,
+	};
+
+	static const fp_t tx_fp[] = {
+		hdlr_tx_a_rf_freq_val,
+		hdlr_tx_b_rf_freq_val,
+		hdlr_tx_c_rf_freq_val,
+		hdlr_tx_d_rf_freq_val,
+	};
+
+	int r;
+
+	char req_buf[ MAX_PROP_LEN ];
+	char rsp_buf[ MAX_PROP_LEN ];
+
+	if( channel > ( tx ? ARRAY_SIZE( tx_fp ) : ARRAY_SIZE( rx_fp ) ) ) {
+		r = E2BIG;
+		PRINT( ERROR, "channel %u is invalid (%d,%s)\n", channel, r, strerror( r ) );
+		goto out;
+	}
+
+	const fp_t *fp = tx ? tx_fp : rx_fp;
+
+	memset( req_buf, '\0', sizeof( req_buf ) );
+	memset( rsp_buf, '\0', sizeof( rsp_buf ) );
+
+	// N.B. the print formatter in this case must be equal to the one in hdlr_XX_X_rf_freq_val
+	snprintf( req_buf, sizeof( req_buf ), "%lf", freq );
+
+	r = fp[ channel ]( req_buf, rsp_buf );
+	if ( RETURN_SUCCESS != r ) {
+		PRINT( ERROR, "function call to hdlr_XX_X_rf_freq_val() failed (%d)\n", r );
+		r = EIO;
+		goto out;
+	}
+
+	double actual_freq = 0;
+	if ( 1 != sscanf( rsp_buf, "%lf", & actual_freq ) || actual_freq != freq ) {
+		r = EIO;
+		PRINT( ERROR, "%s %c: expected: %f, actual: %f\n", tx ? "TX" : "RX", 'A' + channel, freq, actual_freq );
+		goto out;
+	}
+
+	flush_uart_comm( tx ? uart_tx_fd : uart_rx_fd );
+
+	r = EXIT_SUCCESS;
+
+out:
 	return r;
 }

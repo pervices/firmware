@@ -165,12 +165,7 @@ int main(int argc, char *argv[]) {
 
 	// perform autocalibration of the frequency synthesizers
 	// N.B. this must be done after init_property() because uart init is mixed in with it for some reason
-	atexit( synth_lut_fini );
-	ret = synth_lut_init();
-	if ( EXIT_SUCCESS != ret ) {
-		PRINT( ERROR, "Stopping Crimson server\n");
-		return ret;
-	}
+	atexit( synth_lut_disable_all );
 
 	// pass the profile pointers down to properties.c
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);
