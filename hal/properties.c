@@ -495,8 +495,8 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 		return RETURN_SUCCESS;
 	}
 
-        // if freq out of bounds, kill channel
-        if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
+	// if freq out of bounds, kill channel
+	if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
 		strcpy(buf, "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
@@ -5756,4 +5756,83 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
 
 
     usleep(100000);
+}
+
+int set_pll_frequency2(int actual_uart_fd, uint64_t reference, pllparam_t* pll) {
+	int r;
+    // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
+
+    // Send Reference to MCU ( No Need ATM since fixed reference )
+    snprintf( buf, sizeof( buf ), "rf -v %" PRIu32 "\r", (uint32_t)(reference/1000)); // Send reference in kHz
+    r = write( actual_uart_fd, buf, strlen( buf ) );
+    if ( strlen( buf ) != r ) {
+    	r = errno;
+    	goto out;
+    }
+
+    // write ADF4355/5355 R
+    snprintf( buf, sizeof( buf ), "rf -r %" PRIu16 "\r", pll->R );
+    r = write( actual_uart_fd, buf, strlen( buf ) );
+    if ( strlen( buf ) != r ) {
+    	r = errno;
+    	goto out;
+    }
+
+    // write ADF4355/ADF5355 N
+    snprintf( buf, sizeof( buf ), "rf -n %" PRIu32 "\r", pll->N );
+    r = write( actual_uart_fd, buf, strlen( buf ) );
+    if ( strlen( buf ) != r ) {
+    	r = errno;
+    	goto out;
+    }
+
+    // write ADF4355/ADF5355 D
+    snprintf( buf, sizeof( buf ), "rf -d %" PRIu16 "\r", pll->d );
+    r = write( actual_uart_fd, buf, strlen( buf ) );
+    if ( strlen( buf ) != r ) {
+    	r = errno;
+    	goto out;
+    }
+
+    // write ADF4355/ADF5355 feedback mode
+    snprintf( buf, "rf -t %" PRIu8 "\r", pll->divFBen );
+    r = write( actual_uart_fd, buf, strlen( buf ) );
+    if ( strlen( buf ) != r ) {
+    	r = errno;
+    	goto out;
+    }
+
+    // write ADF4355/ADF5355 Output RF Power
+    // default to lower mid power
+    snprintf( buf, sizeof( buf ), "rf -g %" PRIu8 "\r", 1 /*pll->power*/ );
+    r = write( actual_uart_fd, buf, strlen( buf ) );
+    if ( strlen( buf ) != r ) {
+    	r = errno;
+    	goto out;
+    }
+
+    // write ADF4355/ADF5355 Output Frequency
+    // Send output frequency in kHz
+    snprintf( buf, sizeof( buf ), "rf -f %" PRIu32 "\r", (uint32_t)( pll->vcoFreq / pll->d / 1000 ) );
+    r = write( actual_uart_fd, buf, strlen( buf ) );
+    if ( strlen( buf ) != r ) {
+    	r = errno;
+    	goto out;
+    }
+
+    size_t tries;
+    for( tries = 0; tries < 10; tries++ ) {
+    	read( actual_uart_fd, buf, sizeof( buf ) );
+    	usleep(10000);
+    }
+
+    r = EXIT_SUCCESS;
+
+out:
+	if ( EXIT_SUCCESS != r ) {
+		buf[ strlen( buf ) ] = '\0';
+		PRINT( ERROR, "failed to send command '%s' (%d,%s)\n", buf, errno, strerror( errno ) );
+	}
+
+	return r;
 }

@@ -17,6 +17,8 @@
 #include "comm_manager.h"
 #include "synth_lut.h"
 
+#include "pllcalc.h"
+
 extern int get_uart_rx_fd();
 extern int get_uart_tx_fd();
 
@@ -60,8 +62,10 @@ struct synth_lut_ctx {
 };
 
 // Crimson TNG specific defines
-#define FREQ_TOP 6000000000
-#define LO_STEP_SIZE 25000000
+#define FREQ_TOP    PLL1_RFOUT_MAX_HZ
+#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
+
+#define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ
 static struct synth_lut_ctx rx_ctx[] = {
 	DEF_RX_CTX( A ),
 	DEF_RX_CTX( B ),
@@ -75,7 +79,7 @@ static struct synth_lut_ctx tx_ctx[] = {
 	DEF_TX_CTX( D ),
 };
 
-#define SYNTH_LUT_LEN ( FREQ_TOP / LO_STEP_SIZE )
+#define SYNTH_LUT_LEN ( ( FREQ_TOP - FREQ_BOTTOM ) / LO_STEP_SIZE )
 
 /**
  * Returns the channel number (e.g. 0 for 'A')
@@ -139,6 +143,8 @@ out:
 	return r;
 }
 
+extern int set_pll_frequency2( int actual_uart_fd, uint64_t reference, pllparam_t* pll );
+
 static int synth_lut_get_calibration_for_freq( const bool tx, const size_t chan_i, const size_t freq, synth_rec_t *rec ) {
 	int r;
 
@@ -150,22 +156,38 @@ static int synth_lut_get_calibration_for_freq( const bool tx, const size_t chan_
 
 	uart_fd = tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
-	// tell the mcu to use autocal
-	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -A 1", 'a' + chan_i );
+	// tell the mcu what channel to select
+	snprintf( cmd_buf, sizeof( cmd_buf ), "rf -c %c", 'a' + chan_i );
 	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
 	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "synth_lut_uart_cmd() failed (%d,%s)\n", r, strerror( r ) );
 		goto out;
 	}
 
-	// set the frequency, in khz
-	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -f %u", 'a' + chan_i, freq / 1000 );
+	// tell the mcu to use autocal
+	snprintf( cmd_buf, sizeof( cmd_buf ), "rf -A 1" );
 	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
 	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "synth_lut_uart_cmd() failed (%d,%s)\n", r, strerror( r ) );
+		goto out;
+	}
+
+	// run the pll calc algorithm
+	pllparam_t pll;
+	uint64_t in_freq = freq;
+	double out_freq = setFreq( &in_freq, &pll );
+
+	PRINT( INFO, "in_freq: %u, out_freq: %u\n", freq, out_freq );
+
+	// Send Parameters over to the MCU
+	r = set_pll_frequency2( uart_fd, LO_STEP_SIZE, & pll );
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "set_pll_frequency2() failed (%d,%s)\n", r, strerror( r ) );
 		goto out;
 	}
 
 	// read the value back
-	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -p", 'a' + chan_i );
+	snprintf( cmd_buf, sizeof(cmd_buf), "rf -p" );
 	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
 	if ( EXIT_SUCCESS != r ) {
 		goto out;
@@ -181,7 +203,7 @@ static int synth_lut_get_calibration_for_freq( const bool tx, const size_t chan_
 	rec->band = band;
 	rec->bias = bias;
 
-	snprintf( cmd_buf, sizeof(cmd_buf), "rf -c %c -A 0", 'a' + chan_i );
+	snprintf( cmd_buf, sizeof(cmd_buf), "rf -A 0" );
 	r = synth_lut_uart_cmd( uart_fd, cmd_buf, resp_buf, sizeof( resp_buf ) );
 	if ( EXIT_SUCCESS != r ) {
 		goto out;
@@ -207,7 +229,7 @@ static int synth_lut_calibrate_one_board( struct synth_lut_ctx *ctx ) {
 
 	for( i = 0; i < SYNTH_LUT_LEN; i++ ) {
 
-		freq = ( i + 1 ) * LO_STEP_SIZE;
+		freq = FREQ_BOTTOM + i * LO_STEP_SIZE;
 		chan_i = synth_lut_get_channel( ctx );
 		rec = & ctx->fm[ i ];
 
@@ -287,7 +309,7 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 			goto out;
 		}
 		snprintf( cmdbuf, cmdbuf_sz, "mkdir -p $(dirname %s)", ctx->fn );
-		PRINT( INFO, "Running cmd %s\n", cmdbuf );
+		PRINT( INFO, "Running cmd '%s'\n", cmdbuf );
 		r = system( cmdbuf );
 		if ( EXIT_SUCCESS != r ) {
 			errno = EIO;
@@ -339,11 +361,13 @@ static int synth_lut_init_one_board( struct synth_lut_ctx *ctx ) {
 	}
 	ctx->fd = r;
 
+	PRINT( INFO, "Mapping %u records of calibration data for %s %s\n", n, ctx->tx ? "TX" : "RX", ctx->id );
+
 	ctx->fm = mmap( NULL, n * sizeof( *rec ), PROT_READ, MAP_SHARED, ctx->fd, 0 );
 	if ( MAP_FAILED == ctx->fm ) {
 		r = errno;
 		PRINT( ERROR, "Failed to map calibration file %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
-		goto out;
+		goto remove_file;
 	}
 	ctx->fs = n * sizeof( *rec );
 
