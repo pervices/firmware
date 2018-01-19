@@ -2780,7 +2780,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, 2 );
+	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, 2 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -3290,7 +3290,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
 
 	// Send Parameters over to the MCU
-	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, 3 );
+	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, 3 );
 
 	sprintf(ret, "%lf", outfreq);
 
@@ -5803,7 +5803,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll, bool tx
     	if ( EXIT_SUCCESS != ret ) {
     		PRINT( ERROR, "synth_lut_get( %u, %u, %f ) failed (%d,%s)\n", tx, channel, freq, ret, strerror( ret ) );
     	} else {
-    		PRINT( ERROR, "Setting %s %c @ %u MHz with parameters { %u, %u, %u }\n", tx ? "TX" : "RX", 'A' + channel, (unsigned)( freq / 1000000 ), rec.core, rec.band, rec.bias );
+    		PRINT( INFO, "Setting %s %c @ %u MHz with parameters { %u, %u, %u }\n", tx ? "TX" : "RX", 'A' + channel, (unsigned)( freq / 1000000 ), rec.core, rec.band, rec.bias );
 			snprintf(buf, sizeof(buf), "rf -c %c -C %u -B %u -I %u\r", 'a' + channel, rec.core, rec.band, rec.bias );
 			send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     	}
