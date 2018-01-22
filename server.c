@@ -34,6 +34,7 @@
 #include "comm_manager.h"
 #include "property_manager.h"
 #include "parser.h"
+#include "synth_lut.h"
 
 #define ENET_DEV "eth0"
 
@@ -161,6 +162,10 @@ int main(int argc, char *argv[]) {
 	// initialize the properties, which is implemented as a Linux file structure
 	init_property(options);
 	inotify_fd = get_inotify_fd();
+
+	// perform autocalibration of the frequency synthesizers
+	// N.B. this must be done after init_property() because uart init is mixed in with it for some reason
+	atexit( synth_lut_disable_all );
 
 	// pass the profile pointers down to properties.c
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);
