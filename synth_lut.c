@@ -4,6 +4,7 @@
 #include <linux/limits.h>
 #include <math.h>
 #include <pthread.h>
+#include <regex.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -28,6 +29,9 @@
 extern int get_uart_rx_fd();
 extern int get_uart_tx_fd();
 
+extern void server_init_led();
+extern void server_ready_led();
+
 // this should really be a conditional defined in configure.ac based on the hardware revision we're targetting, but ATM this is all I care about
 #ifndef hw_rev_defined_
 #define hw_rev_defined_
@@ -36,9 +40,6 @@ extern int get_uart_tx_fd();
 
 #endif
 
-#define SYNTH_LUT_PATH( trx, ch ) \
-	"/var/crimson/calibration-data/" #trx "/" #ch ".bin"
-
 enum {
 	RX,
 	TX
@@ -46,18 +47,11 @@ enum {
 
 extern int set_freq_internal( const bool tx, const unsigned channel, const double freq );
 
-/**
- * tx - true if the lut is for a TX channel
- * id - a string describing the channel (e.g. "A")
- * fn - file name, including full path, to calibration data for the channel
- * fd - file descriptor for the file named in fn
- * fm - file map via mmap(2) for the file named in fn
- * fs - file size of file named in fn
- */
 struct synth_lut_ctx {
 	const bool tx;
 	const char *id;
-	const char fn[ PATH_MAX ];
+	// "/var/crimson/calibration-data/TXA-XXXXXXXXXXXXXXXXXXXXXX.bin", where "XXXX.." are lowercase hex digits
+	char fn[ PATH_MAX ];
 	int fd;
 	synth_rec_t *fm;
 	size_t fs;
@@ -69,6 +63,7 @@ struct synth_lut_ctx {
 	int (*enable)( struct synth_lut_ctx *ctx );
 	void (*erase)( struct synth_lut_ctx *ctx );
 	int (*get)( struct synth_lut_ctx *ctx, const double freq, synth_rec_t *rec );
+	int (*init)( struct synth_lut_ctx *ctx );
 };
 
 static size_t _synth_lut_channel( struct synth_lut_ctx *ctx );
@@ -76,12 +71,13 @@ static void _synth_lut_disable( struct synth_lut_ctx *ctx );
 static int _synth_lut_enable( struct synth_lut_ctx *ctx );
 static void _synth_lut_erase( struct synth_lut_ctx *ctx );
 static int _synth_lut_get( struct synth_lut_ctx *ctx, const double freq, synth_rec_t *rec );
+static int synth_lut_init( struct synth_lut_ctx *ctx );
 
 #define DEF_RTX_CTX( rtx, rtxbool, ch ) \
 	{ \
 		.tx = rtxbool, \
 		.id = #ch, \
-		.fn = SYNTH_LUT_PATH( rtx, ch ), \
+		.fn = "", \
 		.fd = -1, \
 		.fm = MAP_FAILED, \
 		.fs = 0, \
@@ -92,6 +88,7 @@ static int _synth_lut_get( struct synth_lut_ctx *ctx, const double freq, synth_r
 		.enable = _synth_lut_enable, \
 		.erase = _synth_lut_erase, \
 		.get = _synth_lut_get, \
+		.init = synth_lut_init, \
 	}
 #define DEF_RX_CTX( ch ) DEF_RTX_CTX( rx, RX, ch )
 #define DEF_TX_CTX( ch ) DEF_RTX_CTX( tx, TX, ch )
@@ -231,24 +228,21 @@ out:
 static struct synth_lut_ctx *synth_lut_find( const bool tx, const size_t channel ) {
 
 	struct synth_lut_ctx *it = NULL;
-	size_t i;
 
 	//PRINT( INFO, "Looking for %s %c\n", tx ? "TX" : "RX", 'A' + channel );
 
 	if ( tx ) {
-		for( i = 0; i < ARRAY_SIZE( synth_lut_tx_ctx ); i++ ) {
+		FOR_EACH( it, synth_lut_tx_ctx ) {
 			//PRINT( INFO, "Considering TX %c @ %p\n", 'A' + i, & synth_lut_tx_ctx[ i ] );
-			if ( channel == i ) {
-				it = & synth_lut_tx_ctx[ i ];
+			if ( channel == it->channel( it ) ) {
 				//PRINT( INFO, "Found TX %c\n", 'A' + i );
 				break;
 			}
 		}
 	} else {
-		for( i = 0; i < ARRAY_SIZE( synth_lut_rx_ctx ); i++ ) {
+		FOR_EACH( it, synth_lut_rx_ctx ) {
 			//PRINT( INFO, "Considering RX %c @ %p\n", 'A' + i, & synth_lut_rx_ctx[ i ] );
-			if ( channel == i ) {
-				it = & synth_lut_rx_ctx[ i ];
+			if ( channel == it->channel( it ) ) {
 				//PRINT( INFO, "Found RX %c\n", 'A' + i );
 				break;
 			}
@@ -302,11 +296,14 @@ static int synth_lut_calibrate( struct synth_lut_ctx *ctx ) {
 }
 
 static size_t _synth_lut_channel( struct synth_lut_ctx *ctx ) {
-	if ( ctx->tx ) {
-		return ARRAY_OFFSET( ctx, synth_lut_tx_ctx );
-	} else {
-		return ARRAY_OFFSET( ctx, synth_lut_rx_ctx );
-	}
+
+	size_t r;
+
+	r = ctx->tx ? ARRAY_OFFSET( ctx, synth_lut_tx_ctx ) : ARRAY_OFFSET( ctx, synth_lut_rx_ctx );
+
+	// PRINT( INFO, "synth_lut_rx_ctx: %p, synth_lut_tx_ctx: %p, ctx: %p, r: %u, sizeof( synth_lut_ctx ): %u\n", synth_lut_rx_ctx, synth_lut_tx_ctx, ctx, r, sizeof( *ctx ) );
+
+	return r;
 }
 
 static void _synth_lut_disable( struct synth_lut_ctx *ctx ) {
@@ -318,6 +315,8 @@ static void _synth_lut_disable( struct synth_lut_ctx *ctx ) {
 		goto out;
 	}
 	ctx->enabled = false;
+
+	PRINT( INFO, "Disabling %s %c\n", ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ) );
 
 	if (
 		true
@@ -405,7 +404,15 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 		goto out;
 	}
 
-	PRINT( ERROR, "Enabling sythesizer calibration tables on %s %c..\n", ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ) );
+	server_init_led();
+
+	PRINT( INFO, "Enabling sythesizer calibration tables on %s %c..\n", ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ) );
+
+	r = ctx->init( ctx );
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( INFO, "Failed to initialize %s %c (%d,%s)\n", ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), r, strerror( r ) );
+		goto out;
+	}
 
 	r = stat( ctx->fn, & st );
 	if ( EXIT_SUCCESS != r ) {
@@ -414,6 +421,8 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 			PRINT( ERROR, "Failed to stat %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
 			goto out;
 		}
+
+		PRINT( INFO, "Did not find file '%s'\n", ctx->fn );
 
 		// In this case, no calibration data exists on file, so we have to create a file of calibration data
 		// We assume that after going through autocalibration once for each frequency, that the micro stores a copy of the calibrated values
@@ -427,7 +436,7 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 			goto out;
 		}
 
-		PRINT( INFO, "Allocated %u bytes @ %p for %u LUT records for %s %s\n", n * sizeof( *rec ), rec, n, ctx->tx ? "TX" : "RX", ctx->id );
+		//PRINT( INFO, "Allocated %u bytes @ %p for %u LUT records for %s %s\n", n * sizeof( *rec ), rec, n, ctx->tx ? "TX" : "RX", ctx->id );
 
 		// we temporarily put our buffer inside the ctx
 		ctx->fm = rec;
@@ -475,7 +484,7 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 			goto remove_file;
 		}
 
-		PRINT( INFO, "Wrote %u bytes to '%s'\n", r, ctx->fn );
+		//PRINT( INFO, "Wrote %u bytes to '%s'\n", r, ctx->fn );
 
 		if ( n * sizeof( *rec ) != r ) {
 			r = EINVAL;
@@ -532,8 +541,11 @@ out:
 	}
 	if ( NULL != rec ) {
 		free( rec );
+		//PRINT( INFO, "Freed memory @ %p\n", rec );
 		rec = NULL;
 	}
+
+	server_ready_led();
 
 	pthread_mutex_unlock( & ctx->lock );
 
@@ -614,22 +626,77 @@ out:
 	return r;
 }
 
+static int synth_lut_init( struct synth_lut_ctx *ctx ) {
+
+	char req[] = "status -s";
+
+	int r;
+
+	// this array is used for both the command response and regular expression errors
+	char buf[ 256 ];
+	int uart_fd;
+
+	regex_t preg;
+	const char *regex = "^[0-9a-f]*";
+	regmatch_t pmatch;
+
+	if ( 0 != strlen( ctx->fn ) ) {
+		// ctx->fn has already been initialized
+		r = EXIT_SUCCESS;
+		goto out;
+	}
+
+	r = regcomp( & preg, regex, 0 );
+	if ( EXIT_SUCCESS != r ) {
+		regerror( r, & preg, buf, sizeof( buf ) );
+		PRINT( ERROR, "Failed to compile regular expression '%s' (%d,%s)\n", regex, r, buf );
+		r = EINVAL;
+		goto out;
+	}
+
+	uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
+
+	r = synth_lut_uart_cmd( uart_fd, (char *)req, buf, sizeof( buf ) );
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "Failed to issue command '%s' to %s %c (%d,%s)\n", req, ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), r, strerror( r ) );
+		goto free_re;
+	}
+
+	r = regexec( & preg, buf, 1, & pmatch, 0 );
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "Failed to match '%s' to regular expression '%s' for %s %c\n", buf, regex, ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ) );
+		regerror( r, & preg, buf, sizeof( buf ) );
+		PRINT( ERROR, "(%d,%s)\n", r, buf );
+		r = EINVAL;
+		goto free_re;
+	}
+
+	// truncate the string to the exact size of the matched regular expression
+	buf[ pmatch.rm_eo ] = '\0';
+
+	snprintf( ctx->fn, sizeof( ctx->fn ), "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), buf );
+	r = EXIT_SUCCESS;
+
+free_re:
+	regfree( & preg );
+
+out:
+	return r;
+}
+
 int synth_lut_enable_all() {
 	int r;
-	size_t i;
 
 	struct synth_lut_ctx *it;
 
-	for( i = 0; i < ARRAY_SIZE( synth_lut_rx_ctx ); i++ ) {
-		it = & synth_lut_rx_ctx[ i ];
+	FOR_EACH( it, synth_lut_rx_ctx ) {
 		r = it->enable( it );
 		if ( EXIT_SUCCESS != r ) {
 			goto out;
 		}
 	}
 
-	for( i = 0; i < ARRAY_SIZE( synth_lut_tx_ctx ); i++ ) {
-		it = & synth_lut_tx_ctx[ i ];
+	FOR_EACH( it, synth_lut_tx_ctx ) {
 		r = it->enable( it );
 		if ( EXIT_SUCCESS != r ) {
 			goto out;
@@ -641,16 +708,13 @@ out:
 }
 
 void synth_lut_disable_all() {
-	size_t i;
 	struct synth_lut_ctx *it;
 
-	for( i = 0; i < ARRAY_SIZE( synth_lut_rx_ctx ); i++ ) {
-		it = & synth_lut_rx_ctx[ i ];
+	FOR_EACH( it, synth_lut_rx_ctx ) {
 		it->disable( it );
 	}
 
-	for( i = 0; i < ARRAY_SIZE( synth_lut_tx_ctx ); i++ ) {
-		it = & synth_lut_tx_ctx[ i ];
+	FOR_EACH( it, synth_lut_tx_ctx ) {
 		it->disable( it );
 	}
 }
