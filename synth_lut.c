@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "array-utils.h"
@@ -126,6 +127,11 @@ static int synth_lut_uart_cmd( const int fd, char *query, char *resp, const size
 	//PRINT( INFO, "writing '%s' to fd %d\n", query, fd );
 
 	query[ strlen( query ) ] = '\r';
+
+	r = tcflush( fd, TCIOFLUSH );
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "tcflush failed (%d,%s)\n", errno, strerror( errno ) );
+	}
 
 	r = write( fd, query, strlen( query ) );
 	if ( strlen( query ) != r ) {
