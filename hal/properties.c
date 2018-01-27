@@ -5807,7 +5807,14 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll, bool tx
 			snprintf(buf, sizeof(buf), "rf -c %c -C %u -B %u -I %u\r", 'a' + channel, rec.core, rec.band, rec.bias );
 			send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     	}
+    } else  {
+        //If synth lut is disabled, set autocal flat to enable fall-back behaviour.
+        snprintf(buf, sizeof(buf), "rf -c %c -A 1\r", 'a' + channel);
+        send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     }
+
+    //ADF output power level not presently specified.
+    strcpy(buf, "rf -g ");
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
