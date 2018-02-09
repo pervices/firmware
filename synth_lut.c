@@ -513,6 +513,8 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 		PRINT( INFO, "Created calibration data for %s %s\n", ctx->tx ? "TX" : "RX", ctx->id );
 	}
 
+	PRINT( INFO, "Opening calibration data file %s\n", ctx->fn );
+
 	// we have an existing calibration table on file
 	// we need to communicate that calibration data to the micro
 
@@ -650,7 +652,7 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 	int uart_fd;
 
 	regex_t preg;
-	const char *regex = "^[0-9a-f]*";
+	const char *regex = "^[0-9a-f]+";
 	regmatch_t pmatch;
 
 	if ( 0 != strlen( ctx->fn ) ) {
@@ -669,18 +671,9 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 
 	uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
-	for( i = 0; i < 10; i++ ) {
-		memset( buf, '\0', sizeof( buf ) );
-		r = synth_lut_uart_cmd( uart_fd, (char *)req, buf, sizeof( buf ) );
-		if ( EXIT_SUCCESS == r && 0 != strlen( buf ) ) {
-			break;
-		}
-		r = EINVAL;
-		if ( i < 9 ) {
-			sleep( 1 );
-		}
-	}
-	if ( EXIT_SUCCESS != r || 0 == strlen( buf ) ) {
+	memset( buf, '\0', sizeof( buf ) );
+	r = synth_lut_uart_cmd( uart_fd, (char *)req, buf, sizeof( buf ) );
+	if ( EXIT_SUCCESS != r ) {
 		PRINT( ERROR, "Failed to issue command '%s' to %s %c (%d,%s)\n", req, ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), r, strerror( r ) );
 		goto free_re;
 	}
