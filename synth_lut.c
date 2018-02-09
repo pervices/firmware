@@ -645,7 +645,6 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 	char req[] = "status -s";
 
 	int r;
-	int i;
 
 	// this array is used for both the command response and regular expression errors
 	char buf[ 256 ];
