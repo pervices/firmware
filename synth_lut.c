@@ -128,9 +128,15 @@ static int synth_lut_uart_cmd( const int fd, char *query, char *resp, const size
 
 	query[ strlen( query ) ] = '\r';
 
+	if ( ! isatty( fd ) ) {
+		r = errno;
+		PRINT( ERROR, "fd %d is not a tty (%d,%s)\n", fd, errno, strerror( errno ) );
+		goto out;
+	}
+
 	r = tcflush( fd, TCIOFLUSH );
 	if ( EXIT_SUCCESS != r ) {
-		PRINT( ERROR, "tcflush failed (%d,%s)\n", errno, strerror( errno ) );
+		PRINT( ERROR, "tcflush on fd %d failed (%d,%s)\n", fd, errno, strerror( errno ) );
 	}
 
 	r = write( fd, query, strlen( query ) );
@@ -637,6 +643,7 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 	char req[] = "status -s";
 
 	int r;
+	int i;
 
 	// this array is used for both the command response and regular expression errors
 	char buf[ 256 ];
@@ -662,8 +669,18 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 
 	uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
-	r = synth_lut_uart_cmd( uart_fd, (char *)req, buf, sizeof( buf ) );
-	if ( EXIT_SUCCESS != r ) {
+	for( i = 0; i < 10; i++ ) {
+		memset( buf, '\0', sizeof( buf ) );
+		r = synth_lut_uart_cmd( uart_fd, (char *)req, buf, sizeof( buf ) );
+		if ( EXIT_SUCCESS == r && 0 != strlen( buf ) ) {
+			break;
+		}
+		r = EINVAL;
+		if ( i < 9 ) {
+			sleep( 1 );
+		}
+	}
+	if ( EXIT_SUCCESS != r || 0 == strlen( buf ) ) {
 		PRINT( ERROR, "Failed to issue command '%s' to %s %c (%d,%s)\n", req, ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), r, strerror( r ) );
 		goto free_re;
 	}
