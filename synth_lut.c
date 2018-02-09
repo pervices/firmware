@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "array-utils.h"
@@ -126,6 +127,17 @@ static int synth_lut_uart_cmd( const int fd, char *query, char *resp, const size
 	//PRINT( INFO, "writing '%s' to fd %d\n", query, fd );
 
 	query[ strlen( query ) ] = '\r';
+
+	if ( ! isatty( fd ) ) {
+		r = errno;
+		PRINT( ERROR, "fd %d is not a tty (%d,%s)\n", fd, errno, strerror( errno ) );
+		goto out;
+	}
+
+	r = tcflush( fd, TCIOFLUSH );
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "tcflush on fd %d failed (%d,%s)\n", fd, errno, strerror( errno ) );
+	}
 
 	r = write( fd, query, strlen( query ) );
 	if ( strlen( query ) != r ) {
@@ -501,6 +513,8 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 		PRINT( INFO, "Created calibration data for %s %s\n", ctx->tx ? "TX" : "RX", ctx->id );
 	}
 
+	PRINT( INFO, "Opening calibration data file %s\n", ctx->fn );
+
 	// we have an existing calibration table on file
 	// we need to communicate that calibration data to the micro
 
@@ -631,14 +645,15 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 	char req[] = "status -s";
 
 	int r;
+	size_t len;
 
 	// this array is used for both the command response and regular expression errors
 	char buf[ 256 ];
 	int uart_fd;
 
 	regex_t preg;
-	const char *regex = "^[0-9a-f]*";
-	regmatch_t pmatch;
+	const char *regex = "\\([0-9a-f]\\)\\+[\n>]*";
+	regmatch_t pmatch[ 2 ];
 
 	if ( 0 != strlen( ctx->fn ) ) {
 		// ctx->fn has already been initialized
@@ -656,13 +671,14 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 
 	uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
+	memset( buf, '\0', sizeof( buf ) );
 	r = synth_lut_uart_cmd( uart_fd, (char *)req, buf, sizeof( buf ) );
 	if ( EXIT_SUCCESS != r ) {
 		PRINT( ERROR, "Failed to issue command '%s' to %s %c (%d,%s)\n", req, ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), r, strerror( r ) );
 		goto free_re;
 	}
 
-	r = regexec( & preg, buf, 1, & pmatch, 0 );
+	r = regexec( & preg, buf, 2, pmatch, 0 );
 	if ( EXIT_SUCCESS != r ) {
 		PRINT( ERROR, "Failed to match '%s' to regular expression '%s' for %s %c\n", buf, regex, ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ) );
 		regerror( r, & preg, buf, sizeof( buf ) );
@@ -672,7 +688,7 @@ static int synth_lut_init( struct synth_lut_ctx *ctx ) {
 	}
 
 	// truncate the string to the exact size of the matched regular expression
-	buf[ pmatch.rm_eo ] = '\0';
+	buf[ pmatch[ 1 ].rm_eo ] = '\0';
 
 	snprintf( ctx->fn, sizeof( ctx->fn ), "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), buf );
 	r = EXIT_SUCCESS;
