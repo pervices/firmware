@@ -43,6 +43,14 @@ void synth_lut_disable( const bool tx, const size_t channel );
 void synth_lut_disable_all();
 
 /**
+ * Enable usage of synthesizer calibration tables when setting frequency
+ * for all channels.
+ *
+ * @return        0 on success, or an errno value on error.
+ */
+int synth_lut_enable_all_if_calibrated();
+
+/**
  * Check whether the synthesizer calibration tables are enabled.
  *
  * @return true when enabled, false otherwise.
@@ -54,6 +62,15 @@ bool synth_lut_is_enabled( const bool tx, const size_t channel );
  * internally.
  */
 void synth_lut_erase( const bool tx, const size_t channel );
+
+/**
+ * Check whether calibration data exists for a specific channel.
+ *
+ * @param tx      true if the setting is for tx
+ * @param channel the channel (number, i.e. 0, rather than 'A')
+ * @return        true if calibration data exists, otherwise false.
+ */
+bool synth_lut_is_calibrated( const bool tx, const size_t channel );
 
 /**
  * Get the calibrated synthesizer settings for a specific frequency on a specific channel.
