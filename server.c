@@ -38,6 +38,14 @@
 
 #define ENET_DEV "eth0"
 
+#ifndef CRIMSON_TNG_RX_CHANNELS
+#define CRIMSON_TNG_RX_CHANNELS 4
+#endif
+
+#ifndef CRIMSON_TNG_TX_CHANNELS
+#define CRIMSON_TNG_TX_CHANNELS 4
+#endif
+
 /*
 // timers for polling
 static struct timeval tstart;
@@ -166,6 +174,25 @@ int main(int argc, char *argv[]) {
 	// perform autocalibration of the frequency synthesizers
 	// N.B. this must be done after init_property() because uart init is mixed in with it for some reason
 	atexit( synth_lut_disable_all );
+	synth_lut_enable_all_if_calibrated();
+	for( i = 0; i < CRIMSON_TNG_RX_CHANNELS; i++ ) {
+		if ( synth_lut_is_enabled( false, i ) ) {
+			snprintf( load_profile_path, sizeof( load_profile_path ), "echo 1 > /var/crimson/state/rx/%c/rf/freq/lut_en", 'a' + i );
+			ret2 = system( load_profile_path );
+			if ( EXIT_SUCCESS != ret2 ) {
+				PRINT( ERROR, "command failed: %s\n", load_profile_path );
+			}
+		}
+	}
+	for( i = 0; i < CRIMSON_TNG_TX_CHANNELS; i++ ) {
+		if ( synth_lut_is_enabled( true, i ) ) {
+			snprintf( load_profile_path, sizeof( load_profile_path ), "echo 1 > /var/crimson/state/tx/%c/rf/freq/lut_en", 'a' + i );
+			ret2 = system( load_profile_path );
+			if ( EXIT_SUCCESS != ret2 ) {
+				PRINT( ERROR, "command failed: %s\n", load_profile_path );
+			}
+		}
+	}
 
 	// pass the profile pointers down to properties.c
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);

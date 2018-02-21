@@ -63,6 +63,7 @@ struct synth_lut_ctx {
 	void (*disable)( struct synth_lut_ctx *ctx );
 	int (*enable)( struct synth_lut_ctx *ctx );
 	void (*erase)( struct synth_lut_ctx *ctx );
+	int (*is_calibrated)( struct synth_lut_ctx *ctx, bool *is );
 	int (*get)( struct synth_lut_ctx *ctx, const double freq, synth_rec_t *rec );
 	int (*init)( struct synth_lut_ctx *ctx );
 };
@@ -71,6 +72,7 @@ static size_t _synth_lut_channel( struct synth_lut_ctx *ctx );
 static void _synth_lut_disable( struct synth_lut_ctx *ctx );
 static int _synth_lut_enable( struct synth_lut_ctx *ctx );
 static void _synth_lut_erase( struct synth_lut_ctx *ctx );
+static int _synth_lut_is_calibrated( struct synth_lut_ctx *ctx, bool *is );
 static int _synth_lut_get( struct synth_lut_ctx *ctx, const double freq, synth_rec_t *rec );
 static int synth_lut_init( struct synth_lut_ctx *ctx );
 
@@ -88,6 +90,7 @@ static int synth_lut_init( struct synth_lut_ctx *ctx );
 		.disable = _synth_lut_disable, \
 		.enable = _synth_lut_enable, \
 		.erase = _synth_lut_erase, \
+		.is_calibrated = _synth_lut_is_calibrated, \
 		.get = _synth_lut_get, \
 		.init = synth_lut_init, \
 	}
@@ -750,3 +753,91 @@ bool synth_lut_is_enabled( const bool tx, const size_t channel ) {
 out:
 	return r;
 }
+
+static int _synth_lut_is_calibrated( struct synth_lut_ctx *ctx, bool *is ) {
+
+	int r;
+
+	struct stat st;
+
+	pthread_mutex_lock( & ctx->lock );
+
+	r = ctx->init( ctx );
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( INFO, "Failed to initialize %s %c (%d,%s)\n", ctx->tx ? "TX" : "RX", 'A' + ctx->channel( ctx ), r, strerror( r ) );
+		goto out;
+	}
+
+	r = stat( ctx->fn, & st );
+	if ( EXIT_SUCCESS != r ) {
+		r = errno;
+		PRINT( ERROR, "Failed to stat %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
+		goto out;
+	}
+
+out:
+	pthread_mutex_unlock( & ctx->lock );
+
+	return r;
+}
+
+bool synth_lut_is_calibrated( const bool tx, const size_t channel ) {
+	bool r;
+	int rr;
+	struct synth_lut_ctx *it = synth_lut_find( tx, channel );
+	if ( NULL == it ) {
+		PRINT( ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel );
+		r = false;
+		goto out;
+	}
+	rr = it->is_calibrated( it, & r );
+	if ( EXIT_SUCCESS != rr ) {
+		PRINT( ERROR, "unable to check calibration for %s %c\n", tx ? "TX" : "RX", 'A' + channel );
+		r = false;
+		goto out;
+	}
+
+out:
+	return r;
+}
+
+int synth_lut_enable_all_if_calibrated() {
+	int r;
+
+	struct synth_lut_ctx *it;
+	bool is_calibrated;
+
+	FOR_EACH( it, synth_lut_rx_ctx ) {
+		if (
+			true
+			&& EXIT_SUCCESS == ( r = it->is_calibrated( it, & is_calibrated ) )
+			&& is_calibrated
+			&& EXIT_SUCCESS == ( r = it->enable( it ) )
+		) {
+			PRINT( INFO, "Enabled synth lut for %s %c\n", it->tx ? "TX" : "RX", it->id );
+		}
+		if ( EXIT_SUCCESS != r ) {
+			PRINT( ERROR, "Warning: Failed to check calibration or enable synth lut for %s %c\n", it->tx ? "TX" : "RX", it->id );
+		}
+	}
+
+	FOR_EACH( it, synth_lut_tx_ctx ) {
+		if (
+			true
+			&& EXIT_SUCCESS == ( r = it->is_calibrated( it, & is_calibrated ) )
+			&& is_calibrated
+			&& EXIT_SUCCESS == ( r = it->enable( it ) )
+		) {
+			PRINT( INFO, "Enabled synth lut for %s %c\n", it->tx ? "TX" : "RX", it->id );
+		}
+		if ( EXIT_SUCCESS != r ) {
+			PRINT( ERROR, "Warning: Failed to check calibration or enable synth lut for %s %c\n", it->tx ? "TX" : "RX", it->id );
+		}
+	}
+
+	r = EXIT_SUCCESS;
+
+out:
+	return r;
+}
+

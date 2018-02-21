@@ -35,6 +35,14 @@ pllparam_t pll_def = {
         PLL1_OUTFREQ_DEFAULT,
         PLL1_FB_DEFAULT
 };
+pllparam_t pll_def_r_5 = {
+		PLL1_R_FIXED_5,
+        PLL1_N_DEFAULT,
+        PLL1_D_DEFAULT,
+        PLL1_X2EN_DEFAULT,
+        PLL1_OUTFREQ_DEFAULT,
+        PLL1_FB_DEFAULT
+};
 
 #ifdef _PLL_DEBUG_STANDALONE
 // ==========================
@@ -174,7 +182,10 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
 //  - Assumes a single PLL design, and therefore fixed reference.
 //
 
-        *pll = pll_def;
+		if (*reqFreq < (PLL_CORE_REF_FREQ_HZ * PLL_ADF5355_MAX_N))
+        	*pll = pll_def_r_5;
+		else
+			*pll = pll_def;
 
         uint64_t temp = *reqFreq;
 
@@ -190,23 +201,29 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll) {
         pll_SetVCO(reqFreq, pll);
 	
         // 2. Use the reference to determine R, N, and pfd frequency
-       long double pd_freq = (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
+        //Crimson RTM5 Phase coherance under 575MHz
+        long double pd_freq = (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
 
         double N1 = 0;
 
+		//For phase coherency we need to stick with step sizes
+		//corresponding to a reference as defined (currently 25e6)
+		//However when reqFreq is below threshold we will divide
+		//reference by 5.
         // Determine the values of the N and dividers for PLL1
-        if ( !pll->divFBen || *reqFreq < PLL1_FB_THRESHOLD ) {
+        if ( !pll->divFBen){
             pll->divFBen = 0;
             N1  = (double)pll->vcoFreq / (double)pd_freq;
         } else {
             N1  = (double)pll->vcoFreq / (double)pll->d;
-            N1  = N1 / (long double)pd_freq;
-	    if (N1 < 1) N1 = 1;
+            N1  = N1 / (long double)PLL_CORE_REF_FREQ_HZ;
+            if (N1 < 1) N1 = 1;
         }
         pll->N = (uint32_t)N1;
+        pll->N = (uint32_t)N1 * (uint32_t)pll->R ;
 
         //Set correct, actual, VCO frequency based on output frequency
-	if ( !pll->divFBen || *reqFreq < PLL1_FB_THRESHOLD ) {
+	if ( !pll->divFBen ) {
             pll->vcoFreq = (long double)pd_freq * (long double)pll->N;
         } else {
             pll->vcoFreq = (long double)pd_freq * (uint64_t)pll->N * (uint64_t)pll->d;

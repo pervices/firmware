@@ -5804,7 +5804,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll, bool tx
     		PRINT( ERROR, "synth_lut_get( %u, %u, %f ) failed (%d,%s)\n", tx, channel, freq, ret, strerror( ret ) );
     	} else {
     		PRINT( INFO, "Setting %s %c @ %u MHz with parameters { %u, %u, %u }\n", tx ? "TX" : "RX", 'A' + channel, (unsigned)( freq / 1000000 ), rec.core, rec.band, rec.bias );
-			snprintf(buf, sizeof(buf), "rf -c %c -C %u -B %u -I %u\r", 'a' + channel, rec.core, rec.band, rec.bias );
+			snprintf(buf, sizeof(buf), "rf -c %c -A 0 -C %u -B %u -I %u\r", 'a' + channel, rec.core, rec.band, rec.bias );
 			send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     	}
     } else  {
