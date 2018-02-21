@@ -75,6 +75,9 @@
 
 // ADF4355 Default specs
 #define PLL1_R_FIXED		( 1 )		// R value must be fixed to ensure consistent PFD frequency (13MHz)
+#define PLL1_R_FIXED_5		( 5 )		// R value must be fixed to ensure consistent PFD frequency (13MHz)
+#define PLL_ADF5355_MAX_N		( 23 )		// R value must be fixed to ensure consistent PFD frequency (13MHz)
+
 
 #define PLL1_N_DEFAULT		( 112 )         // N value (N^2 contribution to PLL noise) [16..4096]
 #define PLL1_D_DEFAULT		( 2 )		// RFoutput divider value (1,2,4,6..58,60,62)
