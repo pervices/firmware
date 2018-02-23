@@ -110,7 +110,7 @@ static int _synth_lut_autocal_values( struct synth_lut_ctx *ctx, synth_rec_t *re
 // Crimson TNG specific defines
 #define FREQ_TOP    PLL1_RFOUT_MAX_HZ
 //#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
-#define FREQ_BOTTOM 75000000
+#define FREQ_BOTTOM 125000000
 
 #define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ
 static struct synth_lut_ctx synth_lut_rx_ctx[] = {
@@ -127,7 +127,7 @@ static struct synth_lut_ctx synth_lut_tx_ctx[] = {
 	DEF_TX_CTX( D ),
 };
 
-#define SYNTH_LUT_LEN ( ( ( FREQ_TOP - FREQ_BOTTOM ) / LO_STEP_SIZE ) + 1 )
+#define SYNTH_LUT_LEN ( (size_t)( ( ( FREQ_TOP - FREQ_BOTTOM ) / LO_STEP_SIZE ) + 1 ) )
 
 static int synth_lut_uart_cmd( const int fd, char *query, char *resp, const size_t resp_max_sz ) {
 	int r;
@@ -398,8 +398,9 @@ static int synth_lut_recalibrate_all() {
 		PRINT( ERROR, "calloc failed (%d, %s)\n", r, strerror( r ) );
 		goto out;
 	}
+
 	// create an array of ctx to pass to synth_lut_calibrate_n_for_freq
-	ctx = calloc( n, sizeof( ctx ) );
+	ctx = calloc( n, sizeof( *ctx ) );
 	if ( NULL == ctx ) {
 		r = errno;
 		PRINT( ERROR, "calloc failed (%d, %s)\n", r, strerror( r ) );
@@ -416,6 +417,7 @@ static int synth_lut_recalibrate_all() {
 
 	// just to reduce the number of allocations to free, we just allocate space
 	// for all calibration tables contiguously
+	//PRINT( INFO, "allocating %u * %u * %u = %u bytes for %u synt_rec_t\n", n, SYNTH_LUT_LEN, sizeof( synth_rec_t ), n * SYNTH_LUT_LEN * sizeof( synth_rec_t ), n * SYNTH_LUT_LEN );
 	rect = calloc( n * SYNTH_LUT_LEN, sizeof( *rect ) );
 	if ( NULL == rect ) {
 		r = errno;
@@ -432,9 +434,11 @@ static int synth_lut_recalibrate_all() {
 		freq = (double)FREQ_BOTTOM + i * (double)LO_STEP_SIZE;
 
 		// populate our array of rec to pass to synth_lut_calibrate_n_for_freq
-		for( j = 0; j < ARRAY_SIZE( synth_lut_rx_ctx ); j++ ) {
+		for( j = 0; j < n; j++ ) {
 			rec[ j ] = & ctx[ j ]->fm[ i ];
 		}
+
+		PRINT( INFO, "calling synth_lut_calibrate_n_for_freq()..\n" );
 
 		r = synth_lut_calibrate_n_for_freq( freq, n, ctx, rec );
 		if ( EXIT_SUCCESS != r ) {
@@ -447,58 +451,56 @@ static int synth_lut_recalibrate_all() {
 		}
 	}
 
-	if ( EXIT_SUCCESS == r ) {
-		for( j = 0; j < n; j++ ) {
+	for( j = 0; j < n; j++ ) {
 
-			cmdbuf_sz = strlen( "'mkdir -p $(dirname " ) + strlen( ctx[j]->fn ) + strlen( ")'" ) + sizeof( '\0' );
-			cmdbuf = malloc( cmdbuf_sz );
-			if ( NULL == cmdbuf ) {
-				PRINT( ERROR, "Failed to allocate memory for mkdir -p (%d,%s)\n", errno, strerror( errno ) );
-				goto out;
-			}
-			snprintf( cmdbuf, cmdbuf_sz, "mkdir -p $(dirname %s)", ctx[j]->fn );
-			PRINT( INFO, "Running cmd '%s'\n", cmdbuf );
-			r = system( cmdbuf );
-			if ( EXIT_SUCCESS != r ) {
-				errno = EIO;
-				PRINT( ERROR, "Failed to run command %s\n", cmdbuf, errno, strerror( errno ) );
-				goto out;
-			}
-
-			// when stat sets errno to ENOENT, it means the file does not exist
-			// we must create the file, write calibration data to it, close, and then reopen the file, read-only
-
-			r = open( ctx[j]->fn, O_RDWR | O_SYNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP |  S_IWGRP );
-			if ( -1 == r ) {
-				r = errno;
-				PRINT( ERROR, "Failed to create / open calibration data file %s (%d,%s)\n", ctx[j]->fn, errno, strerror( errno ) );
-				goto out;
-			}
-			ctx[j]->fd = r;
-
-			r = write( ctx[j]->fd, rec, n * sizeof( *rec ) );
-			if ( -1 == r ) {
-				r = errno;
-				PRINT( ERROR, "Failed to write calibration data (%d,%s)\n", errno, strerror( errno ) );
-				remove( ctx[j]->fn );
-				goto out;
-			}
-
-			//PRINT( INFO, "Wrote %u bytes to '%s'\n", r, ctx->fn );
-
-			if ( n * sizeof( *rec ) != r ) {
-				r = EINVAL;
-				PRINT( ERROR, "Wrote wrong number of bytes to calibration data file. Expected: %u, Actual: %u\n", n * sizeof( *rec ), r );
-				remove( ctx[j]->fn );
-				goto out;
-			}
-
-			r = close( ctx[j]->fd );
-			if ( -1 == r ) {
-				PRINT( ERROR, "Warning: Failed to close calibration data file (%d,%s)\n", errno, strerror( errno ) );
-			}
-			ctx[j]->fd = -1;
+		cmdbuf_sz = strlen( "'mkdir -p $(dirname " ) + strlen( ctx[j]->fn ) + strlen( ")'" ) + sizeof( '\0' );
+		cmdbuf = malloc( cmdbuf_sz );
+		if ( NULL == cmdbuf ) {
+			PRINT( ERROR, "Failed to allocate memory for mkdir -p (%d,%s)\n", errno, strerror( errno ) );
+			goto out;
 		}
+		snprintf( cmdbuf, cmdbuf_sz, "mkdir -p $(dirname %s)", ctx[j]->fn );
+		PRINT( INFO, "Running cmd '%s'\n", cmdbuf );
+		r = system( cmdbuf );
+		if ( EXIT_SUCCESS != r ) {
+			errno = EIO;
+			PRINT( ERROR, "Failed to run command %s\n", cmdbuf, errno, strerror( errno ) );
+			goto out;
+		}
+
+		// when stat sets errno to ENOENT, it means the file does not exist
+		// we must create the file, write calibration data to it, close, and then reopen the file, read-only
+
+		r = open( ctx[j]->fn, O_RDWR | O_SYNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP |  S_IWGRP );
+		if ( -1 == r ) {
+			r = errno;
+			PRINT( ERROR, "Failed to create / open calibration data file %s (%d,%s)\n", ctx[j]->fn, errno, strerror( errno ) );
+			goto out;
+		}
+		ctx[j]->fd = r;
+
+		r = write( ctx[j]->fd, rec, SYNTH_LUT_LEN * sizeof( *rec ) );
+		if ( -1 == r ) {
+			r = errno;
+			PRINT( ERROR, "Failed to write calibration data (%d,%s)\n", errno, strerror( errno ) );
+			remove( ctx[j]->fn );
+			goto out;
+		}
+
+		//PRINT( INFO, "Wrote %u bytes to '%s'\n", r, ctx->fn );
+
+		if ( SYNTH_LUT_LEN * sizeof( *rec ) != r ) {
+			r = EINVAL;
+			PRINT( ERROR, "Wrote wrong number of bytes to calibration data file. Expected: %u, Actual: %u\n", n * sizeof( *rec ), r );
+			remove( ctx[j]->fn );
+			goto out;
+		}
+
+		r = close( ctx[j]->fd );
+		if ( -1 == r ) {
+			PRINT( ERROR, "Warning: Failed to close calibration data file (%d,%s)\n", errno, strerror( errno ) );
+		}
+		ctx[j]->fd = -1;
 	}
 
 out:
@@ -598,12 +600,16 @@ out:
 
 static void _synth_lut_erase( struct synth_lut_ctx *ctx ) {
 
+	PRINT( INFO, "Erasing %s\n", ctx->fn );
+
 	pthread_mutex_lock( & ctx->lock );
 
 	ctx->disable( ctx );
 
 	if ( -1 == remove( ctx->fn ) ) {
-		PRINT( ERROR, "unable to remove %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
+		if ( ENOENT != errno ) {
+			PRINT( ERROR, "unable to remove %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
+		}
 	}
 
 	pthread_mutex_unlock( & ctx->lock );
@@ -894,6 +900,7 @@ void synth_lut_disable_all() {
 	FOR_EACH( it, synth_lut_tx_ctx ) {
 		it->disable( it );
 	}
+
 }
 
 bool synth_lut_is_enabled( const bool tx, const size_t channel ) {
@@ -928,10 +935,17 @@ static int _synth_lut_is_calibrated( struct synth_lut_ctx *ctx, bool *is ) {
 
 	r = stat( ctx->fn, & st );
 	if ( EXIT_SUCCESS != r ) {
+		if ( ENOENT == errno ) {
+			r = EXIT_SUCCESS;
+			*is = false;
+			goto out;
+		}
 		r = errno;
 		PRINT( ERROR, "Failed to stat %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
 		goto out;
 	}
+
+	*is = true;
 
 out:
 	pthread_mutex_unlock( & ctx->lock );
