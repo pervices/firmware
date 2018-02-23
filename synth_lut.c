@@ -540,6 +540,8 @@ static size_t _synth_lut_channel( struct synth_lut_ctx *ctx ) {
 static void _synth_lut_disable( struct synth_lut_ctx *ctx ) {
 	int r;
 
+	char cmdbuf[ PATH_MAX ];
+
 	pthread_mutex_lock( & ctx->lock );
 
 	if ( ! ctx->enabled ) {
@@ -571,6 +573,9 @@ static void _synth_lut_disable( struct synth_lut_ctx *ctx ) {
 		}
 	}
 	ctx->fd = -1;
+
+	snprintf( cmdbuf, sizeof( cmdbuf ), "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en", ctx->tx ? 't': 'r', 'a' + ctx->channel( ctx ) );
+	system( cmdbuf );
 
 out:
 	pthread_mutex_unlock( & ctx->lock );
@@ -639,8 +644,7 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 
 	struct stat st;
 	synth_rec_t *rec = NULL;
-	char *cmdbuf = NULL;
-	size_t cmdbuf_sz;
+	char cmdbuf[ PATH_MAX ];
 
 	pthread_mutex_lock( & ctx->lock );
 
@@ -691,7 +695,7 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 	if ( MAP_FAILED == ctx->fm ) {
 		r = errno;
 		PRINT( ERROR, "Failed to map calibration file %s (%d,%s)\n", ctx->fn, errno, strerror( errno ) );
-		goto remove_file;
+		goto out;
 	}
 	ctx->fs = n * sizeof( *rec );
 
@@ -700,20 +704,10 @@ static int _synth_lut_enable( struct synth_lut_ctx *ctx ) {
 	r = EXIT_SUCCESS;
 	ctx->enabled = true;
 
-	goto out;
-
-remove_file:
-	// XXX: fail-safe to ensure we do not have a corrupt calibration file
-	close( ctx->fd );
-	ctx->fd = -1;
-	remove( ctx->fn );
-	sync();
+	snprintf( cmdbuf, sizeof( cmdbuf ), "echo 1 > /var/crimson/state/%cx/%c/rf/freq/lut_en", ctx->tx ? 't': 'r', 'a' + ctx->channel( ctx ) );
+	system( cmdbuf );
 
 out:
-	if ( NULL != cmdbuf ) {
-		free( cmdbuf );
-		cmdbuf = NULL;
-	}
 	if ( NULL != rec ) {
 		free( rec );
 		//PRINT( INFO, "Freed memory @ %p\n", rec );
