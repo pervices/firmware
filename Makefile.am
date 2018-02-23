@@ -18,7 +18,8 @@ server_LDADD = \
 	hal/drivers/mmap/libmmap.la \
 	hal/drivers/udp/libudp.la \
 	hal/drivers/uart/libuart.la \
-	parser/libparser.la
+	parser/libparser.la \
+	-lpthread
 
 mcu_SOURCES = \
 	mcu.c
