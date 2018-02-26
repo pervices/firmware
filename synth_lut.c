@@ -377,7 +377,7 @@ static int synth_lut_recalibrate_all() {
 	size_t j;
 	double freq;
 	size_t chan_i;
-	size_t n;
+	size_t n_channels;
 	size_t cmdbuf_sz;
 	char *cmdbuf;
 
@@ -389,10 +389,10 @@ static int synth_lut_recalibrate_all() {
 
 	synth_lut_erase_all();
 
-	n = ARRAY_SIZE( synth_lut_rx_ctx ) + ARRAY_SIZE( synth_lut_tx_ctx );
+	n_channels = ARRAY_SIZE( synth_lut_rx_ctx ) + ARRAY_SIZE( synth_lut_tx_ctx );
 
 	// create an array of rec to pass to synth_lut_calibrate_n_for_freq
-	rec = calloc( n, sizeof( rec ) );
+	rec = calloc( n_channels, sizeof( *rec ) );
 	if ( NULL == rec ) {
 		r = errno;
 		PRINT( ERROR, "calloc failed (%d, %s)\n", r, strerror( r ) );
@@ -400,7 +400,7 @@ static int synth_lut_recalibrate_all() {
 	}
 
 	// create an array of ctx to pass to synth_lut_calibrate_n_for_freq
-	ctx = calloc( n, sizeof( *ctx ) );
+	ctx = calloc( n_channels, sizeof( *ctx ) );
 	if ( NULL == ctx ) {
 		r = errno;
 		PRINT( ERROR, "calloc failed (%d, %s)\n", r, strerror( r ) );
@@ -418,13 +418,13 @@ static int synth_lut_recalibrate_all() {
 	// just to reduce the number of allocations to free, we just allocate space
 	// for all calibration tables contiguously
 	//PRINT( INFO, "allocating %u * %u * %u = %u bytes for %u synt_rec_t\n", n, SYNTH_LUT_LEN, sizeof( synth_rec_t ), n * SYNTH_LUT_LEN * sizeof( synth_rec_t ), n * SYNTH_LUT_LEN );
-	rect = calloc( n * SYNTH_LUT_LEN, sizeof( *rect ) );
+	rect = calloc( n_channels * SYNTH_LUT_LEN, sizeof( *rect ) );
 	if ( NULL == rect ) {
 		r = errno;
 		PRINT( ERROR, "calloc failed (%d, %s)\n", r, strerror( r ) );
 		goto out;
 	}
-	for( j = 0; j < n; j++ ) {
+	for( j = 0; j < n_channels; j++ ) {
 		ctx[ j ]->fm = & rect[ j * SYNTH_LUT_LEN ];
 	}
 
@@ -434,13 +434,13 @@ static int synth_lut_recalibrate_all() {
 		freq = (double)FREQ_BOTTOM + i * (double)LO_STEP_SIZE;
 
 		// populate our array of rec to pass to synth_lut_calibrate_n_for_freq
-		for( j = 0; j < n; j++ ) {
+		for( j = 0; j < n_channels; j++ ) {
 			rec[ j ] = & ctx[ j ]->fm[ i ];
 		}
 
 		PRINT( INFO, "calling synth_lut_calibrate_n_for_freq()..\n" );
 
-		r = synth_lut_calibrate_n_for_freq( freq, n, ctx, rec );
+		r = synth_lut_calibrate_n_for_freq( freq, n_channels, ctx, rec );
 		if ( EXIT_SUCCESS != r ) {
 			PRINT( ERROR, "%u MHz failed (%d,%s)\n",
 				(unsigned)( freq / 1000000 ),
@@ -451,15 +451,15 @@ static int synth_lut_recalibrate_all() {
 		}
 	}
 
-	for( j = 0; j < n; j++ ) {
+	for( j = 0; j < n_channels; j++ ) {
 
-		cmdbuf_sz = strlen( "'mkdir -p $(dirname " ) + strlen( ctx[j]->fn ) + strlen( ")'" ) + sizeof( '\0' );
+		cmdbuf_sz = strlen( "'mkdir -p $(dirname " ) + strlen( ctx[ j ]->fn ) + strlen( ")'" ) + sizeof( '\0' );
 		cmdbuf = malloc( cmdbuf_sz );
 		if ( NULL == cmdbuf ) {
 			PRINT( ERROR, "Failed to allocate memory for mkdir -p (%d,%s)\n", errno, strerror( errno ) );
 			goto out;
 		}
-		snprintf( cmdbuf, cmdbuf_sz, "mkdir -p $(dirname %s)", ctx[j]->fn );
+		snprintf( cmdbuf, cmdbuf_sz, "mkdir -p $(dirname %s)", ctx[ j ]->fn );
 		PRINT( INFO, "Running cmd '%s'\n", cmdbuf );
 		r = system( cmdbuf );
 		if ( EXIT_SUCCESS != r ) {
@@ -471,36 +471,36 @@ static int synth_lut_recalibrate_all() {
 		// when stat sets errno to ENOENT, it means the file does not exist
 		// we must create the file, write calibration data to it, close, and then reopen the file, read-only
 
-		r = open( ctx[j]->fn, O_RDWR | O_SYNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP |  S_IWGRP );
+		r = open( ctx[ j ]->fn, O_RDWR | O_SYNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP |  S_IWGRP );
 		if ( -1 == r ) {
 			r = errno;
-			PRINT( ERROR, "Failed to create / open calibration data file %s (%d,%s)\n", ctx[j]->fn, errno, strerror( errno ) );
+			PRINT( ERROR, "Failed to create / open calibration data file %s (%d,%s)\n", ctx[ j ]->fn, errno, strerror( errno ) );
 			goto out;
 		}
-		ctx[j]->fd = r;
+		ctx[ j ]->fd = r;
 
-		r = write( ctx[j]->fd, rec, SYNTH_LUT_LEN * sizeof( *rec ) );
+		r = write( ctx[ j ]->fd, ctx[ j ]->fm, SYNTH_LUT_LEN * sizeof( synth_rec_t ) );
 		if ( -1 == r ) {
 			r = errno;
 			PRINT( ERROR, "Failed to write calibration data (%d,%s)\n", errno, strerror( errno ) );
-			remove( ctx[j]->fn );
+			remove( ctx[ j ]->fn );
 			goto out;
 		}
 
 		//PRINT( INFO, "Wrote %u bytes to '%s'\n", r, ctx->fn );
 
-		if ( SYNTH_LUT_LEN * sizeof( *rec ) != r ) {
+		if ( SYNTH_LUT_LEN * sizeof( synth_rec_t ) != r ) {
 			r = EINVAL;
-			PRINT( ERROR, "Wrote wrong number of bytes to calibration data file. Expected: %u, Actual: %u\n", n * sizeof( *rec ), r );
-			remove( ctx[j]->fn );
+			PRINT( ERROR, "Wrote wrong number of bytes to calibration data file. Expected: %u, Actual: %u\n", SYNTH_LUT_LEN * sizeof( synth_rec_t ), r );
+			remove( ctx[ j ]->fn );
 			goto out;
 		}
 
-		r = close( ctx[j]->fd );
+		r = close( ctx[ j ]->fd );
 		if ( -1 == r ) {
 			PRINT( ERROR, "Warning: Failed to close calibration data file (%d,%s)\n", errno, strerror( errno ) );
 		}
-		ctx[j]->fd = -1;
+		ctx[ j ]->fd = -1;
 	}
 
 out:
@@ -518,8 +518,16 @@ out:
 	}
 	if ( NULL != ctx ) {
 
-		for( j = 0; j < n; j++ ) {
+		for( j = 0; j < n_channels; j++ ) {
+			// there was no memory map performed, just a malloc, pointed to by "rect", which is freed above
 			ctx[ j ]->fm = MAP_FAILED;
+		}
+
+		for( j = 0; j < n_channels; j++ ) {
+			if ( -1 != ctx[ j ]->fd ) {
+				close( ctx[ j ]->fd );
+				ctx[ j ]->fd = -1;
+			}
 		}
 
 		free( ctx );
