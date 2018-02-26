@@ -58,10 +58,16 @@ int synth_lut_enable_all_if_calibrated();
 bool synth_lut_is_enabled( const bool tx, const size_t channel );
 
 /**
+ * Clear synth calibration tables for one channel.
+ * This will call synth_lut_disable() internally.
+ */
+void synth_lut_erase( const bool tx, const size_t channel );
+
+/**
  * Clear all synth calibration tables. This will call synth_lut_disable()
  * internally.
  */
-void synth_lut_erase( const bool tx, const size_t channel );
+void synth_lut_erase_all();
 
 /**
  * Check whether calibration data exists for a specific channel.
