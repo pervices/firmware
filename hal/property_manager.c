@@ -67,7 +67,7 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	while(data[pos] != '\n' && data[pos] != '\0') pos++;
 	data[pos] = '\0';
 
-	PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
+	//PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
 // Helper function to make properties
@@ -413,7 +413,7 @@ int load_properties(const char* file) {
 
 // Standard get property
 int get_property(const char* prop, char* data, size_t max_len) {
-	PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
+	//PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
 
 	memset(data, 0, max_len);
 	char path [MAX_PATH_LEN];
