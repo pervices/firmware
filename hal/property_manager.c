@@ -291,7 +291,7 @@ void check_property_inotifies(void) {
 		prop_t* prop = get_prop_from_wd(event -> wd);
 
 		// check if prop exists, prop will not exist if concurrent modifications were made to the file while in this loop
-		if (event -> mask & IN_CLOSE_WRITE && prop) {
+		if ( ( event -> mask & IN_CLOSE_WRITE ) && prop ) {
 			//PRINT( VERBOSE,"Property located at %s has been modified, executing handler\n", prop -> path);
 
 			// empty out the buffers
