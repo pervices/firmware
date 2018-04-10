@@ -508,6 +508,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret) {
 
 		// disable DSP cores
 		read_hps_reg ( "txa4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 0 );
 		write_hps_reg( "txa4", old_val | 0x2);
 
 		// disable channel
@@ -693,6 +694,7 @@ static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 
 	// DSP Reset
 	read_hps_reg(  "txa4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 0 );
 	write_hps_reg( "txa4", old_val |  0x2);
 	write_hps_reg( "txa4", old_val & ~0x2);
 
@@ -734,6 +736,7 @@ static int hdlr_tx_a_dsp_nco_adj (const char* data, char* ret) {
 static int hdlr_tx_a_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txa4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 0 );
 	write_hps_reg( "txa4", old_val |  0x2);
 	write_hps_reg( "txa4", old_val & ~0x2);
 	return RETURN_SUCCESS;
@@ -869,6 +872,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
             read_hps_reg ( reg4[i+4], &old_val);
 	         write_hps_reg( reg4[i+4], old_val | 0x100);
         		read_hps_reg ( reg4[i+4], &old_val);
+            PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
    		   write_hps_reg( reg4[i+4], old_val | 0x2);
 	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
          }
@@ -889,6 +893,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
 
 		// disable DSP cores
 		read_hps_reg ( "txa4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
 		write_hps_reg( "txa4", old_val | 0x2);
 
 		// disable channel
@@ -1352,6 +1357,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 				read_hps_reg ( reg4[i+4], &old_val);
 				write_hps_reg( reg4[i+4], old_val | 0x100);
 				read_hps_reg ( reg4[i+4], &old_val);
+				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
 				write_hps_reg( reg4[i+4], old_val | 0x2);
 				write_hps_reg( reg4[i+4], old_val & (~0x2));
 			}
@@ -1502,6 +1508,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret) {
 
 		// disable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
 		write_hps_reg( "txb4", old_val | 0x2);
 
 		// disable 10G transmission
@@ -1688,6 +1695,7 @@ static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 
 	// DSP Reset
 	read_hps_reg(  "txb4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
 	write_hps_reg( "txb4", old_val |  0x2);
 	write_hps_reg( "txb4", old_val & ~0x2);
 
@@ -1729,6 +1737,7 @@ static int hdlr_tx_b_dsp_nco_adj (const char* data, char* ret) {
 static int hdlr_tx_b_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txb4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
 	write_hps_reg( "txb4", old_val |  0x2);
 	write_hps_reg( "txb4", old_val & ~0x2);
 	return RETURN_SUCCESS;
@@ -1819,6 +1828,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
             read_hps_reg ( reg4[i+4], &old_val);
 	         write_hps_reg( reg4[i+4], old_val | 0x100);
         		read_hps_reg ( reg4[i+4], &old_val);
+			PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
    		   write_hps_reg( reg4[i+4], old_val | 0x2);
 	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
          }
@@ -1839,6 +1849,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
 
 		// disable the DSP cores
 		read_hps_reg ( "txb4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
 		write_hps_reg( "txb4", old_val | 0x2);
 
 		// disable 10G transmission
@@ -2246,6 +2257,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 				read_hps_reg ( reg4[i+4], &old_val);
 				write_hps_reg( reg4[i+4], old_val | 0x100);
 				read_hps_reg ( reg4[i+4], &old_val);
+				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
 				write_hps_reg( reg4[i+4], old_val | 0x2);
 				write_hps_reg( reg4[i+4], old_val & (~0x2));
 			}
@@ -2385,6 +2397,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret) {
 
 		// disable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 2 );
 		write_hps_reg( "txc4", old_val | 0x2);
 
 		// disable 10G transmission
@@ -2570,6 +2583,7 @@ static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 
 	// DSP Reset
 	read_hps_reg(  "txc4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 2 );
 	write_hps_reg( "txc4", old_val |  0x2);
 	write_hps_reg( "txc4", old_val & ~0x2);
 
@@ -2611,6 +2625,7 @@ static int hdlr_tx_c_dsp_nco_adj (const char* data, char* ret) {
 static int hdlr_tx_c_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txc4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 2 );
 	write_hps_reg( "txc4", old_val |  0x2);
 	write_hps_reg( "txc4", old_val & ~0x2);
 	return RETURN_SUCCESS;
@@ -2701,6 +2716,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
             read_hps_reg ( reg4[i+4], &old_val);
 	         write_hps_reg( reg4[i+4], old_val | 0x100);
         		read_hps_reg ( reg4[i+4], &old_val);
+           PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
    		   write_hps_reg( reg4[i+4], old_val | 0x2);
 	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
          }
@@ -2721,6 +2737,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
 
 		// disable the DSP cores
 		read_hps_reg ( "txc4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 2 );
 		write_hps_reg( "txc4", old_val | 0x2);
 
 		// disable 10G transmission
@@ -3127,6 +3144,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 				read_hps_reg ( reg4[i+4], &old_val);
 				write_hps_reg( reg4[i+4], old_val | 0x100);
 				read_hps_reg ( reg4[i+4], &old_val);
+				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
 				write_hps_reg( reg4[i+4], old_val | 0x2);
 				write_hps_reg( reg4[i+4], old_val & (~0x2));
 			}
@@ -3266,6 +3284,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret) {
 
 		// disable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 3 );
 		write_hps_reg( "txd4", old_val | 0x2);
 
 		// disable 10G transmission
@@ -3451,6 +3470,7 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 
 	// DSP Reset
 	read_hps_reg(  "txd4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 3 );
 	write_hps_reg( "txd4", old_val |  0x2);
 	write_hps_reg( "txd4", old_val & ~0x2);
 
@@ -3492,6 +3512,7 @@ static int hdlr_tx_d_dsp_nco_adj (const char* data, char* ret) {
 static int hdlr_tx_d_dsp_rstreq (const char* data, char* ret) {
 	uint32_t old_val;
 	read_hps_reg(  "txd4", &old_val);
+	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 3 );
 	write_hps_reg( "txd4", old_val |  0x2);
 	write_hps_reg( "txd4", old_val & ~0x2);
 	return RETURN_SUCCESS;
@@ -3582,6 +3603,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
             read_hps_reg ( reg4[i+4], &old_val);
 	         write_hps_reg( reg4[i+4], old_val | 0x100);
         		read_hps_reg ( reg4[i+4], &old_val);
+            PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
    		   write_hps_reg( reg4[i+4], old_val | 0x2);
 	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
          }
@@ -3602,6 +3624,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
 
 		// disable the DSP cores
 		read_hps_reg ( "txd4", &old_val);
+		PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 3 );
 		write_hps_reg( "txd4", old_val | 0x2);
 
 		// disable 10G transmission
@@ -4009,6 +4032,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 				read_hps_reg ( reg4[i+4], &old_val);
 				write_hps_reg( reg4[i+4], old_val | 0x100);
 				read_hps_reg ( reg4[i+4], &old_val);
+				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
 				write_hps_reg( reg4[i+4], old_val | 0x2);
 				write_hps_reg( reg4[i+4], old_val & (~0x2));
 			}
@@ -5405,7 +5429,7 @@ static int hdlr_tx_d_rf_freq_lut_en ( const char *data, char *ret ) {
 	DEFINE_FILE_PROP( "fpga/trigger/sma_dir",  hdlr_fpga_trigger_sma_dir,  RW,  "out" ), \
 	DEFINE_FILE_PROP( "fpga/trigger/sma_pol",  hdlr_fpga_trigger_sma_pol,  RW,  "negative" ), \
 	DEFINE_FILE_PROP( "fpga/about/fw_ver",  hdlr_fpga_about_fw_ver,  RW,  VERSION ), \
-	DEFINE_FILE_PROP( "fpga/about/server_ver",  hdlr_server_about_fw_ver,  RW, NULL), \
+	DEFINE_FILE_PROP( "fpga/about/server_ver",  hdlr_server_about_fw_ver,  RW, ""), \
 	DEFINE_FILE_PROP( "fpga/about/hw_ver",  hdlr_fpga_about_hw_ver,  RW,  VERSION ), \
 	DEFINE_FILE_PROP( "fpga/about/id",  hdlr_fpga_about_id,  RW,  "001" ), \
 	DEFINE_FILE_PROP( "fpga/about/name",  hdlr_invalid,  RO,  "crimson_tng" ), \
@@ -5863,7 +5887,7 @@ int set_pll_frequency2(int actual_uart_fd, uint64_t reference, pllparam_t* pll) 
     }
 
     // write ADF4355/ADF5355 feedback mode
-    snprintf( buf, "rf -t %" PRIu8 "\r", pll->divFBen );
+    snprintf( buf, sizeof( buf ), "rf -t %" PRIu8 "\r", pll->divFBen );
     r = write( actual_uart_fd, buf, strlen( buf ) );
     if ( strlen( buf ) != r ) {
     	r = errno;
