@@ -2257,7 +2257,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 				read_hps_reg ( reg4[i+4], &old_val);
 				write_hps_reg( reg4[i+4], old_val | 0x100);
 				read_hps_reg ( reg4[i+4], &old_val);
-				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
+				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
 				write_hps_reg( reg4[i+4], old_val | 0x2);
 				write_hps_reg( reg4[i+4], old_val & (~0x2));
 			}
@@ -3144,7 +3144,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 				read_hps_reg ( reg4[i+4], &old_val);
 				write_hps_reg( reg4[i+4], old_val | 0x100);
 				read_hps_reg ( reg4[i+4], &old_val);
-				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
+				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
 				write_hps_reg( reg4[i+4], old_val | 0x2);
 				write_hps_reg( reg4[i+4], old_val & (~0x2));
 			}
@@ -3603,7 +3603,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
             read_hps_reg ( reg4[i+4], &old_val);
 	         write_hps_reg( reg4[i+4], old_val | 0x100);
         		read_hps_reg ( reg4[i+4], &old_val);
-            PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
+            PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
    		   write_hps_reg( reg4[i+4], old_val | 0x2);
 	      	write_hps_reg( reg4[i+4], old_val & (~0x2));
          }
@@ -4032,7 +4032,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 				read_hps_reg ( reg4[i+4], &old_val);
 				write_hps_reg( reg4[i+4], old_val | 0x100);
 				read_hps_reg ( reg4[i+4], &old_val);
-				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
+				PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + i );
 				write_hps_reg( reg4[i+4], old_val | 0x2);
 				write_hps_reg( reg4[i+4], old_val & (~0x2));
 			}
