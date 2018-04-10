@@ -243,8 +243,8 @@ int main(int argc, char *argv[]) {
 				}
 
 				// Debug print
-				PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
-					cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
+//				PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
+//					cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
 
 				cmd.status = CMD_SUCCESS;
 
