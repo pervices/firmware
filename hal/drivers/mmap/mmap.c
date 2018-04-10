@@ -68,7 +68,9 @@ static int reg_write(uint32_t addr, uint32_t* data, uint32_t bytes_to_write) {
 	if (addr < ALT_LWFPGASLVS_OFST || addr >= ALT_LWFPGASLVS_OFST + ALT_LWFPGASLVS_SPAN)
 		return RETURN_ERROR_ADDR_OUT_OF_RANGE;
 
-	PRINT(VERBOSE, "%s(): addr: 0x%08x data: 0x%08x\n", __func__, addr, *data);
+	const reg_t *rg = get_reg_from_addr( addr );
+
+	//PRINT(VERBOSE, "%s(): reg: %s data: 0x%08x\n", __func__, rg->name , *data);
 
 	int fd, i;
 	void* virtual_base;
