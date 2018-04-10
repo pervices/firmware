@@ -1122,7 +1122,7 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxa4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
 		//Set gain adjustment
-		gain_factor = decim_gain_lut[(resamp_factor)];
+		gain_factor = decim_gain_lut[(base_factor)];
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (((uint16_t)gain_factor) << 0));
 	}
@@ -2061,7 +2061,7 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxb4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
 		//Set gain adjustment
-		gain_factor = decim_gain_lut[(resamp_factor)];
+		gain_factor = decim_gain_lut[(base_factor)];
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (((uint16_t)gain_factor) << 8));
 	}
@@ -2942,7 +2942,7 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxc4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
 		//Set gain adjustment
-		gain_factor = decim_gain_lut[(resamp_factor)];
+		gain_factor = decim_gain_lut[(base_factor)];
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (((uint16_t)gain_factor) << 16));
 	}
@@ -3824,7 +3824,7 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "rxd4", old_val & ~(1 << 15));
 		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
 		//Set gain adjustment
-		gain_factor = decim_gain_lut[(resamp_factor)];
+		gain_factor = decim_gain_lut[(base_factor)];
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (((uint16_t)gain_factor) << 24));
 	}
