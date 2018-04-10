@@ -4106,10 +4106,10 @@ static int hdlr_time_source_ref (const char* data, char* ret) {
 // External Source Buffer Select
 static int hdlr_time_source_extsine (const char* data, char* ret) {
 	if (strcmp(data, "sine") == 0) {
-		strcpy(buf, "HMC -h 1 -b 0\r");
+		strcpy(buf, "HMC -h 1 -b 1\r");
                 send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	} else if (strcmp(data, "LVPECL") == 0) {
-		strcpy(buf, "HMC -h 1 -b 1\r");
+		strcpy(buf, "HMC -h 1 -b 0\r");
                 send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	} else {
                 strcpy(buf, "HMC -h 1 -B\r");
