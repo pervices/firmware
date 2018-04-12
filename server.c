@@ -112,6 +112,13 @@ int main(int argc, char *argv[]) {
 	verbose = 0;
 	fd_set rfds;
 
+	ret = mmap_init();
+	if ( EXIT_SUCCESS != ret ) {
+		PRINT( ERROR, "mmap_init failed\n" );
+		return ret;
+	}
+	atexit( mmap_fini );
+
 	// check for firmware version
 	for( i = 1; i < argc; i++ ) {
 		if (strcmp(argv[i], "-v") == 0) {
