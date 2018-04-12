@@ -302,7 +302,7 @@ void check_property_inotifies(void) {
 			read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
 			strcpy(prop_ret, prop_data);
 
-			PRINT( VERBOSE,"set_property( %s, %s )\n", prop -> path, prop_data);
+			PRINT( VERBOSE, "%s(): set_property( %s, %s )\n", __func__, prop -> path, prop_data);
 			prop -> handler(prop_data, prop_ret);
 			if (prop->permissions == RO) {
 				memset(prop_ret, 0, sizeof(prop_ret));
@@ -505,8 +505,6 @@ int set_property(const char* prop, const char* data) {
 	power_on_channel_fixup( temp->path );
 
 	write_to_file( get_abs_path( temp, path ), data );
-
-	PRINT( VERBOSE,"set_property( %s, %s )\n", prop, data );
 
 	check_property_inotifies();
 
