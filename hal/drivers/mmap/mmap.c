@@ -54,6 +54,7 @@ static int reg_write( uint32_t addr, uint32_t* data ) {
 
 	volatile uint32_t *mmap_addr = (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr );
 	*mmap_addr = *data;
+	msync( mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE );
 
 	return RETURN_SUCCESS;
 }
@@ -120,7 +121,7 @@ int mmap_init() {
 	int r;
 	void *rr;
 
-	r = open( MEM_DEV, O_RDWR );
+	r = open( MEM_DEV, O_RDWR | O_SYNC );
 	if ( -1 == r ) {
 		PRINT( ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror( errno ), errno );
 		r = errno;
