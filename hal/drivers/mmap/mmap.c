@@ -120,7 +120,7 @@ int mmap_init() {
 	int r;
 	void *rr;
 
-	r = open( MEM_DEV, 0, O_RDWR );
+	r = open( MEM_DEV, O_RDWR );
 	if ( -1 == r ) {
 		PRINT( ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror( errno ), errno );
 		r = errno;
