@@ -47,7 +47,11 @@ static void write_to_file(const char* path, const char* data) {
 		return;
 	}
 	fprintf(fd, "%s", data);
-	fclose(fd);
+
+        if ( !( fclose(fd) == 0 ) ) {
+            PRINT(ERROR, "fclose error - %s(), %s\n", __func__, strerror(errno));
+        }
+            
 
 	//PRINT(VERBOSE, "wrote to file: %s (%s)\n", path, data);
 }

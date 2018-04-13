@@ -81,7 +81,7 @@ int parse_cmd(cmd_t* cmd, uint8_t* data) {
 
 		case 3:
 			// strncpy
-			strncpy(cmd -> data, tok, sizeof(cmd -> data));
+                        strncpy(cmd -> data, tok, sizeof(cmd -> data));
 			/* no break */
 		default:
 			break;

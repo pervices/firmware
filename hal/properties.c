@@ -857,7 +857,9 @@ static int hdlr_tx_a_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c a -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-      usleep(200000);
+      
+      PRINT( ERROR, "sleeping for time\n" );
+      usleep(50000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1344,7 +1346,8 @@ static int hdlr_rx_a_pwr (const char* data, char* ret) {
 		// board command
 		strcpy(buf, "board -c a -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(200000);
+		PRINT( ERROR, "sleeping for time\n" );
+                usleep(50000);
 
 		// disable dsp channels
 		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -1817,7 +1820,8 @@ static int hdlr_tx_b_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c b -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(200000);
+		PRINT( ERROR, "sleeping for time\n" );
+                usleep(50000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2248,7 +2252,8 @@ static int hdlr_rx_b_pwr (const char* data, char* ret) {
 		// board commands
 		strcpy(buf, "board -c b -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(200000);
+		PRINT( ERROR, "sleeping for time\n" );
+                usleep(50000);
 
 		// disable dsp channels
 		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -2696,7 +2701,7 @@ static int hdlr_tx_c_qa_uflow (const char* data, char* ret) {
 static int hdlr_tx_c_pwr (const char* data, char* ret) {
 	uint32_t old_val;
 	uint8_t power;
-   uint8_t i;
+        uint8_t i;
 	sscanf(data, "%"SCNd8"", &power);
 
 	// check it power is already enabled
@@ -2709,7 +2714,8 @@ static int hdlr_tx_c_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c c -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(200000);
+		PRINT( ERROR, "sleeping for time\n" );
+                usleep(50000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -3139,7 +3145,8 @@ static int hdlr_rx_c_pwr (const char* data, char* ret) {
 		// board commands
 		strcpy(buf, "board -c c -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(200000);
+		PRINT( ERROR, "sleeping for time\n" );
+                usleep(50000);
 
 		// disable dsp channels
 		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -3600,7 +3607,8 @@ static int hdlr_tx_d_pwr (const char* data, char* ret) {
       // board commands
 		strcpy(buf, "board -c d -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(200000);
+		PRINT( ERROR, "sleeping for time\n" );
+                usleep(50000);
 
 		// disable dsp channels
       for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -4031,7 +4039,8 @@ static int hdlr_rx_d_pwr (const char* data, char* ret) {
 		// board commands
 		strcpy(buf, "board -c d -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-		usleep(200000);
+		PRINT( ERROR, "sleeping for time\n" );
+                usleep(50000);
 
 		// disable dsp channels
 		for(i = 0; i < (NUM_CHANNELS * 2); i++) {
@@ -4417,28 +4426,34 @@ static int hdlr_fpga_board_gle (const char* data, char* ret) {
 	if (strcmp(data, "1") == 0) {
 	    strcpy(buf, "board -g 1\r");
 	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	    usleep(50000);
+	    PRINT( ERROR, "sleeping for time\n" );
+            usleep(50000);
 
 	    strcpy(buf, "board -g 1\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	    usleep(50000);
+	    PRINT( ERROR, "sleeping for time\n" );
+            usleep(50000);
 
 	    strcpy(buf, "board -g 1\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	    usleep(50000);
+	    PRINT( ERROR, "sleeping for time\n" );
+            usleep(50000);
 	}
 	if (strcmp(data, "2") == 0) {
 	    strcpy(buf, "board -g 2\r");
 	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	    usleep(50000);
+	    PRINT( ERROR, "sleeping for time\n" );
+            usleep(50000);
 
 	    strcpy(buf, "board -g 2\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
-	    usleep(50000);
+	    PRINT( ERROR, "sleeping for time\n" );
+            usleep(50000);
 
 	    strcpy(buf, "board -g 2\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
-	    usleep(50000);
+	    PRINT( ERROR, "sleeping for time\n" );
+            usleep(50000);
 	}
 	return RETURN_SUCCESS;
 }
@@ -4509,14 +4524,18 @@ static int hdlr_fpga_board_jesd_sync (const char* data, char* ret) {
 static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret) {
 	strcpy(buf, "board -r\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
-	usleep(700000);
+
+        PRINT( ERROR, "sleeping for LONG time\n" );
+        usleep(700000);
 
 	strcpy(buf, "board -r\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
+        PRINT( ERROR, "sleeping for time\n" );
 	usleep(50000);
 
 	strcpy(buf, "board -r\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
+        PRINT( ERROR, "sleeping for time\n" );
 	usleep(50000);
 
 	/* TODO: Implement DIG board Reset */
@@ -5712,21 +5731,24 @@ void sync_channels(uint8_t chan_mask) {
 
 		/* Trigger a SYSREF pulse */
 		//JESD core out of reset
-		usleep(100000); // Some wait time for MCUs to be ready
-		strcpy(buf, "clk -y\r");
+		usleep(10000);
+                PRINT( ERROR, "sleeping for time\n" );
+
+                strcpy(buf, "clk -y\r");
 		send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
-
-		//Do it again
-
+                usleep(25000);
+PRINT( ERROR, "sleeping for time\n" );
+                //Do it again
 		strcpy(buf, "board -c ");
 		strcat(buf, str_chan_mask);
 		strcat(buf, " -s 1\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
-		usleep(100000); // Some wait time for MCUs to be ready
+		usleep(10000);
+PRINT( ERROR, "sleeping for time\n" );
 		strcpy(buf, "clk -y\r");
 		send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
-		usleep(100000); // Some wait time for MCUs to be ready
-
+                usleep(25000);
+PRINT( ERROR, "sleeping for time\n" );
 		//CHECK IF ALARMS
 		strcpy(buf, "dac -c a -s\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
@@ -5742,9 +5764,6 @@ void sync_channels(uint8_t chan_mask) {
 		if ((dacalarmA[0] == key[0]) &&  (dacalarmA[1] == key[1]) &&
 			(dacalarmB[0] == key[0]) &&  (dacalarmB[1] == key[1])	){
 			break;
-		}
-		else{
-			usleep(200000); // Some wait time for MCUs to be ready
 		}
 	}
 	/* Turn off all boards' SYSREF detection gates */
@@ -5778,7 +5797,8 @@ void sync_channels(uint8_t chan_mask) {
 	//JESD core out of reset
 	write_hps_reg( "res_rw7",0);
 
-	usleep(100000); // Some wait time for MCUs to be ready
+	usleep(25000); // Some wait time for MCUs to be ready
+        PRINT( ERROR, "sleeping for time\n" );
 	strcpy(buf, "clk -y\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
 
@@ -5862,8 +5882,8 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll, bool tx
     strcat(buf, "\r");
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
-
-    usleep(100000);
+    usleep(25000);
+    PRINT( ERROR, "sleeping for time\n" );
 }
 
 int set_pll_frequency2(int actual_uart_fd, uint64_t reference, pllparam_t* pll) {
@@ -5928,12 +5948,13 @@ int set_pll_frequency2(int actual_uart_fd, uint64_t reference, pllparam_t* pll) 
     	goto out;
     }
 
-    size_t tries;
-    for( tries = 0; tries < 10; tries++ ) {
-    	read( actual_uart_fd, buf, sizeof( buf ) );
-    	usleep(10000);
-    }
-
+//     size_t tries;
+//     for( tries = 0; tries < 10; tries++ ) {
+//     	read( actual_uart_fd, buf, sizeof( buf ) );
+//     	usleep(10000);
+//     }
+    usleep(10000);
+    PRINT( ERROR, "sleeping for time\n" );
     r = EXIT_SUCCESS;
 
 out:

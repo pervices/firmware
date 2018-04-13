@@ -188,7 +188,6 @@ int main(int argc, char *argv[]) {
 	for( ;; ) {
 
 		//PRINT( VERBOSE, "creating read fd set\n" );
-
 		// set up read file descriptor set for select(2)
 		FD_ZERO( & rfds );
 		for( i = 0; i < num_udp_ports; i++ ) {

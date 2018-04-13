@@ -51,9 +51,9 @@
 #define SERVER_RESVD_OPT	(1 << 1)
 
 // General purpose temp buffer size
-#define BUF_SIZE 	( 1024 )
-#define MAX_PATH_LEN	( 1024 )
-#define MAX_PROP_LEN	( 1024 )
+#define BUF_SIZE 	( 4048 )
+#define MAX_PATH_LEN	( 4048 )
+#define MAX_PROP_LEN	( 4048 )
 #define MAX_UART_LEN	( 8192 )
 
 // macro for string comparison

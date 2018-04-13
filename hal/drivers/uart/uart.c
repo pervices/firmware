@@ -24,6 +24,8 @@
 // Minimum time between UART commands
 #define TIME_INTERVAL 50000 // us, 0.05 seconds
 
+#define UART_READTIMEOUT 2  // = 0.2 seconds
+
 static struct timeval tprev;	// time since previous UART command
 static struct timeval tstart;	// time since the beginning of a UART send attempt
 static struct timeval tend;
@@ -74,7 +76,7 @@ int set_uart_interface_attribs (int fd, int speed, int parity)
                                         // no canonical processing
         tty.c_oflag = 0;                // no remapping, no delays
         tty.c_cc[VMIN]  = 0;            // read doesn't block
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+        tty.c_cc[VTIME] = UART_READTIMEOUT;            // read timeout
 
         tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
@@ -104,7 +106,7 @@ void set_uart_blocking (int fd, int should_block)
         }
 
         tty.c_cc[VMIN]  = should_block ? 1 : 0;
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+        tty.c_cc[VTIME] = UART_READTIMEOUT;            // read timeout
 
         if (tcsetattr (fd, TCSANOW, &tty) != 0)
 		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));

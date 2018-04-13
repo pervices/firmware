@@ -31,7 +31,7 @@
 #define ARG_MCU_FWD	"-f"
 #define ARG_MCU_TIMEOUT	"-t"
 
-#define DEFAULT_TIMEOUT 100	// 100 milliseconds
+#define DEFAULT_TIMEOUT 25	// 25 milliseconds
 
 static int uart_comm_fd;
 static char buf[MAX_UART_LEN] = {};
