@@ -45,4 +45,7 @@ void list_hps_reg(uint8_t verbosity);
 int dump_hps_reg(void);
 void set_mem_debug_opt(uint8_t options);
 
+int mmap_init();
+void mmap_fini();
+
 #endif
