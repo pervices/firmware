@@ -473,6 +473,7 @@ void power_on_channel( bool tx, int channel ) {
 		PRINT( ERROR,"Cannot find prop for command '%s'\n", buf);
 		return;
 	}
+	prop->handler( "1" , buf);
 	write_to_file(get_abs_path(prop, buf), "1");
 }
 
