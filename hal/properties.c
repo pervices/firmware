@@ -694,12 +694,6 @@ static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txga", (old_val & ~(0xff << 0) ) | (interp_gain_lut[(base_factor)] << 0));
 	}
 
-	// DSP Reset
-	read_hps_reg(  "txa4", &old_val);
-	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 0 );
-	write_hps_reg( "txa4", old_val |  0x2);
-	write_hps_reg( "txa4", old_val & ~0x2);
-
 	return RETURN_SUCCESS;
 }
 
@@ -1138,11 +1132,6 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 0) ) | (((uint16_t)gain_factor) << 0));
 	}
-
-	// DSP Reset
-	read_hps_reg(  "rxa4", &old_val);
-	write_hps_reg( "rxa4", old_val |  0x2);
-	write_hps_reg( "rxa4", old_val & ~0x2);
 
    return RETURN_SUCCESS;
 }
@@ -1699,12 +1688,6 @@ static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txga", (old_val & ~(0xff << 8) ) | (interp_gain_lut[(base_factor)] << 8));
 	}
 
-	// DSP Reset
-	read_hps_reg(  "txb4", &old_val);
-	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 1 );
-	write_hps_reg( "txb4", old_val |  0x2);
-	write_hps_reg( "txb4", old_val & ~0x2);
-
 	return RETURN_SUCCESS;
 }
 
@@ -2087,11 +2070,6 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 8) ) | (((uint16_t)gain_factor) << 8));
 	}
-
-	// DSP Reset
-	read_hps_reg(  "rxb4", &old_val);
-	write_hps_reg( "rxb4", old_val |  0x2);
-	write_hps_reg( "rxb4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -2591,12 +2569,6 @@ static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txga", (old_val & ~(0xff << 16) ) | (interp_gain_lut[(base_factor)] << 16));
 	}
 
-	// DSP Reset
-	read_hps_reg(  "txc4", &old_val);
-	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 2 );
-	write_hps_reg( "txc4", old_val |  0x2);
-	write_hps_reg( "txc4", old_val & ~0x2);
-
 	return RETURN_SUCCESS;
 }
 
@@ -2978,11 +2950,6 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 16) ) | (((uint16_t)gain_factor) << 16));
 	}
-
-	// DSP Reset
-	read_hps_reg(  "rxc4", &old_val);
-	write_hps_reg( "rxc4", old_val |  0x2);
-	write_hps_reg( "rxc4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -3482,12 +3449,6 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(base_factor)] << 24));
 	}
 
-	// DSP Reset
-	read_hps_reg(  "txd4", &old_val);
-	PRINT( VERBOSE, "%s(): TX[%c] RESET\n", __func__, 'A' + 3 );
-	write_hps_reg( "txd4", old_val |  0x2);
-	write_hps_reg( "txd4", old_val & ~0x2);
-
 	return RETURN_SUCCESS;
 }
 
@@ -3870,11 +3831,6 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 		read_hps_reg( "rxga",  &old_val);
 		write_hps_reg( "rxga", (old_val & ~(0xff << 24) ) | (((uint16_t)gain_factor) << 24));
 	}
-
-	// DSP Reset
-	read_hps_reg(  "rxd4", &old_val);
-	write_hps_reg( "rxd4", old_val |  0x2);
-	write_hps_reg( "rxd4", old_val & ~0x2);
 
 	return RETURN_SUCCESS;
 }
@@ -5760,7 +5716,7 @@ void sync_channels(uint8_t chan_mask) {
 
 #else
 	//Put FPGA JESD core in reset
-	write_hps_reg( "res_rw7",0x40000000);
+	write_hps_reg( "res_rw7",0x20000000);
 	write_hps_reg( "res_rw7",0);
 
 	/* Initiate the SYSREF sequence for jesd
