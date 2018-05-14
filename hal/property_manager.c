@@ -49,7 +49,7 @@ static void write_to_file(const char* path, const char* data) {
 	fprintf(fd, "%s", data);
 	fclose(fd);
 
-	PRINT(VERBOSE, "wrote to file: %s (%s)\n", path, data);
+	//PRINT(VERBOSE, "wrote to file: %s (%s)\n", path, data);
 }
 
 // Helper function to read to property
@@ -67,7 +67,7 @@ static void read_from_file(const char* path, char* data, size_t max_len) {
 	while(data[pos] != '\n' && data[pos] != '\0') pos++;
 	data[pos] = '\0';
 
-	PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
+	//PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
 // Helper function to make properties
@@ -291,8 +291,8 @@ void check_property_inotifies(void) {
 		prop_t* prop = get_prop_from_wd(event -> wd);
 
 		// check if prop exists, prop will not exist if concurrent modifications were made to the file while in this loop
-		if (event -> mask & IN_CLOSE_WRITE && prop) {
-			PRINT( VERBOSE,"Property located at %s has been modified, executing handler\n", prop -> path);
+		if ( ( event -> mask & IN_CLOSE_WRITE ) && prop ) {
+			//PRINT( VERBOSE,"Property located at %s has been modified, executing handler\n", prop -> path);
 
 			// empty out the buffers
 			memset(prop_data, 0, MAX_PROP_LEN);
@@ -302,7 +302,7 @@ void check_property_inotifies(void) {
 			read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
 			strcpy(prop_ret, prop_data);
 
-			PRINT( DEBUG,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
+			PRINT( VERBOSE, "%s(): set_property( %s, %s )\n", __func__, prop -> path, prop_data);
 			prop -> handler(prop_data, prop_ret);
 			if (prop->permissions == RO) {
 				memset(prop_ret, 0, sizeof(prop_ret));
@@ -413,8 +413,6 @@ int load_properties(const char* file) {
 
 // Standard get property
 int get_property(const char* prop, char* data, size_t max_len) {
-	PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
-
 	memset(data, 0, max_len);
 	char path [MAX_PATH_LEN];
 	prop_t* temp = get_prop_from_cmd(prop);
@@ -431,12 +429,15 @@ int get_property(const char* prop, char* data, size_t max_len) {
 	}
 
 	read_from_file(get_abs_path(temp, path), data, max_len);
+
+	PRINT( VERBOSE,"get_property( %s ) => %s\n", prop, data );
+
 	return RETURN_SUCCESS;
 }
 
 int get_channel_for_path( const char *path ) {
 
-	PRINT( VERBOSE,"%s(): %s\n", __func__, NULL == path ? "(null)" : path );
+	//PRINT( VERBOSE,"%s(): %s\n", __func__, NULL == path ? "(null)" : path );
 
 	if ( NULL == path ) {
 		return -1;
@@ -453,7 +454,7 @@ int get_channel_for_path( const char *path ) {
 		return -1;
 	}
 
-	PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" : path, path[ 3 ] - 'a' );
+	//PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" : path, path[ 3 ] - 'a' );
 
 	return path[ 3 ] - 'a';
 }
@@ -484,8 +485,6 @@ void power_on_channel_fixup( char *path ) {
 
 // standard set property
 int set_property(const char* prop, const char* data) {
-	PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
-
 	char path [MAX_PATH_LEN];
 	prop_t* temp = get_prop_from_cmd(prop);
 

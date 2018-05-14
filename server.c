@@ -112,6 +112,13 @@ int main(int argc, char *argv[]) {
 	verbose = 0;
 	fd_set rfds;
 
+	ret = mmap_init();
+	if ( EXIT_SUCCESS != ret ) {
+		PRINT( ERROR, "mmap_init failed\n" );
+		return ret;
+	}
+	atexit( mmap_fini );
+
 	// check for firmware version
 	for( i = 1; i < argc; i++ ) {
 		if (strcmp(argv[i], "-v") == 0) {
@@ -119,11 +126,11 @@ int main(int argc, char *argv[]) {
 			printf("Revision: %s\n", VERSIONGITREVISION);
 			printf("Date: %s UTC\n", VERSIONDATE);
 
-		    uint64_t ver39_32, ver31_0;
+		    uint32_t ver39_32, ver31_0;
 		    uint64_t fpgaver;
 			read_hps_reg( "sys3", &ver39_32);
 			read_hps_reg( "sys4", &ver31_0);
-			fpgaver =   ( (ver39_32 & 0xff)<< 32) | ( (ver31_0 & 0xffffffff)<< 0);
+			fpgaver =   ( ((uint64_t)ver39_32 & 0xff) << 32) | ( ((uint64_t)ver31_0 & 0xffffffff)<< 0);
 			printf("FPGA: %llx\n", fpgaver);
 
 			return 0;
@@ -180,12 +187,12 @@ int main(int argc, char *argv[]) {
 	// main loop, look for commands, if exists, service it and respond
 	for( ;; ) {
 
-		PRINT( VERBOSE, "creating read fd set\n" );
+		//PRINT( VERBOSE, "creating read fd set\n" );
 
 		// set up read file descriptor set for select(2)
 		FD_ZERO( & rfds );
 		for( i = 0; i < num_udp_ports; i++ ) {
-			PRINT( VERBOSE, "adding fd %d for port %d\n", comm_fds[ i ], port_nums[ i ] );
+			//PRINT( VERBOSE, "adding fd %d for port %d\n", comm_fds[ i ], port_nums[ i ] );
 			FD_SET( comm_fds[ i ], & rfds );
 			if ( comm_fds[ i ] >= highest_fd ) {
 				highest_fd = comm_fds[ i ];
@@ -193,11 +200,11 @@ int main(int argc, char *argv[]) {
 		}
 		FD_SET( inotify_fd, & rfds );
 		if ( inotify_fd >= highest_fd ) {
-			PRINT( VERBOSE, "adding inotify fd %d\n", inotify_fd );
+			//PRINT( VERBOSE, "adding inotify fd %d\n", inotify_fd );
 			highest_fd = inotify_fd;
 		}
 
-		PRINT( VERBOSE, "calling select(2)..\n" );
+		//PRINT( VERBOSE, "calling select(2)..\n" );
 		ret = select( highest_fd + 1, & rfds, NULL, NULL, NULL );
 
 		switch( ret ) {
@@ -224,7 +231,7 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 
-				PRINT( VERBOSE, "port %d has data\n", port_nums[ i ] );
+				//PRINT( VERBOSE, "port %d has data\n", port_nums[ i ] );
 
 				sa_len = sizeof( sa );
 				memset( buffer, 0, sizeof( buffer ) );
@@ -243,8 +250,8 @@ int main(int argc, char *argv[]) {
 				}
 
 				// Debug print
-				PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
-					cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
+//				PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
+//					cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
 
 				cmd.status = CMD_SUCCESS;
 
@@ -266,7 +273,7 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 
-				PRINT( VERBOSE, "sent reply on port %d\n", port_nums[ i ] );
+				//PRINT( VERBOSE, "sent reply on port %d\n", port_nums[ i ] );
 
 				ret--;
 			}
@@ -275,7 +282,7 @@ int main(int argc, char *argv[]) {
 			// service inotify
 			if ( FD_ISSET( inotify_fd, & rfds ) ) {
 
-				PRINT( VERBOSE, "inotify has data\n" );
+				//PRINT( VERBOSE, "inotify has data\n" );
 
 				// check if any files/properties have been modified through shell
 				check_property_inotifies();
@@ -303,7 +310,7 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 
-		PRINT( VERBOSE, "processed return from select\n" );
+		//PRINT( VERBOSE, "process return from select\n" );
 	}
 
 	// close the file descriptors

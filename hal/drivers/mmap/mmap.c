@@ -18,6 +18,14 @@
 #include "regmap.h"
 #include "mmap.h"
 
+#ifndef HPS2FPGA_GPR_OFST
+#define HPS2FPGA_GPR_OFST	(0xff200000)
+#endif
+
+static int mmap_fd = -1;
+static void *mmap_base = MAP_FAILED;
+static size_t mmap_len = 0;
+
 // Standard for linux
 #define MEM_DEV 	"/dev/mem"
 
@@ -28,101 +36,36 @@ void set_mem_debug_opt(uint8_t options) {
 	_options = options;
 }
 
-static int reg_read(uint32_t addr, uint32_t* data, uint32_t bytes_to_read) {
-	int fd, i;
-	void* virtual_base;
-
-	// round up the nearest PAGE_SIZE
-	uint32_t span = bytes_to_read / PAGE_SIZE;
-	if (span < bytes_to_read) span += PAGE_SIZE;
-
-	if( ( fd = open( MEM_DEV, O_RDONLY | O_SYNC ) ) < 0 ) {
-		PRINT(ERROR, "%s(), opening, %s\n", __func__, strerror(errno));
-		return RETURN_ERROR_COMM_MMAP;
+static int reg_read( uint32_t addr, uint32_t* data ) {
+	if ( MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len ) {
+		return RETURN_ERROR_INSUFFICIENT_RESOURCES;
 	}
 
-	virtual_base = mmap( NULL, span, PROT_READ, MAP_SHARED, fd, addr & ~(span-1) );
-
-	if( virtual_base == MAP_FAILED ) {
-		PRINT(ERROR, "%s(), mmap, %s\n", __func__, strerror(errno));
-		close( fd );
-		return RETURN_ERROR_COMM_MMAP;
-	}
-
-	// Does the actual reading
-	for (i = 0; i < bytes_to_read; i++) {
-		data[i] = alt_read_word(virtual_base + ((addr + i) & (span - 1)));
-	}
-
-	if( munmap( virtual_base, span ) != 0 ) {
-		PRINT(ERROR, "%s(), close, %s\n", __func__, strerror(errno));
-		close(fd);
-		return RETURN_ERROR_COMM_MMAP;
-	}
-
-	close(fd);
-	return RETURN_SUCCESS;
-}
-
-static int reg_write(uint32_t addr, uint32_t* data, uint32_t bytes_to_write) {
-	if (addr < ALT_LWFPGASLVS_OFST || addr >= ALT_LWFPGASLVS_OFST + ALT_LWFPGASLVS_SPAN)
-		return RETURN_ERROR_ADDR_OUT_OF_RANGE;
-
-	PRINT(VERBOSE, "%s(): addr: 0x%08x data: 0x%08x\n", __func__, addr, *data);
-
-	int fd, i;
-	void* virtual_base;
-
-	// round up the nearest PAGE_SIZE
-	uint32_t span = bytes_to_write / PAGE_SIZE;
-	if (span < bytes_to_write) span += PAGE_SIZE;
-
-	if( ( fd = open( MEM_DEV, ( O_RDWR | O_SYNC ) ) ) < 0 ) {
-		PRINT(ERROR, "%s(), opening, %s\n", __func__, strerror(errno));
-		return RETURN_ERROR_COMM_MMAP;
-	}
-
-	virtual_base = mmap( NULL, span, ( PROT_READ | PROT_WRITE ), MAP_SHARED, fd, addr & ~(span-1) );
-
-	if( virtual_base == MAP_FAILED ) {
-		PRINT(ERROR, "%s(), mmap, %s\n", __func__, strerror(errno));
-		close( fd );
-		return RETURN_ERROR_COMM_MMAP;
-	}
-
-	// Does the actual writing
-	for (i = 0; i < bytes_to_write; i++) {
-		alt_write_word(virtual_base + ((addr + i) & (span -1)), data[i]);
-	}
-
-	if( munmap( virtual_base, span ) != 0 ) {
-		PRINT(ERROR, "%s(), close, %s\n", __func__, strerror(errno));
-		close(fd);
-		return RETURN_ERROR_COMM_MMAP;
-	}
-
-	close(fd);
+	volatile uint32_t *mmap_addr = (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr );
+	*data = *mmap_addr;
 
 	return RETURN_SUCCESS;
 }
 
-int burst_read_hps_addr(uint32_t addr, uint32_t* data, size_t bytes_to_read) {
-	if (!data) return RETURN_ERROR_PARAM;
-	return reg_read( addr, data, bytes_to_read );
-}
+static int reg_write( uint32_t addr, uint32_t* data ) {
+	if ( MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len ) {
+		return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+	}
 
-int busrt_write_hps_addr(uint32_t addr, uint32_t* data, size_t bytes_to_write) {
-	if (!data) return RETURN_ERROR_PARAM;
-	return reg_write( addr, data, bytes_to_write );
+	volatile uint32_t *mmap_addr = (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr );
+	*mmap_addr = *data;
+	msync( mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE );
+
+	return RETURN_SUCCESS;
 }
 
 int read_hps_addr(uint32_t addr, uint32_t* data) {
 	if (!data) return RETURN_ERROR_PARAM;
-	return reg_read( addr, data, 1 );
+	return reg_read( addr, data );
 }
 
 int write_hps_addr(uint32_t addr, uint32_t data) {
-	return reg_write( addr, &data, 1 );
+	return reg_write( addr, &data );
 }
 
 int write_hps_addr_mask(uint32_t addr, uint32_t data, uint32_t mask) {
@@ -135,7 +78,7 @@ int read_hps_reg(const char* reg, uint32_t* data) {
 	if (!reg || !data) return RETURN_ERROR_PARAM;
 
 	const reg_t* temp = get_reg_from_name(reg);
-	if (temp)	return reg_read( temp -> addr, data, 1 );
+	if (temp)	return reg_read( temp -> addr, data );
 	else		return RETURN_ERROR_INVALID_REGISTER;
 }
 
@@ -146,7 +89,7 @@ int write_hps_reg(const char* reg, uint32_t data) {
 	PRINT(DEBUG, "%s(): %s: 0x%08x\n", __func__, reg, data);
 
 	const reg_t* temp = get_reg_from_name(reg);
-	if (temp)	return reg_write( temp -> addr, &data, 1 );
+	if (temp)	return reg_write( temp -> addr, &data );
 	else		return RETURN_ERROR_INVALID_REGISTER;
 }
 
@@ -165,11 +108,54 @@ int dump_hps_reg(void) {
 	uint32_t data, index;
 	for (index = 0; index < get_num_regs(); index++) {
 		const reg_t* temp = get_reg_from_index(index);
-		ret = reg_read( temp -> addr, &data, 1);
+		ret = reg_read( temp -> addr, &data );
 		if (ret < 0) return ret;
 
 		printf("reg = %s\taddress = 0x%08x\tvalue = 0x%08x\n",
 			temp -> name, temp -> addr, data);
 	}
 	return RETURN_SUCCESS;
+}
+
+int mmap_init() {
+	int r;
+	void *rr;
+
+	r = open( MEM_DEV, O_RDWR | O_SYNC );
+	if ( -1 == r ) {
+		PRINT( ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror( errno ), errno );
+		r = errno;
+		goto out;
+	}
+	mmap_fd = r;
+
+	rr = mmap( NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd, HPS2FPGA_GPR_OFST );
+	if ( MAP_FAILED == rr ) {
+		PRINT( ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror( errno ), errno );
+		r = errno;
+		goto closefd;
+	}
+	mmap_base = rr;
+	mmap_len = 0x1000;
+
+	r = EXIT_SUCCESS;
+	goto out;
+
+closefd:
+	close( mmap_fd );
+	mmap_fd = -1;
+
+out:
+	return r;
+}
+
+void mmap_fini() {
+	if ( MAP_FAILED != mmap_base ) {
+		munmap( mmap_base, mmap_len );
+		mmap_base = MAP_FAILED;
+	}
+	if ( -1 != mmap_fd ) {
+		close( mmap_fd );
+		mmap_fd = -1;
+	}
 }

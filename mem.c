@@ -18,6 +18,13 @@ int main(int argc, char *argv[]) {
 	uint32_t rval;			// value that is read
 	uint32_t mask = 0xffffffff;	// default mask if not specified
 
+	int r = mmap_init();
+	if ( EXIT_SUCCESS != r ) {
+		PRINT( ERROR, "mmap_init failed\n" );
+		return r;
+	}
+	atexit( mmap_fini );
+
 	/* Parse arguments */
 	// if command is memory write
 	if ((argc == 5 || argc == 4) && strcmp(argv[1], ARG_MEM_WRITE) == 0) {
