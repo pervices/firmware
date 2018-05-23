@@ -666,8 +666,6 @@ static int hdlr_tx_a_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
@@ -1102,8 +1100,6 @@ static int hdlr_rx_a_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
@@ -1660,8 +1656,6 @@ static int hdlr_tx_b_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
@@ -2040,8 +2034,6 @@ static int hdlr_rx_b_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
@@ -2541,8 +2533,6 @@ static int hdlr_tx_c_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
@@ -2921,8 +2911,6 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
@@ -3421,8 +3409,6 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
@@ -3801,8 +3787,6 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret) {
 	double base_err, resamp_err;
 	double rate;
 	sscanf(data, "%lf", &rate);
-	if (rate > BASE_SAMPLE_RATE/2)
-		rate = BASE_SAMPLE_RATE/2;
 
 	// get the error for base rate
 	base_factor   = get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);
