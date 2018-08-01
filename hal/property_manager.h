@@ -29,6 +29,24 @@
 #define UART_SYNTH "/dev/ttycrimson-time"
 #define UART_TX "/dev/ttycrimson-tx"
 #define UART_RX "/dev/ttycrimson-rx"
+#define UART_GENERIC { \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+    "/dev/tty0",       \
+}
 
 int get_inotify_fd();
 

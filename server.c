@@ -63,22 +63,12 @@ char save_profile_path[MAX_PROP_LEN];
 // execution options
 uint8_t options = 0;
 
-enum {
-	MGMT,
-	RXA,
-	RXB,
-	RXC,
-	RXD,
-	TXA,
-	TXB,
-	TXC,
-	TXD,
-};
-
 // comm ports
 int comm_fds[num_udp_ports] = {0};
+
 int port_nums[num_udp_ports] = {
 	UDP_MGMT_PORT,
+#if NUM_CHANNELS == 4
 	UDP_RXA_PORT,
 	UDP_RXB_PORT,
 	UDP_RXC_PORT,
@@ -87,6 +77,26 @@ int port_nums[num_udp_ports] = {
 	UDP_TXB_PORT,
 	UDP_TXC_PORT,
 	UDP_TXD_PORT,
+#elif NUM_CHANNELS == 16
+	UDP_AA_PORT,
+	UDP_AB_PORT,
+	UDP_AC_PORT,
+	UDP_AD_PORT,
+	UDP_AE_PORT,
+	UDP_AF_PORT,
+	UDP_AG_PORT,
+	UDP_AH_PORT,
+	UDP_BA_PORT,
+	UDP_BB_PORT,
+	UDP_BC_PORT,
+	UDP_BD_PORT,
+	UDP_BE_PORT,
+	UDP_BF_PORT,
+	UDP_BG_PORT,
+	UDP_BH_PORT,
+#else
+#error "Channel count not supported"
+#endif
 };
 
 void server_init_led(){
@@ -98,7 +108,6 @@ void server_ready_led(){
     write_hps_reg("led1", 0x1);
     write_hps_reg("led0", 0x1);
 }
-
 
 extern int verbose;
 

@@ -27,6 +27,7 @@
 
 // Define used for debugging
 //#define DEBUG
+#define NUM_CHANNELS 16
 
 // Global return values
 #define RETURN_SUCCESS			0
@@ -104,6 +105,7 @@ typedef struct indata {
 // UDP ports
 typedef enum {
 	UDP_MGMT_PORT = 42799,
+#if NUM_CHANNELS == 4
 	UDP_RXA_PORT  = 42800,
 	UDP_RXB_PORT  = 42801,
 	UDP_RXC_PORT  = 42802,
@@ -113,10 +115,38 @@ typedef enum {
 	UDP_TXC_PORT  = 42806,
 	UDP_TXD_PORT  = 42807,
 	num_udp_ports = 9
+#elif NUM_CHANNELS == 16
+	UDP_AA_PORT  = 42800,
+	UDP_AB_PORT  = 42801,
+	UDP_AC_PORT  = 42802,
+	UDP_AD_PORT  = 42803,
+	UDP_AE_PORT  = 42804,
+	UDP_AF_PORT  = 42805,
+	UDP_AG_PORT  = 42806,
+	UDP_AH_PORT  = 42807,
+	UDP_BA_PORT  = 42808,
+	UDP_BB_PORT  = 42809,
+	UDP_BC_PORT  = 42810,
+	UDP_BD_PORT  = 42811,
+	UDP_BE_PORT  = 42812,
+	UDP_BF_PORT  = 42813,
+	UDP_BG_PORT  = 42814,
+	UDP_BH_PORT  = 42815,
+	num_udp_ports = 17
+#else
+#error "Channel count not supported"
+#endif
 } udp_port_t;
 
+// this one has to be the last one
 enum {
-UDP_FLOW_CNTRL_PORT = 42808,	// this one has to be the last one
+#if NUM_CHANNELS == 4
+    UDP_FLOW_CNTRL_PORT = 42808,
+#elif NUM_CHANNELS == 16
+    UDP_FLOW_CNTRL_PORT = 42816,
+#else
+#error "Channel count not supported"
+#endif
 };
 
 // Boolean datatype

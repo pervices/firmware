@@ -47,20 +47,57 @@
 
 #define FREQ_XOVER_PNT 100000000	// 100 MHz is the crossover frequency for high and low band
 
-#define NUM_CHANNELS 4
-
 // static global variables
 static int uart_synth_fd = 0;
 static int uart_tx_fd = 0;
 static int uart_rx_fd = 0;
+static int* uart_generic_fd;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = {};
 static char buf[MAX_PROP_LEN] = {};
 
 // by default the board is powered off
-static uint8_t rx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
-static uint8_t tx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
-static uint8_t rx_stream[] = {STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF};
-const static char* reg4[] = {"rxa4", "rxb4", "rxc4", "rxd4", "txa4", "txb4", "txc4", "txd4"};
+static uint8_t rx_power[] = {
+#if NUM_CHANNELS == 4
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+#elif NUM_CHANNELS == 16
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+#endif
+};
+static uint8_t tx_power[] = {
+#if NUM_CHANNELS == 4
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+#elif NUM_CHANNELS == 16
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+    PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF,
+#endif
+};
+static uint8_t rx_stream[] = {
+#if NUM_CHANNELS == 4
+    STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF,
+#elif NUM_CHANNELS == 16
+    STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF,
+    STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF,
+    STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF,
+    STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF,
+#endif
+};
+const static char* reg4[] = {
+#if NUM_CHANNELS == 4
+    "rxa4", "rxb4", "rxc4", "rxd4", "txa4", "txb4", "txc4", "txd4",
+#elif NUM_CHANNELS == 16
+    "txa4", "txb4", "txc4", "txd4", "txa4", "txb4", "txc4", "txd4",
+    "txa4", "txb4", "txc4", "txd4", "txa4", "txb4", "txc4", "txd4",
+    "txa4", "txb4", "txc4", "txd4", "txa4", "txb4", "txc4", "txd4",
+    "txa4", "txb4", "txc4", "txd4", "txa4", "txb4", "txc4", "txd4",
+#else
+#error "Channel count not supported"
+#endif
+};
 static int i_bias[] = {17, 17, 17, 17};
 static int q_bias[] = {17, 17, 17, 17};
 
@@ -392,7 +429,6 @@ static int hdlr_tx_ ## _c ## _trigger_gating (const char *data, char* ret) { \
 
 DEFINE_RX_TRIGGER_FUNCS();
 DEFINE_TX_TRIGGER_FUNCS();
-
 
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
@@ -5429,87 +5465,82 @@ static int hdlr_tx_d_rf_freq_lut_en ( const char *data, char *ret ) {
       DEFINE_FILE_PROP( "cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0" ), \
       DEFINE_FILE_PROP( "cm/trx/nco_adj", hdlr_cm_trx_nco_adj, WO, "0" )
 
-#define DEFINE_TATE_FUNC_SET(_c, _fd) \
-    /* TX */                          \
-    static int hdlr_tx_##_c##_trigger_sma_mode       (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_sma_mode       (data, ret); } \
-    static int hdlr_tx_##_c##_trigger_trig_sel       (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_trig_sel       (data, ret); } \
-    static int hdlr_tx_##_c##_trigger_edge_backoff   (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_edge_backoff   (data, ret); } \
-    static int hdlr_tx_##_c##_trigger_edge_sample_num(const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_edge_sample_num(data, ret); } \
-    static int hdlr_tx_##_c##_trigger_ufl_dir        (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_ufl_dir        (data, ret); } \
-    static int hdlr_tx_##_c##_trigger_ufl_mode       (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_ufl_mode       (data, ret); } \
-    static int hdlr_tx_##_c##_trigger_ufl_pol        (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_ufl_pol        (data, ret); } \
-    static int hdlr_tx_##_c##_trigger_gating         (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_trigger_gating         (data, ret); } \
-    static int hdlr_tx_##_c##_pwr                    (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_pwr                    (data, ret); } \
-    static int hdlr_tx_##_c##_rf_dac_dither_en       (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_dac_dither_en       (data, ret); } \
-    static int hdlr_tx_##_c##_rf_dac_dither_mixer_en (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_dac_dither_mixer_en (data, ret); } \
-    static int hdlr_tx_##_c##_rf_dac_dither_sra_sel  (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_dac_dither_sra_sel  (data, ret); } \
-    static int hdlr_tx_##_c##_rf_dac_nco             (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_dac_nco             (data, ret); } \
-    static int hdlr_tx_##_c##_rf_dac_temp            (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_dac_temp            (data, ret); } \
-    static int hdlr_tx_##_c##_rf_freq_val            (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_freq_val            (data, ret); } \
-    static int hdlr_tx_##_c##_rf_freq_lut_en         (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_freq_lut_en         (data, ret); } \
-    static int hdlr_tx_##_c##_rf_freq_band           (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_freq_band           (data, ret); } \
-    static int hdlr_tx_##_c##_rf_freq_i_bias         (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_freq_i_bias         (data, ret); } \
-    static int hdlr_tx_##_c##_rf_freq_q_bias         (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_freq_q_bias         (data, ret); } \
-    static int hdlr_tx_##_c##_rf_gain_val            (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_gain_val            (data, ret); } \
-    static int hdlr_tx_##_c##_status_rfld            (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_status_rfld            (data, ret); } \
-    static int hdlr_tx_##_c##_status_dacld           (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_status_dacld           (data, ret); } \
-    static int hdlr_tx_##_c##_status_dacctr          (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_status_dacctr          (data, ret); } \
-    static int hdlr_tx_##_c##_rf_board_dump          (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_board_dump          (data, ret); } \
-    static int hdlr_tx_##_c##_rf_board_test          (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_board_test          (data, ret); } \
-    static int hdlr_tx_##_c##_rf_board_temp          (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_board_temp          (data, ret); } \
-    static int hdlr_tx_##_c##_rf_board_led           (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_rf_board_led           (data, ret); } \
-    static int hdlr_tx_##_c##_dsp_gain               (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_dsp_gain               (data, ret); } \
-    static int hdlr_tx_##_c##_dsp_rate               (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_dsp_rate               (data, ret); } \
-    static int hdlr_tx_##_c##_dsp_nco_adj            (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_dsp_nco_adj            (data, ret); } \
-    static int hdlr_tx_##_c##_dsp_rstreq             (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_dsp_rstreq             (data, ret); } \
-    static int hdlr_tx_##_c##_about_id               (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_about_id               (data, ret); } \
-    static int hdlr_tx_##_c##_link_vita_en           (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_link_vita_en           (data, ret); } \
-    static int hdlr_tx_##_c##_link_iface             (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_link_iface             (data, ret); } \
-    static int hdlr_tx_##_c##_link_port              (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_link_port              (data, ret); } \
-    static int hdlr_tx_##_c##_qa_fifo_lvl            (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_qa_fifo_lvl            (data, ret); } \
-    static int hdlr_tx_##_c##_qa_oflow               (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_qa_oflow               (data, ret); } \
-    static int hdlr_tx_##_c##_qa_uflow               (const char* data, char* ret) { pass_uart_tx_fd(_fd); return hdlr_tx_a_qa_uflow               (data, ret); } \
-    /* RX */                                                                                                                                                      \
-    static int hdlr_rx_##_c##_trigger_sma_mode       (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_sma_mode       (data, ret); } \
-    static int hdlr_rx_##_c##_trigger_trig_sel       (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_trig_sel       (data, ret); } \
-    static int hdlr_rx_##_c##_trigger_edge_backoff   (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_edge_backoff   (data, ret); } \
-    static int hdlr_rx_##_c##_trigger_edge_sample_num(const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_edge_sample_num(data, ret); } \
-    static int hdlr_rx_##_c##_trigger_ufl_dir        (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_ufl_dir        (data, ret); } \
-    static int hdlr_rx_##_c##_trigger_ufl_mode       (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_ufl_mode       (data, ret); } \
-    static int hdlr_rx_##_c##_trigger_ufl_pol        (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_ufl_pol        (data, ret); } \
-    static int hdlr_rx_##_c##_trigger_gating         (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_trigger_gating         (data, ret); } \
-    static int hdlr_rx_##_c##_pwr                    (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_pwr                    (data, ret); } \
-    static int hdlr_rx_##_c##_rf_dac_dither_en       (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_dac_dither_en       (data, ret); } \
-    static int hdlr_rx_##_c##_rf_dac_dither_mixer_en (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_dac_dither_mixer_en (data, ret); } \
-    static int hdlr_rx_##_c##_rf_dac_dither_sra_sel  (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_dac_dither_sra_sel  (data, ret); } \
-    static int hdlr_rx_##_c##_rf_dac_nco             (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_dac_nco             (data, ret); } \
-    static int hdlr_rx_##_c##_rf_dac_temp            (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_dac_temp            (data, ret); } \
-    static int hdlr_rx_##_c##_rf_freq_val            (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_freq_val            (data, ret); } \
-    static int hdlr_rx_##_c##_rf_freq_lut_en         (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_freq_lut_en         (data, ret); } \
-    static int hdlr_rx_##_c##_rf_freq_band           (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_freq_band           (data, ret); } \
-    static int hdlr_rx_##_c##_rf_freq_i_bias         (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_freq_i_bias         (data, ret); } \
-    static int hdlr_rx_##_c##_rf_freq_q_bias         (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_freq_q_bias         (data, ret); } \
-    static int hdlr_rx_##_c##_rf_gain_val            (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_gain_val            (data, ret); } \
-    static int hdlr_rx_##_c##_status_rfld            (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_status_rfld            (data, ret); } \
-    static int hdlr_rx_##_c##_status_dacld           (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_status_dacld           (data, ret); } \
-    static int hdlr_rx_##_c##_status_dacctr          (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_status_dacctr          (data, ret); } \
-    static int hdlr_rx_##_c##_rf_board_dump          (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_board_dump          (data, ret); } \
-    static int hdlr_rx_##_c##_rf_board_test          (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_board_test          (data, ret); } \
-    static int hdlr_rx_##_c##_rf_board_temp          (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_board_temp          (data, ret); } \
-    static int hdlr_rx_##_c##_rf_board_led           (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_rf_board_led           (data, ret); } \
-    static int hdlr_rx_##_c##_dsp_gain               (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_dsp_gain               (data, ret); } \
-    static int hdlr_rx_##_c##_dsp_rate               (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_dsp_rate               (data, ret); } \
-    static int hdlr_rx_##_c##_dsp_nco_adj            (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_dsp_nco_adj            (data, ret); } \
-    static int hdlr_rx_##_c##_dsp_rstreq             (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_dsp_rstreq             (data, ret); } \
-    static int hdlr_rx_##_c##_about_id               (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_about_id               (data, ret); } \
-    static int hdlr_rx_##_c##_link_vita_en           (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_link_vita_en           (data, ret); } \
-    static int hdlr_rx_##_c##_link_iface             (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_link_iface             (data, ret); } \
-    static int hdlr_rx_##_c##_link_port              (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_link_port              (data, ret); } \
-    static int hdlr_rx_##_c##_qa_fifo_lvl            (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_qa_fifo_lvl            (data, ret); } \
-    static int hdlr_rx_##_c##_qa_oflow               (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_qa_oflow               (data, ret); } \
-    static int hdlr_rx_##_c##_qa_uflow               (const char* data, char* ret) { pass_uart_rx_fd(_fd); return hdlr_rx_a_qa_uflow               (data, ret); }
+#define DEFINE_TATE_FUNC_SET(_c, _fd)                                                                                                                                                  \
+    /* TX */                                                                                                                                                                           \
+    static int hdlr_tx_##_c##_trigger_sma_mode           (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_sma_mode       (data, ret); } \
+    static int hdlr_tx_##_c##_trigger_trig_sel           (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_trig_sel       (data, ret); } \
+    static int hdlr_tx_##_c##_trigger_edge_backoff       (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_edge_backoff   (data, ret); } \
+    static int hdlr_tx_##_c##_trigger_edge_sample_num    (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_edge_sample_num(data, ret); } \
+    static int hdlr_tx_##_c##_trigger_ufl_dir            (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_ufl_dir        (data, ret); } \
+    static int hdlr_tx_##_c##_trigger_ufl_mode           (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_ufl_mode       (data, ret); } \
+    static int hdlr_tx_##_c##_trigger_ufl_pol            (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_ufl_pol        (data, ret); } \
+    static int hdlr_tx_##_c##_trigger_gating             (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_trigger_gating         (data, ret); } \
+    static int hdlr_tx_##_c##_pwr                        (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_pwr                    (data, ret); } \
+    static int hdlr_tx_##_c##_rf_dac_dither_en           (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_dac_dither_en       (data, ret); } \
+    static int hdlr_tx_##_c##_rf_dac_dither_mixer_en     (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_dac_dither_mixer_en (data, ret); } \
+    static int hdlr_tx_##_c##_rf_dac_dither_sra_sel      (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_dac_dither_sra_sel  (data, ret); } \
+    static int hdlr_tx_##_c##_rf_dac_nco                 (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_dac_nco             (data, ret); } \
+    static int hdlr_tx_##_c##_rf_dac_temp                (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_dac_temp            (data, ret); } \
+    static int hdlr_tx_##_c##_rf_freq_val                (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_freq_val            (data, ret); } \
+    static int hdlr_tx_##_c##_rf_freq_lut_en             (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_freq_lut_en         (data, ret); } \
+    static int hdlr_tx_##_c##_rf_freq_band               (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_freq_band           (data, ret); } \
+    static int hdlr_tx_##_c##_rf_freq_i_bias             (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_freq_i_bias         (data, ret); } \
+    static int hdlr_tx_##_c##_rf_freq_q_bias             (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_freq_q_bias         (data, ret); } \
+    static int hdlr_tx_##_c##_rf_gain_val                (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_gain_val            (data, ret); } \
+    static int hdlr_tx_##_c##_status_rfld                (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_status_rfld            (data, ret); } \
+    static int hdlr_tx_##_c##_status_dacld               (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_status_dacld           (data, ret); } \
+    static int hdlr_tx_##_c##_status_dacctr              (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_status_dacctr          (data, ret); } \
+    static int hdlr_tx_##_c##_rf_board_dump              (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_board_dump          (data, ret); } \
+    static int hdlr_tx_##_c##_rf_board_test              (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_board_test          (data, ret); } \
+    static int hdlr_tx_##_c##_rf_board_temp              (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_board_temp          (data, ret); } \
+    static int hdlr_tx_##_c##_rf_board_led               (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_rf_board_led           (data, ret); } \
+    static int hdlr_tx_##_c##_dsp_gain                   (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_dsp_gain               (data, ret); } \
+    static int hdlr_tx_##_c##_dsp_rate                   (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_dsp_rate               (data, ret); } \
+    static int hdlr_tx_##_c##_dsp_nco_adj                (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_dsp_nco_adj            (data, ret); } \
+    static int hdlr_tx_##_c##_dsp_rstreq                 (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_dsp_rstreq             (data, ret); } \
+    static int hdlr_tx_##_c##_about_id                   (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_about_id               (data, ret); } \
+    static int hdlr_tx_##_c##_link_vita_en               (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_link_vita_en           (data, ret); } \
+    static int hdlr_tx_##_c##_link_iface                 (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_link_iface             (data, ret); } \
+    static int hdlr_tx_##_c##_link_port                  (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_link_port              (data, ret); } \
+    static int hdlr_tx_##_c##_qa_fifo_lvl                (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_qa_fifo_lvl            (data, ret); } \
+    static int hdlr_tx_##_c##_qa_oflow                   (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_qa_oflow               (data, ret); } \
+    static int hdlr_tx_##_c##_qa_uflow                   (const char* data, char* ret) { pass_uart_tx_fd(uart_generic_fd[_fd]); return hdlr_tx_a_qa_uflow               (data, ret); } \
+    /* RX */                                                                                                                                                                           \
+    static int hdlr_rx_ ## _c ## _trigger_sma_mode       (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_trigger_sma_mode       (data, ret); } \
+    static int hdlr_rx_ ## _c ## _trigger_trig_sel       (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_trigger_trig_sel       (data, ret); } \
+    static int hdlr_rx_ ## _c ## _trigger_edge_backoff   (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_trigger_edge_backoff   (data, ret); } \
+    static int hdlr_rx_ ## _c ## _trigger_edge_sample_num(const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_trigger_edge_sample_num(data, ret); } \
+    static int hdlr_rx_ ## _c ## _trigger_ufl_mode       (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_trigger_ufl_mode       (data, ret); } \
+    static int hdlr_rx_ ## _c ## _trigger_ufl_dir        (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_trigger_ufl_dir        (data, ret); } \
+    static int hdlr_rx_ ## _c ## _trigger_ufl_pol        (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_trigger_ufl_pol        (data, ret); } \
+    static int hdlr_rx_ ## _c ## _pwr                    (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_pwr                    (data, ret); } \
+    static int hdlr_rx_ ## _c ## _stream                 (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_stream                 (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_freq_val            (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_freq_val            (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_freq_lut_en         (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_freq_lut_en         (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_freq_lna            (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_freq_lna            (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_freq_band           (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_freq_band           (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_gain_val            (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_gain_val            (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_atten_val           (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_atten_val           (data, ret); } \
+    static int hdlr_rx_ ## _c ## _status_rfld            (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_status_rfld            (data, ret); } \
+    static int hdlr_rx_ ## _c ## _status_adcalarm        (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_status_adcalarm        (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_board_dump          (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_board_dump          (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_board_test          (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_board_test          (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_board_temp          (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_board_temp          (data, ret); } \
+    static int hdlr_rx_ ## _c ## _rf_board_led           (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_rf_board_led           (data, ret); } \
+    static int hdlr_rx_ ## _c ## _dsp_signed             (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_dsp_signed             (data, ret); } \
+    static int hdlr_rx_ ## _c ## _dsp_gain               (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_dsp_gain               (data, ret); } \
+    static int hdlr_rx_ ## _c ## _dsp_rate               (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_dsp_rate               (data, ret); } \
+    static int hdlr_rx_ ## _c ## _dsp_nco_adj            (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_dsp_nco_adj            (data, ret); } \
+    static int hdlr_rx_ ## _c ## _dsp_rstreq             (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_dsp_rstreq             (data, ret); } \
+    static int hdlr_rx_ ## _c ## _dsp_loopback           (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_dsp_loopback           (data, ret); } \
+    static int hdlr_rx_ ## _c ## _about_id               (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_about_id               (data, ret); } \
+    static int hdlr_rx_ ## _c ## _link_vita_en           (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_link_vita_en           (data, ret); } \
+    static int hdlr_rx_ ## _c ## _link_iface             (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_link_iface             (data, ret); } \
+    static int hdlr_rx_ ## _c ## _link_port              (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_link_port              (data, ret); } \
+    static int hdlr_rx_ ## _c ## _link_ip_dest           (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_link_ip_dest           (data, ret); } \
+    static int hdlr_rx_ ## _c ## _link_mac_dest          (const char* data, char* ret) { pass_uart_rx_fd(uart_generic_fd[_fd]); return hdlr_rx_a_link_mac_dest          (data, ret); } \
 
-#ifdef TATE
+#if NUM_CHANNELS == 16
     DEFINE_TATE_FUNC_SET(aa,  0)
     DEFINE_TATE_FUNC_SET(ab,  2)
     DEFINE_TATE_FUNC_SET(ac,  4)
@@ -5530,20 +5561,17 @@ static int hdlr_tx_d_rf_freq_lut_en ( const char *data, char *ret ) {
 
 // Beginning of property table
 static prop_t property_table[] = {
-
-#ifdef VAUNT
-	DEFINE_RX_CHANNEL( a, 42820, "10.10.10.10" ),
-	DEFINE_RX_CHANNEL( b, 42821, "10.10.11.10" ),
-	DEFINE_RX_CHANNEL( c, 42822, "10.10.10.10" ),
-	DEFINE_RX_CHANNEL( d, 42823, "10.10.11.10" ),
-
-	DEFINE_TX_CHANNEL( a, 42824 ),
-	DEFINE_TX_CHANNEL( b, 42825 ),
-	DEFINE_TX_CHANNEL( c, 42826 ),
-	DEFINE_TX_CHANNEL( d, 42827 ),
-#endif
-
-#ifdef TATE
+#if NUM_CHANNELS == 4
+	DEFINE_RX_CHANNEL( a, 42820, "10.10.10.10" ), /* 0 */
+	DEFINE_RX_CHANNEL( b, 42821, "10.10.11.10" ), /* 1 */
+	DEFINE_RX_CHANNEL( c, 42822, "10.10.10.10" ), /* 2 */
+	DEFINE_RX_CHANNEL( d, 42823, "10.10.11.10" ), /* 3 */
+	DEFINE_TX_CHANNEL( a, 42824 ),                /* 0 */
+	DEFINE_TX_CHANNEL( b, 42825 ),                /* 1 */
+	DEFINE_TX_CHANNEL( c, 42826 ),                /* 2 */
+	DEFINE_TX_CHANNEL( d, 42827 ),                /* 3 */
+#elif NUM_CHANNELS == 16
+    /* NOTE: Use IP values in header */
     DEFINE_TX_CHANNEL( aa, 42820 ), /*  0 */
     DEFINE_TX_CHANNEL( ab, 42821 ), /*  2 */
     DEFINE_TX_CHANNEL( ac, 42822 ), /*  4 */
@@ -5560,17 +5588,16 @@ static prop_t property_table[] = {
     DEFINE_TX_CHANNEL( bf, 42833 ), /* 11 */
     DEFINE_TX_CHANNEL( bg, 42834 ), /* 13 */
     DEFINE_TX_CHANNEL( bh, 42835 ), /* 15 */
+#else
+#warning "NUM_CHANNELS specified not supported"
 #endif
-
 	DEFINE_TIME(),
 	DEFINE_FPGA(),
-
 	DEFINE_FILE_PROP( "save_config",  hdlr_save_config,  RW,  "/home/root/profile.cfg" ),
 	DEFINE_FILE_PROP( "load_config",  hdlr_load_config,  RW,  "/home/root/profile.cfg" ),
-
 	DEFINE_CM(),
 };
-static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
+static const size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
 
 // Beginning of functions
 size_t get_num_prop(void) {
@@ -5675,6 +5702,10 @@ void pass_uart_tx_fd(int fd) {
 
 void pass_uart_rx_fd(int fd) {
 	uart_rx_fd = fd;
+}
+
+void pass_uart_generic_fd(int* fd) {
+	uart_generic_fd = fd;
 }
 
 char* get_abs_path(prop_t* prop, char* path) {
