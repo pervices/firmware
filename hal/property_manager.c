@@ -32,7 +32,6 @@
 static int uart_synth_comm_fd;
 static int uart_tx_comm_fd;
 static int uart_rx_comm_fd;
-static int uart_generic_fd[NUM_CHANNELS];
 
 // Inotify's file descriptor
 static int inotify_fd;
@@ -228,37 +227,25 @@ int init_property(uint8_t options) {
 	set_uart_debug_opt(options);
 	set_mem_debug_opt(options);
 
-    /* First initialize the synth UART channel. This is applicable to both TATE and VAUNT. */
+	//if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
+	//	PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV1);
+	//	return RETURN_ERROR_COMM_INIT;
+	//}
+	
 	if ( init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0) < 0 ) {
 		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_SYNTH);
 		return RETURN_ERROR_COMM_INIT;
 	}
 
-#if NUM_CHANNELS == 4
-    /* Given there are four channels, this is a VAUNT build,
-     * so separately initialize both the TX and RX MCUs
-     * with their own unique file descriptors. */
 	if ( init_uart_comm(&uart_tx_comm_fd, UART_TX, 0) < 0 ) {
 		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_TX);
 		return RETURN_ERROR_COMM_INIT;
 	}
+	
 	if ( init_uart_comm(&uart_rx_comm_fd, UART_RX, 0) < 0 ) {
 		PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_RX);
 		return RETURN_ERROR_COMM_INIT;
 	}
-#elif NUM_CHANNELS == 16
-    /* Given there are sixteen channels, this is a TATE build,
-     * so initialize 16 generic file descriptors, one per channel. */
-    char* names[] = UART_GENERIC;
-    int i;
-    for(i = 0; i < NUM_CHANNELS; i++)
-        if ( init_uart_comm(&uart_generic_fd[i], names[i], 0) < 0 ) {
-            PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, names[i]);
-            return RETURN_ERROR_COMM_INIT;
-        }
-#else
-#error "Channel count not supported"
-#endif
 	
 	PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
 	PRINT(VERBOSE, "Initializing Inotify\n");
@@ -269,11 +256,10 @@ int init_property(uint8_t options) {
 		return RETURN_ERROR_INOTIFY;
 	}
 
-	/* Pass the uart handlers to the property handlers. */
+	// pass the uart handler to the property handlers
 	pass_uart_synth_fd(uart_synth_comm_fd);
 	pass_uart_tx_fd(uart_tx_comm_fd);
 	pass_uart_rx_fd(uart_rx_comm_fd);
-	pass_uart_generic_fd(uart_generic_fd);
 
 	PRINT( INFO,"Building the property tree\n");
 	build_tree();

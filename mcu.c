@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include "common.h"
 #include "comm_manager.h"
-#include "property_manager.h"
 
 #define UART_SYNTH  "/dev/ttycrimson-time"
 #define UART_TX	    "/dev/ttycrimson-tx"
@@ -51,17 +50,15 @@ static int contains (const char* str, char letter, int size) {
 }
 
 int main(int argc, char *argv[]) {
-    int uart_synth_fd = 0;
-    int uart_tx_fd = 0;
-    int uart_rx_fd = 0;
-    int uart_generic_fd[NUM_CHANNELS] = {0};
+    int uart_synth_fd;
+    int uart_tx_fd;
+    int uart_rx_fd;
 
 	// initialize the comm port
 	if ( init_uart_comm(&uart_synth_fd, UART_SYNTH, 0) < 0 ) {
 		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_SYNTH);
 		return RETURN_ERROR_COMM_INIT;
 	}
-#if NUM_CHANNELS == 4
 	if ( init_uart_comm(&uart_tx_fd, UART_TX, 0) < 0 ) {
 		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_TX);
 		return RETURN_ERROR_COMM_INIT;
@@ -70,19 +67,7 @@ int main(int argc, char *argv[]) {
 		printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_RX);
 		return RETURN_ERROR_COMM_INIT;
 	}
-#elif NUM_CHANNELS == 16
-    {
-        char* names[] = UART_GENERIC;
-        int i;
-        for(i = 0; i < NUM_CHANNELS; i++)
-            if ( init_uart_comm(&uart_generic_fd[i], names[i], 0) < 0 ) {
-                PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, names[i]);
-                return RETURN_ERROR_COMM_INIT;
-            }
-    }
-#else
-#error "Channel count not supported"
-#endif
+
 	int i;
 
 	// parse through the arguments
@@ -108,9 +93,6 @@ int main(int argc, char *argv[]) {
          } else if (argv[i][0] == 's') {
         	 uart_comm_fd = uart_synth_fd;
             fwd_board = '2';
-         } else if (argv[i][0] == 'd') {
-             const int channel = atoi(argv[i + 1]);
-        	 uart_comm_fd = uart_generic_fd[channel];
          } else {
 			   printf("Usage: mcu [%s] [%s] [%s [t|r|s]] [%s milliseconds]\n",
 				   ARG_MCU_SILENT, ARG_MCU_CONSOLE,
