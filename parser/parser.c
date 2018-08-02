@@ -30,6 +30,8 @@ int parse_cmd(cmd_t* cmd, uint8_t* data) {
 	unsigned n;
 	int check;
 
+	PRINT( INFO, "parse(%s)\n", saveptr);
+
 	if (!data || !cmd) return RETURN_ERROR_PARAM;
 
 	for(
