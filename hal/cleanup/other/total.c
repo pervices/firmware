@@ -10,10 +10,22 @@
 #define INT(ch) (CHR(ch) - 'a')
 
 #define LIST_OF_CHANNELS                                                                                               \
-    X(a)                                                                                                               \
-    X(b)                                                                                                               \
-    X(c)                                                                                                               \
-    X(d)
+    X(a)
+
+/* ================================================================================================================== */
+/* ----------------------------------------------------- MISC ------------------------------------------------------- */
+/* ================================================================================================================== */
+
+static int hdlr_tx_sync(const char *data, char *ret) {
+    uint32_t old_val;
+
+    // toggle the bit sys0[6]
+    read_hps_reg("sys0", &old_val);
+    write_hps_reg("sys0", old_val | 0x40);
+    write_hps_reg("sys0", old_val & (~0x40));
+
+    return RETURN_SUCCESS;
+}
 
 /* ================================================================================================================== */
 /* ------------------------------------------------------- TX ------------------------------------------------------- */
@@ -536,6 +548,7 @@
                                                                                                                        \
         return RETURN_SUCCESS;                                                                                         \
     }
+
 LIST_OF_CHANNELS
 #undef X
 
@@ -1024,5 +1037,1007 @@ LIST_OF_CHANNELS
                                                                                                                        \
         return RETURN_SUCCESS;                                                                                         \
     }
+
 LIST_OF_CHANNELS
 #undef X
+
+/* ================================================================================================================== */
+/* --------------------------------------------------- TRIGGER------------------------------------------------------- */
+/* ================================================================================================================== */
+
+static int set_gating_mode(const char *chan, bool dsp) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
+    return set_reg_bits(reg_name, 12, 1, dsp);
+}
+
+static int valid_trigger_mode(const char *data, bool *edge) {
+
+    if (false) {
+    } else if (0 == strncmp("edge", data, strlen("edge"))) {
+        *edge = true;
+    } else if (0 == strncmp("level", data, strlen("level"))) {
+        *edge = false;
+    } else {
+        return RETURN_ERROR_PARAM;
+    }
+
+    return RETURN_SUCCESS;
+}
+
+static int valid_trigger_pol(const char *data, bool *positive) {
+
+    if (false) {
+    } else if (0 == strncmp("positive", data, strlen("positive"))) {
+        *positive = true;
+    } else if (0 == strncmp("negative", data, strlen("negative"))) {
+        *positive = false;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+    return RETURN_SUCCESS;
+}
+
+static int valid_trigger_sel(const char *data, uint32_t *sel) {
+    int r;
+
+    r = sscanf(data, "%" PRIu32, sel);
+    if (1 != r || *sel >= 4) {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+
+    return RETURN_SUCCESS;
+}
+
+static int valid_trigger_dir(const char *data, bool *in) {
+    if (false) {
+    } else if (0 == strncmp("in", data, strlen("in"))) {
+        *in = true;
+    } else if (0 == strncmp("out", data, strlen("out"))) {
+        *in = false;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+    return RETURN_SUCCESS;
+}
+
+static int set_edge_backoff(bool tx, const char *chan, uint32_t backoff) {
+    char regname[8];
+    snprintf(regname, sizeof(regname), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 9 : 12);
+    return set_reg_bits(regname, 0, -1, backoff);
+}
+
+static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
+    int r;
+    uint32_t val_msw;
+    uint32_t val_lsw;
+
+    char regname_msw[8];
+    char regname_lsw[8];
+
+    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 7 : 10);
+    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 8 : 11);
+
+    val_msw = num >> 32;
+    val_lsw = num & 0xffffffff;
+
+    return set_reg_bits(regname_msw, 0, -1, val_msw) || set_reg_bits(regname_lsw, 0, -1, val_lsw);
+}
+
+static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9);
+    return set_reg_bits(reg_name, 9, 1, in);
+}
+
+static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9);
+    return set_reg_bits(reg_name, 10, 0b11, sel);
+}
+
+static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
+    unsigned shift;
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9);
+    shift = sma ? 0 : 4;
+    return set_reg_bits(reg_name, shift, 1, edge);
+}
+
+static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan, tx ? 6 : 9);
+    return set_reg_bits(reg_name, 8, 1, positive);
+}
+
+#define X(ch)                                                                                                          \
+    static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {                                          \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(true, true, #ch, val);                                  \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data, char *ret) {                                      \
+        uint32_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_edge_backoff(data, &val) || set_edge_backoff(true, #ch, val);                                        \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data, char *ret) {                                   \
+        uint64_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_edge_sample_num(data, &val) || set_edge_sample_num(true, #ch, val);                                  \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {                                          \
+        uint32_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_trigger_sel(data, &val) || set_trigger_sel(true, #ch, val);                                          \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {                                           \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_dir(data, &val) || set_trigger_ufl_dir(true, #ch, val);                                      \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##_trigger_ufl_mode(const char *data, char *ret) {                                          \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(false, true, #ch, val);                                 \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {                                           \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_pol(data, &val) || set_trigger_ufl_pol(true, #ch, val);                                      \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {                                          \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(true, false, #ch, val);                                 \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_edge_backoff(const char *data, char *ret) {                                      \
+        uint32_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_edge_backoff(data, &val) || set_edge_backoff(false, #ch, val);                                       \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_edge_sample_num(const char *data, char *ret) {                                   \
+        uint64_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_edge_sample_num(data, &val) || set_edge_sample_num(false, #ch, val);                                 \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_trig_sel(const char *data, char *ret) {                                          \
+        uint32_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_trigger_sel(data, &val) || set_trigger_sel(false, #ch, val);                                         \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_ufl_dir(const char *data, char *ret) {                                           \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_dir(data, &val) || set_trigger_ufl_dir(false, #ch, val);                                     \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_ufl_mode(const char *data, char *ret) {                                          \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(false, false, #ch, val);                                \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_ufl_pol(const char *data, char *ret) {                                           \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_pol(data, &val) || set_trigger_ufl_pol(false, #ch, val);                                     \
+        return r;                                                                                                      \
+    }
+
+LIST_OF_CHANNELS
+#undef X
+
+#define X(ch)                                                                                      \
+    static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {                                            \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_gating_mode(data, &val) || set_gating_mode(#ch, val);                                                \
+        return r;                                                                                                      \
+    }
+
+LIST_OF_CHANNELS
+#undef X
+
+/* ================================================================================================================== */
+/* ----------------------------------------------------- TIME ------------------------------------------------------- */
+/* ================================================================================================================== */
+
+static int hdlr_time_clk_pps(const char *data, char *ret) {
+    // Insert MCU/MEM command
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_clk_cur_time(const char *data, char *ret) {
+    // test by reading it before writing to it
+    // uint32_t intpart, fracpart;
+    // read_hps_reg( "sys5", &intpart);
+    // read_hps_reg( "sys6", &fracpart);
+    // printf("Time is: %lf seconds\n", (double)intpart + ((double)fracpart / 100000000) );
+
+    // double time;
+    // sscanf(data, "%lf", &time);
+    // write_hps_reg( "sys7", (uint32_t)time);
+    // write_hps_reg( "sys8", time - (uint32_t)time);
+
+    long double time;
+    sscanf(data, "%Lf", &time);
+    write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys10", (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
+    write_hps_reg("sys11", (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
+    // write_hps_reg("sys12", (uint32_t)((time-(uint64_t)time)>>32) & 0x00000000FFFFFFFF);
+    // toggle the set register
+    write_hps_reg("sys13", 1);
+    write_hps_reg("sys13", 0);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_source_vco(const char *data, char *ret) {
+    if (strcmp(data, "external") == 0) {
+        strcpy(buf, "clk -v 1\r");
+    } else if (strcmp(data, "internal") == 0) {
+        strcpy(buf, "clk -v 0\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_source_sync(const char *data, char *ret) {
+    if (strcmp(data, "external") == 0) {
+        strcpy(buf, "clk -n 1\r");
+    } else if (strcmp(data, "internal") == 0) {
+        strcpy(buf, "clk -n 0\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+// 10 MHz clock
+static int hdlr_time_source_ref(const char *data, char *ret) {
+    if (strcmp(data, "external") == 0) {
+        strcpy(buf, "clk -t 1\r");
+    } else if (strcmp(data, "internal") == 0) {
+        strcpy(buf, "clk -t 0\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+// External Source Buffer Select
+static int hdlr_time_source_extsine(const char *data, char *ret) {
+    if (strcmp(data, "sine") == 0) {
+        strcpy(buf, "HMC -h 1 -b 1\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    } else if (strcmp(data, "LVPECL") == 0) {
+        strcpy(buf, "HMC -h 1 -b 0\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    } else {
+        strcpy(buf, "HMC -h 1 -B\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        read_uart(uart_synth_fd);
+        strcpy(ret, (char *)uart_ret_buf);
+    }
+    return RETURN_SUCCESS;
+}
+
+// Toggle SPI Sync
+static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
+    if (strcmp(data, "0") != 0) {
+        strcpy(buf, "sync -k\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+// Toggle SPI Sync
+static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
+    if (strcmp(data, "0") != 0) {
+        strcpy(buf, "sync -q\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
+    if (strcmp(data, "0") != 0) {
+        strcpy(buf, "sync -j\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
+    if (strcmp(data, "0") != 0) {
+        strcpy(buf, "sync -p\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+// Resync output edges with Ref
+static int hdlr_time_sync_lmk_resync_all(const char *data, char *ret) {
+    if (strcmp(data, "0") != 0) {
+        strcpy(buf, "sync -r\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+// TODO: Enable DevClock Output
+static int hdlr_time_source_devclk(const char *data, char *ret) {
+    if (strcmp(data, "external") == 0) {
+        strcpy(buf, "clk -t 1\r");
+    } else if (strcmp(data, "internal") == 0) {
+        strcpy(buf, "clk -t 0\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+// TODO: Enable PLL Output
+static int hdlr_time_source_pll(const char *data, char *ret) {
+    if (strcmp(data, "external") == 0) {
+        strcpy(buf, "clk -t 1\r");
+    } else if (strcmp(data, "internal") == 0) {
+        strcpy(buf, "clk -t 0\r");
+    }
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld(const char *data, char *ret) {
+    strcpy(buf, "status -l\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -l 11\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -l 12\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -l 21\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -l 22\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol(const char *data, char *ret) {
+    strcpy(buf, "status -o\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -o 11\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -o 12\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -o 21\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -o 22\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_board_dump(const char *data, char *ret) {
+    // send the uart commands and read back the output and write to file
+
+    // Diagnostic Dump of Clk Board
+    strcpy(buf, "board -e\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    PRINT(DUMP, "[Board: Time Regdump] %s\n", uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_board_test(const char *data, char *ret) {
+    // TODO: MCU code cleanup
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_board_temp(const char *data, char *ret) {
+    strcpy(buf, "board -t\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_board_led(const char *data, char *ret) {
+    strcpy(buf, "board -l ");
+    strcat(buf, data);
+    strcat(buf, "\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_id(const char *data, char *ret) {
+    // Do Nothing, store in filesystem
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_serial(const char *data, char *ret) {
+    strcpy(buf, "status -s\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcudevid(const char *data, char *ret) {
+    strcpy(buf, "status -d\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcurev(const char *data, char *ret) {
+    strcpy(buf, "status -v\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_mcufuses(const char *data, char *ret) {
+    strcpy(buf, "status -f\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_fw_ver(const char *data, char *ret) {
+    strcpy(buf, "board -v\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+/* ================================================================================================================== */
+/* ----------------------------------------------------- FPGA ------------------------------------------------------- */
+/* ================================================================================================================== */
+
+static int hdlr_fpga_board_dump(const char *data, char *ret) {
+
+    // dump all of the board logs
+    hdlr_tx_a_rf_board_dump(NULL, NULL); /* Can use XMACRO for this. */
+    hdlr_tx_b_rf_board_dump(NULL, NULL);
+    hdlr_tx_c_rf_board_dump(NULL, NULL);
+    hdlr_tx_d_rf_board_dump(NULL, NULL);
+    hdlr_rx_a_rf_board_dump(NULL, NULL);
+    hdlr_rx_b_rf_board_dump(NULL, NULL);
+    hdlr_rx_c_rf_board_dump(NULL, NULL);
+    hdlr_rx_d_rf_board_dump(NULL, NULL);
+    hdlr_time_board_dump(NULL, NULL);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_test(const char *data, char *ret) {
+    // TODO: MCU code cleanup
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gle(const char *data, char *ret) {
+
+    if (strcmp(data, "1") == 0) {
+        strcpy(buf, "board -g 1\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+
+        strcpy(buf, "board -g 1\r");
+        send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+
+        strcpy(buf, "board -g 1\r");
+        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+    }
+    if (strcmp(data, "2") == 0) {
+        strcpy(buf, "board -g 2\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+
+        strcpy(buf, "board -g 2\r");
+        send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+
+        strcpy(buf, "board -g 2\r");
+        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_temp(const char *data, char *ret) {
+    // strcpy(buf, "board -t\r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    // read_uart(NO_FWD_CMD);
+    // strcpy(ret, (char*)uart_ret_buf);
+    uint32_t old_val;
+    read_hps_reg("sys14", &old_val);
+
+    // mask off temp
+    old_val = old_val & 0xff;
+
+    // if value >= 0x80 (=128), subtract 0x80 and convert to int
+    if (old_val >= 128) {
+        old_val = old_val - 128;
+        sprintf(ret, "temp +%lu degC\n", old_val);
+    }
+    // if value < 0x80, subtract 0x3a (=58) and convert to negative int
+    else if (old_val < 128) {
+        old_val = old_val - 58;
+        sprintf(ret, "temp -%lu degC\n", old_val);
+    }
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_led(const char *data, char *ret) {
+    // strcpy(buf, "board -l ");
+    // strcat(buf, data);
+    // strcat(buf, "\r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_rstreq(const char *data, char *ret) {
+    // strcpy(buf, "fpga -r \r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+    /* TODO: Implement DIG Board FPGA Reset */
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_reboot(const char *data, char *ret) {
+    if (strcmp(data, "1") == 0) {
+        uint32_t reboot;
+
+        // Write 0 to bit[16] of sys 0 in order to reboot
+        read_hps_reg("sys0", &reboot);
+        reboot = (reboot & 0xFFFEFFFF);
+        write_hps_reg("sys0", reboot);
+        return RETURN_SUCCESS;
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
+    // strcpy(buf, "fpga -o \r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    sync_channels(15);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
+    strcpy(buf, "board -r\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    usleep(700000);
+
+    strcpy(buf, "board -r\r");
+    send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
+    usleep(50000);
+
+    strcpy(buf, "board -r\r");
+    send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
+    usleep(50000);
+
+    /* TODO: Implement DIG board Reset */
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char *ret, unsigned sfp_port) {
+
+    static const unsigned udp_port_max = (1 << 16) - 1;
+    static const unsigned sfp_port_max = 1;
+
+    unsigned udp_port;
+    uint32_t flc0_reg;
+    uint32_t mask;
+
+    if (sfp_port > sfp_port_max) {
+        return RETURN_ERROR_PARAM;
+    }
+    if (1 != sscanf(data, "%u", &udp_port)) {
+        return RETURN_ERROR_PARAM;
+    }
+
+    udp_port = udp_port > udp_port_max ? udp_port_max : udp_port;
+
+    // if number of sfp_ports ever changes, this code needs to be changed
+    // a good reason to use structures to access memory-mapped registers.
+    read_hps_reg("flc0", &flc0_reg);
+    mask = 0xffff << (sfp_port * 16);
+    flc0_reg &= ~mask;
+    flc0_reg |= (udp_port << (sfp_port * 16)) & mask;
+    write_hps_reg("flc0", flc0_reg);
+
+    sprintf(ret, "%u", udp_port);
+
+    return RETURN_SUCCESS;
+}
+static inline int hdlr_fpga_board_flow_control_sfpa_port(const char *data, char *ret) {
+    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 0);
+}
+static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data, char *ret) {
+    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 1);
+}
+
+static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
+    uint32_t old_val;
+
+    // toggle the bit sys0[4]
+    read_hps_reg("sys0", &old_val);
+    write_hps_reg("sys0", old_val | 0x10);
+    write_hps_reg("sys0", old_val & (~0x10));
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_id(const char *data, char *ret) {
+    // don't need to do anything, save the ID in the file system
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
+    uint32_t old_val;
+    int year, month, day, hour, min;
+    read_hps_reg("sys15", &old_val);
+    // get year
+    year = (old_val & 0xfff00000) >> 20;
+    month = (old_val & 0x000f0000) >> 16;
+    day = (old_val & 0x0000f800) >> 11;
+    hour = (old_val & 0x000007c0) >> 6;
+    min = old_val & 0x0000003f;
+
+    sprintf(ret, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month, day, hour, min);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
+    uint32_t old_val;
+    read_hps_reg("sys18", &old_val);
+
+    sprintf(ret, "config. info. 0x%02x \n", old_val);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_serial(const char *data, char *ret) {
+    uint64_t old_val;
+    uint32_t old_val1;
+    uint32_t old_val2;
+    read_hps_reg("sys16", &old_val1);
+    read_hps_reg("sys17", &old_val2);
+
+    // append values
+    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
+
+    sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
+    int r;
+    bool val;
+    r = valid_trigger_dir(data, &val) || set_sma_dir(val);
+    return r;
+}
+
+static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
+    int r;
+    bool val;
+    r = valid_trigger_pol(data, &val) || set_sma_pol(val);
+    return r;
+}
+
+// TODO: Move FWversion code to ARM, edit MAKE file with version info, refer to MCU code
+static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
+    // strcpy(buf, "board -v\r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    // read_uart(NO_FWD_CMD);
+    // strcpy(ret, (char*)uart_ret_buf);
+    uint64_t old_val;
+    uint32_t old_val1;
+    uint32_t old_val2;
+    read_hps_reg("sys3", &old_val2);
+    read_hps_reg("sys4", &old_val1);
+
+    // bits sys3[7:0]
+    old_val2 = old_val2 & 0xff;
+
+    // append values
+    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
+
+    sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_server_about_fw_ver(const char *data, char *ret) {
+    FILE *fp = NULL;
+    char buf[MAX_PROP_LEN] = {0};
+    if ((fp = popen("/usr/bin/server -v", "r")) == NULL) {
+        PRINT(ERROR, "Error opening pipe!\n");
+        return RETURN_ERROR;
+    }
+    while (fgets(buf, MAX_PROP_LEN, fp) != NULL) {
+        strncat(ret, buf, MAX_PROP_LEN);
+    }
+    if (pclose(fp)) {
+        return RETURN_ERROR;
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    read_hps_reg("sys1", &old_val);
+
+    // bits sys1[10:7]
+    old_val = (old_val >> 7) & 0xf;
+
+    sprintf(ret, "ver. 0x%02x", old_val);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_rate(const char *data, char *ret) {
+    // TODO: Need to implement in FW
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_ip_addr(const char *data, char *ret) {
+    uint32_t ip[4];
+    if (ipver[0] == IPVER_IPV4) {
+        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip, ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net5", (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]));
+    } else if (ipver[0] == IPVER_IPV6) {
+        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip, ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net1", ip[0]);
+        write_hps_reg("net2", ip[1]);
+        write_hps_reg("net3", ip[2]);
+        write_hps_reg("net4", ip[3]);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_mac_addr(const char *data, char *ret) {
+    uint8_t mac[6];
+    sscanf(data, "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 "", mac, mac + 1, mac + 2, mac + 3,
+           mac + 4, mac + 5);
+    write_hps_reg("net11", (mac[0] << 8) | (mac[1]));
+    write_hps_reg("net12", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    uint8_t ver;
+    sscanf(data, "%" SCNd8 "", &ver);
+    read_hps_reg("net0", &old_val);
+    if (ver > 0)
+        write_hps_reg("net0", (old_val | 0x4));
+    else
+        write_hps_reg("net0", (old_val & ~(0x4)));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
+    uint32_t old_val;
+    uint32_t pay_len;
+    sscanf(data, "%" SCNd32 "", &pay_len);
+    read_hps_reg("net0", &old_val);
+    write_hps_reg("net0", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_ip_addr(const char *data, char *ret) {
+    uint32_t ip[4];
+    if (ipver[1] == IPVER_IPV4) {
+        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip, ip + 1, ip + 2, ip + 3);
+        ip[0] = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]);
+        write_hps_reg("net20", ip[0]);
+    } else if (ipver[1] == IPVER_IPV6) {
+        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip, ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net16", ip[0]);
+        write_hps_reg("net17", ip[1]);
+        write_hps_reg("net18", ip[2]);
+        write_hps_reg("net19", ip[3]);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_mac_addr(const char *data, char *ret) {
+    uint8_t mac[6];
+    sscanf(data, "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 "", mac, mac + 1, mac + 2, mac + 3,
+           mac + 4, mac + 5);
+    write_hps_reg("net26", (mac[0] << 8) | (mac[1]));
+    write_hps_reg("net27", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    uint8_t ver;
+    sscanf(data, "%" SCNd8 "", &ver);
+    read_hps_reg("net15", &old_val);
+    if (ver > 0)
+        write_hps_reg("net15", (old_val & ~(1 << 2)) | (1 << 2));
+    else
+        write_hps_reg("net15", (old_val & ~(1 << 2)));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
+    uint32_t old_val;
+    uint32_t pay_len;
+    sscanf(data, "%" SCNd32 "", &pay_len);
+    read_hps_reg("net15", &old_val);
+    write_hps_reg("net15", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_net_dhcp_en(const char *data, char *ret) { return RETURN_SUCCESS; }
+
+static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
+    // write to the file
+    char name[MAX_PROP_LEN] = {0};
+    char command[MAX_PROP_LEN] = {0};
+    sscanf(data, "%s", name);
+
+    strcpy(command, "echo ");
+    strcat(command, name);
+    strcat(command, " > /etc/hostname");
+    system(command);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
+    // ensure that it is a valid IP address
+    char ip_address[MAX_PROP_LEN] = {0};
+    char command[MAX_PROP_LEN] = {0};
+    sscanf(data, "%s", ip_address);
+
+    struct sockaddr_in sa;
+    if (!inet_pton(AF_INET, ip_address, &(sa.sin_addr))) {
+        return RETURN_ERROR_PARAM;
+    }
+
+    // write to the file
+    strcpy(command, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/");
+    strcat(command, ip_address);
+    strcat(command, "/ /etc/init.d/mcu_init.sh");
+    system(command);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
+    uint32_t gps_time_lh = 0, gps_time_uh = 0;
+    char gps_split[MAX_PROP_LEN];
+
+    read_hps_reg("sys5", &gps_time_lh);
+    read_hps_reg("sys6", &gps_time_uh);
+
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
+    strncpy(ret, gps_split, MAX_PROP_LEN);
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
+    strncat(ret, gps_split, MAX_PROP_LEN);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
+    uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
+    char gps_split[MAX_PROP_LEN];
+    read_hps_reg("sys7", &gps_frac_time_lh);
+    read_hps_reg("sys8", &gps_frac_time_uh);
+
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
+    strncpy(ret, gps_split, MAX_PROP_LEN);
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
+    strncat(ret, gps_split, MAX_PROP_LEN);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
+    uint32_t systime_lh = 0;
+    uint32_t systime_uh = 0;
+    read_hps_reg("sys5", &systime_lh);
+    read_hps_reg("sys6", &systime_uh);
+    write_hps_reg("sys9", systime_lh);
+    write_hps_reg("sys10", systime_uh);
+    write_hps_reg("sys11", 0); // set frac_time to 0
+    write_hps_reg("sys12", 0); // set frac_time to 0
+    write_hps_reg("sys13", 1); // writing 1, then 0 to sys9 sets the time
+    write_hps_reg("sys13", 0); // to what is written in sys7 and sys8
+
+    return RETURN_SUCCESS;
+}

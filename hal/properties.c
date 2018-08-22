@@ -211,12 +211,6 @@ static int set_sma_dir(bool in) { return set_reg_bits("sys2", 4, 1, in); }
 
 static int set_sma_pol(bool positive) { return set_reg_bits("sys2", 6, 1, positive); }
 
-static int set_gating_mode(const char *chan, bool dsp) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
-    return set_reg_bits(reg_name, 12, 1, dsp);
-}
-
 // Beginning of property functions, very long because each property needs to be
 // handled explicitly
 static int hdlr_invalid(const char *data, char *ret) {
