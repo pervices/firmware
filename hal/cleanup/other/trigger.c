@@ -2,6 +2,12 @@
 /* --------------------------------------------------- TRIGGER------------------------------------------------------- */
 /* ================================================================================================================== */
 
+static int set_gating_mode(const char *chan, bool dsp) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
+    return set_reg_bits(reg_name, 12, 1, dsp);
+}
+
 static int valid_trigger_mode(const char *data, bool *edge) {
 
     if (false) {
@@ -104,53 +110,102 @@ static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
     return set_reg_bits(reg_name, 8, 1, positive);
 }
 
-#define DEFINE_TRIGGER_FUNCS(_trx, ch)                                                                                 \
-    static int hdlr_##_trx##_##ch##_trigger_sma_mode(const char *data, char *ret) {                                    \
+#define DEFINE_TRIGGER_FUNCS(ch)                                                                                       \
+    static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {                                          \
         int r;                                                                                                         \
         bool val;                                                                                                      \
-        r = valid_trigger_mode(data, &val) || set_trigger_mode(true, !strcmp(#_trx, "tx"), #ch, val);                  \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(true, true, #ch, val);                                  \
         return r;                                                                                                      \
     }                                                                                                                  \
                                                                                                                        \
-    static int hdlr_##_trx##_##ch##_trigger_edge_backoff(const char *data, char *ret) {                                \
+    static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data, char *ret) {                                      \
         uint32_t val;                                                                                                  \
         int r;                                                                                                         \
-        r = valid_edge_backoff(data, &val) || set_edge_backoff(!strcmp(#_trx, "tx"), #ch, val);                        \
+        r = valid_edge_backoff(data, &val) || set_edge_backoff(true, #ch, val);                                        \
         return r;                                                                                                      \
     }                                                                                                                  \
                                                                                                                        \
-    static int hdlr_##_trx##_##ch##_trigger_edge_sample_num(const char *data, char *ret) {                             \
+    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data, char *ret) {                                   \
         uint64_t val;                                                                                                  \
         int r;                                                                                                         \
-        r = valid_edge_sample_num(data, &val) || set_edge_sample_num(!strcmp(#_trx, "tx"), #ch, val);                  \
+        r = valid_edge_sample_num(data, &val) || set_edge_sample_num(true, #ch, val);                                  \
         return r;                                                                                                      \
     }                                                                                                                  \
                                                                                                                        \
-    static int hdlr_##_trx##_##ch##_trigger_trig_sel(const char *data, char *ret) {                                    \
+    static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {                                          \
         uint32_t val;                                                                                                  \
         int r;                                                                                                         \
-        r = valid_trigger_sel(data, &val) || set_trigger_sel(!strcmp(#_trx, "tx"), #ch, val);                          \
+        r = valid_trigger_sel(data, &val) || set_trigger_sel(true, #ch, val);                                          \
         return r;                                                                                                      \
     }                                                                                                                  \
                                                                                                                        \
-    static int hdlr_##_trx##_##ch##_trigger_ufl_dir(const char *data, char *ret) {                                     \
+    static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {                                           \
         int r;                                                                                                         \
         bool val;                                                                                                      \
-        r = valid_trigger_dir(data, &val) || set_trigger_ufl_dir(!strcmp(#_trx, "tx"), #ch, val);                      \
+        r = valid_trigger_dir(data, &val) || set_trigger_ufl_dir(true, #ch, val);                                      \
         return r;                                                                                                      \
     }                                                                                                                  \
                                                                                                                        \
-    static int hdlr_##_trx##_##ch##_trigger_ufl_mode(const char *data, char *ret) {                                    \
+    static int hdlr_tx_##ch##_trigger_ufl_mode(const char *data, char *ret) {                                          \
         int r;                                                                                                         \
         bool val;                                                                                                      \
-        r = valid_trigger_mode(data, &val) || set_trigger_mode(false, !strcmp(#_trx, "tx"), #ch, val);                 \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(false, true, #ch, val);                                 \
         return r;                                                                                                      \
     }                                                                                                                  \
                                                                                                                        \
-    static int hdlr_##_trx##_##ch##_trigger_ufl_pol(const char *data, char *ret) {                                     \
+    static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {                                           \
         int r;                                                                                                         \
         bool val;                                                                                                      \
-        r = valid_trigger_pol(data, &val) || set_trigger_ufl_pol(!strcmp(#_trx, "tx"), #ch, val);                      \
+        r = valid_trigger_pol(data, &val) || set_trigger_ufl_pol(true, #ch, val);                                      \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {                                          \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(true, false, #ch, val);                                 \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_edge_backoff(const char *data, char *ret) {                                      \
+        uint32_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_edge_backoff(data, &val) || set_edge_backoff(false, #ch, val);                                       \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_edge_sample_num(const char *data, char *ret) {                                   \
+        uint64_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_edge_sample_num(data, &val) || set_edge_sample_num(false, #ch, val);                                 \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_trig_sel(const char *data, char *ret) {                                          \
+        uint32_t val;                                                                                                  \
+        int r;                                                                                                         \
+        r = valid_trigger_sel(data, &val) || set_trigger_sel(false, #ch, val);                                         \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_ufl_dir(const char *data, char *ret) {                                           \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_dir(data, &val) || set_trigger_ufl_dir(false, #ch, val);                                     \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_ufl_mode(const char *data, char *ret) {                                          \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_mode(data, &val) || set_trigger_mode(false, false, #ch, val);                                \
+        return r;                                                                                                      \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_trigger_ufl_pol(const char *data, char *ret) {                                           \
+        int r;                                                                                                         \
+        bool val;                                                                                                      \
+        r = valid_trigger_pol(data, &val) || set_trigger_ufl_pol(false, #ch, val);                                     \
         return r;                                                                                                      \
     }
 
@@ -169,16 +224,16 @@ static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
     DEFINE_TX_GATING_FUNC(d)
 
 #define DEFINE_TX_TRIGGER_FUNCS()                                                                                      \
-    DEFINE_TRIGGER_FUNCS(tx, a)                                                                                        \
-    DEFINE_TRIGGER_FUNCS(tx, b)                                                                                        \
-    DEFINE_TRIGGER_FUNCS(tx, c)                                                                                        \
-    DEFINE_TRIGGER_FUNCS(tx, d)
+    DEFINE_TRIGGER_FUNCS(a)                                                                                            \
+    DEFINE_TRIGGER_FUNCS(b)                                                                                            \
+    DEFINE_TRIGGER_FUNCS(c)                                                                                            \
+    DEFINE_TRIGGER_FUNCS(d)
 
 #define DEFINE_RX_TRIGGER_FUNCS()                                                                                      \
-    DEFINE_TRIGGER_FUNCS(rx, a)                                                                                        \
-    DEFINE_TRIGGER_FUNCS(rx, b)                                                                                        \
-    DEFINE_TRIGGER_FUNCS(rx, c)                                                                                        \
-    DEFINE_TRIGGER_FUNCS(rx, d)
+    DEFINE_TRIGGER_FUNCS(a)                                                                                            \
+    DEFINE_TRIGGER_FUNCS(b)                                                                                            \
+    DEFINE_TRIGGER_FUNCS(c)                                                                                            \
+    DEFINE_TRIGGER_FUNCS(d)
 
 DEFINE_TX_GATING_FUNCS()
 DEFINE_RX_TRIGGER_FUNCS()

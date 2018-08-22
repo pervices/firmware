@@ -1,18 +1,19 @@
 /*
- * Properties are written once and expanded for the number of channels specified via X-Macros.
+ * Properties are written once and expanded for the number of channels specified via
+ * a C-like template system known as the X-Macro: https://en.wikipedia.org/wiki/X_Macro
  *
- * See (https://en.wikipedia.org/wiki/X_Macro) for more information on X-Macros.
+ * Don't forget to line up the backslashes when you're done.
  */
 
 #define STR(ch) #ch
 #define CHR(ch) #ch[0]
 #define INT(ch) (CHR(ch) - 'a')
 
-#define LIST_OF_CHANNELS \
-    X(a) \
-    X(b) \
-    X(c) \
-    X(d) \
+#define LIST_OF_CHANNELS                                                                                               \
+    X(a)                                                                                                               \
+    X(b)                                                                                                               \
+    X(c)                                                                                                               \
+    X(d)
 
 /* ================================================================================================================== */
 /* ------------------------------------------------------- TX ------------------------------------------------------- */
@@ -193,8 +194,8 @@
         int gain;                                                                                                      \
         sscanf(data, "%i", &gain);                                                                                     \
                                                                                                                        \
-        /* 0   -> 126	attenuation only */                                                                            \
-        /* 127		0dB */                                                                                             \
+        /*   0 -> 126 attenuation only */                                                                              \
+        /* 127    0dB */                                                                                               \
                                                                                                                        \
         if (gain > 127)                                                                                                \
             gain = 127;                                                                                                \
@@ -489,7 +490,53 @@
         }                                                                                                              \
                                                                                                                        \
         return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##_about_serial(const char *data, char *ret) {                                              \
+        strcpy(buf, "status -s\r");                                                                                    \
+        send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_tx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##about_mcudevid(const char *data, char *ret) {                                             \
+        strcpy(buf, "status -d\r");                                                                                    \
+        send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_tx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##about_mcurev(const char *data, char *ret) {                                               \
+        strcpy(buf, "status -v\r");                                                                                    \
+        send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_tx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##about_mcufuses(const char *data, char *ret) {                                             \
+        strcpy(buf, "status -f\r");                                                                                    \
+        send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_tx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_tx_##ch##about_fw_ver(const char *data, char *ret) {                                               \
+        strcpy(buf, "board -v\r");                                                                                     \
+        send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_tx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
     }
+
 LIST_OF_CHANNELS
 #undef X
 
@@ -931,6 +978,51 @@ LIST_OF_CHANNELS
             read_hps_reg("rx" STR(ch) "4", &old_val);                                                                  \
             write_hps_reg("rx" STR(ch) "4", old_val &(~0x100));                                                        \
         }                                                                                                              \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_about_serial(const char *data, char *ret) {                                              \
+        strcpy(buf, "status -s\r");                                                                                    \
+        send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_rx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_about_mcudevid(const char *data, char *ret) {                                            \
+        strcpy(buf, "status -d\r");                                                                                    \
+        send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_rx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_about_mcurev(const char *data, char *ret) {                                              \
+        strcpy(buf, "status -v\r");                                                                                    \
+        send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_rx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_about_mcufuses(const char *data, char *ret) {                                            \
+        strcpy(buf, "status -f\r");                                                                                    \
+        send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_rx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
+        return RETURN_SUCCESS;                                                                                         \
+    }                                                                                                                  \
+                                                                                                                       \
+    static int hdlr_rx_##ch##_about_fw_ver(const char *data, char *ret) {                                              \
+        strcpy(buf, "board -v\r");                                                                                     \
+        send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                              \
+        read_uart(uart_rx_fd[INT(ch)]);                                                                                \
+        strcpy(ret, (char *)uart_ret_buf);                                                                             \
+                                                                                                                       \
         return RETURN_SUCCESS;                                                                                         \
     }
 LIST_OF_CHANNELS
