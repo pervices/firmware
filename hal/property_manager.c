@@ -211,7 +211,9 @@ static void build_tree(void) {
     PRINT(VERBOSE, "Done building tree\n");
 }
 
-int get_inotify_fd() { return inotify_fd; }
+int get_inotify_fd() {
+    return inotify_fd;
+}
 
 // Initialize handler functions
 int init_property(uint8_t options) {

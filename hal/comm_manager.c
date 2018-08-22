@@ -61,8 +61,12 @@ int close_udp_comm(int fd) {
 static int uart_devices[MAX_DEVICES];
 static uint8_t used_uart_devices[MAX_DEVICES] = {FREE_DEVICE};
 
-int get_uart_tx_fd() { return uart_devices[1]; }
-int get_uart_rx_fd() { return uart_devices[2]; }
+int get_uart_tx_fd() {
+    return uart_devices[1];
+}
+int get_uart_rx_fd() {
+    return uart_devices[2];
+}
 
 // Gets the next available file descriptor
 static int get_next_uart_fd(int *fd) {

@@ -1,5 +1,0 @@
-a.c b.c. c.c. d.c need to be compressed into one XMACRO
-
-the four files must pasted into stitch.c
-
-a single xmacro (xmacro.c) must expand into expand.c to match stitch.c
