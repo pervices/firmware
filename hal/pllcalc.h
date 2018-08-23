@@ -32,9 +32,8 @@
 #include <stdlib.h>
 
 // For stand alone operation;
-//#define _PLL_DEBUG_STANDALONE //Standalone program, compile with: gcc -lm pllcalc.c
-//#define _PLL_DEBUG_INFO
-//#define _PLL_DEBUG_VERBOSE
+//#define _PLL_DEBUG_STANDALONE //Standalone program, compile with: gcc -lm
+//pllcalc.c #define _PLL_DEBUG_INFO #define _PLL_DEBUG_VERBOSE
 
 #ifndef _PLL_DEBUG_STANDALONE
 #include "common.h"
@@ -63,9 +62,9 @@
 #define PLL1_VCO_MIN_HZ 3400000000ULL
 #define PLL1_VCO_MAX_HZ 6800000000ULL
 #define PLL1_N_MIN 23 // Minimum allowable N value (per datasheet)
-#define PLL1_N_MAX                                                                                                     \
-    4024             // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255	//Maximum allowable N value (per
-                     // performance/judgement)
+#define PLL1_N_MAX                                                             \
+    4024 // 7000 // 524255 // 131072 // 65535 // 32767 // 16383 // 255
+         // //Maximum allowable N value (per performance/judgement)
 #define PLL1_R_MIN 1 // Require lower R divider to ensure reliable PDF frequency
 #define PLL1_R_MAX 100
 #define PLL1_DIV_MAX 64
@@ -75,13 +74,18 @@
 #define PLL_PARAM_GOOD 0
 
 // ADF4355 Default specs
-#define PLL1_R_FIXED (1)       // R value must be fixed to ensure consistent PFD frequency (13MHz)
-#define PLL1_R_FIXED_5 (5)     // R value must be fixed to ensure consistent PFD frequency (13MHz)
-#define PLL_ADF5355_MAX_N (23) // R value must be fixed to ensure consistent PFD frequency (13MHz)
+#define PLL1_R_FIXED                                                           \
+    (1) // R value must be fixed to ensure consistent PFD frequency (13MHz)
+#define PLL1_R_FIXED_5                                                         \
+    (5) // R value must be fixed to ensure consistent PFD frequency (13MHz)
+#define PLL_ADF5355_MAX_N                                                      \
+    (23) // R value must be fixed to ensure consistent PFD frequency (13MHz)
 
-#define PLL1_N_DEFAULT (112)              // N value (N^2 contribution to PLL noise) [16..4096]
-#define PLL1_D_DEFAULT (2)                // RFoutput divider value (1,2,4,6..58,60,62)
-#define PLL1_X2EN_DEFAULT (0)             // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
+#define PLL1_N_DEFAULT                                                         \
+    (112)                  // N value (N^2 contribution to PLL noise) [16..4096]
+#define PLL1_D_DEFAULT (2) // RFoutput divider value (1,2,4,6..58,60,62)
+#define PLL1_X2EN_DEFAULT                                                      \
+    (0) // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
 #define PLL1_OUTFREQ_DEFAULT (2800000000) // Resulting VCO Output Frequency
 #define PLL1_FB_DEFAULT (1)               // VCO divider feedback
 
@@ -108,7 +112,8 @@ typedef struct {
 } pllparam_t;
 
 // Set Output Frequency
-double setFreq(uint64_t *reqFreq, pllparam_t *pll1); // Returns the actual frequency set.
+double setFreq(uint64_t *reqFreq,
+               pllparam_t *pll1); // Returns the actual frequency set.
 
 // Return 1 if all sanitary checks for pllparam_t have passed
 uint8_t pll_CheckParams(pllparam_t *pllparam, uint8_t is_pll1);

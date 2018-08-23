@@ -62,10 +62,12 @@ char *get_abs_dir(prop_t *prop, char *path);
 char *get_root(prop_t *prop, char *root);
 
 void pass_uart_synth_fd(int fd);
-void pass_uart_tx_fd(int* fd);
-void pass_uart_rx_fd(int* fd);
+void pass_uart_tx_fd(int *fd);
+void pass_uart_rx_fd(int *fd);
 
-void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path, char *save_path);
+void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
+                            char *save_path);
 void sync_channels(uint8_t chan_mask);
-void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, bool tx, size_t channel);
+void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
+                       bool tx, size_t channel);
 #endif
