@@ -1,0 +1,11 @@
+stages:
+    - prepare
+    - build
+
+prep:
+    stage: prepare
+    script: apt-get install autoconf; autoreconf --install
+
+build:
+    stage: build
+    script: sh autogen.sh; make; make install
