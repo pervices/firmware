@@ -150,7 +150,8 @@ static void make_prop(prop_t *prop) {
         system(cmd);
 
         // TODO: replace with symlinkat(2)
-        snprintf(cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s", prop->symlink_target, prop->path);
+        snprintf(cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s",
+                 prop->symlink_target, prop->path);
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
@@ -165,7 +166,8 @@ static void add_prop_to_inotify(prop_t *prop) {
 
     // check if RO property
     if (prop->permissions != RO) {
-        prop->wd = inotify_add_watch(inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
+        prop->wd = inotify_add_watch(inotify_fd, get_abs_path(prop, path),
+                                     IN_CLOSE_WRITE);
     }
 
     if (prop->wd < 0)
@@ -178,8 +180,10 @@ static void init_prop_val(prop_t *prop) {
     memset(path, 0, MAX_PATH_LEN);
 
     // exceptions for values that must persist through hard resets
-    if (strcmp(prop->path, "fpga/link/net/hostname") == 0 || strcmp(prop->path, "fpga/link/net/ip_addr") == 0 ||
-        strcmp(prop->path, "save_config") == 0 || strcmp(prop->path, "load_config") == 0) {
+    if (strcmp(prop->path, "fpga/link/net/hostname") == 0 ||
+        strcmp(prop->path, "fpga/link/net/ip_addr") == 0 ||
+        strcmp(prop->path, "save_config") == 0 ||
+        strcmp(prop->path, "load_config") == 0) {
         return;
     }
 
@@ -305,7 +309,8 @@ void check_property_inotifies(void) {
             read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
             strcpy(prop_ret, prop_data);
 
-            PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__, prop->path, prop_data);
+            PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__,
+                  prop->path, prop_data);
             prop->handler(prop_data, prop_ret);
             if (prop->permissions == RO) {
                 memset(prop_ret, 0, sizeof(prop_ret));
@@ -325,7 +330,8 @@ void check_property_inotifies(void) {
                 write_to_file(get_abs_path(prop, path), prop_ret);
 
                 // re-add property to inotify
-                prop->wd = inotify_add_watch(inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
+                prop->wd = inotify_add_watch(
+                    inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
                 if (prop->wd < 0) {
                     PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 }
@@ -518,6 +524,7 @@ int set_property(const char *prop, const char *data) {
 }
 
 // Pass the pointers for load/saving profiles flags
-void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path, char *save_path) {
+void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
+                               char *save_path) {
     pass_profile_pntr_prop(load, save, load_path, save_path);
 }
