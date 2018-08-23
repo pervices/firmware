@@ -2856,6 +2856,10 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
 
 /* clang-format off */
 
+/* -------------------------------------------------------------------------- */
+/* ---------------------------- PROPERTY TABLE ------------------------------ */
+/* -------------------------------------------------------------------------- */
+
 // This is the file property tree which links all XMACRO expanded functions above
 // to a file path with some sort of default value. The default values
 // should ideally be pulled from the MCU to prevent extensive configuration.
@@ -3061,9 +3065,13 @@ static prop_t property_table[] = {
     DEFINE_CM()
 };
 
+static const size_t num_properties = LEN(property_table);
+
 /* clang-format on */
 
-static const size_t num_properties = LEN(property_table);
+/* -------------------------------------------------------------------------- */
+/* -------------------------- EXTERNED FUNCTIONS ---------------------------- */
+/* -------------------------------------------------------------------------- */
 
 size_t get_num_prop(void) {
     return num_properties;
@@ -3529,17 +3537,15 @@ int set_freq_internal(const bool tx, const unsigned channel,
     typedef int (*fp_t)(const char *, char *);
 
     static const fp_t rx_fp[] = {
-        hdlr_rx_a_rf_freq_val,
-        hdlr_rx_b_rf_freq_val,
-        hdlr_rx_c_rf_freq_val,
-        hdlr_rx_d_rf_freq_val,
+#define X(ch) hdlr_rx_##ch##_rf_freq_val,
+    CHANNELS
+#undef X
     };
 
     static const fp_t tx_fp[] = {
-        hdlr_tx_a_rf_freq_val,
-        hdlr_tx_b_rf_freq_val,
-        hdlr_tx_c_rf_freq_val,
-        hdlr_tx_d_rf_freq_val,
+#define X(ch) hdlr_tx_##ch##_rf_freq_val,
+    CHANNELS
+#undef X
     };
 
     int r;
