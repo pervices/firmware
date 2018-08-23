@@ -27,87 +27,168 @@
 #include "property_manager.h"
 #include "synth_lut.h"
 
+/* clang-format off */
+
+/* -------------------------------------------------------------------------- */
+/* -------------------------- SOME CPP DEFINES ------------------------------ */
+/* -------------------------------------------------------------------------- */
+
+// Sample rates are in samples per second (SPS).
+#define BASE_SAMPLE_RATE   325000000.0
+#define RESAMP_SAMPLE_RATE 260000000.0
+
+#define IPVER_IPV4 0
+#define IPVER_IPV6 1
+
+// (2 ^ 32) / (1 * 322265625)
+#define DSP_NCO_CONST \
+    ((double)13.215283987692307692307692307692307692307692307692307690000)
+
+// (2 ^ 48) / (4 * 322265625)
+#define DAC_NCO_CONST \
+    ((double)216519.21285435076923076923076923076923076923076923076919296)
+
+#define PWR_ON  1
+#define PWR_OFF 0
+
+#define STREAM_ON  1
+#define STREAM_OFF 0
+
+#define LEN(a) ((int) sizeof(a) / sizeof(*a))
+
+/* -------------------------------------------------------------------------- */
+/* ------------------------- SOME X-MACRO TALK ------------------------------ */
+/* -------------------------------------------------------------------------- */
+
+// Property functions are writen once and expanded N times for however many
+// channels specified. Channels are specified here. Channel operations will be
+// done in the order of this specification.
+#define CHANNELS  \
+    X(a) /*  0 */ \
+    X(b) /*  1 */ \
+    X(c) /*  2 */ \
+    X(d) /*  3 */ \
+    X(e) /*  4 */ \
+    X(f) /*  5 */ \
+    X(g) /*  6 */ \
+    X(h) /*  7 */ \
+    X(i) /*  8 */ \
+    X(j) /*  9 */ \
+    X(k) /* 10 */ \
+    X(l) /* 11 */ \
+    X(m) /* 12 */ \
+    X(n) /* 13 */ \
+    X(o) /* 14 */ \
+    X(p) /* 15 */
+
+// This channel specification is also known as an X-MACRO:
+// https://en.wikipedia.org/wiki/X_Macro.
+// An X-MACRO can expand a preprocessor defintion and do some very valuable
+// work using the following three tools (STR, CHR, INT).
 #define STR(ch) #ch
 #define CHR(ch) #ch[0]
 #define INT(ch) ((int)(CHR(ch) - 'a'))
 
-/* clang-format off */
+// STR converts a channel letter to a compile time string
+//    -> (assuming strings are "a", "b", "c" ... "z").
+// CHR converts the string into a runtime char.
+// INT converts the char into a runtime integer.
+//
+// Let us try building an array of channel names using the X-MACRO.
+static const char* const names[] = {
+#define X(ch) STR(ch)
+    CHANNELS
+#undef X
+};
 
-#define NUM_CHANNELS 24
-#define LIST_OF_CHANNELS \
-    X(a) /*  0 */        \
-    X(b) /*  1 */        \
-    X(c) /*  2 */        \
-    X(d) /*  3 */        \
-    X(e) /*  4 */        \
-    X(f) /*  5 */        \
-    X(g) /*  6 */        \
-    X(h) /*  7 */        \
-    X(i) /*  8 */        \
-    X(j) /*  9 */        \
-    X(k) /* 10 */        \
-    X(l) /* 11 */        \
-    X(m) /* 12 */        \
-    X(n) /* 13 */        \
-    X(o) /* 14 */        \
-    X(p) /* 15 */        \
-    X(q) /* 16 */        \
-    X(r) /* 17 */        \
-    X(s) /* 18 */        \
-    X(t) /* 19 */        \
-    X(u) /* 20 */        \
-    X(v) /* 21 */        \
-    X(w) /* 22 */        \
-    X(x) /* 23 */
+// This expands nicely into an array of strings that looks something like
+// this: { "a", "b", "c" ... }.
+// The number of channels is simply the length of the this array.
+#define NUM_CHANNELS LEN(names)
 
-#define BASE_SAMPLE_RATE \
-    325000000.0 // SPS
-#define RESAMP_SAMPLE_RATE \
-    260000000.0 // SPS
+// And that's all there is to the X-MACRO.
+// The X-MACRO will be used heavily later on to expand
+// channel functions into N times over for as many channels as there are.
+// The CHANNEL preprocessor list can be reconfigured for however many
+// channels the server needs.
 
-//#define IPVER_IPV4 0
-//#define IPVER_IPV6 1
+/* -------------------------------------------------------------------------- */
+/* -------------------------- GLOBAL VARIABLES ------------------------------ */
+/* -------------------------------------------------------------------------- */
 
-// truncate DSP NCO CONST last 4 digits to ensure dac NCO can divide evenly
-
-#define DSP_NCO_CONST /* (2 ^ 32) / (1 * 322265625) */ \
-    ((double)13.215283987692307692307692307692307692307692307692307690000)
-
-#define DAC_NCO_CONST /* (2 ^ 48) / (4 * 322265625) */ \
-    ((double)216519.21285435076923076923076923076923076923076923076919296)
-
-#define PWR_ON 1
-#define PWR_OFF 0
-
-#define STREAM_ON 1
-#define STREAM_OFF 0
-
-/* clang-format on */
-
-// static global variables
-static int uart_synth_fd = 0;
+// These file descriptors point to MCU devices.
+// For VAUNT, the TX and RX will use only one file descriptor as four TX
+// channels share one MCU and four RX channels share another MCU.
+// For TATE, there is one TX file descriptor per channel, and one RX file
+// descriptor per channel, as each channel uses its own MCU.
 static int *uart_tx_fd = NULL;
 static int *uart_rx_fd = NULL;
-static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = {};
-static char buf[MAX_PROP_LEN] = {};
 
-// by default the board is powered off: NOTE MUST BE EXPANDED TO 24 CHANNELS
-static uint8_t rx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
-static uint8_t tx_power[] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
-static uint8_t rx_stream[] = {STREAM_OFF, STREAM_OFF, STREAM_OFF, STREAM_OFF};
-const static char *reg4[] = {"rxa4", "rxb4", "rxc4", "rxd4",
-                             "txa4", "txb4", "txc4", "txd4"};
-static int i_bias[] = {17, 17, 17, 17};
-static int q_bias[] = {17, 17, 17, 17};
+// A typical VAUNT file descriptor layout may look something like this:
+// RX = { 0, 0, 0, 0 }
+// TX = { 1, 1, 1, 1 }
+// For TATE, as there sixteen channels, with each file descriptor pointing to a
+// unique MCU:
+// RX = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
+// TX = {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 }
 
-// profile pointers
+// For VAUNT and TATE there is always one MCU for time control, and thus one
+// file descriptor for both projects.
+static int uart_synth_fd = 0;
+
+static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
+static char buf[MAX_PROP_LEN] = { '\0' };
+
+static uint8_t rx_power[] = {
+#define X(ch) PWR_OFF,
+    CHANNELS
+#undef X
+};
+
+static uint8_t tx_power[] = {
+#define X(ch) PWR_OFF,
+    CHANNELS
+#undef X
+};
+
+static uint8_t rx_stream[] = {
+#define X(ch) STREAM_OFF,
+    CHANNELS
+#undef X
+};
+
+static const char *reg4[] = {
+#define X(ch) "rx"STR(ch)"4",
+    CHANNELS
+#undef X
+#define X(ch) "tx"STR(ch)"4",
+    CHANNELS
+#undef X
+};
+
+static int i_bias[] = {
+#define X(ch) 17,
+    CHANNELS
+#undef X
+};
+
+static int q_bias[] = {
+#define X(ch) 17,
+    CHANNELS
+#undef X
+};
+
 uint8_t *_save_profile;
 uint8_t *_load_profile;
 char *_save_profile_path;
 char *_load_profile_path;
 
-//// state variables
-// static uint8_t ipver[2] = {IPVER_IPV4, IPVER_IPV4};
+static const uint8_t ipver[] = {
+    IPVER_IPV4,
+    IPVER_IPV4,
+};
+
+/* clang-format on */
 
 // helper function to check if the buffer contains a character, strstr() won't
 // work because no NULL terminator
@@ -206,15 +287,6 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate,
         _r;                                                                    \
     })
 
-// static int set_sma_dir(bool in) {
-//    return set_reg_bits("sys2", 4, 1, in);
-//}
-//
-// static int set_sma_pol(bool positive) {
-//    return set_reg_bits("sys2", 6, 1, positive);
-//}
-//
-
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- MISC ------------------------------------ */
 /* -------------------------------------------------------------------------- */
@@ -260,6 +332,14 @@ static int hdlr_load_config(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int set_sma_dir(bool in) {
+    return set_reg_bits("sys2", 4, 1, in);
+}
+
+static int set_sma_pol(bool positive) {
+    return set_reg_bits("sys2", 6, 1, positive);
+}
+
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- LUTS ------------------------------------ */
 /* -------------------------------------------------------------------------- */
@@ -290,7 +370,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
         return hdlr_XX_X_rf_freq_lut_en(data, ret, true, INT(ch));             \
     }
 
-LIST_OF_CHANNELS
+CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -558,7 +638,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         return r;                                                              \
     }
 
-LIST_OF_CHANNELS
+CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -1098,7 +1178,7 @@ LIST_OF_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }
 
-LIST_OF_CHANNELS
+CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -1600,7 +1680,7 @@ LIST_OF_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }
 
-LIST_OF_CHANNELS
+CHANNELS
 #undef X
 
 #define X(ch)                                                                  \
@@ -1611,7 +1691,7 @@ LIST_OF_CHANNELS
         return r;                                                              \
     }
 
-LIST_OF_CHANNELS
+CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -1687,8 +1767,10 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
         if (0 == (mask_rx & (1 << i))) {
             continue;
         }
-#define X(ch) if (i == INT(ch)) hdlr = hdlr_rx_##ch##_rf_atten_val;
-        LIST_OF_CHANNELS
+#define X(ch)                                                                  \
+    if (i == INT(ch))                                                          \
+        hdlr = hdlr_rx_##ch##_rf_atten_val;
+        CHANNELS
 #undef X
 
         // call the handler directly
@@ -1735,8 +1817,10 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch) if (i == INT(ch)) hdlr = hdlr_rx_##ch##_rf_gain_val;
-        LIST_OF_CHANNELS
+#define X(ch)                                                                  \
+    if (i == INT(ch))                                                          \
+        hdlr = hdlr_rx_##ch##_rf_gain_val;
+        CHANNELS
 #undef X
 
         // call the handler directly
@@ -1783,8 +1867,10 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch) if (i == INT(ch)) hdlr = hdlr_tx_##ch##_rf_gain_val;
-        LIST_OF_CHANNELS
+#define X(ch)                                                                  \
+    if (i == INT(ch))                                                          \
+        hdlr = hdlr_tx_##ch##_rf_gain_val;
+        CHANNELS
 #undef X
 
         // call the handler directly
@@ -1849,8 +1935,10 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch) if (i == INT(ch)) hdlr = hdlr_rx_##ch##_rf_gain_val;
-        LIST_OF_CHANNELS
+#define X(ch)                                                                  \
+    if (i == INT(ch))                                                          \
+        hdlr = hdlr_rx_##ch##_rf_gain_val;
+        CHANNELS
 #undef X
 
         // call the handler directly
@@ -1873,8 +1961,10 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch) if (i == INT(ch)) hdlr = hdlr_tx_##ch##_rf_freq_val;
-        LIST_OF_CHANNELS
+#define X(ch)                                                                  \
+    if (i == INT(ch))                                                          \
+        hdlr = hdlr_tx_##ch##_rf_freq_val;
+        CHANNELS
 #undef X
 
         // call the handler directly
@@ -1939,8 +2029,10 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch) if (i == INT(ch)) hdlr = hdlr_rx_##ch##_dsp_nco_adj;
-        LIST_OF_CHANNELS
+#define X(ch)                                                                  \
+    if (i == INT(ch))                                                          \
+        hdlr = hdlr_rx_##ch##_dsp_nco_adj;
+        CHANNELS
 #undef X
 
         // call the handler directly
@@ -1962,8 +2054,10 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         if (0 == (mask_tx & (1 << i))) {
             continue;
         }
-#define X(ch) if (i == INT(ch)) hdlr = hdlr_tx_##ch##_dsp_nco_adj;
-        LIST_OF_CHANNELS
+#define X(ch)                                                                  \
+    if (i == INT(ch))                                                          \
+        hdlr = hdlr_tx_##ch##_dsp_nco_adj;
+        CHANNELS
 #undef X
 
         // call the handler directly
@@ -2303,476 +2397,486 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 /* --------------------------------- FPGA ----------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-//
-// static int hdlr_fpga_board_dump(const char *data, char *ret) {
-//
-//    // dump all of the board logs
-//    hdlr_tx_a_rf_board_dump(NULL, NULL); /* Can use XMACRO for this. */
-//    hdlr_tx_b_rf_board_dump(NULL, NULL);
-//    hdlr_tx_c_rf_board_dump(NULL, NULL);
-//    hdlr_tx_d_rf_board_dump(NULL, NULL);
-//    hdlr_rx_a_rf_board_dump(NULL, NULL);
-//    hdlr_rx_b_rf_board_dump(NULL, NULL);
-//    hdlr_rx_c_rf_board_dump(NULL, NULL);
-//    hdlr_rx_d_rf_board_dump(NULL, NULL);
-//    hdlr_time_board_dump(NULL, NULL);
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_test(const char *data, char *ret) {
-//    // TODO: MCU code cleanup
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_gle(const char *data, char *ret) {
-//
-//    if (strcmp(data, "1") == 0) {
-//        strcpy(buf, "board -g 1\r");
-//        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-//        usleep(50000);
-//
-//        strcpy(buf, "board -g 1\r");
-//        send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//        usleep(50000);
-//
-//        strcpy(buf, "board -g 1\r");
-//        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//        usleep(50000);
-//    }
-//    if (strcmp(data, "2") == 0) {
-//        strcpy(buf, "board -g 2\r");
-//        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-//        usleep(50000);
-//
-//        strcpy(buf, "board -g 2\r");
-//        send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//        usleep(50000);
-//
-//        strcpy(buf, "board -g 2\r");
-//        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//        usleep(50000);
-//    }
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_temp(const char *data, char *ret) {
-//    // strcpy(buf, "board -t\r");
-//    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-//    // read_uart(NO_FWD_CMD);
-//    // strcpy(ret, (char*)uart_ret_buf);
-//    uint32_t old_val;
-//    read_hps_reg("sys14", &old_val);
-//
-//    // mask off temp
-//    old_val = old_val & 0xff;
-//
-//    // if value >= 0x80 (=128), subtract 0x80 and convert to int
-//    if (old_val >= 128) {
-//        old_val = old_val - 128;
-//        sprintf(ret, "temp +%lu degC\n", old_val);
-//    }
-//    // if value < 0x80, subtract 0x3a (=58) and convert to negative int
-//    else if (old_val < 128) {
-//        old_val = old_val - 58;
-//        sprintf(ret, "temp -%lu degC\n", old_val);
-//    }
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_led(const char *data, char *ret) {
-//    // strcpy(buf, "board -l ");
-//    // strcat(buf, data);
-//    // strcat(buf, "\r");
-//    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_rstreq(const char *data, char *ret) {
-//    // strcpy(buf, "fpga -r \r");
-//    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-//
-//    /* TODO: Implement DIG Board FPGA Reset */
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_reboot(const char *data, char *ret) {
-//    if (strcmp(data, "1") == 0) {
-//        uint32_t reboot;
-//
-//        // Write 0 to bit[16] of sys 0 in order to reboot
-//        read_hps_reg("sys0", &reboot);
-//        reboot = (reboot & 0xFFFEFFFF);
-//        write_hps_reg("sys0", reboot);
-//        return RETURN_SUCCESS;
-//    }
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
-//    // strcpy(buf, "fpga -o \r");
-//    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-//    sync_channels(15);
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
-//    strcpy(buf, "board -r\r");
-//    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-//    usleep(700000);
-//
-//    strcpy(buf, "board -r\r");
-//    send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//    usleep(50000);
-//
-//    strcpy(buf, "board -r\r");
-//    send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//    usleep(50000);
-//
-//    /* TODO: Implement DIG board Reset */
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char
-// *ret, unsigned sfp_port) {
-//
-//    static const unsigned udp_port_max = (1 << 16) - 1;
-//    static const unsigned sfp_port_max = 1;
-//
-//    unsigned udp_port;
-//    uint32_t flc0_reg;
-//    uint32_t mask;
-//
-//    if (sfp_port > sfp_port_max) {
-//        return RETURN_ERROR_PARAM;
-//    }
-//    if (1 != sscanf(data, "%u", &udp_port)) {
-//        return RETURN_ERROR_PARAM;
-//    }
-//
-//    udp_port = udp_port > udp_port_max ? udp_port_max : udp_port;
-//
-//    // if number of sfp_ports ever changes, this code needs to be changed
-//    // a good reason to use structures to access memory-mapped registers.
-//    read_hps_reg("flc0", &flc0_reg);
-//    mask = 0xffff << (sfp_port * 16);
-//    flc0_reg &= ~mask;
-//    flc0_reg |= (udp_port << (sfp_port * 16)) & mask;
-//    write_hps_reg("flc0", flc0_reg);
-//
-//    sprintf(ret, "%u", udp_port);
-//
-//    return RETURN_SUCCESS;
-//}
-// static inline int hdlr_fpga_board_flow_control_sfpa_port(const char *data,
-// char *ret) {
-//    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 0);
-//}
-// static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data,
-// char *ret) {
-//    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 1);
-//}
-//
-// static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
-//    uint32_t old_val;
-//
-//    // toggle the bit sys0[4]
-//    read_hps_reg("sys0", &old_val);
-//    write_hps_reg("sys0", old_val | 0x10);
-//    write_hps_reg("sys0", old_val & (~0x10));
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_about_id(const char *data, char *ret) {
-//    // don't need to do anything, save the ID in the file system
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
-//    uint32_t old_val;
-//    int year, month, day, hour, min;
-//    read_hps_reg("sys15", &old_val);
-//    // get year
-//    year = (old_val & 0xfff00000) >> 20;
-//    month = (old_val & 0x000f0000) >> 16;
-//    day = (old_val & 0x0000f800) >> 11;
-//    hour = (old_val & 0x000007c0) >> 6;
-//    min = old_val & 0x0000003f;
-//
-//    sprintf(ret, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year,
-//    month, day, hour, min);
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
-//    uint32_t old_val;
-//    read_hps_reg("sys18", &old_val);
-//
-//    sprintf(ret, "config. info. 0x%02x \n", old_val);
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_about_serial(const char *data, char *ret) {
-//    uint64_t old_val;
-//    uint32_t old_val1;
-//    uint32_t old_val2;
-//    read_hps_reg("sys16", &old_val1);
-//    read_hps_reg("sys17", &old_val2);
-//
-//    // append values
-//    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
-//
-//    sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
-//    int r;
-//    bool val;
-//    r = valid_trigger_dir(data, &val) || set_sma_dir(val);
-//    return r;
-//}
-//
-// static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
-//    int r;
-//    bool val;
-//    r = valid_trigger_pol(data, &val) || set_sma_pol(val);
-//    return r;
-//}
-//
-//// TODO: Move FWversion code to ARM, edit MAKE file with version info, refer
-/// to MCU code
-// static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
-//    // strcpy(buf, "board -v\r");
-//    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-//    // read_uart(NO_FWD_CMD);
-//    // strcpy(ret, (char*)uart_ret_buf);
-//    uint64_t old_val;
-//    uint32_t old_val1;
-//    uint32_t old_val2;
-//    read_hps_reg("sys3", &old_val2);
-//    read_hps_reg("sys4", &old_val1);
-//
-//    // bits sys3[7:0]
-//    old_val2 = old_val2 & 0xff;
-//
-//    // append values
-//    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
-//
-//    sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_server_about_fw_ver(const char *data, char *ret) {
-//    FILE *fp = NULL;
-//    char buf[MAX_PROP_LEN] = {0};
-//    if ((fp = popen("/usr/bin/server -v", "r")) == NULL) {
-//        PRINT(ERROR, "Error opening pipe!\n");
-//        return RETURN_ERROR;
-//    }
-//    while (fgets(buf, MAX_PROP_LEN, fp) != NULL) {
-//        strncat(ret, buf, MAX_PROP_LEN);
-//    }
-//    if (pclose(fp)) {
-//        return RETURN_ERROR;
-//    }
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
-//    uint32_t old_val;
-//    read_hps_reg("sys1", &old_val);
-//
-//    // bits sys1[10:7]
-//    old_val = (old_val >> 7) & 0xf;
-//
-//    sprintf(ret, "ver. 0x%02x", old_val);
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_rate(const char *data, char *ret) {
-//    // TODO: Need to implement in FW
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpa_ip_addr(const char *data, char *ret) {
-//    uint32_t ip[4];
-//    if (ipver[0] == IPVER_IPV4) {
-//        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip, ip
-//        + 1, ip + 2, ip + 3); write_hps_reg("net5", (ip[0] << 24) | (ip[1] <<
-//        16) | (ip[2] << 8) | (ip[3]));
-//    } else if (ipver[0] == IPVER_IPV6) {
-//        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip, ip
-//        + 1, ip + 2, ip + 3); write_hps_reg("net1", ip[0]);
-//        write_hps_reg("net2", ip[1]);
-//        write_hps_reg("net3", ip[2]);
-//        write_hps_reg("net4", ip[3]);
-//    }
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpa_mac_addr(const char *data, char *ret) {
-//    uint8_t mac[6];
-//    sscanf(data, "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%"
-//    SCNx8 "", mac, mac + 1, mac + 2, mac + 3,
-//           mac + 4, mac + 5);
-//    write_hps_reg("net11", (mac[0] << 8) | (mac[1]));
-//    write_hps_reg("net12", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) |
-//    mac[5]); return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpa_ver(const char *data, char *ret) {
-//    uint32_t old_val;
-//    uint8_t ver;
-//    sscanf(data, "%" SCNd8 "", &ver);
-//    read_hps_reg("net0", &old_val);
-//    if (ver > 0)
-//        write_hps_reg("net0", (old_val | 0x4));
-//    else
-//        write_hps_reg("net0", (old_val & ~(0x4)));
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
-//    uint32_t old_val;
-//    uint32_t pay_len;
-//    sscanf(data, "%" SCNd32 "", &pay_len);
-//    read_hps_reg("net0", &old_val);
-//    write_hps_reg("net0", (old_val & ~(0xffff0000)) | (pay_len << 16));
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpb_ip_addr(const char *data, char *ret) {
-//    uint32_t ip[4];
-//    if (ipver[1] == IPVER_IPV4) {
-//        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip, ip
-//        + 1, ip + 2, ip + 3); ip[0] = (ip[0] << 24) | (ip[1] << 16) | (ip[2]
-//        << 8) | (ip[3]); write_hps_reg("net20", ip[0]);
-//    } else if (ipver[1] == IPVER_IPV6) {
-//        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip, ip
-//        + 1, ip + 2, ip + 3); write_hps_reg("net16", ip[0]);
-//        write_hps_reg("net17", ip[1]);
-//        write_hps_reg("net18", ip[2]);
-//        write_hps_reg("net19", ip[3]);
-//    }
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpb_mac_addr(const char *data, char *ret) {
-//    uint8_t mac[6];
-//    sscanf(data, "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%"
-//    SCNx8 "", mac, mac + 1, mac + 2, mac + 3,
-//           mac + 4, mac + 5);
-//    write_hps_reg("net26", (mac[0] << 8) | (mac[1]));
-//    write_hps_reg("net27", (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) |
-//    mac[5]); return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpb_ver(const char *data, char *ret) {
-//    uint32_t old_val;
-//    uint8_t ver;
-//    sscanf(data, "%" SCNd8 "", &ver);
-//    read_hps_reg("net15", &old_val);
-//    if (ver > 0)
-//        write_hps_reg("net15", (old_val & ~(1 << 2)) | (1 << 2));
-//    else
-//        write_hps_reg("net15", (old_val & ~(1 << 2)));
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
-//    uint32_t old_val;
-//    uint32_t pay_len;
-//    sscanf(data, "%" SCNd32 "", &pay_len);
-//    read_hps_reg("net15", &old_val);
-//    write_hps_reg("net15", (old_val & ~(0xffff0000)) | (pay_len << 16));
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_net_dhcp_en(const char *data, char *ret) {
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
-//    // write to the file
-//    char name[MAX_PROP_LEN] = {0};
-//    char command[MAX_PROP_LEN] = {0};
-//    sscanf(data, "%s", name);
-//
-//    strcpy(command, "echo ");
-//    strcat(command, name);
-//    strcat(command, " > /etc/hostname");
-//    system(command);
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
-//    // ensure that it is a valid IP address
-//    char ip_address[MAX_PROP_LEN] = {0};
-//    char command[MAX_PROP_LEN] = {0};
-//    sscanf(data, "%s", ip_address);
-//
-//    struct sockaddr_in sa;
-//    if (!inet_pton(AF_INET, ip_address, &(sa.sin_addr))) {
-//        return RETURN_ERROR_PARAM;
-//    }
-//
-//    // write to the file
-//    strcpy(command, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/");
-//    strcat(command, ip_address);
-//    strcat(command, "/ /etc/init.d/mcu_init.sh");
-//    system(command);
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
-//    uint32_t gps_time_lh = 0, gps_time_uh = 0;
-//    char gps_split[MAX_PROP_LEN];
-//
-//    read_hps_reg("sys5", &gps_time_lh);
-//    read_hps_reg("sys6", &gps_time_uh);
-//
-//    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
-//    strncpy(ret, gps_split, MAX_PROP_LEN);
-//    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
-//    strncat(ret, gps_split, MAX_PROP_LEN);
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
-//    uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
-//    char gps_split[MAX_PROP_LEN];
-//    read_hps_reg("sys7", &gps_frac_time_lh);
-//    read_hps_reg("sys8", &gps_frac_time_uh);
-//
-//    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
-//    strncpy(ret, gps_split, MAX_PROP_LEN);
-//    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
-//    strncat(ret, gps_split, MAX_PROP_LEN);
-//    return RETURN_SUCCESS;
-//}
-//
-// static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
-//    uint32_t systime_lh = 0;
-//    uint32_t systime_uh = 0;
-//    read_hps_reg("sys5", &systime_lh);
-//    read_hps_reg("sys6", &systime_uh);
-//    write_hps_reg("sys9", systime_lh);
-//    write_hps_reg("sys10", systime_uh);
-//    write_hps_reg("sys11", 0); // set frac_time to 0
-//    write_hps_reg("sys12", 0); // set frac_time to 0
-//    write_hps_reg("sys13", 1); // writing 1, then 0 to sys9 sets the time
-//    write_hps_reg("sys13", 0); // to what is written in sys7 and sys8
-//
-//    return RETURN_SUCCESS;
-//}
-//
+// dumps all of the board logs for tx and rx
+static int hdlr_fpga_board_dump(const char *data, char *ret) {
+
+#define X(ch) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
+    CHANNELS
+#undef X
+
+#define X(ch) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
+    CHANNELS
+#undef X
+
+    hdlr_time_board_dump(NULL, NULL);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_test(const char *data, char *ret) {
+    // TODO: MCU code cleanup
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gle(const char *data, char *ret) {
+
+    if (strcmp(data, "1") == 0) {
+
+        strcpy(buf, "board -g 1\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+
+        strcpy(buf, "board -g 1\r");
+#define X(ch) send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+        CHANNELS
+#undef X
+
+        strcpy(buf, "board -g 1\r");
+#define X(ch) send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+        CHANNELS
+#undef X
+    }
+    if (strcmp(data, "2") == 0) {
+        strcpy(buf, "board -g 2\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(50000);
+
+        strcpy(buf, "board -g 2\r");
+#define X(ch) send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+        CHANNELS
+#undef X
+
+        strcpy(buf, "board -g 2\r");
+#define X(xh) send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+        CHANNELS
+#undef X
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_temp(const char *data, char *ret) {
+    // strcpy(buf, "board -t\r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    // read_uart(NO_FWD_CMD);
+    // strcpy(ret, (char*)uart_ret_buf);
+    uint32_t old_val;
+    read_hps_reg("sys14", &old_val);
+
+    // mask off temp
+    old_val = old_val & 0xff;
+
+    // if value >= 0x80 (=128), subtract 0x80 and convert to int
+    if (old_val >= 128) {
+        old_val = old_val - 128;
+        sprintf(ret, "temp +%lu degC\n", old_val);
+    }
+    // if value < 0x80, subtract 0x3a (=58) and convert to negative int
+    else if (old_val < 128) {
+        old_val = old_val - 58;
+        sprintf(ret, "temp -%lu degC\n", old_val);
+    }
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_led(const char *data, char *ret) {
+    // strcpy(buf, "board -l ");
+    // strcat(buf, data);
+    // strcat(buf, "\r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_rstreq(const char *data, char *ret) {
+    // strcpy(buf, "fpga -r \r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+
+    /* TODO: Implement DIG Board FPGA Reset */
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_reboot(const char *data, char *ret) {
+    if (strcmp(data, "1") == 0) {
+        uint32_t reboot;
+
+        // Write 0 to bit[16] of sys 0 in order to reboot
+        read_hps_reg("sys0", &reboot);
+        reboot = (reboot & 0xFFFEFFFF);
+        write_hps_reg("sys0", reboot);
+        return RETURN_SUCCESS;
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
+    // strcpy(buf, "fpga -o \r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    sync_channels(15);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
+    strcpy(buf, "board -r\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    usleep(700000);
+
+    strcpy(buf, "board -r\r");
+#define X(ch) send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    CHANNELS
+#undef X
+
+    strcpy(buf, "board -r\r");
+#define X(ch) send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    CHANNELS
+#undef X
+
+    /* TODO: Implement DIG board Reset */
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char *ret,
+                                                  unsigned sfp_port) {
+
+    static const unsigned udp_port_max = (1 << 16) - 1;
+    static const unsigned sfp_port_max = 1;
+
+    unsigned udp_port;
+    uint32_t flc0_reg;
+    uint32_t mask;
+
+    if (sfp_port > sfp_port_max) {
+        return RETURN_ERROR_PARAM;
+    }
+    if (1 != sscanf(data, "%u", &udp_port)) {
+        return RETURN_ERROR_PARAM;
+    }
+
+    udp_port = udp_port > udp_port_max ? udp_port_max : udp_port;
+
+    // if number of sfp_ports ever changes, this code needs to be changed
+    // a good reason to use structures to access memory-mapped registers.
+    read_hps_reg("flc0", &flc0_reg);
+    mask = 0xffff << (sfp_port * 16);
+    flc0_reg &= ~mask;
+    flc0_reg |= (udp_port << (sfp_port * 16)) & mask;
+    write_hps_reg("flc0", flc0_reg);
+
+    sprintf(ret, "%u", udp_port);
+
+    return RETURN_SUCCESS;
+}
+static inline int hdlr_fpga_board_flow_control_sfpa_port(const char *data,
+                                                         char *ret) {
+    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 0);
+}
+static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data,
+                                                         char *ret) {
+    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 1);
+}
+
+static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
+    uint32_t old_val;
+
+    // toggle the bit sys0[4]
+    read_hps_reg("sys0", &old_val);
+    write_hps_reg("sys0", old_val | 0x10);
+    write_hps_reg("sys0", old_val & (~0x10));
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_id(const char *data, char *ret) {
+    // don't need to do anything, save the ID in the file system
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
+    uint32_t old_val;
+    int year, month, day, hour, min;
+    read_hps_reg("sys15", &old_val);
+    // get year
+    year = (old_val & 0xfff00000) >> 20;
+    month = (old_val & 0x000f0000) >> 16;
+    day = (old_val & 0x0000f800) >> 11;
+    hour = (old_val & 0x000007c0) >> 6;
+    min = old_val & 0x0000003f;
+
+    sprintf(ret, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month,
+            day, hour, min);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
+    uint32_t old_val;
+    read_hps_reg("sys18", &old_val);
+
+    sprintf(ret, "config. info. 0x%02x \n", old_val);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_serial(const char *data, char *ret) {
+    uint64_t old_val;
+    uint32_t old_val1;
+    uint32_t old_val2;
+    read_hps_reg("sys16", &old_val1);
+    read_hps_reg("sys17", &old_val2);
+
+    // append values
+    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
+
+    sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
+    int r;
+    bool val;
+    r = valid_trigger_dir(data, &val) || set_sma_dir(val);
+    return r;
+}
+
+static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
+    int r;
+    bool val;
+    r = valid_trigger_pol(data, &val) || set_sma_pol(val);
+    return r;
+}
+
+// TODO: Move FWversion code to ARM, edit MAKE file with version info, refer to MCU code
+static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
+    // strcpy(buf, "board -v\r");
+    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
+    // read_uart(NO_FWD_CMD);
+    // strcpy(ret, (char*)uart_ret_buf);
+    uint64_t old_val;
+    uint32_t old_val1;
+    uint32_t old_val2;
+    read_hps_reg("sys3", &old_val2);
+    read_hps_reg("sys4", &old_val1);
+
+    // bits sys3[7:0]
+    old_val2 = old_val2 & 0xff;
+
+    // append values
+    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
+
+    sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_server_about_fw_ver(const char *data, char *ret) {
+    FILE *fp = NULL;
+    char buf[MAX_PROP_LEN] = {0};
+    if ((fp = popen("/usr/bin/server -v", "r")) == NULL) {
+        PRINT(ERROR, "Error opening pipe!\n");
+        return RETURN_ERROR;
+    }
+    while (fgets(buf, MAX_PROP_LEN, fp) != NULL) {
+        strncat(ret, buf, MAX_PROP_LEN);
+    }
+    if (pclose(fp)) {
+        return RETURN_ERROR;
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    read_hps_reg("sys1", &old_val);
+
+    // bits sys1[10:7]
+    old_val = (old_val >> 7) & 0xf;
+
+    sprintf(ret, "ver. 0x%02x", old_val);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_rate(const char *data, char *ret) {
+    // TODO: Need to implement in FW
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_ip_addr(const char *data, char *ret) {
+    uint32_t ip[4];
+    if (ipver[0] == IPVER_IPV4) {
+        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net5",
+                      (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]));
+    } else if (ipver[0] == IPVER_IPV6) {
+        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net1", ip[0]);
+        write_hps_reg("net2", ip[1]);
+        write_hps_reg("net3", ip[2]);
+        write_hps_reg("net4", ip[3]);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_mac_addr(const char *data, char *ret) {
+    uint8_t mac[6];
+    sscanf(data,
+           "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 "",
+           mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);
+    write_hps_reg("net11", (mac[0] << 8) | (mac[1]));
+    write_hps_reg("net12",
+                  (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    uint8_t ver;
+    sscanf(data, "%" SCNd8 "", &ver);
+    read_hps_reg("net0", &old_val);
+    if (ver > 0)
+        write_hps_reg("net0", (old_val | 0x4));
+    else
+        write_hps_reg("net0", (old_val & ~(0x4)));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
+    uint32_t old_val;
+    uint32_t pay_len;
+    sscanf(data, "%" SCNd32 "", &pay_len);
+    read_hps_reg("net0", &old_val);
+    write_hps_reg("net0", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_ip_addr(const char *data, char *ret) {
+    uint32_t ip[4];
+    if (ipver[1] == IPVER_IPV4) {
+        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        ip[0] = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]);
+        write_hps_reg("net20", ip[0]);
+    } else if (ipver[1] == IPVER_IPV6) {
+        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net16", ip[0]);
+        write_hps_reg("net17", ip[1]);
+        write_hps_reg("net18", ip[2]);
+        write_hps_reg("net19", ip[3]);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_mac_addr(const char *data, char *ret) {
+    uint8_t mac[6];
+    sscanf(data,
+           "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 "",
+           mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);
+    write_hps_reg("net26", (mac[0] << 8) | (mac[1]));
+    write_hps_reg("net27",
+                  (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    uint8_t ver;
+    sscanf(data, "%" SCNd8 "", &ver);
+    read_hps_reg("net15", &old_val);
+    if (ver > 0)
+        write_hps_reg("net15", (old_val & ~(1 << 2)) | (1 << 2));
+    else
+        write_hps_reg("net15", (old_val & ~(1 << 2)));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
+    uint32_t old_val;
+    uint32_t pay_len;
+    sscanf(data, "%" SCNd32 "", &pay_len);
+    read_hps_reg("net15", &old_val);
+    write_hps_reg("net15", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_net_dhcp_en(const char *data, char *ret) {
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
+    // write to the file
+    char name[MAX_PROP_LEN] = {0};
+    char command[MAX_PROP_LEN] = {0};
+    sscanf(data, "%s", name);
+
+    strcpy(command, "echo ");
+    strcat(command, name);
+    strcat(command, " > /etc/hostname");
+    system(command);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
+    // ensure that it is a valid IP address
+    char ip_address[MAX_PROP_LEN] = {0};
+    char command[MAX_PROP_LEN] = {0};
+    sscanf(data, "%s", ip_address);
+
+    struct sockaddr_in sa;
+    if (!inet_pton(AF_INET, ip_address, &(sa.sin_addr))) {
+        return RETURN_ERROR_PARAM;
+    }
+
+    // write to the file
+    strcpy(command, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/");
+    strcat(command, ip_address);
+    strcat(command, "/ /etc/init.d/mcu_init.sh");
+    system(command);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
+    uint32_t gps_time_lh = 0, gps_time_uh = 0;
+    char gps_split[MAX_PROP_LEN];
+
+    read_hps_reg("sys5", &gps_time_lh);
+    read_hps_reg("sys6", &gps_time_uh);
+
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
+    strncpy(ret, gps_split, MAX_PROP_LEN);
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
+    strncat(ret, gps_split, MAX_PROP_LEN);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
+    uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
+    char gps_split[MAX_PROP_LEN];
+    read_hps_reg("sys7", &gps_frac_time_lh);
+    read_hps_reg("sys8", &gps_frac_time_uh);
+
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
+    strncpy(ret, gps_split, MAX_PROP_LEN);
+    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
+    strncat(ret, gps_split, MAX_PROP_LEN);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
+    uint32_t systime_lh = 0;
+    uint32_t systime_uh = 0;
+    read_hps_reg("sys5", &systime_lh);
+    read_hps_reg("sys6", &systime_uh);
+    write_hps_reg("sys9", systime_lh);
+    write_hps_reg("sys10", systime_uh);
+    write_hps_reg("sys11", 0); // set frac_time to 0
+    write_hps_reg("sys12", 0); // set frac_time to 0
+    write_hps_reg("sys13", 1); // writing 1, then 0 to sys9 sets the time
+    write_hps_reg("sys13", 0); // to what is written in sys7 and sys8
+
+    return RETURN_SUCCESS;
+}
 
 /* clang-format off */
 
@@ -2965,16 +3069,16 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 
 static prop_t property_table[] = {
 
-#define X(ch) DEFINE_TX_CHANNEL(ch)
-    LIST_OF_CHANNELS
+#define X(ch) DEFINE_RX_CHANNEL(ch)
+    CHANNELS
 #undef X
 
-#define X(ch) DEFINE_RX_CHANNEL(ch)
-    LIST_OF_CHANNELS
+#define X(ch) DEFINE_TX_CHANNEL(ch)
+    CHANNELS
 #undef X
 
     DEFINE_TIME()
-    // DEFINE_FPGA(),
+    DEFINE_FPGA()
 
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
@@ -2984,17 +3088,16 @@ static prop_t property_table[] = {
 
 /* clang-format on */
 
-// static size_t num_properties = sizeof(property_table) /
-// sizeof(property_table[0]);
-//
-// size_t get_num_prop(void) {
-//    return num_properties;
-//}
-//
-// prop_t *get_prop(size_t idx) {
-//    return (property_table + idx);
-//}
-//
+static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
+
+size_t get_num_prop(void) {
+    return num_properties;
+}
+
+prop_t *get_prop(size_t idx) {
+    return (property_table + idx);
+}
+
 // prop_t *get_prop_from_wd(int wd) {
 //    size_t i;
 //    for (i = 0; i < num_properties; i++) {
