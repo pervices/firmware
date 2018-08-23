@@ -4,8 +4,9 @@ stages:
 
 prep:
     stage: prepare
-    script: apt-get install autoconf; autoreconf --install
+    script: apt-get update && apt-get install -y dh-autoreconf
 
 build:
     stage: build
     script: sh autogen.sh; make; make install
+
