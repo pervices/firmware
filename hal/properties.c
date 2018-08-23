@@ -57,7 +57,7 @@
 #define LEN(a) ((int) sizeof(a) / sizeof(*a))
 
 /* -------------------------------------------------------------------------- */
-/* ------------------------- SOME X-MACRO TALK ------------------------------ */
+/* -------------------------- SOME XMACRO TALK ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
 // Property functions are writen once and expanded N times for however many
@@ -81,9 +81,9 @@
     X(o) /* 14 */ \
     X(p) /* 15 */
 
-// This channel specification is also known as an X-MACRO:
+// This channel specification is also known as an XMACRO:
 // https://en.wikipedia.org/wiki/X_Macro.
-// An X-MACRO can expand a preprocessor defintion and do some very valuable
+// An XMACRO can expand a preprocessor defintion and do some very valuable
 // work using the following three tools (STR, CHR, INT).
 #define STR(ch) #ch
 #define CHR(ch) #ch[0]
@@ -94,7 +94,7 @@
 // CHR converts the string into a runtime char.
 // INT converts the char into a runtime integer.
 //
-// Let us try building an array of channel names using the X-MACRO.
+// Let us try building an array of channel names using the XMACRO.
 static const char* const names[] = {
 #define X(ch) STR(ch)
     CHANNELS
@@ -106,8 +106,8 @@ static const char* const names[] = {
 // The number of channels is simply the length of the this array.
 #define NUM_CHANNELS LEN(names)
 
-// And that's all there is to the X-MACRO.
-// The X-MACRO will be used heavily later on to expand
+// And that's all there is to the XMACRO.
+// The XMACRO will be used heavily later on to expand
 // channel functions into N times over for as many channels as there are.
 // The CHANNEL preprocessor list can be reconfigured for however many
 // channels the server needs.
@@ -131,14 +131,22 @@ static int *uart_rx_fd = NULL;
 // unique MCU:
 // RX = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
 // TX = {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 }
+// Note that RX is -1 here as TATE is very configurable with its backplane
+// configuration setup. One client may want 16 TX and 0 RX lines, while
+// another may want half and half:
+// RX = { -1, -1, -1, -1, -1, -1, -1, -1,  8,  9, 10, 11, 12, 13, 14, 15 }
+// TX = {  0,  1,  2,  3,  4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1 }
 
 // For VAUNT and TATE there is always one MCU for time control, and thus one
-// file descriptor for both projects.
+// file descriptor.
 static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 
+// Here we XMACRO expand again, but just with PWR_OFF so that the array
+// looks like { PWR_OFF, PWR_OFF, PWR_OFF ... } for as ever many
+// channels as there are.
 static uint8_t rx_power[] = {
 #define X(ch) PWR_OFF,
     CHANNELS
@@ -157,6 +165,12 @@ static uint8_t rx_stream[] = {
 #undef X
 };
 
+// Here is another XMACRO expand, but this one looks like:
+// {
+//   "rxa4", "rxb4", "rxc4", "rxd4" ...
+//   "txa4", "txb4", "txc4", "txd4" ...
+// }
+// for however many channels there are.
 static const char *reg4[] = {
 #define X(ch) "rx"STR(ch)"4",
     CHANNELS
@@ -166,6 +180,9 @@ static const char *reg4[] = {
 #undef X
 };
 
+// More XMACRO fun (you're starting to get the idea now) but this array
+// is just an array of 17's: { 17, 17, 17 ... 17 } for however many
+// channels there are.
 static int i_bias[] = {
 #define X(ch) 17,
     CHANNELS
@@ -178,6 +195,8 @@ static int q_bias[] = {
 #undef X
 };
 
+// The server can be saved and loaded from disk. These pointers will
+// help with that.
 uint8_t *_save_profile;
 uint8_t *_load_profile;
 char *_save_profile_path;
@@ -190,9 +209,8 @@ static const uint8_t ipver[] = {
 
 /* clang-format on */
 
-// helper function to check if the buffer contains a character, strstr() won't
-// work because no NULL terminator
-static int contains(const char *str, char letter, int size) { /* strchr */
+// Also known as strchr (maybe we should replace this someday).
+static int contains(const char *str, char letter, int size) {
     int i = 0, cnt = 0;
     for (i = 0; i < size; i++) {
         if (str[i] == letter)
@@ -201,7 +219,6 @@ static int contains(const char *str, char letter, int size) { /* strchr */
     return cnt;
 }
 
-// helper function to read back from UART after a UART command
 static int read_uart(int uartfd) {
     char buf[MAX_UART_LEN] = {};
     memset(buf, 0, MAX_UART_LEN);
@@ -221,7 +238,7 @@ static int read_uart(int uartfd) {
     return RETURN_SUCCESS;
 }
 
-// helper function to find the optimal value for the sample rate blocks
+// Finds the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor(double rate, double base_rate,
                                       double *err) {
     double max_factor = 65536; // 2^16
@@ -232,7 +249,7 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate,
     double lower_factor = (double)floor(base_rate / rate);
     double upper_factor = lower_factor + 1;
 
-    // error bounds check
+    // Error bounds check
     if (lower_factor > max_factor || lower_factor < min_factor)
         lower_factor_violation = 1;
     if (upper_factor > max_factor || upper_factor < min_factor)
@@ -264,11 +281,8 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate,
     }
 }
 
-// PRINT( VERBOSE, "%s(): set_reg_bits( name: %s, shift: %u, mask: %p, val: %p
-// )\n", __func__, name, shift, (void
-// *)mask, (void *)val );
-// XXX: @CF: 20171108: Statement Expressions are bad... but this code will be
-// replaced soon anyway
+// XXX
+// Statement Expressions are bad... but this code will be replaced soon anyway.
 #define set_reg_bits(name, shift, mask, val)                                   \
     ({                                                                         \
         int _r;                                                                \
@@ -291,8 +305,6 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate,
 /* -------------------------------- MISC ------------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-// Beginning of property functions, very long because each property needs to be
-// handled explicitly
 static int hdlr_invalid(const char *data, char *ret) {
     PRINT(ERROR, "Cannot invoke a set on this property\n");
     return RETURN_ERROR_SET_PROP;
@@ -362,6 +374,11 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     return r;
 }
 
+// And here we start with the REAL Xmacro work.
+// As you can see, each function name has a channel character placed
+// where ##ch## is found. Within the function, something else changes too,
+// like here, where the function argument for 'channel' is specified with the
+// INT preprocessor helper.
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
@@ -369,9 +386,9 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     static int hdlr_tx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, true, INT(ch));             \
     }
-
 CHANNELS
 #undef X
+// This will be the theme for the rest of this property file.
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- GATE ------------------------------------ */
@@ -637,7 +654,6 @@ static int valid_gating_mode(const char *data, bool *dsp) {
             set_trigger_ufl_pol(false, #ch, val);                              \
         return r;                                                              \
     }
-
 CHANNELS
 #undef X
 
@@ -1028,7 +1044,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* WARNING:                                                                \
+    /* XXX:                                                                    \
      * DOES NOT PORT WELL.                                                     \
      * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {       \
@@ -1039,7 +1055,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* WARNING:                                                                \
+    /* XXX:                                                                    \
        DOES NOT PORT WELL.                                                     \
        flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {          \
@@ -1051,7 +1067,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* WARNING:                                                                \
+    /* XXX:                                                                    \
      * DOES NOT PORT WELL.                                                     \
      * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {          \
@@ -1177,7 +1193,6 @@ CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }
-
 CHANNELS
 #undef X
 
@@ -1679,7 +1694,6 @@ CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }
-
 CHANNELS
 #undef X
 
@@ -1690,7 +1704,6 @@ CHANNELS
         r = valid_gating_mode(data, &val) || set_gating_mode(#ch, val);        \
         return r;                                                              \
     }
-
 CHANNELS
 #undef X
 
@@ -2082,24 +2095,10 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 /* -------------------------------------------------------------------------- */
 
 static int hdlr_time_clk_pps(const char *data, char *ret) {
-    // Insert MCU/MEM command
-
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_clk_cur_time(const char *data, char *ret) {
-    // test by reading it before writing to it
-    // uint32_t intpart, fracpart;
-    // read_hps_reg( "sys5", &intpart);
-    // read_hps_reg( "sys6", &fracpart);
-    // printf("Time is: %lf seconds\n", (double)intpart + ((double)fracpart /
-    // 100000000) );
-
-    // double time;
-    // sscanf(data, "%lf", &time);
-    // write_hps_reg( "sys7", (uint32_t)time);
-    // write_hps_reg( "sys8", time - (uint32_t)time);
-
     long double time;
     sscanf(data, "%Lf", &time);
     write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
@@ -2108,8 +2107,6 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 
     write_hps_reg("sys11",
                   (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
-    // write_hps_reg("sys12", (uint32_t)((time-(uint64_t)time)>>32) &
-    // 0x00000000FFFFFFFF); toggle the set register
     write_hps_reg("sys13", 1);
     write_hps_reg("sys13", 0);
     return RETURN_SUCCESS;
@@ -2171,6 +2168,7 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
+
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
@@ -2310,8 +2308,7 @@ static int hdlr_time_status_lol_pll_pll2(const char *data, char *ret) {
 }
 
 static int hdlr_time_board_dump(const char *data, char *ret) {
-    // send the uart commands and read back the output and write to file
-
+    // Send the uart commands and read back the output and write to file.
     // Diagnostic Dump of Clk Board
     strcpy(buf, "board -e\r");
     send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -2322,7 +2319,6 @@ static int hdlr_time_board_dump(const char *data, char *ret) {
 }
 
 static int hdlr_time_board_test(const char *data, char *ret) {
-    // TODO: MCU code cleanup
     return RETURN_SUCCESS;
 }
 
@@ -2344,7 +2340,6 @@ static int hdlr_time_board_led(const char *data, char *ret) {
 }
 
 static int hdlr_time_about_id(const char *data, char *ret) {
-    // Do Nothing, store in filesystem
     return RETURN_SUCCESS;
 }
 
@@ -2397,42 +2392,41 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 /* --------------------------------- FPGA ----------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-// dumps all of the board logs for tx and rx
+// Dumps all of the board logs for TX, RX, and TIME
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
-
 #define X(ch) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
     CHANNELS
 #undef X
-
 #define X(ch) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
     CHANNELS
 #undef X
-
     hdlr_time_board_dump(NULL, NULL);
 
     return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_test(const char *data, char *ret) {
-    // TODO: MCU code cleanup
     return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
     if (strcmp(data, "1") == 0) {
-
         strcpy(buf, "board -g 1\r");
         send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         usleep(50000);
 
         strcpy(buf, "board -g 1\r");
-#define X(ch) send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+#define X(ch)                                                                  \
+    send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
+        usleep(50000);
         CHANNELS
 #undef X
 
         strcpy(buf, "board -g 1\r");
-#define X(ch) send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+#define X(ch)                                                                  \
+    send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
+        usleep(50000);
         CHANNELS
 #undef X
     }
@@ -2442,12 +2436,16 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
         usleep(50000);
 
         strcpy(buf, "board -g 2\r");
-#define X(ch) send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+#define X(ch)                                                                  \
+    send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
+        usleep(50000);
         CHANNELS
 #undef X
 
         strcpy(buf, "board -g 2\r");
-#define X(xh) send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+#define X(xh)                                                                  \
+    send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
+        usleep(50000);
         CHANNELS
 #undef X
     }
@@ -2455,23 +2453,16 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_temp(const char *data, char *ret) {
-    // strcpy(buf, "board -t\r");
-    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-    // read_uart(NO_FWD_CMD);
-    // strcpy(ret, (char*)uart_ret_buf);
     uint32_t old_val;
     read_hps_reg("sys14", &old_val);
 
-    // mask off temp
+    // Mask off temp
     old_val = old_val & 0xff;
 
-    // if value >= 0x80 (=128), subtract 0x80 and convert to int
     if (old_val >= 128) {
         old_val = old_val - 128;
         sprintf(ret, "temp +%lu degC\n", old_val);
-    }
-    // if value < 0x80, subtract 0x3a (=58) and convert to negative int
-    else if (old_val < 128) {
+    } else if (old_val < 128) {
         old_val = old_val - 58;
         sprintf(ret, "temp -%lu degC\n", old_val);
     }
@@ -2480,19 +2471,10 @@ static int hdlr_fpga_board_temp(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_led(const char *data, char *ret) {
-    // strcpy(buf, "board -l ");
-    // strcat(buf, data);
-    // strcat(buf, "\r");
-    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_rstreq(const char *data, char *ret) {
-    // strcpy(buf, "fpga -r \r");
-    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-
-    /* TODO: Implement DIG Board FPGA Reset */
-
     return RETURN_SUCCESS;
 }
 
@@ -2510,8 +2492,6 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
-    // strcpy(buf, "fpga -o \r");
-    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
     sync_channels(15);
     return RETURN_SUCCESS;
 }
@@ -2522,16 +2502,19 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
     usleep(700000);
 
     strcpy(buf, "board -r\r");
-#define X(ch) send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+#define X(ch)                                                                  \
+    send_uart_comm(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
+        usleep(50000);
     CHANNELS
 #undef X
 
     strcpy(buf, "board -r\r");
-#define X(ch) send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+#define X(ch)                                                                  \
+    send_uart_comm(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
+        usleep(50000);
     CHANNELS
 #undef X
 
-    /* TODO: Implement DIG board Reset */
     return RETURN_SUCCESS;
 }
 
@@ -2578,7 +2561,6 @@ static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data,
 static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
     uint32_t old_val;
 
-    // toggle the bit sys0[4]
     read_hps_reg("sys0", &old_val);
     write_hps_reg("sys0", old_val | 0x10);
     write_hps_reg("sys0", old_val & (~0x10));
@@ -2587,7 +2569,6 @@ static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_id(const char *data, char *ret) {
-    // don't need to do anything, save the ID in the file system
     return RETURN_SUCCESS;
 }
 
@@ -2595,7 +2576,8 @@ static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
     uint32_t old_val;
     int year, month, day, hour, min;
     read_hps_reg("sys15", &old_val);
-    // get year
+
+    // Get year
     year = (old_val & 0xfff00000) >> 20;
     month = (old_val & 0x000f0000) >> 16;
     day = (old_val & 0x0000f800) >> 11;
@@ -2611,8 +2593,8 @@ static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
 static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     uint32_t old_val;
     read_hps_reg("sys18", &old_val);
-
     sprintf(ret, "config. info. 0x%02x \n", old_val);
+
     return RETURN_SUCCESS;
 }
 
@@ -2623,10 +2605,10 @@ static int hdlr_fpga_about_serial(const char *data, char *ret) {
     read_hps_reg("sys16", &old_val1);
     read_hps_reg("sys17", &old_val2);
 
-    // append values
+    // Append values
     old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
-
     sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
+
     return RETURN_SUCCESS;
 }
 
@@ -2634,6 +2616,7 @@ static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
     int r;
     bool val;
     r = valid_trigger_dir(data, &val) || set_sma_dir(val);
+
     return r;
 }
 
@@ -2641,25 +2624,20 @@ static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
     int r;
     bool val;
     r = valid_trigger_pol(data, &val) || set_sma_pol(val);
+
     return r;
 }
 
-// TODO: Move FWversion code to ARM, edit MAKE file with version info, refer to MCU code
 static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
-    // strcpy(buf, "board -v\r");
-    // send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
-    // read_uart(NO_FWD_CMD);
-    // strcpy(ret, (char*)uart_ret_buf);
     uint64_t old_val;
     uint32_t old_val1;
     uint32_t old_val2;
     read_hps_reg("sys3", &old_val2);
     read_hps_reg("sys4", &old_val1);
 
-    // bits sys3[7:0]
     old_val2 = old_val2 & 0xff;
 
-    // append values
+    // Append values
     old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
 
     sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
@@ -2686,7 +2664,6 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     uint32_t old_val;
     read_hps_reg("sys1", &old_val);
 
-    // bits sys1[10:7]
     old_val = (old_val >> 7) & 0xf;
 
     sprintf(ret, "ver. 0x%02x", old_val);
@@ -2694,7 +2671,6 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_rate(const char *data, char *ret) {
-    // TODO: Need to implement in FW
     return RETURN_SUCCESS;
 }
 
@@ -2803,7 +2779,6 @@ static int hdlr_fpga_link_net_dhcp_en(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
-    // write to the file
     char name[MAX_PROP_LEN] = {0};
     char command[MAX_PROP_LEN] = {0};
     sscanf(data, "%s", name);
@@ -2817,7 +2792,7 @@ static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
-    // ensure that it is a valid IP address
+    // Ensure that it is a valid IP address
     char ip_address[MAX_PROP_LEN] = {0};
     char command[MAX_PROP_LEN] = {0};
     sscanf(data, "%s", ip_address);
@@ -2827,7 +2802,7 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
         return RETURN_ERROR_PARAM;
     }
 
-    // write to the file
+    // Write to the file
     strcpy(command, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/");
     strcat(command, ip_address);
     strcat(command, "/ /etc/init.d/mcu_init.sh");
@@ -2860,6 +2835,7 @@ static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
     strncpy(ret, gps_split, MAX_PROP_LEN);
     snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
     strncat(ret, gps_split, MAX_PROP_LEN);
+
     return RETURN_SUCCESS;
 }
 
@@ -2870,15 +2846,19 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     read_hps_reg("sys6", &systime_uh);
     write_hps_reg("sys9", systime_lh);
     write_hps_reg("sys10", systime_uh);
-    write_hps_reg("sys11", 0); // set frac_time to 0
-    write_hps_reg("sys12", 0); // set frac_time to 0
-    write_hps_reg("sys13", 1); // writing 1, then 0 to sys9 sets the time
+    write_hps_reg("sys11", 0); // Set frac_time to 0
+    write_hps_reg("sys12", 0); // Set frac_time to 0
+    write_hps_reg("sys13", 1); // Writing 1, then 0 to sys9 sets the time
     write_hps_reg("sys13", 0); // to what is written in sys7 and sys8
 
     return RETURN_SUCCESS;
 }
 
 /* clang-format off */
+
+// This is the file property tree which links all XMACRO expanded functions above
+// to a file path with some sort of default value. The default values
+// should ideally be pulled from the MCU to prevent extensive configuration.
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
@@ -3068,27 +3048,22 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     DEFINE_FILE_PROP("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0")
 
 static prop_t property_table[] = {
-
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
-
 #define X(ch) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
-
     DEFINE_TIME()
     DEFINE_FPGA()
-
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
-
     DEFINE_CM()
 };
 
 /* clang-format on */
 
-static size_t num_properties = sizeof(property_table) / sizeof(property_table[0]);
+static const size_t num_properties = LEN(property_table);
 
 size_t get_num_prop(void) {
     return num_properties;
@@ -3098,508 +3073,516 @@ prop_t *get_prop(size_t idx) {
     return (property_table + idx);
 }
 
-// prop_t *get_prop_from_wd(int wd) {
-//    size_t i;
-//    for (i = 0; i < num_properties; i++) {
-//        if (property_table[i].wd == wd)
-//            return (property_table + i);
-//    }
-//
-//    // no matching prop found
-//    return NULL;
-//}
-//
-// prop_t *get_prop_from_hdlr(int (*hdlr)(const char *, char *)) {
-//    size_t i;
-//    for (i = 0; i < num_properties; i++) {
-//        if (property_table[i].handler == hdlr) {
-//            return &property_table[i];
-//        }
-//    }
-//
-//    // no matching prop found
-//    return NULL;
-//}
-//
-// int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
-//
-//    const char *vcs = "/var/crimson/state/";
-//    const size_t vcsl = strlen(vcs);
-//    char origcwd[MAX_PATH_LEN];
-//    char *temp;
-//    size_t path_strlen;
-//    size_t delta;
-//    int r;
-//
-//#if MAX_PATH_LEN < PATH_MAX
-//#error MAX_PATH_LEN is too small
-//#endif
-//
-//    getcwd(origcwd, sizeof(origcwd));
-//    chdir(vcs);
-//    temp = (void *)realpath(prop, path);
-//    chdir(origcwd);
-//    if (NULL == temp) {
-//        PRINT(ERROR, "unable to find a property corresponding to '%s'\n",
-//        prop); return RETURN_ERROR_SET_PROP;
-//    }
-//
-//    path_strlen = strlen(path);
-//    r = strncmp(vcs, path, vcsl);
-//    if (0 == r) {
-//        delta = path_strlen - vcsl;
-//        memmove(path, path + vcsl, delta);
-//        path[delta] = '\0';
-//    }
-//
-//    //	if ( 0 != strcmp( path, prop ) ) {
-//    //		PRINT( INFO, "%s(): resolved symbolic link: '%s' =>
-//    '%s'\n",
-//    __func__, prop, path );
-//    //	}
-//
-//    return RETURN_SUCCESS;
-//}
-//
-// prop_t *get_prop_from_cmd(const char *cmd) {
-//    char path[MAX_PATH_LEN];
-//    size_t i;
-//
-//    if (RETURN_SUCCESS == resolve_symbolic_property_name(cmd, path,
-//    sizeof(path))) {
-//        cmd = path;
-//    }
-//
-//    for (i = 0; i < num_properties; i++) {
-//        if ((strcmp(property_table[i].path, cmd) == 0) &&
-//        (strlen(property_table[i].path) == strlen(cmd)))
-//            return (property_table + i);
-//    }
-//
-//    // no matching prop found
-//    return NULL;
-//}
-//
-// static inline const char *get_home_dir(void) {
-//    return getpwuid(getuid())->pw_dir;
-//}
-//
-// void pass_uart_synth_fd(int fd) {
-//    uart_synth_fd = fd;
-//}
-//
-// void pass_uart_tx_fd(int fd) {
-//    uart_tx_fd = fd;
-//}
-//
-// void pass_uart_rx_fd(int fd) {
-//    uart_rx_fd = fd;
-//}
-//
-// char *get_abs_path(prop_t *prop, char *path) {
-//    strcpy(path, "/var/crimson");
-//    strcat(path, "/state/");
-//    strcat(path, prop->path);
-//    return path;
-//}
-//
-// char *get_abs_dir(prop_t *prop, char *path) {
-//    size_t len = 0;
-//    size_t i = 0;
-//    while (prop->path[i]) {
-//        if (prop->path[i] == '/')
-//            len = i;
-//        i++;
-//    }
-//
-//    strcpy(path, "/var/crimson");
-//    strcat(path, "/state/");
-//
-//    size_t temp_len = 0;
-//
-//    if (len != 0) {
-//        temp_len = strlen(path);
-//        memcpy(path + temp_len, prop->path, len);
-//        path[temp_len + len] = '\0';
-//    }
-//
-//    return path;
-//}
-//
-// char *get_root(prop_t *prop, char *root) {
-//    int i;
-//    for (i = 0; prop->path[i] != '/' && prop->path[i] != '\0'; i++) {
-//        root[i] = prop->path[i];
-//    }
-//    root[i] = 0;
-//
-//    return root;
-//}
-//
-// void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
-// char *save_path) {
-//    _load_profile = load;
-//    _save_profile = save;
-//    _load_profile_path = load_path;
-//    _save_profile_path = save_path;
-//}
-//
-// void sync_channels(uint8_t chan_mask) {
-//    char str_chan_mask[MAX_PROP_LEN] = "";
-//    sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
-//    // usleep(300000); // Some wait time for the reset to be ready
-//    /* Bring the ADCs & DACs into 'demo' mode for JESD */
-//
-//    // RX - ADCs
-//    strcpy(buf, "power -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -a 1\r");
-//    send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_rx_fd);
-//
-//    // TX - DACs
-//    strcpy(buf, "power -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -d 1\r");
-//    send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_tx_fd);
-//
-//    /***********************************
-//     * Start loop.
-//     * Issue JESD, then read to see if
-//     * bad
-//     **********************************/
-//    char key[] = "00\r";
-//    char dacalarmA[] = "ff\r";
-//    char dacalarmB[] = "ff\r";
-//
-//#ifdef SYNC_CHECK_DAC_LOOP
-//    for (int i = 0; i < 15; i += 1) {
-//
-//        // Put FPGA JESD core in reset
-//        write_hps_reg("res_rw7", 0x40000000);
-//        write_hps_reg("res_rw7", 0);
-//
-//        /* Initiate the SYSREF sequence for jesd
-//         * Set all boards' SYSREF detection gate to ON */
-//        strcpy(buf, "board -c ");
-//        strcat(buf, str_chan_mask);
-//        strcat(buf, " -s 1\r");
-//        send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//        read_uart(uart_rx_fd);
-//        strcpy(buf, "board -c ");
-//        strcat(buf, str_chan_mask);
-//        strcat(buf, " -s 1\r");
-//        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//        read_uart(uart_tx_fd);
-//
-//        /* Trigger a SYSREF pulse */
-//        // JESD core out of reset
-//        usleep(100000); // Some wait time for MCUs to be ready
-//        strcpy(buf, "clk -y\r");
-//        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-//        read_uart(uart_synth_fd);
-//
-//        // Do it again
-//
-//        strcpy(buf, "board -c ");
-//        strcat(buf, str_chan_mask);
-//        strcat(buf, " -s 1\r");
-//        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//        read_uart(uart_tx_fd);
-//        usleep(100000); // Some wait time for MCUs to be ready
-//        strcpy(buf, "clk -y\r");
-//        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-//        read_uart(uart_synth_fd);
-//        usleep(100000); // Some wait time for MCUs to be ready
-//
-//        // CHECK IF ALARMS
-//        strcpy(buf, "dac -c a -s\r");
-//        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//        read_uart(uart_tx_fd);
-//
-//        strcpy(dacalarmA, (char *)uart_ret_buf);
-//
-//        // CHECK IF ALARMS
-//        strcpy(buf, "dac -c d -s\r");
-//        send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//        read_uart(uart_tx_fd);
-//
-//        strcpy(dacalarmB, (char *)uart_ret_buf);
-//
-//        if ((dacalarmA[0] == key[0]) && (dacalarmA[1] == key[1]) &&
-//        (dacalarmB[0] == key[0]) &&
-//            (dacalarmB[1] == key[1])) {
-//            break;
-//        } else {
-//            usleep(200000); // Some wait time for MCUs to be ready
-//        }
-//    }
-//    /* Turn off all boards' SYSREF detection gates */
-//    strcpy(buf, "board -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -s 0\r");
-//    send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_rx_fd);
-//    strcpy(buf, "board -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -s 0\r");
-//    send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_tx_fd);
-//
-//#else
-//    // Put FPGA JESD core in reset
-//    write_hps_reg("res_rw7", 0x20000000);
-//    write_hps_reg("res_rw7", 0);
-//
-//    /* Initiate the SYSREF sequence for jesd
-//     * Set all boards' SYSREF detection gate to ON */
-//    strcpy(buf, "board -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -s 1\r");
-//    send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_rx_fd);
-//    strcpy(buf, "board -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -s 1\r");
-//    send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_tx_fd);
-//
-//    /* Trigger a SYSREF pulse */
-//    // JESD core out of reset
-//    write_hps_reg("res_rw7", 0);
-//
-//    usleep(100000); // Some wait time for MCUs to be ready
-//    strcpy(buf, "clk -y\r");
-//    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_synth_fd);
-//
-//    /* Turn off all boards' SYSREF detection gates */
-//    strcpy(buf, "board -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -s 0\r");
-//    send_uart_comm(uart_rx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_rx_fd);
-//    strcpy(buf, "board -c ");
-//    strcat(buf, str_chan_mask);
-//    strcat(buf, " -s 0\r");
-//    send_uart_comm(uart_tx_fd, (uint8_t *)buf, strlen(buf));
-//    read_uart(uart_tx_fd);
-//
-//#endif
-//}
-//
-// void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, bool
-// tx, size_t channel) {
-//    // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
-//
-//    // Send Reference to MCU ( No Need ATM since fixed reference )
-//    strcpy(buf, "rf -v ");
-//    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000));
-//    // Send reference in kHz strcat(buf, "\r"); send_uart_comm(uart_fd,
-//    (uint8_t *)buf, strlen(buf));
-//
-//    // write ADF4355/5355 R
-//    strcpy(buf, "rf -r ");
-//    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
-//    strcat(buf, "\r");
-//    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
-//
-//    // write ADF4355/ADF5355 N
-//    strcpy(buf, "rf -n ");
-//    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
-//    strcat(buf, "\r");
-//    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
-//
-//    // write ADF4355/ADF5355 D
-//    strcpy(buf, "rf -d ");
-//    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
-//    strcat(buf, "\r");
-//    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
-//
-//    // write ADF4355/ADF5355 feedback mode
-//    strcpy(buf, "rf -t ");
-//    sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
-//    strcat(buf, "\r");
-//    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
-//
-//    // write ADF4355/ADF5355 Output RF Power
-//    strcpy(buf, "rf -g ");
-//    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/); // default to
-//    lower mid power strcat(buf, "\r"); send_uart_comm(uart_fd, (uint8_t *)buf,
-//    strlen(buf));
-//
-//    double freq = pll->vcoFreq / pll->d;
-//
-//    if (synth_lut_is_enabled(tx, channel)) {
-//        synth_rec_t rec;
-//        int ret = synth_lut_get(tx, channel, freq, &rec);
-//        if (EXIT_SUCCESS != ret) {
-//            PRINT(ERROR, "synth_lut_get( %u, %u, %f ) failed (%d,%s)\n", tx,
-//            channel, freq, ret, strerror(ret));
-//        } else {
-//            PRINT(INFO, "Setting %s %c @ %u MHz with parameters { %u, %u, %u
-//            }\n", tx ? "TX" : "RX", 'A' + channel,
-//                  (unsigned)(freq / 1000000), rec.core, rec.band, rec.bias);
-//            snprintf(buf, sizeof(buf), "rf -c %c -A 0 -C %u -B %u -I %u\r",
-//            'a' + channel, rec.core, rec.band,
-//                     rec.bias);
-//            send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
-//        }
-//    } else {
-//        // If synth lut is disabled, set autocal flat to enable fall-back
-//        behaviour. snprintf(buf, sizeof(buf), "rf -c %c -A 1\r", 'a' +
-//        channel); send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
-//    }
-//
-//    // ADF output power level not presently specified.
-//    strcpy(buf, "rf -g ");
-//
-//    // write ADF4355/ADF5355 Output Frequency
-//    strcpy(buf, "rf -f ");
-//    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000)); //
-//    Send output frequency in kHz strcat(buf, "\r"); send_uart_comm(uart_fd,
-//    (uint8_t *)buf, strlen(buf));
-//
-//    usleep(100000);
-//}
-//
-// int set_pll_frequency2(int actual_uart_fd, uint64_t reference, pllparam_t
-// *pll) {
-//    int r;
-//    // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
-//
-//    // Send Reference to MCU ( No Need ATM since fixed reference )
-//    snprintf(buf, sizeof(buf), "rf -v %" PRIu32 "\r", (uint32_t)(reference /
-//    1000)); // Send reference in kHz r = write(actual_uart_fd, buf,
-//    strlen(buf)); if (strlen(buf) != r) {
-//        r = errno;
-//        goto out;
-//    }
-//
-//    // write ADF4355/5355 R
-//    snprintf(buf, sizeof(buf), "rf -r %" PRIu16 "\r", pll->R);
-//    r = write(actual_uart_fd, buf, strlen(buf));
-//    if (strlen(buf) != r) {
-//        r = errno;
-//        goto out;
-//    }
-//
-//    // write ADF4355/ADF5355 N
-//    snprintf(buf, sizeof(buf), "rf -n %" PRIu32 "\r", pll->N);
-//    r = write(actual_uart_fd, buf, strlen(buf));
-//    if (strlen(buf) != r) {
-//        r = errno;
-//        goto out;
-//    }
-//
-//    // write ADF4355/ADF5355 D
-//    snprintf(buf, sizeof(buf), "rf -d %" PRIu16 "\r", pll->d);
-//    r = write(actual_uart_fd, buf, strlen(buf));
-//    if (strlen(buf) != r) {
-//        r = errno;
-//        goto out;
-//    }
-//
-//    // write ADF4355/ADF5355 feedback mode
-//    snprintf(buf, sizeof(buf), "rf -t %" PRIu8 "\r", pll->divFBen);
-//    r = write(actual_uart_fd, buf, strlen(buf));
-//    if (strlen(buf) != r) {
-//        r = errno;
-//        goto out;
-//    }
-//
-//    // write ADF4355/ADF5355 Output RF Power
-//    // default to lower mid power
-//    snprintf(buf, sizeof(buf), "rf -g %" PRIu8 "\r", 1 /*pll->power*/);
-//    r = write(actual_uart_fd, buf, strlen(buf));
-//    if (strlen(buf) != r) {
-//        r = errno;
-//        goto out;
-//    }
-//
-//    // write ADF4355/ADF5355 Output Frequency
-//    // Send output frequency in kHz
-//    snprintf(buf, sizeof(buf), "rf -f %" PRIu32 "\r", (uint32_t)(pll->vcoFreq
-//    / pll->d / 1000)); r = write(actual_uart_fd, buf, strlen(buf)); if
-//    (strlen(buf) != r) {
-//        r = errno;
-//        goto out;
-//    }
-//
-//    size_t tries;
-//    for (tries = 0; tries < 10; tries++) {
-//        read(actual_uart_fd, buf, sizeof(buf));
-//        usleep(10000);
-//    }
-//
-//    r = EXIT_SUCCESS;
-//
-// out:
-//    if (EXIT_SUCCESS != r) {
-//        buf[strlen(buf)] = '\0';
-//        PRINT(ERROR, "failed to send command '%s' (%d,%s)\n", buf, errno,
-//        strerror(errno));
-//    }
-//
-//    return r;
-//}
-//
-// int set_freq_internal(const bool tx, const unsigned channel, const double
-// freq) {
-//
-//    typedef int (*fp_t)(const char *, char *);
-//
-//    static const fp_t rx_fp[] = {
-//        hdlr_rx_a_rf_freq_val,
-//        hdlr_rx_b_rf_freq_val,
-//        hdlr_rx_c_rf_freq_val,
-//        hdlr_rx_d_rf_freq_val,
-//    };
-//
-//    static const fp_t tx_fp[] = {
-//        hdlr_tx_a_rf_freq_val,
-//        hdlr_tx_b_rf_freq_val,
-//        hdlr_tx_c_rf_freq_val,
-//        hdlr_tx_d_rf_freq_val,
-//    };
-//
-//    int r;
-//
-//    char req_buf[MAX_PROP_LEN];
-//    char rsp_buf[MAX_PROP_LEN];
-//
-//    if (channel > (tx ? ARRAY_SIZE(tx_fp) : ARRAY_SIZE(rx_fp))) {
-//        r = E2BIG;
-//        PRINT(ERROR, "channel %u is invalid (%d,%s)\n", channel, r,
-//        strerror(r)); goto out;
-//    }
-//
-//    const fp_t *fp = tx ? tx_fp : rx_fp;
-//
-//    memset(req_buf, '\0', sizeof(req_buf));
-//    memset(rsp_buf, '\0', sizeof(rsp_buf));
-//
-//    // N.B. the print formatter in this case must be equal to the one in
-//    hdlr_XX_X_rf_freq_val snprintf(req_buf, sizeof(req_buf), "%lf", freq);
-//
-//    r = fp[channel](req_buf, rsp_buf);
-//    if (RETURN_SUCCESS != r) {
-//        PRINT(ERROR, "function call to hdlr_XX_X_rf_freq_val() failed (%d)\n",
-//        r); r = EIO; goto out;
-//    }
-//
-//    double actual_freq = 0;
-//    if (1 != sscanf(rsp_buf, "%lf", &actual_freq) || actual_freq != freq) {
-//        r = EIO;
-//        PRINT(ERROR, "%s %c: expected: %f, actual: %f\n", tx ? "TX" : "RX",
-//        'A' + channel, freq, actual_freq); goto out;
-//    }
-//
-//    flush_uart_comm(tx ? uart_tx_fd : uart_rx_fd);
-//
-//    r = EXIT_SUCCESS;
-//
-// out:
-//    return r;
-//}
+prop_t *get_prop_from_wd(int wd) {
+    size_t i;
+    for (i = 0; i < num_properties; i++) {
+        if (property_table[i].wd == wd)
+            return (property_table + i);
+    }
+    return NULL;
+}
+
+prop_t *get_prop_from_hdlr(int (*hdlr)(const char *, char *)) {
+    size_t i;
+    for (i = 0; i < num_properties; i++) {
+        if (property_table[i].handler == hdlr) {
+            return &property_table[i];
+        }
+    }
+    return NULL;
+}
+
+int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
+
+    const char *vcs = "/var/crimson/state/";
+    const size_t vcsl = strlen(vcs);
+    char origcwd[MAX_PATH_LEN];
+    char *temp;
+    size_t path_strlen;
+    size_t delta;
+    int r;
+
+#if MAX_PATH_LEN < PATH_MAX
+#error MAX_PATH_LEN is too small
+#endif
+
+    getcwd(origcwd, sizeof(origcwd));
+    chdir(vcs);
+    temp = (void *)realpath(prop, path);
+    chdir(origcwd);
+    if (NULL == temp) {
+        PRINT(ERROR, "unable to find a property corresponding to '%s'\n", prop);
+        return RETURN_ERROR_SET_PROP;
+    }
+
+    path_strlen = strlen(path);
+    r = strncmp(vcs, path, vcsl);
+    if (0 == r) {
+        delta = path_strlen - vcsl;
+        memmove(path, path + vcsl, delta);
+        path[delta] = '\0';
+    }
+
+    //	if ( 0 != strcmp( path, prop ) ) {
+    //		PRINT( INFO, "%s(): resolved symbolic link: '%s' =>
+    // '%s'\n",
+    // __func__, prop, path );
+    //	}
+
+    return RETURN_SUCCESS;
+}
+
+prop_t *get_prop_from_cmd(const char *cmd) {
+    char path[MAX_PATH_LEN];
+    size_t i;
+
+    if (RETURN_SUCCESS ==
+        resolve_symbolic_property_name(cmd, path, sizeof(path))) {
+        cmd = path;
+    }
+
+    for (i = 0; i < num_properties; i++) {
+        if ((strcmp(property_table[i].path, cmd) == 0) &&
+            (strlen(property_table[i].path) == strlen(cmd)))
+            return (property_table + i);
+    }
+
+    // no matching prop found
+    return NULL;
+}
+
+static inline const char *get_home_dir(void) {
+    return getpwuid(getuid())->pw_dir;
+}
+
+void pass_uart_synth_fd(int fd) {
+    uart_synth_fd = fd;
+}
+
+void pass_uart_tx_fd(int *fd) {
+    uart_tx_fd = fd;
+}
+
+void pass_uart_rx_fd(int *fd) {
+    uart_rx_fd = fd;
+}
+
+char *get_abs_path(prop_t *prop, char *path) {
+    strcpy(path, "/var/crimson");
+    strcat(path, "/state/");
+    strcat(path, prop->path);
+    return path;
+}
+
+char *get_abs_dir(prop_t *prop, char *path) {
+    size_t len = 0;
+    size_t i = 0;
+    while (prop->path[i]) {
+        if (prop->path[i] == '/')
+            len = i;
+        i++;
+    }
+
+    strcpy(path, "/var/crimson");
+    strcat(path, "/state/");
+
+    size_t temp_len = 0;
+
+    if (len != 0) {
+        temp_len = strlen(path);
+        memcpy(path + temp_len, prop->path, len);
+        path[temp_len + len] = '\0';
+    }
+
+    return path;
+}
+
+char *get_root(prop_t *prop, char *root) {
+    int i;
+    for (i = 0; prop->path[i] != '/' && prop->path[i] != '\0'; i++) {
+        root[i] = prop->path[i];
+    }
+    root[i] = 0;
+
+    return root;
+}
+
+void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
+                            char *save_path) {
+    _load_profile = load;
+    _save_profile = save;
+    _load_profile_path = load_path;
+    _save_profile_path = save_path;
+}
+
+// XXX
+// Uses zeroth file descriptor for RX And TX for now until a way is found to
+// convert the channel mask into a integer.
+void sync_channels(uint8_t chan_mask) {
+    char str_chan_mask[MAX_PROP_LEN] = "";
+    sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
+    // usleep(300000); // Some wait time for the reset to be ready
+    /* Bring the ADCs & DACs into 'demo' mode for JESD */
+
+    // RX - ADCs
+    strcpy(buf, "power -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -a 1\r");
+    send_uart_comm(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_rx_fd[0]);
+
+    // TX - DACs
+    strcpy(buf, "power -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -d 1\r");
+    send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_tx_fd[0]);
+
+    /***********************************
+     * Start loop.
+     * Issue JESD, then read to see if
+     * bad
+     **********************************/
+    char key[] = "00\r";
+    char dacalarmA[] = "ff\r";
+    char dacalarmB[] = "ff\r";
+
+#ifdef SYNC_CHECK_DAC_LOOP
+    for (int i = 0; i < 15; i += 1) {
+
+        // Put FPGA JESD core in reset
+        write_hps_reg("res_rw7", 0x40000000);
+        write_hps_reg("res_rw7", 0);
+
+        /* Initiate the SYSREF sequence for jesd
+         * Set all boards' SYSREF detection gate to ON */
+        strcpy(buf, "board -c ");
+        strcat(buf, str_chan_mask);
+        strcat(buf, " -s 1\r");
+        send_uart_comm(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
+        read_uart(uart_rx_fd[0]);
+        strcpy(buf, "board -c ");
+        strcat(buf, str_chan_mask);
+        strcat(buf, " -s 1\r");
+        send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+        read_uart(uart_tx_fd[0]);
+
+        /* Trigger a SYSREF pulse */
+        // JESD core out of reset
+        usleep(100000); // Some wait time for MCUs to be ready
+        strcpy(buf, "clk -y\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        read_uart(uart_synth_fd);
+
+        // Do it again
+
+        strcpy(buf, "board -c ");
+        strcat(buf, str_chan_mask);
+        strcat(buf, " -s 1\r");
+        send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+        read_uart(uart_tx_fd[0]);
+        usleep(100000); // Some wait time for MCUs to be ready
+        strcpy(buf, "clk -y\r");
+        send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        read_uart(uart_synth_fd);
+        usleep(100000); // Some wait time for MCUs to be ready
+
+        // CHECK IF ALARMS
+        strcpy(buf, "dac -c a -s\r");
+        send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+        read_uart(uart_tx_fd[0]);
+
+        strcpy(dacalarmA, (char *)uart_ret_buf);
+
+        // CHECK IF ALARMS
+        strcpy(buf, "dac -c d -s\r");
+        send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+        read_uart(uart_tx_fd[0]);
+
+        strcpy(dacalarmB, (char *)uart_ret_buf);
+
+        if ((dacalarmA[0] == key[0]) && (dacalarmA[1] == key[1]) &&
+            (dacalarmB[0] == key[0]) && (dacalarmB[1] == key[1])) {
+            break;
+        } else {
+            usleep(200000); // Some wait time for MCUs to be ready
+        }
+    }
+    /* Turn off all boards' SYSREF detection gates */
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 0\r");
+    send_uart_comm(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_rx_fd[0]);
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 0\r");
+    send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_tx_fd[0]);
+
+#else
+    // Put FPGA JESD core in reset
+    write_hps_reg("res_rw7", 0x20000000);
+    write_hps_reg("res_rw7", 0);
+
+    /* Initiate the SYSREF sequence for jesd
+     * Set all boards' SYSREF detection gate to ON */
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 1\r");
+    send_uart_comm(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_rx_fd[0]);
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 1\r");
+    send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_tx_fd[0]);
+
+    /* Trigger a SYSREF pulse */
+    // JESD core out of reset
+    write_hps_reg("res_rw7", 0);
+
+    usleep(100000); // Some wait time for MCUs to be ready
+    strcpy(buf, "clk -y\r");
+    send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    read_uart(uart_synth_fd);
+
+    /* Turn off all boards' SYSREF detection gates */
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 0\r");
+    send_uart_comm(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_rx_fd[0]);
+    strcpy(buf, "board -c ");
+    strcat(buf, str_chan_mask);
+    strcat(buf, " -s 0\r");
+    send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+    read_uart(uart_tx_fd[0]);
+
+#endif
+}
+
+void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
+                       bool tx, size_t channel) {
+    // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
+
+    // Send Reference to MCU ( No Need ATM since fixed reference )
+    strcpy(buf, "rf -v ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000));
+    // Send reference in kHz
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write ADF4355/5355 R
+    strcpy(buf, "rf -r ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write ADF4355/ADF5355 N
+    strcpy(buf, "rf -n ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write ADF4355/ADF5355 D
+    strcpy(buf, "rf -d ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write ADF4355/ADF5355 feedback mode
+    strcpy(buf, "rf -t ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write ADF4355/ADF5355 Output RF Power
+    strcpy(buf, "rf -g ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);
+    // default to lower mid power
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    double freq = pll->vcoFreq / pll->d;
+
+    if (synth_lut_is_enabled(tx, channel)) {
+        synth_rec_t rec;
+        int ret = synth_lut_get(tx, channel, freq, &rec);
+        if (EXIT_SUCCESS != ret) {
+            PRINT(ERROR, "synth_lut_get( %u, %u, %f ) failed (%d,%s)\n", tx,
+                  channel, freq, ret, strerror(ret));
+        } else {
+            PRINT(INFO,
+                  "Setting %s %c @ %u MHz with parameters { %u, %u, %u}\n",
+                  tx ? "TX" : "RX", 'A' + channel, (unsigned)(freq / 1000000),
+                  rec.core, rec.band, rec.bias);
+            snprintf(buf, sizeof(buf), "rf -c %c -A 0 -C %u -B %u -I %u\r",
+                     'a' + channel, rec.core, rec.band, rec.bias);
+            send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+        }
+    } else {
+        // If synth lut is disabled, set autocal flat to enable fall-back
+        // behaviour.
+        snprintf(buf, sizeof(buf), "rf -c %c -A 1\r", 'a' + channel);
+        send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+    }
+
+    // ADF output power level not presently specified.
+    strcpy(buf, "rf -g ");
+
+    // write ADF4355/ADF5355 Output Frequency
+    strcpy(buf, "rf -f ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000));
+    // Send output frequency in kHz
+    strcat(buf, "\r");
+    send_uart_comm(uart_fd, (uint8_t *)buf, strlen(buf));
+    usleep(100000);
+}
+
+int set_pll_frequency2(int actual_uart_fd, uint64_t reference,
+                       pllparam_t *pll) {
+    int r;
+    // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
+
+    // Send Reference to MCU ( No Need ATM since fixed reference )
+    snprintf(buf, sizeof(buf), "rf -v %" PRIu32 "\r",
+             (uint32_t)(reference / 1000)); // Send reference in kHz
+    r = write(actual_uart_fd, buf, strlen(buf));
+    if (strlen(buf) != r) {
+        r = errno;
+        goto out;
+    }
+
+    // write ADF4355/5355 R
+    snprintf(buf, sizeof(buf), "rf -r %" PRIu16 "\r", pll->R);
+    r = write(actual_uart_fd, buf, strlen(buf));
+    if (strlen(buf) != r) {
+        r = errno;
+        goto out;
+    }
+
+    // write ADF4355/ADF5355 N
+    snprintf(buf, sizeof(buf), "rf -n %" PRIu32 "\r", pll->N);
+    r = write(actual_uart_fd, buf, strlen(buf));
+    if (strlen(buf) != r) {
+        r = errno;
+        goto out;
+    }
+
+    // write ADF4355/ADF5355 D
+    snprintf(buf, sizeof(buf), "rf -d %" PRIu16 "\r", pll->d);
+    r = write(actual_uart_fd, buf, strlen(buf));
+    if (strlen(buf) != r) {
+        r = errno;
+        goto out;
+    }
+
+    // write ADF4355/ADF5355 feedback mode
+    snprintf(buf, sizeof(buf), "rf -t %" PRIu8 "\r", pll->divFBen);
+    r = write(actual_uart_fd, buf, strlen(buf));
+    if (strlen(buf) != r) {
+        r = errno;
+        goto out;
+    }
+
+    // write ADF4355/ADF5355 Output RF Power
+    // default to lower mid power
+    snprintf(buf, sizeof(buf), "rf -g %" PRIu8 "\r", 1 /*pll->power*/);
+    r = write(actual_uart_fd, buf, strlen(buf));
+    if (strlen(buf) != r) {
+        r = errno;
+        goto out;
+    }
+
+    // write ADF4355/ADF5355 Output Frequency
+    // Send output frequency in kHz
+    snprintf(buf, sizeof(buf), "rf -f %" PRIu32 "\r",
+             (uint32_t)(pll->vcoFreq / pll->d / 1000));
+    r = write(actual_uart_fd, buf, strlen(buf));
+    if (strlen(buf) != r) {
+        r = errno;
+        goto out;
+    }
+
+    size_t tries;
+    for (tries = 0; tries < 10; tries++) {
+        read(actual_uart_fd, buf, sizeof(buf));
+        usleep(10000);
+    }
+
+    r = EXIT_SUCCESS;
+
+out:
+    if (EXIT_SUCCESS != r) {
+        buf[strlen(buf)] = '\0';
+        PRINT(ERROR, "failed to send command '%s' (%d,%s)\n", buf, errno,
+              strerror(errno));
+    }
+
+    return r;
+}
+
+int set_freq_internal(const bool tx, const unsigned channel,
+                      const double freq) {
+
+    typedef int (*fp_t)(const char *, char *);
+
+    static const fp_t rx_fp[] = {
+        hdlr_rx_a_rf_freq_val,
+        hdlr_rx_b_rf_freq_val,
+        hdlr_rx_c_rf_freq_val,
+        hdlr_rx_d_rf_freq_val,
+    };
+
+    static const fp_t tx_fp[] = {
+        hdlr_tx_a_rf_freq_val,
+        hdlr_tx_b_rf_freq_val,
+        hdlr_tx_c_rf_freq_val,
+        hdlr_tx_d_rf_freq_val,
+    };
+
+    int r;
+
+    char req_buf[MAX_PROP_LEN];
+    char rsp_buf[MAX_PROP_LEN];
+
+    if (channel > (tx ? ARRAY_SIZE(tx_fp) : ARRAY_SIZE(rx_fp))) {
+        r = E2BIG;
+        PRINT(ERROR, "channel %u is invalid (%d,%s)\n", channel, r,
+              strerror(r));
+        goto out;
+    }
+
+    const fp_t *fp = tx ? tx_fp : rx_fp;
+
+    memset(req_buf, '\0', sizeof(req_buf));
+    memset(rsp_buf, '\0', sizeof(rsp_buf));
+
+    // N.B. the print formatter in this case must be equal to the one in
+    // hdlr_XX_X_rf_freq_val
+    snprintf(req_buf, sizeof(req_buf), "%lf", freq);
+
+    r = fp[channel](req_buf, rsp_buf);
+    if (RETURN_SUCCESS != r) {
+        PRINT(ERROR, "function call to hdlr_XX_X_rf_freq_val() failed (%d)\n",
+              r);
+        r = EIO;
+        goto out;
+    }
+
+    double actual_freq = 0;
+    if (1 != sscanf(rsp_buf, "%lf", &actual_freq) || actual_freq != freq) {
+        r = EIO;
+        PRINT(ERROR, "%s %c: expected: %f, actual: %f\n", tx ? "TX" : "RX",
+              'A' + channel, freq, actual_freq);
+        goto out;
+    }
+
+    flush_uart_comm(tx ? uart_tx_fd[channel] : uart_rx_fd[channel]);
+
+    r = EXIT_SUCCESS;
+
+out:
+    return r;
+}
