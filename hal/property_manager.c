@@ -80,8 +80,9 @@ static void make_prop(prop_t *prop) {
 
     case PROP_TYPE_FILE:
 
-        // TODO: @CF: The preferred way to build a directory tree relative to some path would be to use mkdirat(2),
-        // openat(2), etc. Here, we don't even check return values, which can be dangerous.
+        // TODO: @CF: The preferred way to build a directory tree relative to
+        // some path would be to use mkdirat(2), openat(2), etc. Here, we don't
+        // even check return values, which can be dangerous.
 
         // TODO: @CF: use mkdir(2)
         // mkdir -p /home/root/state/*
@@ -128,8 +129,9 @@ static void make_prop(prop_t *prop) {
 
     case PROP_TYPE_SYMLINK:
 
-        // TODO: @CF: The preferred way to build a directory tree relative to some path would be to use mkdirat(2),
-        // openat(2), etc. Here, we don't even check return values, which can be dangerous.
+        // TODO: @CF: The preferred way to build a directory tree relative to
+        // some path would be to use mkdirat(2), openat(2), etc. Here, we don't
+        // even check return values, which can be dangerous.
 
         // TODO: @CF: use mkdir(2)
         // mkdir -p /home/root/state/*
@@ -187,8 +189,9 @@ static void init_prop_val(prop_t *prop) {
     }
 }
 
-// TODO: @CF: modify function to first open base directory and then to use relative ops (openat, mkdirat, fchownat,
-// fchmodat, etc) Helper function for building a tree in the home directory
+// TODO: @CF: modify function to first open base directory and then to use
+// relative ops (openat, mkdirat, fchownat, fchmodat, etc) Helper function for
+// building a tree in the home directory
 static void build_tree(void) {
     PRINT(VERBOSE, "Building tree, %i properties found\n", get_num_prop());
     prop_t *prop;
@@ -288,10 +291,11 @@ void check_property_inotifies(void) {
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
 
-        // check if prop exists, prop will not exist if concurrent modifications were made to the file while in this
-        // loop
+        // check if prop exists, prop will not exist if concurrent modifications
+        // were made to the file while in this loop
         if ((event->mask & IN_CLOSE_WRITE) && prop) {
-            // PRINT( VERBOSE,"Property located at %s has been modified, executing handler\n", prop -> path);
+            // PRINT( VERBOSE,"Property located at %s has been modified,
+            // executing handler\n", prop -> path);
 
             // empty out the buffers
             memset(prop_data, 0, MAX_PROP_LEN);
@@ -310,7 +314,8 @@ void check_property_inotifies(void) {
 
             // if the return value didn't change, don't write to file again
             if (strcmp(prop_ret, prop_data) != 0) {
-                // temperarily remove property from inotify so the file update won't trigger another inotify event
+                // temperarily remove property from inotify so the file update
+                // won't trigger another inotify event
                 if (inotify_rm_watch(inotify_fd, prop->wd) < 0) {
                     PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 }
@@ -447,11 +452,13 @@ int get_channel_for_path(const char *path) {
         return -1;
     }
     if (1 && 0 != strncmp("rx", path, 2) && 0 != strncmp("tx", path, 2)) {
-        // note: this is not necessarily an error (some paths do not begin with rx or tx)
+        // note: this is not necessarily an error (some paths do not begin with
+        // rx or tx)
         return -1;
     }
 
-    // PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" : path, path[ 3 ] - 'a' );
+    // PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" :
+    // path, path[ 3 ] - 'a' );
 
     return path[3] - 'a';
 }
@@ -473,7 +480,8 @@ void power_on_channel_fixup(char *path) {
     bool tx;
     int channel = get_channel_for_path(path);
     if (-1 == channel) {
-        // note: this is not necessarily an error (some paths do not have a channel)
+        // note: this is not necessarily an error (some paths do not have a
+        // channel)
         return;
     }
     tx = 0 == strncmp("tx", path, 2);
@@ -498,7 +506,8 @@ int set_property(const char *prop, const char *data) {
     }
 
     // enable channel if it has not been enabled yet
-    // (enabling the channel later will erase the current channels, so enable now)
+    // (enabling the channel later will erase the current channels, so enable
+    // now)
     power_on_channel_fixup(temp->path);
 
     write_to_file(get_abs_path(temp, path), data);

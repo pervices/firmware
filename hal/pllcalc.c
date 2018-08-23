@@ -47,7 +47,8 @@ int main(void) {
     int printdebug = 0;
     uint64_t stepFreq = (1000000);
 
-    // for (reqFreq = stepFreq * 100; reqFreq <= stepFreq * 6250; reqFreq += stepFreq)
+    // for (reqFreq = stepFreq * 100; reqFreq <= stepFreq * 6250; reqFreq +=
+    // stepFreq)
     for (reqFreq = 700e6; reqFreq <= 6800000000; reqFreq += stepFreq) {
 
         // This is the main function, everything after is for statistics
@@ -74,11 +75,12 @@ int main(void) {
         dbc_noise1 = dbc_noise1 / 10000;
 
 #ifdef _PLL_DEBUG_VERBOSE
-        printf("Requested: %" PRIu64
-               ", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, Noise: %.10lf, Noise (dBc): %.10lf \n",
+        printf("Requested: %" PRIu64 ", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, "
+               "Noise: %.10lf, Noise (dBc): %.10lf \n",
                reqFreq, actual_reference, actual_output, diff, 20 * log10(noise), 20 * log10(dbc_noise1));
-        printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n", pll.vcoFreq, pll.d, pll.R,
-               pll.N, pll.x2en);
+        printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: %li, "
+               "2xOut: %i\n",
+               pll.vcoFreq, pll.d, pll.R, pll.N, pll.x2en);
 #endif
 
         if (diff < 0) {
@@ -103,11 +105,12 @@ int main(void) {
 #ifdef _PLL_DEBUG_INFO
         if (printdebug) {
             printf("ERROR: Parameter Violation\n");
-            printf("\t Requested: %" PRIu64
-                   ", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, Noise: %.10lf, Noise (dBc): %.10lf \n",
+            printf("\t Requested: %" PRIu64 ", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, "
+                   "Noise: %.10lf, Noise (dBc): %.10lf \n",
                    reqFreq, actual_reference, actual_output, diff, 20 * log10(noise), 20 * log10(dbc_noise1));
-            printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: %li, 2xOut: %i\n", pll.vcoFreq, pll.d, pll.R,
-                   pll.N, pll.x2en);
+            printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: "
+                   "%li, 2xOut: %i\n",
+                   pll.vcoFreq, pll.d, pll.R, pll.N, pll.x2en);
             printdebug = 0;
         }
 #endif
@@ -125,9 +128,9 @@ int main(void) {
 // ==========================
 double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
 
-    // Crimson has two PLLs feeding each other. The first PLL is used to generate
-    // a reference frequency that is used by the second PLL to synthesize a clean
-    // output mixing frequency.
+    // Crimson has two PLLs feeding each other. The first PLL is used to
+    // generate a reference frequency that is used by the second PLL to
+    // synthesize a clean output mixing frequency.
 
     // The procedure to calculate all the PLL parameters is this:
     //
@@ -135,14 +138,18 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     //	-This also effectively sets the divider or doubler values.
     //      -To ensure loop stability and coherency, we also set R
     //
-    // 1a. If the output falls between the natural VCO frequency, we just use the fundamental VCO frequency.
+    // 1a. If the output falls between the natural VCO frequency, we just use
+    // the fundamental VCO frequency.
     //
-    // 1b. If the output frequency is falls above the VCO band, we simply use the doubler and divide the desired output
-    // by 2 to obtain the fundamental VCO frequency.
+    // 1b. If the output frequency is falls above the VCO band, we simply use
+    // the doubler and divide the desired output by 2 to obtain the fundamental
+    // VCO frequency.
     //
-    // 1c. If the output is below the VCO band, we find the smallest divider we can use
+    // 1c. If the output is below the VCO band, we find the smallest divider we
+    // can use
     //
-    // 2. Once we've determined the doubler values, we use the need to select a reasonable N value.
+    // 2. Once we've determined the doubler values, we use the need to select a
+    // reasonable N value.
     //
     //  - This will depend on our feedback network.
     //  - Assumes a single PLL design, and therefore fixed reference.
@@ -165,7 +172,8 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     else if (*reqFreq < PLL1_RFOUT_MIN_HZ)
         *reqFreq = PLL1_RFOUT_MIN_HZ;
 
-    // 1. Determine VCO frequency, and also frequency doubler or output divider values.
+    // 1. Determine VCO frequency, and also frequency doubler or output divider
+    // values.
     pll_SetVCO(reqFreq, pll);
 
     // 2. Use the reference to determine R, N, and pfd frequency
