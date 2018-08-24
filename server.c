@@ -39,48 +39,42 @@
 
 #define ENET_DEV "eth0"
 
-/*
-// timers for polling
-static struct timeval tstart;
-static struct timeval tend;
+// Profile flags, read in this file, triggered in properties.c
+static uint8_t load_profile = 0;
+static uint8_t save_profile = 0;
+static char load_profile_path[MAX_PROP_LEN];
+static char save_profile_path[MAX_PROP_LEN];
 
-// return 1 if timeout, 0 if not
-static uint8_t timeout(uint32_t timeout) {
-	gettimeofday(&tend, NULL);
-	if ( ((tend.tv_usec + 1000000 * tend.tv_sec)
-		- (tstart.tv_usec + 1000000 * tstart.tv_sec) - 26) > timeout)
-		return 1;
-	else
-		return 0;
-}
-*/
-
-// profile flags, read in this file, triggered in properties.c
-uint8_t load_profile = 0;
-uint8_t save_profile = 0;
-char load_profile_path[MAX_PROP_LEN];
-char save_profile_path[MAX_PROP_LEN];
-
-// execution options
+// Execution options
 uint8_t options = 0;
 
-// comm ports
-int comm_fds[num_udp_ports] = {0};
-int port_nums[num_udp_ports] = {
-	UDP_MGMT_PORT,
-	UDP_RXA_PORT,
-	UDP_RXB_PORT,
-	UDP_RXC_PORT,
-	UDP_RXD_PORT,
-	UDP_TXA_PORT,
-	UDP_TXB_PORT,
-	UDP_TXC_PORT,
-	UDP_TXD_PORT,
+// Comm ports
+static int port_nums[] = {
+    42799, /* UDP Management Port */
+    42800,
+    42801,
+    42802,
+    42803,
+    42804,
+    42805,
+    42806,
+    42807,
+    42808,
+    42809,
+    42810,
+    42811,
+    42812,
+    42813,
+    42814,
+    42815,
+    42816,
 };
 
+static int comm_fds[LEN(port_nums)];
+
 void server_init_led(){
-    write_hps_reg("led1", 0x1); //Solid green
-    write_hps_reg("led0", 0x00070003); //Flashing green
+    write_hps_reg("led1", 0x1); // Solid green
+    write_hps_reg("led0", 0x00070003); // Flashing green
 }
 
 void server_ready_led(){
@@ -90,7 +84,6 @@ void server_ready_led(){
 
 extern int verbose;
 
-// main loop
 int main(int argc, char *argv[]) {
 
 	int ret = 0;
@@ -109,7 +102,7 @@ int main(int argc, char *argv[]) {
 	}
 	atexit( mmap_fini );
 
-	// check for firmware version
+	// Check for firmware version
 	for( i = 1; i < argc; i++ ) {
 		if (strcmp(argv[i], "-v") == 0) {
 			printf("Branch: %s\n", VERSIONGITBRANCH);
@@ -134,14 +127,14 @@ int main(int argc, char *argv[]) {
 	
 	server_init_led();
 
-	// check for an argument for debug mode
+	// Check for an argument for debug mode
 	if (argc >= 2) {
 		if (strcmp(argv[1], "-d") == 0)
 			options |= SERVER_DEBUG_OPT;
 	}
 
 	// Initialize network communications for each port
-	for( i = 0; i < num_udp_ports; i++) {
+	for( i = 0; i < LEN(port_nums); i++) {
 		if ( init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0 ) {
 			PRINT( ERROR, "%s, cannot initialize network %s\n", __func__, ENET_DEV);
 			return RETURN_ERROR_COMM_INIT;
@@ -156,33 +149,30 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in sa;
 	socklen_t sa_len;
 
-	// initialize the properties, which is implemented as a Linux file structure
+	// Initialize the properties, which is implemented as a Linux file structure
 	init_property(options);
 	inotify_fd = get_inotify_fd();
 
-	// perform autocalibration of the frequency synthesizers
+	// Perform autocalibration of the frequency synthesizers
 	// N.B. this must be done after init_property() because uart init is mixed in with it for some reason
 	atexit( synth_lut_disable_all );
 	synth_lut_enable_all_if_calibrated();
 
-	// pass the profile pointers down to properties.c
+	// Pass the profile pointers down to properties.c
 	pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path, save_profile_path);
 
 
-	// let the user know the server is ready to receive commands
+	// Let the user know the server is ready to receive commands
 	PRINT( INFO, "Crimson server is up\n");
 
 	server_ready_led();
 
-	// main loop, look for commands, if exists, service it and respond
+	// Main loop, look for commands, if exists, service it and respond
 	for( ;; ) {
 
-		//PRINT( VERBOSE, "creating read fd set\n" );
-
-		// set up read file descriptor set for select(2)
+		// Set up read file descriptor set for select(2)
 		FD_ZERO( & rfds );
-		for( i = 0; i < num_udp_ports; i++ ) {
-			//PRINT( VERBOSE, "adding fd %d for port %d\n", comm_fds[ i ], port_nums[ i ] );
+		for( i = 0; i < LEN(port_nums); i++ ) {
 			FD_SET( comm_fds[ i ], & rfds );
 			if ( comm_fds[ i ] >= highest_fd ) {
 				highest_fd = comm_fds[ i ];
@@ -190,11 +180,9 @@ int main(int argc, char *argv[]) {
 		}
 		FD_SET( inotify_fd, & rfds );
 		if ( inotify_fd >= highest_fd ) {
-			//PRINT( VERBOSE, "adding inotify fd %d\n", inotify_fd );
 			highest_fd = inotify_fd;
 		}
 
-		//PRINT( VERBOSE, "calling select(2)..\n" );
 		ret = select( highest_fd + 1, & rfds, NULL, NULL, NULL );
 
 		switch( ret ) {
@@ -203,7 +191,7 @@ int main(int argc, char *argv[]) {
 		case -1:
 
 			if ( 0 == ret ) {
-				// timeout has expired (although we have provided no timeout)
+				// Timeout has expired (although we have provided no timeout)
 				PRINT( VERBOSE, "select timed-out\n" );
 			} else {
 				PRINT( VERBOSE, "select failed on fd %d: %s (%d)\n", comm_fds[ i ], strerror( errno ), errno );
@@ -214,14 +202,12 @@ int main(int argc, char *argv[]) {
 
 		default:
 
-			// service other management requests
-			for( i = 0; i < num_udp_ports; i++ ) {
+			// Service other management requests
+			for( i = 0; i < LEN(port_nums); i++ ) {
 
 				if ( ! FD_ISSET( comm_fds[ i ], & rfds ) ) {
 					continue;
 				}
-
-				//PRINT( VERBOSE, "port %d has data\n", port_nums[ i ] );
 
 				sa_len = sizeof( sa );
 				memset( buffer, 0, sizeof( buffer ) );
@@ -238,10 +224,6 @@ int main(int argc, char *argv[]) {
 					ret--;
 					continue;
 				}
-
-				// Debug print
-//				PRINT( VERBOSE, "Recevied [Seq: %"PRIu32" Op: %i Status: %i Prop: %s Data: %s]\n",
-//					cmd.seq, cmd.op, cmd.status, cmd.prop, cmd.data);
 
 				cmd.status = CMD_SUCCESS;
 
@@ -263,21 +245,17 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 
-				//PRINT( VERBOSE, "sent reply on port %d\n", port_nums[ i ] );
-
 				ret--;
 			}
 
 
-			// service inotify
+			// Service inotify
 			if ( FD_ISSET( inotify_fd, & rfds ) ) {
 
-				//PRINT( VERBOSE, "inotify has data\n" );
-
-				// check if any files/properties have been modified through shell
+				// Check if any files/properties have been modified through shell
 				check_property_inotifies();
 
-				// check if any of the writes/reads were made to save/load profiles
+				// Check if any of the writes/reads were made to save/load profiles
 				// priority given to saving profile
 				if (save_profile) {
 					save_properties(save_profile_path);
@@ -293,18 +271,16 @@ int main(int argc, char *argv[]) {
 			}
 
 			if ( 0 != ret ) {
-				// sanity check: this should be zero after servicing fd's!!
+				// Sanity check: this should be zero after servicing fd's!!
 				PRINT( VERBOSE, "did not service all channels\n" );
 			}
 
 			break;
 		}
-
-		//PRINT( VERBOSE, "process return from select\n" );
 	}
 
-	// close the file descriptors
-	for( i = 0; i < num_udp_ports; i++) {
+	// Close the file descriptors
+	for( i = 0; i < LEN(port_nums); i++) {
 		close_udp_comm(comm_fds[i]);
 	}
 

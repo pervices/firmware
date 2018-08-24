@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <time.h>
 
+#define LEN(a) ((int) sizeof(a) / sizeof(*a))
+
 // Define used for debugging
 //#define DEBUG
 
