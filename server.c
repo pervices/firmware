@@ -64,18 +64,6 @@ char save_profile_path[MAX_PROP_LEN];
 // execution options
 uint8_t options = 0;
 
-enum {
-	MGMT,
-	RXA,
-	RXB,
-	RXC,
-	RXD,
-	TXA,
-	TXB,
-	TXC,
-	TXD,
-};
-
 // comm ports
 int comm_fds[num_udp_ports] = {0};
 int port_nums[num_udp_ports] = {
@@ -99,7 +87,6 @@ void server_ready_led(){
     write_hps_reg("led1", 0x1);
     write_hps_reg("led0", 0x1);
 }
-
 
 extern int verbose;
 

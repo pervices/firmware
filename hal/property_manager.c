@@ -16,11 +16,13 @@
 //
 
 #include "property_manager.h"
+
 #include "comm_manager.h"
 #include "common.h"
 #include "mmap.h" // shouldn't need to include this, this is here for errata fixing
 #include "properties.h"
 #include "uart.h"
+
 #include <stdbool.h>
 #include <unistd.h>
 

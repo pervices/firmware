@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#if 0 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
+#if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
 
     #include "array-utils.h"
