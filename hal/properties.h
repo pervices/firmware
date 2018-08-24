@@ -51,7 +51,7 @@ typedef struct prop {
     int wd;                     // inotify watch descriptor
 } prop_t;
 
-// Inline functions
+// Externed functions
 size_t get_num_prop(void);
 prop_t *get_prop(size_t idx);
 prop_t *get_prop_from_wd(int wd);
@@ -70,4 +70,10 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 void sync_channels(uint8_t chan_mask);
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, size_t channel);
+
+/* Expanding the server from 4 channels (Vaunt) to 16 channels (Tate)
+ * broke some static element settings in the property table. Running
+ * this table patch will fix it */
+void table_patch(void);
+
 #endif

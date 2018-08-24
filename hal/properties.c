@@ -15,17 +15,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "properties.h"
+#if 1
+    #include "properties.h"
 
-#include <ctype.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+    #include <ctype.h>
+    #include <stdbool.h>
+    #include <stdio.h>
+    #include <string.h>
 
-#include "array-utils.h"
-#include "mmap.h"
-#include "property_manager.h"
-#include "synth_lut.h"
+    #include "array-utils.h"
+    #include "mmap.h"
+    #include "property_manager.h"
+    #include "synth_lut.h"
+#endif
 
 /* clang-format off */
 
@@ -3067,11 +3069,51 @@ static prop_t property_table[] = {
 
 static const size_t num_properties = LEN(property_table);
 
+static const char *tostr(const int num)
+{
+    char* str = calloc(32, sizeof(*str));
+    sprintf(str, "%d", num);
+    return str;
+}
+
 /* clang-format on */
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------- EXTERNED FUNCTIONS ---------------------------- */
 /* -------------------------------------------------------------------------- */
+
+// Some elements (like ports) from the property table when the XMACRO was introduced.
+// This function puts them back.
+void table_patch(void)
+{
+    const int base = 42820;
+    const int offset = LEN(names);
+
+    // RX Ports
+#define X(ch) \
+    set_property("rx/" #ch "/link/port", tostr(base + INT(ch)));
+CHANNELS
+#undef X
+
+    // RX IP Addresses
+#define X(ch) \
+    set_property("rx/" #ch "/link/ip_dest", INT(ch) % 2 == 0 ? "10.10.10.10" : "10.10.11.10");
+CHANNELS
+#undef X
+
+    // TX Ports
+#define X(ch) \
+    set_property("tx/" #ch "/link/port"  , tostr(base + INT(ch) + offset)); \
+    set_property("tx/" #ch "/qa/fifo_lvl", tostr(base + INT(ch) + offset)); \
+    set_property("tx/" #ch "/qa/oflow"   , tostr(base + INT(ch) + offset)); \
+    set_property("tx/" #ch "/qa/uflow"   , tostr(base + INT(ch) + offset));
+CHANNELS
+#undef X
+
+    // Using tostr() calls malloc internally (but with very bytes). There will be some
+    // memory leaks, as the string is copied to the property table char array,
+    // but this ok, as the byte count is very small.
+}
 
 size_t get_num_prop(void) {
     return num_properties;
