@@ -3090,8 +3090,8 @@ static const char *tostr(const int num)
 /* -------------------------- EXTERNED FUNCTIONS ---------------------------- */
 /* -------------------------------------------------------------------------- */
 
-// Some elements (like ports) from the property table when the XMACRO was
-// introduced. This function puts them back.
+// Some elements (like ports) from the property table were lost when the
+// XMACRO was introduced. This function puts them back.
 void patch_table(void) {
     const int base = 42820;
     const int offset = ARRAY_SIZE(names);
