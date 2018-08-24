@@ -27,11 +27,14 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
+// Assume there can be as many channels as letters in the alphabet.
+#define MAX_CHANNELS ('z' - 'a' + 1)
+
 // UART communication manager's file descriptor
-// static int uart_comm_fd;
-static int uart_synth_comm_fd;
-static int uart_tx_comm_fd;
-static int uart_rx_comm_fd;
+static int uart_synth_comm_fd = 0;
+
+static int uart_tx_comm_fd[MAX_CHANNELS];
+static int uart_rx_comm_fd[MAX_CHANNELS];
 
 // Inotify's file descriptor
 static int inotify_fd;
@@ -232,22 +235,19 @@ int init_property(uint8_t options) {
     set_uart_debug_opt(options);
     set_mem_debug_opt(options);
 
-    // if ( init_uart_comm(&uart_comm_fd, UART_DEV, 0) < 0 ) {
-    //	PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_DEV1);
-    //	return RETURN_ERROR_COMM_INIT;
-    //}
-
     if (init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0) < 0) {
         PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_SYNTH);
         return RETURN_ERROR_COMM_INIT;
     }
 
-    if (init_uart_comm(&uart_tx_comm_fd, UART_TX, 0) < 0) {
+    // XXX: INIT ALL PLEASE.
+    if (init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0) < 0) {
         PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_TX);
         return RETURN_ERROR_COMM_INIT;
     }
 
-    if (init_uart_comm(&uart_rx_comm_fd, UART_RX, 0) < 0) {
+    // XXX: INIT ALL PLEASE.
+    if (init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0) < 0) {
         PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_RX);
         return RETURN_ERROR_COMM_INIT;
     }

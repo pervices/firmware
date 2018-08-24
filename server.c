@@ -33,6 +33,7 @@
 #include "mmap.h"
 #include "comm_manager.h"
 #include "property_manager.h"
+#include "properties.h"
 #include "parser.h"
 #include "synth_lut.h"
 
@@ -111,6 +112,8 @@ int main(int argc, char *argv[]) {
 
 	verbose = 0;
 	fd_set rfds;
+
+    table_patch();
 
 	ret = mmap_init();
 	if ( EXIT_SUCCESS != ret ) {
