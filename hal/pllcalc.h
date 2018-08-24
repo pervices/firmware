@@ -33,7 +33,7 @@
 
 // For stand alone operation;
 //#define _PLL_DEBUG_STANDALONE //Standalone program, compile with: gcc -lm
-//pllcalc.c #define _PLL_DEBUG_INFO #define _PLL_DEBUG_VERBOSE
+// pllcalc.c #define _PLL_DEBUG_INFO #define _PLL_DEBUG_VERBOSE
 
 #ifndef _PLL_DEBUG_STANDALONE
 #include "common.h"

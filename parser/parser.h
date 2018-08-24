@@ -24,18 +24,18 @@
 #include <stdlib.h>
 #include "common.h"
 
-typedef enum {OP_GET, OP_SET, OP_ERROR} operation_t;
-typedef enum {CMD_SUCCESS, CMD_ERROR} cmd_status_t;
+typedef enum { OP_GET, OP_SET, OP_ERROR } operation_t;
+typedef enum { CMD_SUCCESS, CMD_ERROR } cmd_status_t;
 
 typedef struct cmd {
-	uint32_t seq;
-	operation_t op;	
-	cmd_status_t status;
-	char prop[MAX_PATH_LEN]; // prop is a path variable in linux
-	char data[MAX_PROP_LEN]; // data is the property value
+    uint32_t seq;
+    operation_t op;
+    cmd_status_t status;
+    char prop[MAX_PATH_LEN]; // prop is a path variable in linux
+    char data[MAX_PROP_LEN]; // data is the property value
 } cmd_t;
 
-int parse_cmd(cmd_t* cmd, uint8_t* data);
-void build_cmd(cmd_t* cmd, uint8_t* data, size_t max_size);
+int parse_cmd(cmd_t *cmd, uint8_t *data);
+void build_cmd(cmd_t *cmd, uint8_t *data, size_t max_size);
 
 #endif

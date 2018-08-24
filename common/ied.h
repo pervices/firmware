@@ -11,22 +11,25 @@
 
 #include <syslog.h>
 
-#define I( fmt, args... ) \
-	do { \
-		syslog( LOG_INFO, fmt "\n", ##args ); \
-	} while( 0 )
+#define I(fmt, args...)                                                        \
+    do {                                                                       \
+        syslog(LOG_INFO, fmt "\n", ##args);                                    \
+    } while (0)
 
-#define E( fmt, args... ) \
-	if ( 0 == errno ) { \
-		syslog( LOG_CRIT, "%s: %s(): %d: " fmt "\n", __FILE__, __FUNCTION__, __LINE__, ##args ); \
-	} else { \
-		syslog( LOG_CRIT, "%s: %s(): %d: %s (%d): " fmt "\n", __FILE__, __FUNCTION__, __LINE__, strerror( errno ), errno, ##args ); \
-	}
+#define E(fmt, args...)                                                        \
+    if (0 == errno) {                                                          \
+        syslog(LOG_CRIT, "%s: %s(): %d: " fmt "\n", __FILE__, __FUNCTION__,    \
+               __LINE__, ##args);                                              \
+    } else {                                                                   \
+        syslog(LOG_CRIT, "%s: %s(): %d: %s (%d): " fmt "\n", __FILE__,         \
+               __FUNCTION__, __LINE__, strerror(errno), errno, ##args);        \
+    }
 
-#define D( fmt, args... ) \
-	do { \
-		syslog( LOG_DEBUG, "%s: %s(): " fmt "\n", __FILE__, __FUNCTION__, ##args ); \
-	} while( 0 )
+#define D(fmt, args...)                                                        \
+    do {                                                                       \
+        syslog(LOG_DEBUG, "%s: %s(): " fmt "\n", __FILE__, __FUNCTION__,       \
+               ##args);                                                        \
+    } while (0)
 
 #else /* HAVE_SYSLOG */
 
@@ -35,25 +38,28 @@
 
 #include <stdio.h>
 
-#define I( fmt, args... ) \
-	do { \
-		fprintf( stdout, "I: " fmt "\n", ##args ); \
-	} while( 0 )
+#define I(fmt, args...)                                                        \
+    do {                                                                       \
+        fprintf(stdout, "I: " fmt "\n", ##args);                               \
+    } while (0)
 
-#define E( fmt, args... ) \
-	if ( 0 == errno ) { \
-		fprintf( stderr, "E: %s: %s(): %d: " fmt "\n", __FILE__, __FUNCTION__, __LINE__, ##args ); \
-	} else { \
-		fprintf( stderr, "E: %s: %s(): %d: %s (%d): " fmt "\n", __FILE__, __FUNCTION__, __LINE__, strerror( errno ), errno, ##args ); \
-	}
+#define E(fmt, args...)                                                        \
+    if (0 == errno) {                                                          \
+        fprintf(stderr, "E: %s: %s(): %d: " fmt "\n", __FILE__, __FUNCTION__,  \
+                __LINE__, ##args);                                             \
+    } else {                                                                   \
+        fprintf(stderr, "E: %s: %s(): %d: %s (%d): " fmt "\n", __FILE__,       \
+                __FUNCTION__, __LINE__, strerror(errno), errno, ##args);       \
+    }
 
 #ifdef DEBUG
-#define D( fmt, args... ) \
-	do { \
-		fprintf( stderr, "D: %s: %s(): " fmt "\n", __FILE__, __FUNCTION__, ##args ); \
-	} while( 0 )
+#define D(fmt, args...)                                                        \
+    do {                                                                       \
+        fprintf(stderr, "D: %s: %s(): " fmt "\n", __FILE__, __FUNCTION__,      \
+                ##args);                                                       \
+    } while (0)
 #else
-#define D( fmt, args... )
+#define D(fmt, args...)
 #endif /* DEBUG */
 
 #endif /* HAVE_SYSLOG */

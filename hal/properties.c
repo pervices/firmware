@@ -16,17 +16,17 @@
 //
 
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
-    #include "properties.h"
+#include "properties.h"
 
-    #include "array-utils.h"
-    #include "mmap.h"
-    #include "property_manager.h"
-    #include "synth_lut.h"
+#include "array-utils.h"
+#include "mmap.h"
+#include "property_manager.h"
+#include "synth_lut.h"
 
-    #include <ctype.h>
-    #include <stdbool.h>
-    #include <stdio.h>
-    #include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 #endif
 
 /* clang-format off */
@@ -356,9 +356,7 @@ static int hdlr_load_config(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int set_sma_dir(bool in) {
-    return set_reg_bits("sys2", 4, 1, in);
-}
+static int set_sma_dir(bool in) { return set_reg_bits("sys2", 4, 1, in); }
 
 static int set_sma_pol(bool positive) {
     return set_reg_bits("sys2", 6, 1, positive);
@@ -3092,46 +3090,41 @@ static const char *tostr(const int num)
 /* -------------------------- EXTERNED FUNCTIONS ---------------------------- */
 /* -------------------------------------------------------------------------- */
 
-// Some elements (like ports) from the property table when the XMACRO was introduced.
-// This function puts them back.
-void patch_table(void)
-{
+// Some elements (like ports) from the property table when the XMACRO was
+// introduced. This function puts them back.
+void patch_table(void) {
     const int base = 42820;
     const int offset = LEN(names);
 
     // RX Ports
-#define X(ch) \
-    set_property("rx/" #ch "/link/port", tostr(base + INT(ch)));
+#define X(ch) set_property("rx/" #ch "/link/port", tostr(base + INT(ch)));
     CHANNELS
 #undef X
 
     // RX IP Addresses
-#define X(ch) \
-    set_property("rx/" #ch "/link/ip_dest", INT(ch) % 2 == 0 ? "10.10.10.10" : "10.10.11.10");
+#define X(ch)                                                                  \
+    set_property("rx/" #ch "/link/ip_dest",                                    \
+                 INT(ch) % 2 == 0 ? "10.10.10.10" : "10.10.11.10");
     CHANNELS
 #undef X
 
     // TX Ports
-#define X(ch) \
-    set_property("tx/" #ch "/link/port"  , tostr(base + INT(ch) + offset)); \
-    set_property("tx/" #ch "/qa/fifo_lvl", tostr(base + INT(ch) + offset)); \
-    set_property("tx/" #ch "/qa/oflow"   , tostr(base + INT(ch) + offset)); \
-    set_property("tx/" #ch "/qa/uflow"   , tostr(base + INT(ch) + offset));
+#define X(ch)                                                                  \
+    set_property("tx/" #ch "/link/port", tostr(base + INT(ch) + offset));      \
+    set_property("tx/" #ch "/qa/fifo_lvl", tostr(base + INT(ch) + offset));    \
+    set_property("tx/" #ch "/qa/oflow", tostr(base + INT(ch) + offset));       \
+    set_property("tx/" #ch "/qa/uflow", tostr(base + INT(ch) + offset));
     CHANNELS
 #undef X
 
-    // Using tostr() calls malloc internally (but with very bytes). There will be some
-    // memory leaks, as the string is copied to the property table char array,
-    // but this ok, as the byte count is very small.
+    // Using tostr() calls malloc internally (but with very bytes). There will
+    // be some memory leaks, as the string is copied to the property table char
+    // array, but this ok, as the byte count is very small.
 }
 
-size_t get_num_prop(void) {
-    return num_properties;
-}
+size_t get_num_prop(void) { return num_properties; }
 
-prop_t *get_prop(size_t idx) {
-    return (property_table + idx);
-}
+prop_t *get_prop(size_t idx) { return (property_table + idx); }
 
 prop_t *get_prop_from_wd(int wd) {
     size_t i;
@@ -3215,17 +3208,11 @@ static inline const char *get_home_dir(void) {
     return getpwuid(getuid())->pw_dir;
 }
 
-void pass_uart_synth_fd(int fd) {
-    uart_synth_fd = fd;
-}
+void pass_uart_synth_fd(int fd) { uart_synth_fd = fd; }
 
-void pass_uart_tx_fd(int *fd) {
-    uart_tx_fd = fd;
-}
+void pass_uart_tx_fd(int *fd) { uart_tx_fd = fd; }
 
-void pass_uart_rx_fd(int *fd) {
-    uart_rx_fd = fd;
-}
+void pass_uart_rx_fd(int *fd) { uart_rx_fd = fd; }
 
 char *get_abs_path(prop_t *prop, char *path) {
     strcpy(path, "/var/crimson");
@@ -3590,13 +3577,13 @@ int set_freq_internal(const bool tx, const unsigned channel,
 
     static const fp_t rx_fp[] = {
 #define X(ch) hdlr_rx_##ch##_rf_freq_val,
-    CHANNELS
+        CHANNELS
 #undef X
     };
 
     static const fp_t tx_fp[] = {
 #define X(ch) hdlr_tx_##ch##_rf_freq_val,
-    CHANNELS
+        CHANNELS
 #undef X
     };
 

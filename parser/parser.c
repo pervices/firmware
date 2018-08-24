@@ -17,87 +17,89 @@
 
 #include "parser.h"
 
-
-typedef enum {STATE_SEQ, STATE_OP, STATE_PROP, STATE_DATA} state_t;
+typedef enum { STATE_SEQ, STATE_OP, STATE_PROP, STATE_DATA } state_t;
 
 // seq,op,prop,[data]
-int parse_cmd(cmd_t* cmd, uint8_t* data) {
-	int r;
-	char* tok;
-	char* saveptr = (char *)data;
-	// our packets are either "123,get,foo", or "123,set,foo,bar", so there are a maximum of 4 fields
-	const unsigned n_max = 4;
-	unsigned n;
-	int check;
+int parse_cmd(cmd_t *cmd, uint8_t *data) {
+    int r;
+    char *tok;
+    char *saveptr = (char *)data;
+    // our packets are either "123,get,foo", or "123,set,foo,bar", so there are
+    // a maximum of 4 fields
+    const unsigned n_max = 4;
+    unsigned n;
+    int check;
 
-	PRINT( INFO, "parse(%s)\n", saveptr);
+    PRINT(INFO, "parse(%s)\n", saveptr);
 
-	if (!data || !cmd) return RETURN_ERROR_PARAM;
+    if (!data || !cmd)
+        return RETURN_ERROR_PARAM;
 
-	for(
-		// for loop init
-		n = 0,
-		tok = strtok_r( saveptr, ",", & saveptr );
+    for (
+        // for loop init
+        n = 0, tok = strtok_r(saveptr, ",", &saveptr);
 
-		// for loop condition
-		NULL != tok && n < n_max;
+        // for loop condition
+        NULL != tok && n < n_max;
 
-		// for loop update
-		tok = strtok_r( saveptr, ",", & saveptr ),
-		n++
-	) {
-		switch( n ) {
+        // for loop update
+        tok = strtok_r(saveptr, ",", &saveptr),
+        n++) {
+        switch (n) {
 
-		case 0:
-			// parse a number from a string
-			// sscanf
-			// on error, set r = ...ERROR...; goto out;
-			check = sscanf(tok, "%u", &cmd -> seq);
-			if (check != 1) {
-				PRINT(ERROR, "Unable to parse command.");
-				r = RETURN_ERROR;
-				goto out;
-			}
-			break;
+        case 0:
+            // parse a number from a string
+            // sscanf
+            // on error, set r = ...ERROR...; goto out;
+            check = sscanf(tok, "%u", &cmd->seq);
+            if (check != 1) {
+                PRINT(ERROR, "Unable to parse command.");
+                r = RETURN_ERROR;
+                goto out;
+            }
+            break;
 
-		case 1:
-			// convert "get" or "set" to cmd_op_t
-			// strncmp
-			// on error, set r = ...ERROR...; goto out;
-			if ( strncmp(tok, "get", 3) == 0 ){
-				cmd -> op = OP_GET;
-			}else if (strncmp(tok, "set", 3) == 0){
-				cmd -> op = OP_SET;
-			}else {
-				cmd -> op = OP_ERROR;
-				PRINT(ERROR, "Improper command format, options are get and set only.");
-				r = RETURN_ERROR;
-				goto out;
-			}
-			break;
+        case 1:
+            // convert "get" or "set" to cmd_op_t
+            // strncmp
+            // on error, set r = ...ERROR...; goto out;
+            if (strncmp(tok, "get", 3) == 0) {
+                cmd->op = OP_GET;
+            } else if (strncmp(tok, "set", 3) == 0) {
+                cmd->op = OP_SET;
+            } else {
+                cmd->op = OP_ERROR;
+                PRINT(ERROR,
+                      "Improper command format, options are get and set only.");
+                r = RETURN_ERROR;
+                goto out;
+            }
+            break;
 
-		case 2:
-			// strncpy
-			strncpy(cmd -> prop, tok, sizeof(cmd -> prop));
-			break;
+        case 2:
+            // strncpy
+            strncpy(cmd->prop, tok, sizeof(cmd->prop));
+            break;
 
-		case 3:
-			// strncpy
-			strncpy(cmd -> data, tok, sizeof(cmd -> data));
-			/* no break */
-		default:
-			break;
-		}
-	}
-	r = RETURN_SUCCESS;
+        case 3:
+            // strncpy
+            strncpy(cmd->data, tok, sizeof(cmd->data));
+            /* no break */
+        default:
+            break;
+        }
+    }
+    r = RETURN_SUCCESS;
 out:
-	return r;
+    return r;
 }
 
 // seq,status,[data]
-void build_cmd(cmd_t* cmd, uint8_t* data, size_t max_size) {
-	if (!cmd || !data) return;
+void build_cmd(cmd_t *cmd, uint8_t *data, size_t max_size) {
+    if (!cmd || !data)
+        return;
 
-	memset(data, 0, max_size);
-	snprintf((char*)data, max_size, "%"PRIu32",%i,%s", cmd -> seq, cmd -> status, cmd -> data);
+    memset(data, 0, max_size);
+    snprintf((char *)data, max_size, "%" PRIu32 ",%i,%s", cmd->seq, cmd->status,
+             cmd->data);
 }

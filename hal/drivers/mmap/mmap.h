@@ -18,8 +18,8 @@
 #ifndef MMAP_H_
 #define MMAP_H_
 
-#define PAGE_SIZE	( getpagesize() )
-#define PAGE_MASK	( getpagesize() - 1 )
+#define PAGE_SIZE (getpagesize())
+#define PAGE_MASK (getpagesize() - 1)
 
 #include <stdio.h>
 #include <unistd.h>
@@ -32,14 +32,14 @@
 #include <errno.h>
 #include "common.h"
 
-int burst_read_hps_addr(uint32_t addr, uint32_t* data, size_t bytes_to_read);
-int busrt_write_hps_addr(uint32_t addr, uint32_t* data, size_t bytes_to_write);
-int read_hps_addr(uint32_t addr, uint32_t* data);
+int burst_read_hps_addr(uint32_t addr, uint32_t *data, size_t bytes_to_read);
+int busrt_write_hps_addr(uint32_t addr, uint32_t *data, size_t bytes_to_write);
+int read_hps_addr(uint32_t addr, uint32_t *data);
 int write_hps_addr(uint32_t addr, uint32_t data);
-int read_hps_reg(const char* reg, uint32_t* data);
-int write_hps_reg(const char* reg, uint32_t data);
+int read_hps_reg(const char *reg, uint32_t *data);
+int write_hps_reg(const char *reg, uint32_t data);
 int write_hps_addr_mask(uint32_t addr, uint32_t data, uint32_t mask);
-int write_hps_reg_mask(const char* reg, uint32_t data, uint32_t mask);
+int write_hps_reg_mask(const char *reg, uint32_t data, uint32_t mask);
 
 void list_hps_reg(uint8_t verbosity);
 int dump_hps_reg(void);

@@ -4,12 +4,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct synth_rec __attribute__(( packed ));
+struct synth_rec __attribute__((packed));
 
 typedef struct synth_rec {
-	uint8_t core;
-	uint8_t band;
-	uint8_t bias;
+    uint8_t core;
+    uint8_t band;
+    uint8_t bias;
 } synth_rec_t;
 
 /**
@@ -22,7 +22,7 @@ typedef struct synth_rec {
  * @param channel The channel to enable calibration on
  * @return        0 on success or an errno value on error
  */
-int synth_lut_enable( const bool tx, const size_t channel );
+int synth_lut_enable(const bool tx, const size_t channel);
 /**
  * Enable usage of synthesizer calibration tables when setting frequency
  * for all channels.
@@ -34,7 +34,7 @@ int synth_lut_enable_all();
 /**
  * Enable usage of synthesizer calibration tables when setting frequency.
  */
-void synth_lut_disable( const bool tx, const size_t channel );
+void synth_lut_disable(const bool tx, const size_t channel);
 
 /**
  * Disable usage of synthesizer calibration tables when setting frequency
@@ -55,13 +55,13 @@ int synth_lut_enable_all_if_calibrated();
  *
  * @return true when enabled, false otherwise.
  */
-bool synth_lut_is_enabled( const bool tx, const size_t channel );
+bool synth_lut_is_enabled(const bool tx, const size_t channel);
 
 /**
  * Clear synth calibration tables for one channel.
  * This will call synth_lut_disable() internally.
  */
-void synth_lut_erase( const bool tx, const size_t channel );
+void synth_lut_erase(const bool tx, const size_t channel);
 
 /**
  * Clear all synth calibration tables. This will call synth_lut_disable()
@@ -76,10 +76,11 @@ void synth_lut_erase_all();
  * @param channel the channel (number, i.e. 0, rather than 'A')
  * @return        true if calibration data exists, otherwise false.
  */
-bool synth_lut_is_calibrated( const bool tx, const size_t channel );
+bool synth_lut_is_calibrated(const bool tx, const size_t channel);
 
 /**
- * Get the calibrated synthesizer settings for a specific frequency on a specific channel.
+ * Get the calibrated synthesizer settings for a specific frequency on a
+ * specific channel.
  *
  * @param tx      true if the setting is for tx
  * @param channel the channel (number, i.e. 0, rather than 'A')
@@ -88,8 +89,10 @@ bool synth_lut_is_calibrated( const bool tx, const size_t channel );
  * @return        0 on success.
  *                EINVAL if rec is NULL.
  *                EINVAL if channel is out of range.
- *                EINVAL if freq is not an exact positive multiple of the LO step size.
+ *                EINVAL if freq is not an exact positive multiple of the LO
+ * step size.
  */
-int synth_lut_get( const bool tx, const uint8_t channel, const double freq, synth_rec_t *rec );
+int synth_lut_get(const bool tx, const uint8_t channel, const double freq,
+                  synth_rec_t *rec);
 
 #endif /* SYNTH_LUT_H_ */
