@@ -116,7 +116,7 @@ static const char* const names[] = {
 // This expands nicely into an array of strings that looks something like
 // this: { "a", "b", "c" ... }.
 // The number of channels is simply the length of the this array.
-#define NUM_CHANNELS LEN(names)
+#define NUM_CHANNELS ARRAY_SIZE(names)
 
 // And that's all there is to the XMACRO.
 // The XMACRO will be used heavily later on to expand
@@ -3075,7 +3075,7 @@ static prop_t property_table[] = {
     DEFINE_CM()
 };
 
-static const size_t num_properties = LEN(property_table);
+static const size_t num_properties = ARRAY_SIZE(property_table);
 
 static const char *tostr(const int num)
 {
@@ -3094,7 +3094,7 @@ static const char *tostr(const int num)
 // introduced. This function puts them back.
 void patch_table(void) {
     const int base = 42820;
-    const int offset = LEN(names);
+    const int offset = ARRAY_SIZE(names);
 
     // RX Ports
 #define X(ch) set_property("rx/" #ch "/link/port", tostr(base + INT(ch)));

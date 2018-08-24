@@ -33,6 +33,7 @@
 #include "mmap.h"
 #include "comm_manager.h"
 #include "property_manager.h"
+#include "array-utils.h"
 #include "properties.h"
 #include "parser.h"
 #include "synth_lut.h"
@@ -55,7 +56,7 @@ static int port_nums[] = {
     42809, 42810, 42811, 42812, 42813, 42814, 42815, 42816,
 };
 
-static int comm_fds[LEN(port_nums)];
+static int comm_fds[ARRAY_SIZE(port_nums)];
 
 void server_init_led() {
     write_hps_reg("led1", 0x1);        // Solid green
@@ -120,7 +121,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Initialize network communications for each port
-    for (i = 0; i < LEN(port_nums); i++) {
+    for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
         if (init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0) {
             PRINT(ERROR, "%s, cannot initialize network %s\n", __func__,
                   ENET_DEV);
@@ -160,7 +161,7 @@ int main(int argc, char *argv[]) {
 
         // Set up read file descriptor set for select(2)
         FD_ZERO(&rfds);
-        for (i = 0; i < LEN(port_nums); i++) {
+        for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
             FD_SET(comm_fds[i], &rfds);
             if (comm_fds[i] >= highest_fd) {
                 highest_fd = comm_fds[i];
@@ -192,7 +193,7 @@ int main(int argc, char *argv[]) {
         default:
 
             // Service other management requests
-            for (i = 0; i < LEN(port_nums); i++) {
+            for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
 
                 if (!FD_ISSET(comm_fds[i], &rfds)) {
                     continue;
@@ -274,7 +275,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Close the file descriptors
-    for (i = 0; i < LEN(port_nums); i++) {
+    for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
         close_udp_comm(comm_fds[i]);
     }
 
