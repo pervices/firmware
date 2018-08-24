@@ -8,3 +8,7 @@ build:
         - autoreconf --install
         - autoconf && aclocal && sh autogen.sh && sh configure
         - make && make install && make install-strip
+    artifacts:
+        name: "$CI_JOB_NAME"
+        untracked: true
+        expire_in: 1 day
