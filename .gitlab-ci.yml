@@ -1,12 +1,10 @@
 stages:
-    - prepare
     - build
-
-prep:
-    stage: prepare
-    script: apt-get update && apt-get install -y dh-autoreconf
 
 build:
     stage: build
-    script: sh autogen.sh; make; make install
-
+    script: 
+        - apt-get update && apt-get install -y dh-autoreconf
+        - autoreconf --install
+        - autoconf && aclocal && sh autogen.sh && sh configure
+        - make && make install
