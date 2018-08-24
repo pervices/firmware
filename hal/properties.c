@@ -15,18 +15,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#if 1
+#if 0 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
-
-    #include <ctype.h>
-    #include <stdbool.h>
-    #include <stdio.h>
-    #include <string.h>
 
     #include "array-utils.h"
     #include "mmap.h"
     #include "property_manager.h"
     #include "synth_lut.h"
+
+    #include <ctype.h>
+    #include <stdbool.h>
+    #include <stdio.h>
+    #include <string.h>
 #endif
 
 /* clang-format off */
@@ -65,23 +65,35 @@
 // Property functions are writen once and expanded N times for however many
 // channels specified. Channels are specified here. Channel operations will be
 // done in the order of this specification.
-#define CHANNELS  \
-    X(a) /*  0 */ \
-    X(b) /*  1 */ \
-    X(c) /*  2 */ \
-    X(d) /*  3 */ \
-    X(e) /*  4 */ \
-    X(f) /*  5 */ \
-    X(g) /*  6 */ \
-    X(h) /*  7 */ \
-    X(i) /*  8 */ \
-    X(j) /*  9 */ \
-    X(k) /* 10 */ \
-    X(l) /* 11 */ \
-    X(m) /* 12 */ \
-    X(n) /* 13 */ \
-    X(o) /* 14 */ \
-    X(p) /* 15 */
+
+#define VAUNT
+#if defined(VAUNT)
+    #define CHANNELS  \
+        X(a) /*  0 */ \
+        X(b) /*  1 */ \
+        X(c) /*  2 */ \
+        X(e) /*  3 */
+#elif defined(TATE)
+    #define CHANNELS  \
+        X(a) /*  0 */ \
+        X(b) /*  1 */ \
+        X(c) /*  2 */ \
+        X(d) /*  3 */ \
+        X(e) /*  4 */ \
+        X(f) /*  5 */ \
+        X(g) /*  6 */ \
+        X(h) /*  7 */ \
+        X(i) /*  8 */ \
+        X(j) /*  9 */ \
+        X(k) /* 10 */ \
+        X(l) /* 11 */ \
+        X(m) /* 12 */ \
+        X(n) /* 13 */ \
+        X(o) /* 14 */ \
+        X(p) /* 15 */
+#else
+    #error "Project name (VAUNT | TATE) not specified or not recognized."
+#endif
 
 // This channel specification is also known as an XMACRO:
 // https://en.wikipedia.org/wiki/X_Macro.
@@ -3084,7 +3096,7 @@ static const char *tostr(const int num)
 
 // Some elements (like ports) from the property table when the XMACRO was introduced.
 // This function puts them back.
-void table_patch(void)
+void patch_table(void)
 {
     const int base = 42820;
     const int offset = LEN(names);
@@ -3092,13 +3104,13 @@ void table_patch(void)
     // RX Ports
 #define X(ch) \
     set_property("rx/" #ch "/link/port", tostr(base + INT(ch)));
-CHANNELS
+    CHANNELS
 #undef X
 
     // RX IP Addresses
 #define X(ch) \
     set_property("rx/" #ch "/link/ip_dest", INT(ch) % 2 == 0 ? "10.10.10.10" : "10.10.11.10");
-CHANNELS
+    CHANNELS
 #undef X
 
     // TX Ports
@@ -3107,7 +3119,7 @@ CHANNELS
     set_property("tx/" #ch "/qa/fifo_lvl", tostr(base + INT(ch) + offset)); \
     set_property("tx/" #ch "/qa/oflow"   , tostr(base + INT(ch) + offset)); \
     set_property("tx/" #ch "/qa/uflow"   , tostr(base + INT(ch) + offset));
-CHANNELS
+    CHANNELS
 #undef X
 
     // Using tostr() calls malloc internally (but with very bytes). There will be some

@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 	verbose = 0;
 	fd_set rfds;
 
-    table_patch();
+    patch_table();
 
 	ret = mmap_init();
 	if ( EXIT_SUCCESS != ret ) {

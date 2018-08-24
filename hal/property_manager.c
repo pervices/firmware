@@ -240,17 +240,19 @@ int init_property(uint8_t options) {
         return RETURN_ERROR_COMM_INIT;
     }
 
-    // XXX: INIT ALL PLEASE.
+    // TX (XXX: CHEATING: REQUIRES PARSING EXTERNAL FILE)
     if (init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0) < 0) {
         PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_TX);
         return RETURN_ERROR_COMM_INIT;
     }
+    uart_tx_comm_fd[1] = uart_tx_comm_fd[2] = uart_tx_comm_fd[3] = uart_tx_comm_fd[0];
 
-    // XXX: INIT ALL PLEASE.
+    // RX (XXX: CHEATING: REQUIRES PARSING EXTERNAL FILE)
     if (init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0) < 0) {
         PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_RX);
         return RETURN_ERROR_COMM_INIT;
     }
+    uart_rx_comm_fd[1] = uart_rx_comm_fd[2] = uart_rx_comm_fd[3] = uart_rx_comm_fd[0];
 
     PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
     PRINT(VERBOSE, "Initializing Inotify\n");
