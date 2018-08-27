@@ -1,7 +1,19 @@
-/*
- * (c) 2014 Per Vices Corporation.
- * See license.txt for license information.
- */
+//
+// Copyright 2014 - 2019 Per Vices Corporation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 /**
  * \file interp_gain_lut.h
@@ -25,6 +37,7 @@
 
 #ifndef _INTERP_GAIN_LUT_H_
 #define _INTERP_GAIN_LUT_H_
+
 static const uint8_t interp_gain_lut[65536] = {
     128, 128, 135, 128, 84,  135, 124, 128, 142, 84,  104, 135, 90,  124, 88,
     128, 94,  142, 108, 84,  131, 104, 83,  135, 110, 90,  149, 124, 104, 88,
@@ -4396,4 +4409,5 @@ static const uint8_t interp_gain_lut[65536] = {
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
     128};
+
 #endif

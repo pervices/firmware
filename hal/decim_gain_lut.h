@@ -1,7 +1,19 @@
-/*
- * (c) 2014 Per Vices Corporation.
- * See license.txt for license information.
- */
+//
+// Copyright 2014 - 2019 Per Vices Corporation
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 /**
  * \file decim_gain_lut.h
@@ -25,6 +37,7 @@
 
 #ifndef _DECIM_GAIN_LUT_H_
 #define _DECIM_GAIN_LUT_H_
+
 static const uint8_t decim_gain_lut[65536] = {
     128, 66,  90,  66,  67,  46,  72,  66,  127, 69,  76,  93,  112, 73,  95,
     66,  89,  130, 92,  69,  101, 78,  117, 93,  71,  115, 89,  73,  116, 97,
@@ -4395,5 +4408,7 @@ static const uint8_t decim_gain_lut[65536] = {
     66,  66,  66,  66,  66,  66,  66,  64,  64,  64,  64,  64,  64,  64,  64,
     64,  64,  64,  64,  64,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,
     66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,
-    66};
+    66
+};
+
 #endif
