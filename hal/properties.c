@@ -64,7 +64,6 @@
 // channels specified. Channels are specified here. Channel operations will be
 // done in the order of this specification.
 
-#define VAUNT
 #if defined(VAUNT)
     #define CHANNELS  \
         X(a) /*  0 */ \

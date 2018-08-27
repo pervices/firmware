@@ -26,9 +26,49 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 
-#define UART_SYNTH "/dev/ttycrimson-time"
-#define UART_TX "/dev/ttycrimson-tx"
-#define UART_RX "/dev/ttycrimson-rx"
+#if defined(VAUNT)
+    #define UART_SYNTH "/dev/ttycrimson-time"
+    #define UART_TX "/dev/ttycrimson-tx"
+    #define UART_RX "/dev/ttycrimson-rx"
+#elif defined(TATE)
+    #define UART_SYNTH "/dev/ttytate-time"
+    #define UART_TX { \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+        "/dev/ttytate-tx", \
+    }
+    #define UART_RX { \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+        "/dev/ttytate-rx", \
+    }
+#endif
 
 int get_inotify_fd();
 

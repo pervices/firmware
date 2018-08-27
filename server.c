@@ -38,25 +38,7 @@
 #include "parser.h"
 #include "synth_lut.h"
 
-#define ENET_DEV "eth0"
-
-// Profile flags, read in this file, triggered in properties.c
-static uint8_t load_profile = 0;
-static uint8_t save_profile = 0;
-static char load_profile_path[MAX_PROP_LEN];
-static char save_profile_path[MAX_PROP_LEN];
-
-// Execution options
-uint8_t options = 0;
-
-// Comm ports
-static int port_nums[] = {
-    42799, /* UDP Management Port */
-    42800, 42801, 42802, 42803, 42804, 42805, 42806, 42807, 42808,
-    42809, 42810, 42811, 42812, 42813, 42814, 42815, 42816,
-};
-
-static int comm_fds[ARRAY_SIZE(port_nums)];
+extern int verbose;
 
 void server_init_led() {
     write_hps_reg("led1", 0x1);        // Solid green
@@ -68,13 +50,29 @@ void server_ready_led() {
     write_hps_reg("led0", 0x1);
 }
 
-extern int verbose;
-
 int main(int argc, char *argv[]) {
 
     int ret = 0;
     int i = 0;
-    cmd_t cmd;
+    cmd_t cmd = { 0 };
+
+    uint8_t load_profile = 0;
+    uint8_t save_profile = 0;
+
+    uint8_t options = 0;
+
+    char load_profile_path[MAX_PROP_LEN];
+    char save_profile_path[MAX_PROP_LEN];
+
+    const int port_nums[] = {
+        42799, /* UDP Management Port */
+        42800, 42801, 42802, 42803, 42804, 42805, 42806, 42807, 42808,
+        42809, 42810, 42811, 42812, 42813, 42814, 42815, 42816,
+    };
+
+    int comm_fds[ARRAY_SIZE(port_nums)];
+
+    const char* const enet_dev = "eth0";
 
     verbose = 0;
     fd_set rfds;
@@ -122,9 +120,9 @@ int main(int argc, char *argv[]) {
 
     // Initialize network communications for each port
     for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
-        if (init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0) {
+        if (init_udp_comm(&(comm_fds[i]), enet_dev, port_nums[i], 0) < 0) {
             PRINT(ERROR, "%s, cannot initialize network %s\n", __func__,
-                  ENET_DEV);
+                  enet_dev);
             return RETURN_ERROR_COMM_INIT;
         }
     }
