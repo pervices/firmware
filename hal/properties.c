@@ -299,7 +299,6 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     }
 CHANNELS
 #undef X
-// This will be the theme for the rest of this property file.
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- GATE ------------------------------------ */
@@ -2775,6 +2774,8 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     #define PROJECT_NAME "crimson_tng"
 #elif defined(TATE)
     #define PROJECT_NAME "tate" /* Name unknown for now... */
+#else
+    #error "Project name (VAUNT | TATE) not defined"
 #endif
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
@@ -3020,7 +3021,8 @@ void patch_tree(void) {
 
     // Using tostr() calls malloc internally (but with very bytes). There will
     // be some memory leaks, as the string is copied to the property table char
-    // array, but this ok, as the byte count is very small.
+    // array, but this is ok, as the byte count for int to string conversion is
+    // very small.
 }
 
 size_t get_num_prop(void) { return num_properties; }

@@ -1,5 +1,5 @@
-#ifndef _XMACRO_H_
-#define _XMACRO_H_
+#ifndef XMACRO_H_
+#define XMACRO_H_
 
 /* clang-format off */
 
