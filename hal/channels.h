@@ -67,7 +67,7 @@
 
 // Channel names as strings.
 static const char* const channel_names[] = {
-#define X(ch) STR(ch)
+#define X(ch) STR(ch),
     CHANNELS
 #undef X
 };
