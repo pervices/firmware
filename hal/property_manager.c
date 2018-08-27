@@ -38,14 +38,9 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-// Assume there can be as many channels as letters in the alphabet.
-#define MAX_CHANNELS ('z' - 'a' + 1)
-
-// UART communication manager's file descriptor
 static int uart_synth_comm_fd = 0;
-// TX an RX comm FD
-static int uart_tx_comm_fd[MAX_CHANNELS];
-static int uart_rx_comm_fd[MAX_CHANNELS];
+static int uart_tx_comm_fd[ARRAY_SIZE(channel_names)] = { 0 };
+static int uart_rx_comm_fd[ARRAY_SIZE(channel_names)] = { 0 };
 
 // Inotify's file descriptor
 static int inotify_fd;
