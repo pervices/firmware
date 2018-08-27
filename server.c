@@ -54,9 +54,12 @@ int main(int argc, char *argv[]) {
     char save_profile_path[MAX_PROP_LEN];
 
     const int port_nums[] = {
-        42799, /* UDP Management Port */
-        42800, 42801, 42802, 42803, 42804, 42805, 42806, 42807, 42808,
-        42809, 42810, 42811, 42812, 42813, 42814, 42815, 42816,
+        /* UDP management port */
+        42799,
+        /* Crimson ports */
+        42800, 42801, 42802, 42803, 42804, 42805, 42806, 42807,
+        /* Additional TATE ports */
+        42808, 42809, 42810, 42811, 42812, 42813, 42814, 42815, 42816,
     };
 
     int comm_fds[ARRAY_SIZE(port_nums)];
