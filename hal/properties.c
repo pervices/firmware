@@ -17,7 +17,7 @@
 
 /* clang-format off */
 
-#if 0 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
+#if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
 
     #include "array-utils.h"
