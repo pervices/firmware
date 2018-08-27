@@ -17,14 +17,13 @@
 
 /* clang-format off */
 
-#if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
+#if 0 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
 
     #include "array-utils.h"
     #include "mmap.h"
     #include "property_manager.h"
     #include "synth_lut.h"
-    #include "channels.h"
 
     #include <ctype.h>
     #include <stdbool.h>
@@ -32,9 +31,7 @@
     #include <string.h>
 #endif
 
-/* -------------------------------------------------------------------------- */
-/* -------------------------- SOME CPP DEFINES ------------------------------ */
-/* -------------------------------------------------------------------------- */
+#include "channels.h"
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
@@ -57,28 +54,23 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
-/* -------------------------------------------------------------------------- */
-/* -------------------------- GLOBAL VARIABLES ------------------------------ */
-/* -------------------------------------------------------------------------- */
-
 // A typical VAUNT file descriptor layout may look something like this:
-// RX = { 0, 0, 0, 0 }
-// TX = { 1, 1, 1, 1 }
+// RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
+// TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
+// Assuming file descriptors 0 and 1 are both valid.
 // For TATE, as there sixteen channels, with each file descriptor pointing to a
 // unique MCU:
 // RX = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
 // TX = {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 }
 // Note that RX is -1 here as TATE is very configurable with its backplane
 // configuration setup. One client may want 16 TX and 0 RX lines, while
-// another may want half and half:
-// RX = { -1, -1, -1, -1, -1, -1, -1, -1,  8,  9, 10, 11, 12, 13, 14, 15 }
+// another may want 8 TX and 8 RX lines:
+// RX = {  0,  1,  2,  3,  4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1 }
 // TX = {  0,  1,  2,  3,  4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1 }
-
 static int *uart_tx_fd = NULL;
 static int *uart_rx_fd = NULL;
 
-// For VAUNT and TATE there is always one MCU for time control, and thus one
-// file descriptor.
+// For VAUNT and TATE there is always one MCU for time control.
 static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
@@ -1627,7 +1619,7 @@ CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
-/* --------------------------------- CM ------------------------------------- */
+/* ------------------------------ CHANNEL MASK ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
 static uint16_t cm_chanmask_get(const char *path) {
@@ -2779,6 +2771,12 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
+#if defined(VAUNT)
+    #define PROJECT_NAME "crimson_tng"
+#elif defined(TATE)
+    #define PROJECT_NAME "tate" /* Name unknown for now... */
+#endif
+
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
         .type = PROP_TYPE_FILE,      \
@@ -2925,7 +2923,7 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     DEFINE_FILE_PROP("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "")                  \
     DEFINE_FILE_PROP("fpga/about/hw_ver"                   , hdlr_fpga_about_hw_ver,                 RW, VERSION)             \
     DEFINE_FILE_PROP("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001")               \
-    DEFINE_FILE_PROP("fpga/about/name"                     , hdlr_invalid,                           RO, "crimson_tng")       \
+    DEFINE_FILE_PROP("fpga/about/name"                     , hdlr_invalid,                           RO, PROJECT_NAME)        \
     DEFINE_FILE_PROP("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001")               \
     DEFINE_FILE_PROP("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm")  \
     DEFINE_FILE_PROP("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0")                 \
@@ -2954,7 +2952,7 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     DEFINE_FILE_PROP("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0")                 \
     DEFINE_FILE_PROP("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "1400")              \
     DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, "crimson_tng")       \
+    DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
     DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
 
 #define DEFINE_CM()                                                    \
