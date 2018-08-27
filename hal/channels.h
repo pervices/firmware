@@ -33,7 +33,7 @@
         X(a) /*  0 */ \
         X(b) /*  1 */ \
         X(c) /*  2 */ \
-        X(e) /*  3 */
+        X(d) /*  3 */
 #elif defined(TATE)
     #define CHANNELS  \
         X(a) /*  0 */ \
