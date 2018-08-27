@@ -37,18 +37,7 @@
 #include "properties.h"
 #include "parser.h"
 #include "synth_lut.h"
-
-extern int verbose;
-
-void server_init_led() {
-    write_hps_reg("led1", 0x1);        // Solid green
-    write_hps_reg("led0", 0x00070003); // Flashing green
-}
-
-void server_ready_led() {
-    write_hps_reg("led1", 0x1);
-    write_hps_reg("led0", 0x1);
-}
+#include "led.h"
 
 int main(int argc, char *argv[]) {
 
@@ -74,7 +63,9 @@ int main(int argc, char *argv[]) {
 
     const char *const enet_dev = "eth0";
 
+    extern int verbose;
     verbose = 0;
+
     fd_set rfds;
 
     ret = mmap_init();
