@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
     int ret = 0;
     int i = 0;
-    cmd_t cmd = { 0 };
+    cmd_t cmd = {0};
 
     uint8_t load_profile = 0;
     uint8_t save_profile = 0;
@@ -72,12 +72,10 @@ int main(int argc, char *argv[]) {
 
     int comm_fds[ARRAY_SIZE(port_nums)];
 
-    const char* const enet_dev = "eth0";
+    const char *const enet_dev = "eth0";
 
     verbose = 0;
     fd_set rfds;
-
-    patch_table();
 
     ret = mmap_init();
     if (EXIT_SUCCESS != ret) {

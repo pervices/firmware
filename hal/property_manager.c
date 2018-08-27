@@ -15,17 +15,25 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "property_manager.h"
+/* clang-format off */
 
-#include "comm_manager.h"
-#include "common.h"
-#include "mmap.h" // shouldn't need to include this, this is here for errata fixing
-#include "properties.h"
-#include "array-utils.h"
-#include "uart.h"
+#if 1
+    #include "property_manager.h"
 
-#include <stdbool.h>
-#include <unistd.h>
+    #include "comm_manager.h"
+    #include "common.h"
+    #include "mmap.h" // shouldn't need to include this, this is here for errata fixing
+    #include "properties.h"
+    #include "array-utils.h"
+    #include "uart.h"
+
+    #include <stdbool.h>
+    #include <unistd.h>
+#endif
+
+#include "channels.h"
+
+/* clang-format on */
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
@@ -229,6 +237,9 @@ int get_inotify_fd() { return inotify_fd; }
 // Initialize handler functions
 int init_property(uint8_t options) {
 
+    /* Sometimes things break when one codebase covers two projects */
+    patch_tree();
+
     // uart transactions
     PRINT(VERBOSE, "Initializing UART\n");
 
@@ -237,39 +248,24 @@ int init_property(uint8_t options) {
     set_uart_debug_opt(options);
     set_mem_debug_opt(options);
 
-    /* SYNTH UART FILE DESCRIPTOR SETUP */
-    {
-        int fd = 0;
-        if (init_uart_comm(&fd, UART_SYNTH, 0) < 0) {
-            PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_SYNTH);
-            return RETURN_ERROR_COMM_INIT;
-        }
-        uart_synth_comm_fd = fd;
-    }
+    /* Setup all UART devices */
+    init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
 #if defined(VAUNT)
-    /* TX UART FILE DESCRIPTOR SETUP */
-    {
-        int fd = 0;
-        if (init_uart_comm(&fd, UART_TX, 0) < 0) {
-            PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_TX);
-            return RETURN_ERROR_COMM_INIT;
-        }
-        for(int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
-            uart_tx_comm_fd[i] = fd;
-    }
+    #define SETUP \
+        init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0); \
+        init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0); \
+        for(int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++) uart_tx_comm_fd[i] = uart_tx_comm_fd[0]; \
+        for(int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++) uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
+    SETUP
 
-    /* RX UART FILE DESCRIPTOR SETUP */
-    {
-        int fd = 0;
-        if (init_uart_comm(&fd, UART_RX, 0) < 0) {
-            PRINT(ERROR, "%s, cannot initialize uart %s\n", __func__, UART_RX);
-            return RETURN_ERROR_COMM_INIT;
-        }
-        for(int i = 0; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
-            uart_rx_comm_fd[i] = fd;
-    }
 #elif defined(TATE)
+    #define X(ch) \
+        init_uart_comm(&uart_tx_comm_fd[INT(ch)], "/dev/ttytatetx"STR(ch), 0); \
+        init_uart_comm(&uart_rx_comm_fd[INT(ch)], "/dev/ttytaterx"STR(ch), 0);
+    CHANNELS
+    #undef X
+
 #endif
 
     PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");

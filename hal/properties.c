@@ -15,21 +15,22 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
-#include "properties.h"
-
-#include "array-utils.h"
-#include "mmap.h"
-#include "property_manager.h"
-#include "synth_lut.h"
-
-#include <ctype.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#endif
-
 /* clang-format off */
+
+#if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
+    #include "properties.h"
+
+    #include "array-utils.h"
+    #include "mmap.h"
+    #include "property_manager.h"
+    #include "synth_lut.h"
+    #include "channels.h"
+
+    #include <ctype.h>
+    #include <stdbool.h>
+    #include <stdio.h>
+    #include <string.h>
+#endif
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------- SOME CPP DEFINES ------------------------------ */
@@ -57,83 +58,8 @@
 #define STREAM_OFF 0
 
 /* -------------------------------------------------------------------------- */
-/* -------------------------- SOME XMACRO TALK ------------------------------ */
-/* -------------------------------------------------------------------------- */
-
-// Property functions are writen once and expanded N times for however many
-// channels specified. Channels are specified here. Channel operations will be
-// done in the order of this specification.
-
-#if defined(VAUNT)
-    #define CHANNELS  \
-        X(a) /*  0 */ \
-        X(b) /*  1 */ \
-        X(c) /*  2 */ \
-        X(e) /*  3 */
-#elif defined(TATE)
-    #define CHANNELS  \
-        X(a) /*  0 */ \
-        X(b) /*  1 */ \
-        X(c) /*  2 */ \
-        X(d) /*  3 */ \
-        X(e) /*  4 */ \
-        X(f) /*  5 */ \
-        X(g) /*  6 */ \
-        X(h) /*  7 */ \
-        X(i) /*  8 */ \
-        X(j) /*  9 */ \
-        X(k) /* 10 */ \
-        X(l) /* 11 */ \
-        X(m) /* 12 */ \
-        X(n) /* 13 */ \
-        X(o) /* 14 */ \
-        X(p) /* 15 */
-#else
-    #error "Project name (VAUNT | TATE) not specified or not recognized."
-#endif
-
-// This channel specification is also known as an XMACRO:
-// https://en.wikipedia.org/wiki/X_Macro.
-// An XMACRO can expand a preprocessor defintion and do some very valuable
-// work using the following three tools (STR, CHR, INT).
-#define STR(ch) #ch
-#define CHR(ch) #ch[0]
-#define INT(ch) ((int)(CHR(ch) - 'a'))
-
-// STR converts a channel letter to a compile time string
-//    -> (assuming strings are "a", "b", "c" ... "z").
-// CHR converts the string into a runtime char.
-// INT converts the char into a runtime integer.
-//
-// Let us try building an array of channel names using the XMACRO.
-static const char* const names[] = {
-#define X(ch) STR(ch)
-    CHANNELS
-#undef X
-};
-
-// This expands nicely into an array of strings that looks something like
-// this: { "a", "b", "c" ... }.
-// The number of channels is simply the length of the this array.
-#define NUM_CHANNELS ARRAY_SIZE(names)
-
-// And that's all there is to the XMACRO.
-// The XMACRO will be used heavily later on to expand
-// channel functions into N times over for as many channels as there are.
-// The CHANNEL preprocessor list can be reconfigured for however many
-// channels the server needs.
-
-/* -------------------------------------------------------------------------- */
 /* -------------------------- GLOBAL VARIABLES ------------------------------ */
 /* -------------------------------------------------------------------------- */
-
-// These file descriptors point to MCU devices.
-// For VAUNT, the TX and RX will use only one file descriptor as four TX
-// channels share one MCU and four RX channels share another MCU.
-// For TATE, there is one TX file descriptor per channel, and one RX file
-// descriptor per channel, as each channel uses its own MCU.
-static int *uart_tx_fd = NULL;
-static int *uart_rx_fd = NULL;
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0 }
@@ -148,6 +74,9 @@ static int *uart_rx_fd = NULL;
 // RX = { -1, -1, -1, -1, -1, -1, -1, -1,  8,  9, 10, 11, 12, 13, 14, 15 }
 // TX = {  0,  1,  2,  3,  4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1 }
 
+static int *uart_tx_fd = NULL;
+static int *uart_rx_fd = NULL;
+
 // For VAUNT and TATE there is always one MCU for time control, and thus one
 // file descriptor.
 static int uart_synth_fd = 0;
@@ -155,9 +84,6 @@ static int uart_synth_fd = 0;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 
-// Here we XMACRO expand again, but just with PWR_OFF so that the array
-// looks like { PWR_OFF, PWR_OFF, PWR_OFF ... } for as ever many
-// channels as there are.
 static uint8_t rx_power[] = {
 #define X(ch) PWR_OFF,
     CHANNELS
@@ -176,12 +102,6 @@ static uint8_t rx_stream[] = {
 #undef X
 };
 
-// Here is another XMACRO expand, but this one looks like:
-// {
-//   "rxa4", "rxb4", "rxc4", "rxd4" ...
-//   "txa4", "txb4", "txc4", "txd4" ...
-// }
-// for however many channels there are.
 static const char *reg4[] = {
 #define X(ch) "rx"STR(ch)"4",
     CHANNELS
@@ -191,9 +111,6 @@ static const char *reg4[] = {
 #undef X
 };
 
-// More XMACRO fun (you're starting to get the idea now) but this array
-// is just an array of 17's: { 17, 17, 17 ... 17 } for however many
-// channels there are.
 static int i_bias[] = {
 #define X(ch) 17,
     CHANNELS
@@ -206,8 +123,6 @@ static int q_bias[] = {
 #undef X
 };
 
-// The server can be saved and loaded from disk. These pointers will
-// help with that.
 uint8_t *_save_profile;
 uint8_t *_load_profile;
 char *_save_profile_path;
@@ -383,11 +298,6 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     return r;
 }
 
-// And here we start with the REAL Xmacro work.
-// As you can see, each function name has a channel character placed
-// where ##ch## is found. Within the function, something else changes too,
-// like here, where the function argument for 'channel' is specified with the
-// INT preprocessor helper.
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
@@ -2869,10 +2779,6 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-// This is the file property tree which links all XMACRO expanded functions above
-// to a file path with some sort of default value. The default values
-// should ideally be pulled from the MCU to prevent extensive configuration.
-
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
         .type = PROP_TYPE_FILE,      \
@@ -3089,11 +2995,9 @@ static const char *tostr(const int num)
 /* -------------------------- EXTERNED FUNCTIONS ---------------------------- */
 /* -------------------------------------------------------------------------- */
 
-// Some elements (like ports) from the property table were lost when the
-// XMACRO was introduced. This function puts them back.
-void patch_table(void) {
+void patch_tree(void) {
     const int base = 42820;
-    const int offset = ARRAY_SIZE(names);
+    const int offset = NUM_CHANNELS;
 
     // RX Ports
 #define X(ch) set_property("rx/" #ch "/link/port", tostr(base + INT(ch)));

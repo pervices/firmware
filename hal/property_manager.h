@@ -26,49 +26,11 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 
-#if defined(VAUNT)
-    #define UART_SYNTH "/dev/ttycrimson-time"
-    #define UART_TX "/dev/ttycrimson-tx"
-    #define UART_RX "/dev/ttycrimson-rx"
-#elif defined(TATE)
-    #define UART_SYNTH "/dev/ttytate-time"
-    #define UART_TX { \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-        "/dev/ttytate-tx", \
-    }
-    #define UART_RX { \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-        "/dev/ttytate-rx", \
-    }
-#endif
+/* Crimson UART ports.
+ * TATE ports are expanded with xmacros. */
+#define UART_SYNTH "/dev/ttycrimson-time"
+#define UART_TX "/dev/ttycrimson-tx"
+#define UART_RX "/dev/ttycrimson-rx"
 
 int get_inotify_fd();
 
@@ -79,10 +41,8 @@ int save_properties(const char *file);
 int load_properties(const char *file);
 void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
                                char *save_path);
-
 // Example property: "tx_a/rf/dac/freq"
 int get_property(const char *prop, char *data, size_t max_len);
 int set_property(const char *prop, const char *data);
-// API for the Crimson
 
 #endif

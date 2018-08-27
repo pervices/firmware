@@ -73,7 +73,7 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
 
 /* Expanding the server from 4 channels (Vaunt) to 16 channels (Tate)
  * broke some static element settings in the property table. Running
- * this table patch will fix it */
-void patch_table(void);
+ * this tree patch will fix it */
+void patch_tree(void);
 
 #endif

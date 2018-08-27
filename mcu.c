@@ -150,8 +150,8 @@ int main(int argc, char *argv[]) {
             //				pos++;
             //				real_size = total_bytes - pos;
             //				memcpy(buf, buf + pos, real_size);
-            //				memset(buf + real_size, 0, MAX_UART_LEN -
-            //real_size);
+            //				memset(buf + real_size, 0, MAX_UART_LEN
+            //- real_size);
             //			}
 
             printf("%s\n", buf);
