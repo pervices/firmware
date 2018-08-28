@@ -2981,11 +2981,24 @@ static prop_t property_table[] = {
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
 
-static const char *tostr(const int num)
+static char *tostr(const int num)
 {
     char* str = calloc(32, sizeof(*str));
     sprintf(str, "%d", num);
     return str;
+}
+
+static void set_default_str(const char* const path, const char* const str)
+{
+    prop_t* prop = get_prop_from_cmd(path);
+    strcpy(prop->def_val, str);
+}
+
+static void set_default_int(const char* const path, const int value)
+{
+    char* str = tostr(value);
+    set_default_str(path, str);
+    free(str);
 }
 
 /* clang-format on */
@@ -2994,35 +3007,33 @@ static const char *tostr(const int num)
 /* -------------------------- EXTERNED FUNCTIONS ---------------------------- */
 /* -------------------------------------------------------------------------- */
 
+void dump_tree(void)
+{
+    for(int i = 0; i < num_properties; i++)
+    {
+        struct prop p = property_table[i];
+        printf("%40s == %40s\n", p.path, p.def_val);
+    }
+}
+
 void patch_tree(void) {
-    const int base = 42820;
-    const int offset = NUM_CHANNELS;
+    const int base_port = 42820;
 
-    // RX Ports
-#define X(ch) set_property("rx/" #ch "/link/port", tostr(base + INT(ch)));
+#define X(ch) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
     CHANNELS
 #undef X
 
-    // RX IP Addresses
-#define X(ch)                                                                  \
-    set_property("rx/" #ch "/link/ip_dest",                                    \
-                 INT(ch) % 2 == 0 ? "10.10.10.10" : "10.10.11.10");
+#define X(ch) set_default_str("rx/" #ch "/link/ip_dest", ((INT(ch) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
     CHANNELS
 #undef X
 
-    // TX Ports
-#define X(ch)                                                                  \
-    set_property("tx/" #ch "/link/port", tostr(base + INT(ch) + offset));      \
-    set_property("tx/" #ch "/qa/fifo_lvl", tostr(base + INT(ch) + offset));    \
-    set_property("tx/" #ch "/qa/oflow", tostr(base + INT(ch) + offset));       \
-    set_property("tx/" #ch "/qa/uflow", tostr(base + INT(ch) + offset));
+#define X(ch) \
+    set_default_int("tx/" #ch "/link/port",   base_port + INT(ch) + NUM_CHANNELS); \
+    set_default_int("tx/" #ch "/qa/fifo_lvl", base_port + INT(ch) + NUM_CHANNELS); \
+    set_default_int("tx/" #ch "/qa/oflow",    base_port + INT(ch) + NUM_CHANNELS); \
+    set_default_int("tx/" #ch "/qa/uflow",    base_port + INT(ch) + NUM_CHANNELS);
     CHANNELS
 #undef X
-
-    // Using tostr() calls malloc internally (but with very bytes). There will
-    // be some memory leaks, as the string is copied to the property table char
-    // array, but this is ok, as the byte count for int to string conversion is
-    // very small.
 }
 
 size_t get_num_prop(void) { return num_properties; }

@@ -71,9 +71,12 @@ void sync_channels(uint8_t chan_mask);
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, size_t channel);
 
+void dump_tree(void);
+
 /* Expanding the server from 4 channels (Vaunt) to 16 channels (Tate)
  * broke some static element settings in the property table. Running
  * this tree patch will fix it */
+
 void patch_tree(void);
 
 #endif

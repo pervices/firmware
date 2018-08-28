@@ -206,6 +206,14 @@ static void init_prop_val(prop_t *prop) {
 // relative ops (openat, mkdirat, fchownat, fchmodat, etc) Helper function for
 // building a tree in the home directory
 static void build_tree(void) {
+
+    // Sets up IPs and Ports.
+    // This was introduced when the XMACRO
+    // in channels.h was developed to help aid the port from VAUNT to TATE.
+    patch_tree();
+
+    dump_tree();
+
     PRINT(VERBOSE, "Building tree, %i properties found\n", get_num_prop());
     prop_t *prop;
 
@@ -231,9 +239,6 @@ int get_inotify_fd() { return inotify_fd; }
 
 // Initialize handler functions
 int init_property(uint8_t options) {
-
-    /* Sometimes things break when one codebase covers two projects */
-    patch_tree();
 
     // uart transactions
     PRINT(VERBOSE, "Initializing UART\n");
@@ -288,6 +293,7 @@ int init_property(uint8_t options) {
     pass_uart_rx_fd(uart_rx_comm_fd);
 
     PRINT(INFO, "Building the property tree\n");
+
     build_tree();
 
     return RETURN_SUCCESS;
