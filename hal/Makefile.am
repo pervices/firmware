@@ -5,10 +5,11 @@ noinst_LTLIBRARIES = \
 	libhal.la
 
 libhal_la_SOURCES = \
-	pllcalc.c \
+	cmd.c \
 	comm_manager.c \
+	pllcalc.c \
 	properties.c \
-	property_manager.c 
+	property_manager.c
 libhal_la_CFLAGS = \
 	-DVERSION=VERSIONDATE
 libhal_la_LIBADD = \

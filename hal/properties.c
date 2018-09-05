@@ -22,6 +22,7 @@
 
     #include "array-utils.h"
     #include "mmap.h"
+    #include "cmd.h"
     #include "property_manager.h"
     #include "synth_lut.h"
 
@@ -2022,6 +2023,13 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_clk_cmd(const char* data, char* ret) {
+
+    cmd_set_time(strtod(data, NULL));
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_source_vco(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         strcpy(buf, "clk -v 1\r");
@@ -2888,6 +2896,7 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
+    DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
