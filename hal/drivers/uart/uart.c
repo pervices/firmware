@@ -17,161 +17,155 @@
 
 #include "uart.h"
 
-
 // Maximum before a UART command is considered a fail
-#define TIMEOUT 1000000UL	// us, 1.0 seconds
+#define TIMEOUT 1000000UL // us, 1.0 seconds
 
 // Minimum time between UART commands
 #define TIME_INTERVAL 50000 // us, 0.05 seconds
 
-static struct timeval tprev;	// time since previous UART command
-static struct timeval tstart;	// time since the beginning of a UART send attempt
+static struct timeval tprev;  // time since previous UART command
+static struct timeval tstart; // time since the beginning of a UART send attempt
 static struct timeval tend;
 
 // Options passed from server.c
 static uint8_t _options = 0;
 
-void set_uart_debug_opt(uint8_t options) {
-	_options = options;
-}
+void set_uart_debug_opt(uint8_t options) { _options = options; }
 
 // return 1 if timeout, 0 if not
-static uint8_t timeout(struct timeval* t, long long int time) {
-	gettimeofday(&tend, NULL);
+static uint8_t timeout(struct timeval *t, long long int time) {
+    gettimeofday(&tend, NULL);
 
-	// overflow issue when computing all within the same statement
-	long long int cur = (t->tv_usec + 1000000UL * t->tv_sec);
-	long long int pre = (tend.tv_usec + 1000000UL * tend.tv_sec);
-	long long int elapsed = pre - cur;
+    // overflow issue when computing all within the same statement
+    long long int cur = (t->tv_usec + 1000000UL * t->tv_sec);
+    long long int pre = (tend.tv_usec + 1000000UL * tend.tv_sec);
+    long long int elapsed = pre - cur;
 
-	if ( elapsed > time || elapsed < 0) {
-		return 1;
-	} else {
-		return 0;
-	}
+    if (elapsed > time || elapsed < 0) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
-int set_uart_interface_attribs (int fd, int speed, int parity)
-{
-	gettimeofday(&tprev, NULL);	// on config, reset the prev timer
+int set_uart_interface_attribs(int fd, int speed, int parity) {
+    gettimeofday(&tprev, NULL); // on config, reset the prev timer
 
-        struct termios tty;
-        memset (&tty, 0, sizeof tty);
-        if (tcgetattr (fd, &tty) != 0)
-        {
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-                return RETURN_ERROR;
-        }
+    struct termios tty;
+    memset(&tty, 0, sizeof tty);
+    if (tcgetattr(fd, &tty) != 0) {
+        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+        return RETURN_ERROR;
+    }
 
-        cfsetospeed (&tty, speed);
-        cfsetispeed (&tty, speed);
+    cfsetospeed(&tty, speed);
+    cfsetispeed(&tty, speed);
 
-        tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
-        // disable IGNBRK for mismatched speed tests; otherwise receive break
-        // as \000 chars
-        tty.c_iflag &= ~IGNBRK;         // disable break processing
-        tty.c_lflag = 0;                // no signaling chars, no echo,
-                                        // no canonical processing
-        tty.c_oflag = 0;                // no remapping, no delays
-        tty.c_cc[VMIN]  = 0;            // read doesn't block
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit chars
+    // disable IGNBRK for mismatched speed tests; otherwise receive break
+    // as \000 chars
+    tty.c_iflag &= ~IGNBRK; // disable break processing
+    tty.c_lflag = 0;        // no signaling chars, no echo,
+                            // no canonical processing
+    tty.c_oflag = 0;        // no remapping, no delays
+    tty.c_cc[VMIN] = 0;     // read doesn't block
+    tty.c_cc[VTIME] = 5;    // 0.5 seconds read timeout
 
-        tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
-        tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
-                                        // enable reading
-        tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
-        tty.c_cflag |= parity;
-        tty.c_cflag &= ~CSTOPB;
-        tty.c_cflag &= ~CRTSCTS;
+    tty.c_cflag |= (CLOCAL | CREAD);   // ignore modem controls,
+                                       // enable reading
+    tty.c_cflag &= ~(PARENB | PARODD); // shut off parity
+    tty.c_cflag |= parity;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
 
-        if (tcsetattr (fd, TCSANOW, &tty) != 0)
-        {
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-                return RETURN_ERROR;
-        }
-        return RETURN_SUCCESS;
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+        return RETURN_ERROR;
+    }
+    return RETURN_SUCCESS;
 }
 
-void set_uart_blocking (int fd, int should_block)
-{
-        struct termios tty;
-        memset (&tty, 0, sizeof tty);
-        if (tcgetattr (fd, &tty) != 0)
-        {
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-                return;
-        }
-
-        tty.c_cc[VMIN]  = should_block ? 1 : 0;
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
-
-        if (tcsetattr (fd, TCSANOW, &tty) != 0)
-		PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-
+void set_uart_blocking(int fd, int should_block) {
+    struct termios tty;
+    memset(&tty, 0, sizeof tty);
+    if (tcgetattr(fd, &tty) != 0) {
+        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
+    }
+
+    tty.c_cc[VMIN] = should_block ? 1 : 0;
+    tty.c_cc[VTIME] = 5; // 0.5 seconds read timeout
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0)
+        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+
+    return;
 }
 
-int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
-	gettimeofday(&tstart, NULL);
+int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
+    gettimeofday(&tstart, NULL);
 
-	int rd_len = 0;
-	while (!rd_len && !timeout(&tstart, TIMEOUT)) {
-		rd_len += read(fd, data, max_size);
-	}
+    int rd_len = 0;
+    while (!rd_len && !timeout(&tstart, TIMEOUT)) {
+        rd_len += read(fd, data, max_size);
+    }
 
-	/*int i;
-	PRINT( VERBOSE,"got %i characters, uart: ", rd_len);
-	for (i = 0; i < rd_len; i++) PRINT( VERBOSE,"%c", data[i]);
-	PRINT( VERBOSE,"\n");*/
+    /*int i;
+    PRINT( VERBOSE,"got %i characters, uart: ", rd_len);
+    for (i = 0; i < rd_len; i++) PRINT( VERBOSE,"%c", data[i]);
+    PRINT( VERBOSE,"\n");*/
 
-	// if nothing to be read
-	if (rd_len < 0) rd_len = 0;
+    // if nothing to be read
+    if (rd_len < 0)
+        rd_len = 0;
 
-	if (timeout(&tstart, TIMEOUT)) {
-		PRINT(ERROR, "%s(), timedout\n", __func__);
-		*size = rd_len;
-		return RETURN_ERROR_UART_TIMEOUT;
-	}
+    if (timeout(&tstart, TIMEOUT)) {
+        PRINT(ERROR, "%s(), timedout\n", __func__);
+        *size = rd_len;
+        return RETURN_ERROR_UART_TIMEOUT;
+    }
 
-	*size = rd_len;
-	return RETURN_SUCCESS;
+    *size = rd_len;
+    return RETURN_SUCCESS;
 }
 
-int send_uart(int fd, uint8_t* data, uint16_t size) {
-	//if (_options & SERVER_DEBUG_OPT)
-	PRINT(DEBUG, "%s(): %s\n", __func__, data);
+int send_uart(int fd, uint8_t *data, uint16_t size) {
+    // if (_options & SERVER_DEBUG_OPT)
+    PRINT(DEBUG, "%s(): %s\n", __func__, data);
 
-	// wait for previous command to finish
-	while (!timeout(&tprev, TIME_INTERVAL)){}
+    // wait for previous command to finish
+    while (!timeout(&tprev, TIME_INTERVAL)) {
+    }
 
-	// clear receive buffer first, for old data from previous commands
-	flush_uart(fd);
+    // clear receive buffer first, for old data from previous commands
+    flush_uart(fd);
 
-	// begin timer for timeout
-	gettimeofday(&tstart, NULL);
+    // begin timer for timeout
+    gettimeofday(&tstart, NULL);
 
-	int wr_len = 0;
-	while (wr_len != size && !timeout(&tstart, TIMEOUT)) {
-		wr_len += write(fd, data + wr_len, size - wr_len);
-	}
+    int wr_len = 0;
+    while (wr_len != size && !timeout(&tstart, TIMEOUT)) {
+        wr_len += write(fd, data + wr_len, size - wr_len);
+    }
 
-	// reset the tprev timer
-	gettimeofday(&tprev, NULL);
+    // reset the tprev timer
+    gettimeofday(&tprev, NULL);
 
-	// if it timedout, print out a message
-	if (timeout(&tstart, TIMEOUT)) {
-		PRINT(ERROR, "%s(): timedout\n", __func__);
-		return RETURN_ERROR_UART_TIMEOUT;
-	}
+    // if it timedout, print out a message
+    if (timeout(&tstart, TIMEOUT)) {
+        PRINT(ERROR, "%s(): timedout\n", __func__);
+        return RETURN_ERROR_UART_TIMEOUT;
+    }
 
-	return RETURN_SUCCESS;
+    return RETURN_SUCCESS;
 }
 
 int flush_uart(int fd) {
-	// flushes UART on HPS side
-	if( tcflush(fd, TCIOFLUSH) == 0)
-		return RETURN_SUCCESS;
-	else
-		return RETURN_ERROR_UART_FLUSH;
+    // flushes UART on HPS side
+    if (tcflush(fd, TCIOFLUSH) == 0)
+        return RETURN_SUCCESS;
+    else
+        return RETURN_ERROR_UART_FLUSH;
 }

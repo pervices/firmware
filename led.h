@@ -15,25 +15,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef UART_H_
-#define UART_H_
+#ifndef LED_H_
+#define LED_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <termios.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/time.h>
-#include "common.h"
+#include "mmap.h"
 
-int set_uart_interface_attribs(int fd, int speed, int parity);
-void set_uart_blocking(int fd, int should_block);
-int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size);
-int send_uart(int fd, uint8_t *data, uint16_t size);
-int flush_uart(int fd);
-void set_uart_debug_opt(uint8_t options);
+void server_init_led(void);
+
+void server_ready_led(void);
 
 #endif

@@ -1,5 +1,5 @@
 //
-// Copyright 2014 Per Vices Corporation
+// Copyright 2014 - 2019 Per Vices Corporation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,14 +18,16 @@
 #ifndef PROPERTY_MANAGER_H_
 #define PROPERTY_MANAGER_H_
 
-#include <sys/inotify.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
+#include <sys/inotify.h>
+#include <unistd.h>
 
+/* Crimson UART ports.
+ * TATE ports are expanded with xmacros. */
 #define UART_SYNTH "/dev/ttycrimson-time"
 #define UART_TX "/dev/ttycrimson-tx"
 #define UART_RX "/dev/ttycrimson-rx"
@@ -35,13 +37,12 @@ int get_inotify_fd();
 int init_property(uint8_t options);
 void check_property_inotifies(void);
 void update_status_properties(void);
-int save_properties(const char* file);
-int load_properties(const char* file);
-void pass_profile_pntr_manager(uint8_t* load, uint8_t* save, char* load_path, char* save_path);
-
+int save_properties(const char *file);
+int load_properties(const char *file);
+void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
+                               char *save_path);
 // Example property: "tx_a/rf/dac/freq"
-int get_property(const char* prop, char* data, size_t max_len);
-int set_property(const char* prop, const char* data);
-// API for the Crimson
+int get_property(const char *prop, char *data, size_t max_len);
+int set_property(const char *prop, const char *data);
 
 #endif

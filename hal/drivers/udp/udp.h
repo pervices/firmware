@@ -1,5 +1,5 @@
 //
-// Copyright 2014 Per Vices Corporation
+// Copyright 2014 - 2019 Per Vices Corporation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -35,34 +35,34 @@
 #include "common.h"
 
 typedef struct {
-	char iface[50];		// interface name, ex. eth0
-	struct ether_addr hwa;	// mac address
-	struct in_addr ipa;	// ip address
-	struct in_addr bcast;	// broadcast
-	struct in_addr nmask;	// net mask
-	struct in_addr gate;	// default gateway
-	uint32_t port;		// port number
-	u_short mtu;		// MTU size
+    char iface[50];        // interface name, ex. eth0
+    struct ether_addr hwa; // mac address
+    struct in_addr ipa;    // ip address
+    struct in_addr bcast;  // broadcast
+    struct in_addr nmask;  // net mask
+    struct in_addr gate;   // default gateway
+    uint32_t port;         // port number
+    u_short mtu;           // MTU size
 } eth_t;
 
 typedef struct udp_dev {
-	int sockfd;		// socket file descriptor
-	uint16_t opt;		// options
-	eth_t* eth;		// general ethernet settings
-	struct sockaddr_in si;	// socket prameters
-	int slen;		// socket length
+    int sockfd;            // socket file descriptor
+    uint16_t opt;          // options
+    eth_t *eth;            // general ethernet settings
+    struct sockaddr_in si; // socket prameters
+    int slen;              // socket length
 } udp_dev_t;
 
-int get_ip (eth_t* eth, char* str, int size);
-int get_bcast (eth_t* eth, char* str, int size);
-int get_nmask (eth_t* eth, char* str, int size);
-int get_mac (eth_t* eth, char* str, int size);
-int get_gate (eth_t* eth, char* str, int size);
+int get_ip(eth_t *eth, char *str, int size);
+int get_bcast(eth_t *eth, char *str, int size);
+int get_nmask(eth_t *eth, char *str, int size);
+int get_mac(eth_t *eth, char *str, int size);
+int get_gate(eth_t *eth, char *str, int size);
 
-int establish_udp_connection(udp_dev_t* udp, unsigned short port);
-int severe_udp_connection(udp_dev_t* udp);
+int establish_udp_connection(udp_dev_t *udp, unsigned short port);
+int severe_udp_connection(udp_dev_t *udp);
 
-int recv_udp(udp_dev_t* udp, uint8_t* data, uint16_t* size, uint16_t max_size);
-int send_udp(udp_dev_t* udp, uint8_t* data, uint16_t size);
+int recv_udp(udp_dev_t *udp, uint8_t *data, uint16_t *size, uint16_t max_size);
+int send_udp(udp_dev_t *udp, uint8_t *data, uint16_t size);
 
 #endif

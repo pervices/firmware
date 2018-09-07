@@ -19,43 +19,43 @@
 
 int verbose;
 
-void PRINT_WRAPPER( print_t priority, const char* format, ... ) {
+void PRINT_WRAPPER(print_t priority, const char *format, ...) {
 
-	FILE* o;
+    FILE *o;
 
-	va_list args;
-	va_start( args, format );
+    va_list args;
+    va_start(args, format);
 
-	o = NULL;
+    o = NULL;
 
-	switch( priority ){
-		case ERROR:
-			o = stderr;
-			break;
+    switch (priority) {
+    case ERROR:
+        o = stderr;
+        break;
 
-		case VERBOSE:
-			if ( verbose >= 1 ){
-				o = stdout;
-			}
-			break;
+    case VERBOSE:
+        if (verbose >= 1) {
+            o = stdout;
+        }
+        break;
 
-		case DEBUG:
-			if ( verbose >= 2 ){
-				o = stdout;
-			}
-			break;
+    case DEBUG:
+        if (verbose >= 2) {
+            o = stdout;
+        }
+        break;
 
-		case INFO:
-		case DUMP:
-		default:
-			o = stdout;
-			break;
-	}
+    case INFO:
+    case DUMP:
+    default:
+        o = stdout;
+        break;
+    }
 
-	if ( NULL != o ) {
-		vfprintf( o, format, args );
-		fflush( o );
-	}
+    if (NULL != o) {
+        vfprintf(o, format, args);
+        fflush(o);
+    }
 
-	va_end( args );
+    va_end(args);
 }

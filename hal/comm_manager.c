@@ -15,9 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "udp.h"
-#include "uart.h"
 #include "comm_manager.h"
+#include "uart.h"
+#include "udp.h"
 
 #define MAX_DEVICES 16
 #define USED_DEVICE 1
@@ -27,29 +27,31 @@
  * UDP Driver Manager
  **************************************/
 
-int init_udp_comm(int* fd, const char* dev, in_port_t port, uint16_t options) {
-	int ret = RETURN_SUCCESS;
+int init_udp_comm(int *fd, const char *dev, in_port_t port, uint16_t options) {
+    int ret = RETURN_SUCCESS;
 
-	// Allocate space for udp device
-	udp_dev_t mydev = { .sockfd = -1, };
+    // Allocate space for udp device
+    udp_dev_t mydev = {
+        .sockfd = -1,
+    };
 
-	PRINT( VERBOSE,"Calling establish_udp_connection()\n");
+    PRINT(VERBOSE, "Calling establish_udp_connection()\n");
 
-	ret = establish_udp_connection( & mydev, port );
-	if (ret < 0) {
-		close_udp_comm(*fd);
-	}
+    ret = establish_udp_connection(&mydev, port);
+    if (ret < 0) {
+        close_udp_comm(*fd);
+    }
 
-	*fd = mydev.sockfd;
+    *fd = mydev.sockfd;
 
-	return ret;
+    return ret;
 }
 
 int close_udp_comm(int fd) {
 
-	close( fd );
+    close(fd);
 
-	return RETURN_SUCCESS;
+    return RETURN_SUCCESS;
 }
 
 /**************************************
@@ -59,77 +61,77 @@ int close_udp_comm(int fd) {
 static int uart_devices[MAX_DEVICES];
 static uint8_t used_uart_devices[MAX_DEVICES] = {FREE_DEVICE};
 
-int get_uart_tx_fd() {
-	return uart_devices[ 1 ];
-}
-int get_uart_rx_fd() {
-	return uart_devices[ 2 ];
-}
+int get_uart_tx_fd() { return uart_devices[1]; }
+int get_uart_rx_fd() { return uart_devices[2]; }
 
 // Gets the next available file descriptor
-static int get_next_uart_fd (int* fd) {
-	int i;
-	for (i = 0; i < MAX_DEVICES; i++) {
-		if (used_uart_devices[i] == FREE_DEVICE) {
-			*fd = i;
-			return RETURN_SUCCESS;
-		}
-	}
-	return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+static int get_next_uart_fd(int *fd) {
+    int i;
+    for (i = 0; i < MAX_DEVICES; i++) {
+        if (used_uart_devices[i] == FREE_DEVICE) {
+            *fd = i;
+            return RETURN_SUCCESS;
+        }
+    }
+    return RETURN_ERROR_INSUFFICIENT_RESOURCES;
 }
 
-int init_uart_comm(int* fd, const char* dev, uint16_t options) {
-	if (get_next_uart_fd(fd) < 0)
-		return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+int init_uart_comm(int *fd, const char *dev, uint16_t options) {
+    if (get_next_uart_fd(fd) < 0)
+        return RETURN_ERROR_INSUFFICIENT_RESOURCES;
 
-	PRINT( VERBOSE,"Found file descriptor %i\n", *fd);
-	used_uart_devices[*fd] = USED_DEVICE;
-	PRINT( VERBOSE,"Opening UART port: %s\n", dev);
+    PRINT(VERBOSE, "Found file descriptor %i\n", *fd);
+    used_uart_devices[*fd] = USED_DEVICE;
+    PRINT(VERBOSE, "Opening UART port: %s\n", dev);
 
-	// Allocate space for uart device
-	uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
-	if (uart_devices[*fd] < 0)
-	{
-		PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
-		return RETURN_ERROR;
-	}
-	int mydev = uart_devices[*fd];
+    // Allocate space for uart device
+    uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
+    if (uart_devices[*fd] < 0) {
+        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+        return RETURN_ERROR;
+    }
+    int mydev = uart_devices[*fd];
 
-	PRINT( VERBOSE,"Configuring UART\n");
+    PRINT(VERBOSE, "Configuring UART\n");
 
-	set_uart_interface_attribs (mydev, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
-	set_uart_blocking (mydev, 0);               	 // set no blocking
+    set_uart_interface_attribs(mydev, B115200,
+                               0); // set speed to 115,200 bps, 8n1 (no parity)
+    set_uart_blocking(mydev, 0);   // set no blocking
 
-	return RETURN_SUCCESS;
+    return RETURN_SUCCESS;
 }
 
 int close_uart_comm(int fd) {
-	if (fd < 0) return RETURN_ERROR_PARAM;
+    if (fd < 0)
+        return RETURN_ERROR_PARAM;
 
-	PRINT( VERBOSE,"Closing uart network %s()\n", __func__);
+    PRINT(VERBOSE, "Closing uart network %s()\n", __func__);
 
-	int mydev = uart_devices[fd];
+    int mydev = uart_devices[fd];
 
-	close(mydev);
-	used_uart_devices[fd] = FREE_DEVICE;
+    close(mydev);
+    used_uart_devices[fd] = FREE_DEVICE;
 
-	return RETURN_SUCCESS;
+    return RETURN_SUCCESS;
 }
 
-int recv_uart_comm(int fd, uint8_t* data, uint16_t* size, uint16_t max_size) {
-	if (fd < 0) return RETURN_ERROR_PARAM;
-	int mydev = uart_devices[fd];
-	return recv_uart(mydev, data, size, max_size);
+int recv_uart_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
+    if (fd < 0)
+        return RETURN_ERROR_PARAM;
+    int mydev = uart_devices[fd];
+    return recv_uart(mydev, data, size, max_size);
 }
 
-int send_uart_comm(int fd, uint8_t* data, uint16_t size) {
-	if (fd < 0) return RETURN_ERROR_PARAM;
-	int mydev = uart_devices[fd];
-	return send_uart(mydev, data, size);
+int send_uart_comm(int fd, uint8_t *data, uint16_t size) {
+    if (fd < 0)
+        return RETURN_ERROR_PARAM;
+    int mydev = uart_devices[fd];
+    return send_uart(mydev, data, size);
 }
 
 int flush_uart_comm(int fd) {
-	if (fd < 0) return RETURN_ERROR_PARAM;
-	int mydev = uart_devices[fd];
-	return flush_uart(mydev);
+    if (fd < 0)
+        return RETURN_ERROR_PARAM;
+    int mydev = uart_devices[fd];
+    return flush_uart(mydev);
 }

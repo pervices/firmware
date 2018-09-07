@@ -10,6 +10,7 @@ bin_PROGRAMS = \
 
 server_SOURCES = \
 	server.c \
+	led.c \
 	synth_lut.c
 
 server_LDADD = \
