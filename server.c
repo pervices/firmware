@@ -65,16 +65,6 @@ int main(int argc, char *argv[]) {
         42805,
         42806,
         42807,
-        /* Additional TATE ports */
-        42808,
-        42809,
-        42810,
-        42811,
-        42812,
-        42813,
-        42814,
-        42815,
-        42816,
     };
 
     int comm_fds[ARRAY_SIZE(port_nums)];

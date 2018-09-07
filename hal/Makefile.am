@@ -5,7 +5,6 @@ noinst_LTLIBRARIES = \
 	libhal.la
 
 libhal_la_SOURCES = \
-	cmd.c \
 	comm_manager.c \
 	pllcalc.c \
 	properties.c \

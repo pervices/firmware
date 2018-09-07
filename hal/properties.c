@@ -22,7 +22,6 @@
 
     #include "array-utils.h"
     #include "mmap.h"
-    #include "cmd.h"
     #include "property_manager.h"
     #include "synth_lut.h"
 
@@ -2024,9 +2023,6 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 }
 
 static int hdlr_time_clk_cmd(const char* data, char* ret) {
-
-    cmd_set_time(strtod(data, NULL));
-
     return RETURN_SUCCESS;
 }
 
@@ -2772,6 +2768,11 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_user_regs(const char *data, char *ret)
+{
+    return RETURN_SUCCESS;
+}
+
 /* clang-format off */
 
 /* -------------------------------------------------------------------------- */
@@ -2927,9 +2928,11 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
 
 #define DEFINE_FPGA()                                                                                                         \
+    DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative")          \
     DEFINE_FILE_PROP("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION)             \
+    DEFINE_FILE_PROP("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)             \
     DEFINE_FILE_PROP("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "")                  \
     DEFINE_FILE_PROP("fpga/about/hw_ver"                   , hdlr_fpga_about_hw_ver,                 RW, VERSION)             \
     DEFINE_FILE_PROP("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001")               \
