@@ -371,7 +371,7 @@ static int set_edge_backoff(bool tx, const char *chan, uint32_t backoff) {
 }
 
 static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
-    int r;
+
     uint32_t val_msw;
     uint32_t val_lsw;
 
@@ -712,7 +712,7 @@ CHANNELS
         set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
                           &pll, true, INT(ch));                                \
                                                                                \
-        sprintf(ret, "%lf", outfreq);                                          \
+        sprintf(ret, "%Lf", outfreq);                                          \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -843,7 +843,7 @@ CHANNELS
     static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
         uint32_t old_val;                                                      \
         uint16_t base_factor, resamp_factor;                                   \
-        double base_err, resamp_err;                                           \
+        double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
                                                                                \
@@ -1162,7 +1162,7 @@ CHANNELS
         set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
                           &pll, false, INT(ch));                               \
                                                                                \
-        sprintf(ret, "%lf", outfreq);                                          \
+        sprintf(ret, "%Lf", outfreq);                                          \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1305,7 +1305,7 @@ CHANNELS
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
         uint32_t old_val;                                                      \
         uint16_t base_factor, resamp_factor;                                   \
-        double base_err, resamp_err;                                           \
+        double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
                                                                                \
@@ -1681,9 +1681,9 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 
     mask_rx = cm_chanmask_get("/var/crimson/state/cm/chanmask-rx");
 
-    sscanf(data, "%lf", &atten);
+    sscanf(data, "%d", &atten);
 
-    sprintf(inbuf, "%lf", atten);
+    sprintf(inbuf, "%d", atten);
 
     for (i = 0; i < NUM_CHANNELS; i++) {
 
@@ -2026,6 +2026,7 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
     return RETURN_SUCCESS;
 }
 
+#if 0
 static int hdlr_time_source_vco(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         strcpy(buf, "clk -v 1\r");
@@ -2035,7 +2036,9 @@ static int hdlr_time_source_vco(const char *data, char *ret) {
     send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
+#endif
 
+#if 0
 static int hdlr_time_source_sync(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         strcpy(buf, "clk -n 1\r");
@@ -2045,6 +2048,7 @@ static int hdlr_time_source_sync(const char *data, char *ret) {
     send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
+#endif
 
 // 10 MHz clock
 static int hdlr_time_source_ref(const char *data, char *ret) {
@@ -2119,6 +2123,7 @@ static int hdlr_time_sync_lmk_resync_all(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+#if 0
 // TODO: Enable DevClock Output
 static int hdlr_time_source_devclk(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
@@ -2129,7 +2134,9 @@ static int hdlr_time_source_devclk(const char *data, char *ret) {
     send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
+#endif
 
+#if 0
 // TODO: Enable PLL Output
 static int hdlr_time_source_pll(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
@@ -2140,6 +2147,7 @@ static int hdlr_time_source_pll(const char *data, char *ret) {
     send_uart_comm(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
+#endif
 
 static int hdlr_time_status_ld(const char *data, char *ret) {
     strcpy(buf, "status -l\r");
@@ -2375,10 +2383,10 @@ static int hdlr_fpga_board_temp(const char *data, char *ret) {
 
     if (old_val >= 128) {
         old_val = old_val - 128;
-        sprintf(ret, "temp +%lu degC\n", old_val);
+        sprintf(ret, "temp +%u degC\n", old_val);
     } else if (old_val < 128) {
         old_val = old_val - 58;
-        sprintf(ret, "temp -%lu degC\n", old_val);
+        sprintf(ret, "temp -%u degC\n", old_val);
     }
 
     return RETURN_SUCCESS;
@@ -2513,14 +2521,12 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
-    uint64_t old_val;
     uint32_t old_val1;
     uint32_t old_val2;
     read_hps_reg("sys16", &old_val1);
     read_hps_reg("sys17", &old_val2);
 
     // Append values
-    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
     sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
 
     return RETURN_SUCCESS;
@@ -2543,16 +2549,12 @@ static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
-    uint64_t old_val;
     uint32_t old_val1;
     uint32_t old_val2;
     read_hps_reg("sys3", &old_val2);
     read_hps_reg("sys4", &old_val1);
 
     old_val2 = old_val2 & 0xff;
-
-    // Append values
-    old_val = ((uint64_t)old_val2 << 32) | (uint64_t)old_val1;
 
     sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
     return RETURN_SUCCESS;
@@ -3216,11 +3218,10 @@ void sync_channels(uint8_t chan_mask) {
      * Issue JESD, then read to see if
      * bad
      **********************************/
+#ifdef SYNC_CHECK_DAC_LOOP
     char key[] = "00\r";
     char dacalarmA[] = "ff\r";
     char dacalarmB[] = "ff\r";
-
-#ifdef SYNC_CHECK_DAC_LOOP
     for (int i = 0; i < 15; i += 1) {
 
         // Put FPGA JESD core in reset

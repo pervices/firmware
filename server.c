@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
                 // Timeout has expired (although we have provided no timeout)
                 PRINT(VERBOSE, "select timed-out\n");
             } else {
-                PRINT(VERBOSE, "select failed on fd %d: %s (%d)\n", comm_fds[i],
+                PRINT(VERBOSE, "select failed on fd %d: %s (%d)\n", -1,
                       strerror(errno), errno);
             }
 

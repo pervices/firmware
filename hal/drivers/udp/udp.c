@@ -17,71 +17,75 @@
 
 #include "udp.h"
 
-static int establish_eth_settings(eth_t *eth) {
-    struct ifreq ifr;
+// Function not used. Removing to fix compiler warnings.
+#if 0
 
-    // local socket
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    static int establish_eth_settings(eth_t *eth) {
+        struct ifreq ifr;
 
-    // MAC Address
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
-    if ((ioctl(sockfd, SIOCGIFHWADDR, &ifr)) == -1) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-        return RETURN_ERROR_COMM_INIT;
+        // local socket
+        int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+        // MAC Address
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        if ((ioctl(sockfd, SIOCGIFHWADDR, &ifr)) == -1) {
+            PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+            return RETURN_ERROR_COMM_INIT;
+        }
+        memcpy(&(eth->hwa), &ifr.ifr_hwaddr.sa_data, 6);
+
+        // IP address
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        if ((ioctl(sockfd, SIOCGIFADDR, &ifr)) == -1) {
+            PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+            return RETURN_ERROR_COMM_INIT;
+        }
+        memcpy(&eth->ipa, &(*(struct sockaddr_in *)&ifr.ifr_addr).sin_addr, 4);
+
+        // Broadcast
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        if ((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1) {
+            PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+            return RETURN_ERROR_COMM_INIT;
+        }
+        memcpy(&eth->bcast, &(*(struct sockaddr_in *)&ifr.ifr_broadaddr).sin_addr,
+               4);
+
+        // Gateway TODO
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        if ((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1) {
+            PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+            return RETURN_ERROR_COMM_INIT;
+        }
+        memcpy(&eth->bcast, &(*(struct sockaddr_in *)&ifr.ifr_broadaddr).sin_addr,
+               4);
+
+        // Netmask
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        if ((ioctl(sockfd, SIOCGIFNETMASK, &ifr)) == -1) {
+            PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+            return RETURN_ERROR_COMM_INIT;
+        }
+        memcpy(&eth->nmask.s_addr,
+               &(*(struct sockaddr_in *)&ifr.ifr_netmask).sin_addr, 4);
+
+        // MTU
+        memset(&ifr, 0, sizeof(ifr));
+        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        if ((ioctl(sockfd, SIOCGIFMTU, &ifr)) == -1) {
+            PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+            return RETURN_ERROR_COMM_INIT;
+        }
+        eth->mtu = ifr.ifr_mtu;
+
+        return RETURN_SUCCESS;
     }
-    memcpy(&(eth->hwa), &ifr.ifr_hwaddr.sa_data, 6);
-
-    // IP address
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
-    if ((ioctl(sockfd, SIOCGIFADDR, &ifr)) == -1) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-        return RETURN_ERROR_COMM_INIT;
-    }
-    memcpy(&eth->ipa, &(*(struct sockaddr_in *)&ifr.ifr_addr).sin_addr, 4);
-
-    // Broadcast
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
-    if ((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-        return RETURN_ERROR_COMM_INIT;
-    }
-    memcpy(&eth->bcast, &(*(struct sockaddr_in *)&ifr.ifr_broadaddr).sin_addr,
-           4);
-
-    // Gateway TODO
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
-    if ((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-        return RETURN_ERROR_COMM_INIT;
-    }
-    memcpy(&eth->bcast, &(*(struct sockaddr_in *)&ifr.ifr_broadaddr).sin_addr,
-           4);
-
-    // Netmask
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
-    if ((ioctl(sockfd, SIOCGIFNETMASK, &ifr)) == -1) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-        return RETURN_ERROR_COMM_INIT;
-    }
-    memcpy(&eth->nmask.s_addr,
-           &(*(struct sockaddr_in *)&ifr.ifr_netmask).sin_addr, 4);
-
-    // MTU
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
-    if ((ioctl(sockfd, SIOCGIFMTU, &ifr)) == -1) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-        return RETURN_ERROR_COMM_INIT;
-    }
-    eth->mtu = ifr.ifr_mtu;
-
-    return RETURN_SUCCESS;
-}
+#endif
 
 int get_ip(eth_t *eth, char *str, int size) {
     inet_ntop(AF_INET, &(eth->ipa), str, size);
@@ -109,7 +113,6 @@ int get_gate(eth_t *eth, char *str, int size) {
 }
 
 int establish_udp_connection(udp_dev_t *udp, in_port_t port) {
-    int ret = 0;
 
     // open the socket
     udp->sockfd = socket(AF_INET, SOCK_DGRAM, 0);

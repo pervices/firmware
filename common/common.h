@@ -52,7 +52,7 @@
 
 // General purpose temp buffer size
 #define BUF_SIZE (1024)
-#define MAX_PATH_LEN (1024)
+#define MAX_PATH_LEN (4096)
 #define MAX_PROP_LEN (1024)
 #define MAX_UART_LEN (8192)
 
