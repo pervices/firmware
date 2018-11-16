@@ -112,12 +112,6 @@ int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
         rd_len += read(fd, data, max_size);
     }
 
-    /*int i;
-    PRINT( VERBOSE,"got %i characters, uart: ", rd_len);
-    for (i = 0; i < rd_len; i++) PRINT( VERBOSE,"%c", data[i]);
-    PRINT( VERBOSE,"\n");*/
-
-    // if nothing to be read
     if (rd_len < 0)
         rd_len = 0;
 
@@ -132,17 +126,11 @@ int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
 }
 
 int send_uart(int fd, uint8_t *data, uint16_t size) {
-    // if (_options & SERVER_DEBUG_OPT)
-    PRINT(DEBUG, "%s(): %s\n", __func__, data);
+    if (_options & SERVER_DEBUG_OPT)
+        PRINT(DEBUG, "%s(): %s\n", __func__, data);
 
-    // wait for previous command to finish
-    while (!timeout(&tprev, TIME_INTERVAL)) {
-    }
-
-    // clear receive buffer first, for old data from previous commands
     flush_uart(fd);
 
-    // begin timer for timeout
     gettimeofday(&tstart, NULL);
 
     int wr_len = 0;
@@ -150,10 +138,8 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
         wr_len += write(fd, data + wr_len, size - wr_len);
     }
 
-    // reset the tprev timer
     gettimeofday(&tprev, NULL);
 
-    // if it timedout, print out a message
     if (timeout(&tstart, TIMEOUT)) {
         PRINT(ERROR, "%s(): timedout\n", __func__);
         return RETURN_ERROR_UART_TIMEOUT;
@@ -162,8 +148,8 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
     return RETURN_SUCCESS;
 }
 
+// Flushes UART on HPS side
 int flush_uart(int fd) {
-    // flushes UART on HPS side
     if (tcflush(fd, TCIOFLUSH) == 0)
         return RETURN_SUCCESS;
     else
