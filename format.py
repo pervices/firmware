@@ -7,4 +7,4 @@ for subdir, dirs, files in os.walk("."):
             if "build" in path:
                 continue
             else:
-                os.system("clang-format -i -style='{SortIncludes: false, IndentWidth: 4, ColumnLimit: 80, AllowShortBlocksOnASingleLine: false}' %s" % path)
+                os.system("clang-format -i -style='{BasedOnStyle: webkit, SortIncludes: false, IndentWidth: 4, ColumnLimit: 80, AllowShortBlocksOnASingleLine: false}' %s" % path)

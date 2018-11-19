@@ -10,12 +10,13 @@
 #define ARG_REG_DUMP "rd"
 #define ARG_REG_LIST "rl"
 
-int main(int argc, char *argv[]) {
-    char *reg;            // register
+int main(int argc, char* argv[])
+{
+    char* reg; // register
     uint32_t addr, value; // r/w address, and value if applicable
-    int verbose = 0;      // printing verbosity, default, not verbose
+    int verbose = 0; // printing verbosity, default, not verbose
     int length = 4;
-    uint32_t rval;              // value that is read
+    uint32_t rval; // value that is read
     uint32_t mask = 0xffffffff; // default mask if not specified
 
     int r = mmap_init();
@@ -65,8 +66,8 @@ int main(int argc, char *argv[]) {
         printf("\n");
 
         // if command is register write
-    } else if ((argc == 5 || argc == 4) &&
-               strcmp(argv[1], ARG_REG_WRITE) == 0) {
+    } else if ((argc == 5 || argc == 4)
+        && strcmp(argv[1], ARG_REG_WRITE) == 0) {
         reg = argv[2];
         sscanf(argv[3], "%x", &value);
 
@@ -98,8 +99,8 @@ int main(int argc, char *argv[]) {
     } else {
         printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] "
                "[value|length|mask] [mask]\n",
-               ARG_MEM_READ, ARG_MEM_WRITE, ARG_MEM_DUMP, ARG_REG_READ,
-               ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST);
+            ARG_MEM_READ, ARG_MEM_WRITE, ARG_MEM_DUMP, ARG_REG_READ,
+            ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST);
         return 0;
     }
 

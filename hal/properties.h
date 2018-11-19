@@ -45,31 +45,31 @@ typedef struct prop {
     prop_type_t type;
     char path[MAX_PROP_LEN];
     char symlink_target[MAX_PROP_LEN];
-    int (*handler)(const char *data, char *ret);
+    int (*handler)(const char* data, char* ret);
     perm_t permissions;
     char def_val[MAX_PROP_LEN]; // default value
-    int wd;                     // inotify watch descriptor
+    int wd; // inotify watch descriptor
 } prop_t;
 
 // Externed functions
 size_t get_num_prop(void);
-prop_t *get_prop(size_t idx);
-prop_t *get_prop_from_wd(int wd);
-prop_t *get_prop_from_hdlr(int (*hdlr)(const char *, char *));
-prop_t *get_prop_from_cmd(const char *cmd);
-char *get_abs_path(prop_t *prop, char *path);
-char *get_abs_dir(prop_t *prop, char *path);
-char *get_root(prop_t *prop, char *root);
+prop_t* get_prop(size_t idx);
+prop_t* get_prop_from_wd(int wd);
+prop_t* get_prop_from_hdlr(int (*hdlr)(const char*, char*));
+prop_t* get_prop_from_cmd(const char* cmd);
+char* get_abs_path(prop_t* prop, char* path);
+char* get_abs_dir(prop_t* prop, char* path);
+char* get_root(prop_t* prop, char* root);
 
 void pass_uart_synth_fd(int fd);
-void pass_uart_tx_fd(int *fd);
-void pass_uart_rx_fd(int *fd);
+void pass_uart_tx_fd(int* fd);
+void pass_uart_rx_fd(int* fd);
 
-void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
-                            char *save_path);
+void pass_profile_pntr_prop(
+    uint8_t* load, uint8_t* save, char* load_path, char* save_path);
 void sync_channels(uint8_t chan_mask);
-void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
-                       bool tx, size_t channel);
+void set_pll_frequency(
+    int uart_fd, uint64_t reference, pllparam_t* pll, bool tx, size_t channel);
 
 void dump_tree(void);
 

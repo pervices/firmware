@@ -92,53 +92,52 @@ extern "C" {
  *  \param dest - Write destination pointer address
  *  \param src  - 8 bit data byte to write to memory
  */
-#define alt_write_byte(dest, src)                                              \
-    (*ALT_CAST(volatile uint8_t *, (dest)) = (src))
+#define alt_write_byte(dest, src) (*ALT_CAST(volatile uint8_t*, (dest)) = (src))
 
 /*! Read and return the 8 bit byte from the source address in device memory.
  *  \param src    Read source pointer address
  *  \returns      8 bit data byte value
  */
-#define alt_read_byte(src) (*ALT_CAST(volatile uint8_t *, (src)))
+#define alt_read_byte(src) (*ALT_CAST(volatile uint8_t*, (src)))
 
 /*! Write the 16 bit half word to the destination address in device memory.
  *  \param dest - Write destination pointer address
  *  \param src  - 16 bit data half word to write to memory
  */
 #define alt_write_hword(dest, src)                                             \
-    (*ALT_CAST(volatile uint16_t *, (dest)) = (src))
+    (*ALT_CAST(volatile uint16_t*, (dest)) = (src))
 
 /*! Read and return the 16 bit half word from the source address in device
  * memory. \param src    Read source pointer address \returns      16 bit data
  * half word value
  */
-#define alt_read_hword(src) (*ALT_CAST(volatile uint16_t *, (src)))
+#define alt_read_hword(src) (*ALT_CAST(volatile uint16_t*, (src)))
 
 /*! Write the 32 bit word to the destination address in device memory.
  *  \param dest - Write destination pointer address
  *  \param src  - 32 bit data word to write to memory
  */
 #define alt_write_word(dest, src)                                              \
-    (*ALT_CAST(volatile uint32_t *, (dest)) = (src))
+    (*ALT_CAST(volatile uint32_t*, (dest)) = (src))
 
 /*! Read and return the 32 bit word from the source address in device memory.
  *  \param src    Read source pointer address
  *  \returns      32 bit data word value
  */
-#define alt_read_word(src) (*ALT_CAST(volatile uint32_t *, (src)))
+#define alt_read_word(src) (*ALT_CAST(volatile uint32_t*, (src)))
 
 /*! Write the 64 bit double word to the destination address in device memory.
  *  \param dest - Write destination pointer address
  *  \param src  - 64 bit data double word to write to memory
  */
 #define alt_write_dword(dest, src)                                             \
-    (*ALT_CAST(volatile uint64_t *, (dest)) = (src))
+    (*ALT_CAST(volatile uint64_t*, (dest)) = (src))
 
 /*! Read and return the 64 bit double word from the source address in device
  * memory. \param src    Read source pointer address \returns      64 bit data
  * double word value
  */
-#define alt_read_dword(src) (*ALT_CAST(volatile uint64_t *, (src)))
+#define alt_read_dword(src) (*ALT_CAST(volatile uint64_t*, (src)))
 
 /*! @} */
 

@@ -20,10 +20,11 @@
 typedef enum { STATE_SEQ, STATE_OP, STATE_PROP, STATE_DATA } state_t;
 
 // seq,op,prop,[data]
-int parse_cmd(cmd_t *cmd, uint8_t *data) {
+int parse_cmd(cmd_t* cmd, uint8_t* data)
+{
     int r;
-    char *tok;
-    char *saveptr = (char *)data;
+    char* tok;
+    char* saveptr = (char*)data;
     // our packets are either "123,get,foo", or "123,set,foo,bar", so there are
     // a maximum of 4 fields
     const unsigned n_max = 4;
@@ -70,7 +71,7 @@ int parse_cmd(cmd_t *cmd, uint8_t *data) {
             } else {
                 cmd->op = OP_ERROR;
                 PRINT(ERROR,
-                      "Improper command format, options are get and set only.");
+                    "Improper command format, options are get and set only.");
                 r = RETURN_ERROR;
                 goto out;
             }
@@ -95,11 +96,12 @@ out:
 }
 
 // seq,status,[data]
-void build_cmd(cmd_t *cmd, uint8_t *data, size_t max_size) {
+void build_cmd(cmd_t* cmd, uint8_t* data, size_t max_size)
+{
     if (!cmd || !data)
         return;
 
     memset(data, 0, max_size);
-    snprintf((char *)data, max_size, "%" PRIu32 ",%i,%s", cmd->seq, cmd->status,
-             cmd->data);
+    snprintf((char*)data, max_size, "%" PRIu32 ",%i,%s", cmd->seq, cmd->status,
+        cmd->data);
 }

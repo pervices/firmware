@@ -109,7 +109,7 @@ bool synth_lut_is_calibrated(const bool tx, const size_t channel);
  *                EINVAL if freq is not an exact positive multiple of the LO
  * step size.
  */
-int synth_lut_get(const bool tx, const uint8_t channel, const double freq,
-                  synth_rec_t *rec);
+int synth_lut_get(
+    const bool tx, const uint8_t channel, const double freq, synth_rec_t* rec);
 
 #endif /* SYNTH_LUT_H_ */

@@ -23,7 +23,7 @@
 // Minimum time between UART commands
 #define TIME_INTERVAL 50000 // us, 0.05 seconds
 
-static struct timeval tprev;  // time since previous UART command
+static struct timeval tprev; // time since previous UART command
 static struct timeval tstart; // time since the beginning of a UART send attempt
 static struct timeval tend;
 
@@ -33,7 +33,8 @@ static uint8_t _options = 0;
 void set_uart_debug_opt(uint8_t options) { _options = options; }
 
 // return 1 if timeout, 0 if not
-static uint8_t timeout(struct timeval *t, long long int time) {
+static uint8_t timeout(struct timeval* t, long long int time)
+{
     gettimeofday(&tend, NULL);
 
     // overflow issue when computing all within the same statement
@@ -48,7 +49,8 @@ static uint8_t timeout(struct timeval *t, long long int time) {
     }
 }
 
-int set_uart_interface_attribs(int fd, int speed, int parity) {
+int set_uart_interface_attribs(int fd, int speed, int parity)
+{
     gettimeofday(&tprev, NULL); // on config, reset the prev timer
 
     struct termios tty;
@@ -65,16 +67,16 @@ int set_uart_interface_attribs(int fd, int speed, int parity) {
     // disable IGNBRK for mismatched speed tests; otherwise receive break
     // as \000 chars
     tty.c_iflag &= ~IGNBRK; // disable break processing
-    tty.c_lflag = 0;        // no signaling chars, no echo,
-                            // no canonical processing
-    tty.c_oflag = 0;        // no remapping, no delays
-    tty.c_cc[VMIN] = 0;     // read doesn't block
-    tty.c_cc[VTIME] = 5;    // 0.5 seconds read timeout
+    tty.c_lflag = 0; // no signaling chars, no echo,
+                     // no canonical processing
+    tty.c_oflag = 0; // no remapping, no delays
+    tty.c_cc[VMIN] = 0; // read doesn't block
+    tty.c_cc[VTIME] = 5; // 0.5 seconds read timeout
 
     tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
-    tty.c_cflag |= (CLOCAL | CREAD);   // ignore modem controls,
-                                       // enable reading
+    tty.c_cflag |= (CLOCAL | CREAD); // ignore modem controls,
+                                     // enable reading
     tty.c_cflag &= ~(PARENB | PARODD); // shut off parity
     tty.c_cflag |= parity;
     tty.c_cflag &= ~CSTOPB;
@@ -87,7 +89,8 @@ int set_uart_interface_attribs(int fd, int speed, int parity) {
     return RETURN_SUCCESS;
 }
 
-void set_uart_blocking(int fd, int should_block) {
+void set_uart_blocking(int fd, int should_block)
+{
     struct termios tty;
     memset(&tty, 0, sizeof tty);
     if (tcgetattr(fd, &tty) != 0) {
@@ -104,7 +107,8 @@ void set_uart_blocking(int fd, int should_block) {
     return;
 }
 
-int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
+int recv_uart(int fd, uint8_t* data, uint16_t* size, uint16_t max_size)
+{
     gettimeofday(&tstart, NULL);
 
     int rd_len = 0;
@@ -125,7 +129,8 @@ int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
     return RETURN_SUCCESS;
 }
 
-int send_uart(int fd, uint8_t *data, uint16_t size) {
+int send_uart(int fd, uint8_t* data, uint16_t size)
+{
     if (_options & SERVER_DEBUG_OPT)
         PRINT(DEBUG, "%s(): %s\n", __func__, data);
 
@@ -149,7 +154,8 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
 }
 
 // Flushes UART on HPS side
-int flush_uart(int fd) {
+int flush_uart(int fd)
+{
     if (tcflush(fd, TCIOFLUSH) == 0)
         return RETURN_SUCCESS;
     else
