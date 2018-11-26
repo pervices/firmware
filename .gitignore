@@ -56,3 +56,5 @@ stamp-h1
 
 #Ignore hex (programming files) in this directory
 *.hex
+
+copy.sh

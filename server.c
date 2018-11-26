@@ -38,6 +38,7 @@
 #include "parser.h"
 #include "synth_lut.h"
 #include "led.h"
+#include "time_it.h"
 
 int main(int argc, char *argv[]) {
 
@@ -133,7 +134,12 @@ int main(int argc, char *argv[]) {
     socklen_t sa_len;
 
     // Initialize the properties, which is implemented as a Linux file structure
+    const int t0 = time_it();
     init_property(options);
+    const int t1 = time_it();
+
+    printf("boot time %d\n", t1 - t0);
+
     inotify_fd = get_inotify_fd();
 
     // Perform autocalibration of the frequency synthesizers
@@ -178,7 +184,7 @@ int main(int argc, char *argv[]) {
                 // Timeout has expired (although we have provided no timeout)
                 PRINT(VERBOSE, "select timed-out\n");
             } else {
-                PRINT(VERBOSE, "select failed on fd %d: %s (%d)\n", comm_fds[i],
+                PRINT(VERBOSE, "select failed on fd %d: %s (%d)\n", -1,
                       strerror(errno), errno);
             }
 

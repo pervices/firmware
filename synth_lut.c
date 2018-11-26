@@ -192,6 +192,7 @@ out:
     return r;
 }
 
+#if 0
 static int synth_lut_calibrate_one_for_freq(struct synth_lut_ctx *ctx,
                                             const double freq,
                                             synth_rec_t *rec) {
@@ -232,6 +233,7 @@ static int synth_lut_calibrate_one_for_freq(struct synth_lut_ctx *ctx,
 out:
     return r;
 }
+#endif
 
 static int synth_lut_calibrate_n_for_freq(const double freq, const size_t n,
                                           struct synth_lut_ctx *ctx_[],
@@ -337,6 +339,7 @@ static struct synth_lut_ctx *synth_lut_find(const bool tx,
     return it;
 }
 
+#if 0
 static int synth_lut_calibrate_one(struct synth_lut_ctx *ctx) {
 
     int r;
@@ -368,6 +371,7 @@ static int synth_lut_calibrate_one(struct synth_lut_ctx *ctx) {
 
     return EXIT_SUCCESS;
 }
+#endif
 
 static int synth_lut_recalibrate_all() {
 
@@ -376,14 +380,12 @@ static int synth_lut_recalibrate_all() {
     size_t i;
     size_t j;
     double freq;
-    size_t chan_i;
     size_t n_channels;
     size_t cmdbuf_sz;
-    char *cmdbuf;
+    char *cmdbuf = NULL;
 
     synth_rec_t **rec = NULL;
     struct synth_lut_ctx **ctx = NULL;
-    struct synth_lut_ctx *it;
 
     synth_rec_t *rect = NULL;
 
@@ -669,7 +671,6 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
 
     int r;
 
-    struct stat st;
     synth_rec_t *rec = NULL;
     char cmdbuf[PATH_MAX];
 
@@ -838,7 +839,6 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     char req[] = "status -s";
 
     int r;
-    size_t len;
 
     // this array is used for both the command response and regular expression
     // errors
@@ -1048,7 +1048,6 @@ int synth_lut_enable_all_if_calibrated() {
 
     r = EXIT_SUCCESS;
 
-out:
     return r;
 }
 
@@ -1058,8 +1057,6 @@ static int _synth_lut_set_freq(struct synth_lut_ctx *ctx, const double freq) {
     pthread_mutex_lock(&ctx->lock);
 
     r = set_freq_internal(ctx->tx, ctx->channel(ctx), freq);
-
-out:
 
     pthread_mutex_unlock(&ctx->lock);
 
@@ -1074,7 +1071,6 @@ static int _synth_lut_autocal_enable(struct synth_lut_ctx *ctx, const bool en) {
     char cmd_buf[PATH_MAX];
     char resp_buf[PATH_MAX];
 
-    int core, band, bias;
     int uart_fd;
 
     size_t chan_i;

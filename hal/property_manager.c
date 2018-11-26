@@ -32,6 +32,7 @@
 #endif
 
 #include "channels.h"
+#include "time_it.h"
 
 /* clang-format on */
 
@@ -80,6 +81,11 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
+static void change_group_permissions_for_all(void)
+{
+    system("chgrp dev-grp0 -R /var/crimson");
+}
+
 // Helper function to make properties
 static void make_prop(prop_t *prop) {
     char cmd[MAX_PATH_LEN];
@@ -100,24 +106,12 @@ static void make_prop(prop_t *prop) {
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
-        // TODO: @CF: use fchownat(2)
-        // change group for folder
-        strcpy(cmd, "chgrp dev-grp0 -R ");
-        strcat(cmd, get_abs_dir(prop, path));
-        system(cmd);
-
         // TODO: replace with openat(2)
         // touch /home/root/state/*
         strcpy(cmd, "touch ");
         strcat(cmd, get_abs_path(prop, path));
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
-
-        // TODO: @CF: use fchownat(2)
-        // change group for properties
-        strcpy(cmd, "chgrp dev-grp0 ");
-        strcat(cmd, get_abs_path(prop, path));
-        system(cmd);
 
         // TODO: @CF: use fchmodat(2)
         // if read only property, change permissions
@@ -148,12 +142,6 @@ static void make_prop(prop_t *prop) {
         strcat(cmd, get_abs_dir(prop, path));
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
-
-        // TODO: @CF: use fchownat(2)
-        // change group for folder
-        strcpy(cmd, "chgrp dev-grp0 -R ");
-        strcat(cmd, get_abs_dir(prop, path));
-        system(cmd);
 
         snprintf(cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path);
         system(cmd);
@@ -228,6 +216,8 @@ static void build_tree(void) {
         PRINT(VERBOSE, "made prop: %s wd: %i\n", prop->path, prop->wd);
     }
 
+    change_group_permissions_for_all();
+
     // force property initofy check (writing of defaults) after init
     check_property_inotifies();
 
@@ -252,16 +242,15 @@ int init_property(uint8_t options) {
     init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
 #if defined(VAUNT)
-#define SETUP                                        \
-    init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0); \
-    init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0); \
-    for (int i = 1; i < NUM_CHANNELS; i++)           \
-        uart_tx_comm_fd[i] = uart_tx_comm_fd[0];     \
-    for (int i = 1; i < NUM_CHANNELS; i++)           \
+    init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
+    init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
+    for (int i = 1; i < NUM_CHANNELS; i++)
+        uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
+    for (int i = 1; i < NUM_CHANNELS; i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
-    SETUP
 
 #elif defined(TATE)
+
 #define X(ch)                                                               \
     init_uart_comm(&uart_tx_comm_fd[INT(ch)], "/dev/ttytatetx" STR(ch), 0); \
     init_uart_comm(&uart_rx_comm_fd[INT(ch)], "/dev/ttytaterx" STR(ch), 0);
@@ -338,7 +327,13 @@ void check_property_inotifies(void) {
 
             PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__,
                   prop->path, prop_data);
+
+            const int t0 = time_it();
             prop->handler(prop_data, prop_ret);
+            const int t1 = time_it();
+
+            printf("%s :: %d\n", path, t1 - t0);
+
             if (prop->permissions == RO) {
                 memset(prop_ret, 0, sizeof(prop_ret));
                 sprintf(prop_ret, "%s", prop->def_val);
