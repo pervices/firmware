@@ -94,12 +94,12 @@
     (23) // R value must be fixed to ensure consistent PFD frequency (13MHz)
 
 #define PLL1_N_DEFAULT                                                         \
-    (112) // N value (N^2 contribution to PLL noise) [16..4096]
+    (112)                  // N value (N^2 contribution to PLL noise) [16..4096]
 #define PLL1_D_DEFAULT (2) // RFoutput divider value (1,2,4,6..58,60,62)
 #define PLL1_X2EN_DEFAULT                                                      \
     (0) // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
 #define PLL1_OUTFREQ_DEFAULT (2800000000) // Resulting VCO Output Frequency
-#define PLL1_FB_DEFAULT (1) // VCO divider feedback
+#define PLL1_FB_DEFAULT (1)               // VCO divider feedback
 
 /*
 
@@ -115,22 +115,22 @@
 
 // Define a generic structure to hold PLL values.
 typedef struct {
-    uint16_t R; // Reference divider R
-    uint32_t N; // VCO Frequency divider N
-    uint16_t d; // VCO Output Frequency divider
-    uint8_t x2en; // VCO Output Frequency doubler (enabled when 1)
+    uint16_t R;          // Reference divider R
+    uint32_t N;          // VCO Frequency divider N
+    uint16_t d;          // VCO Output Frequency divider
+    uint8_t x2en;        // VCO Output Frequency doubler (enabled when 1)
     long double vcoFreq; // Resulting VCO Output Frequency
-    uint8_t divFBen; // Feedback from divider (enabled when 1, default 0)
+    uint8_t divFBen;     // Feedback from divider (enabled when 1, default 0)
 } pllparam_t;
 
 // Set Output Frequency
-double setFreq(uint64_t* reqFreq,
-    pllparam_t* pll1); // Returns the actual frequency set.
+double setFreq(uint64_t *reqFreq,
+               pllparam_t *pll1); // Returns the actual frequency set.
 
 // Return 1 if all sanitary checks for pllparam_t have passed
-uint8_t pll_CheckParams(pllparam_t* pllparam, uint8_t is_pll1);
+uint8_t pll_CheckParams(pllparam_t *pllparam, uint8_t is_pll1);
 
 // Determine the VCO and Output Settings of the PLL
-void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pllparam);
+void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pllparam);
 
 #endif

@@ -89,17 +89,17 @@
 // Output data structure
 typedef struct outdata {
     uint8_t status; // status of the operation
-    uint32_t seq; // sequence of cmd, must match	NOT YET IMPLEMENTED
-    char* data; // data the be sent back
+    uint32_t seq;   // sequence of cmd, must match	NOT YET IMPLEMENTED
+    char *data;     // data the be sent back
 } outdata_t;
 
 // Input data structure
 typedef struct indata {
-    uint32_t seq; // sequence of cmd, must match NOT YET IMPLEMENTED
+    uint32_t seq;  // sequence of cmd, must match NOT YET IMPLEMENTED
     uint8_t ctgry; // category
-    uint8_t op; // operation
-    char* cmd; // command
-    char* data; // write data if operation is a SET
+    uint8_t op;    // operation
+    char *cmd;     // command
+    char *data;    // write data if operation is a SET
 } indata_t;
 
 // UDP ports
@@ -126,7 +126,7 @@ typedef enum { FALSE, TRUE } boolean;
 typedef enum { ERROR, INFO, DEBUG, VERBOSE, DUMP } print_t;
 
 // printf wrapper
-void PRINT_WRAPPER(print_t priority, const char* format, ...);
+void PRINT_WRAPPER(print_t priority, const char *format, ...);
 
 #define PRINT(prio, fmt, args...)                                              \
     do {                                                                       \
@@ -134,11 +134,11 @@ void PRINT_WRAPPER(print_t priority, const char* format, ...);
         clock_gettime(CLOCK_REALTIME, &_ts);                                   \
         if (ERROR == prio) {                                                   \
             PRINT_WRAPPER(prio, "[%6ld.%03ld] %s: %s(): " fmt,                 \
-                (long)_ts.tv_sec, _ts.tv_nsec / 1000000UL, #prio, __func__,    \
-                ##args);                                                       \
+                          (long)_ts.tv_sec, _ts.tv_nsec / 1000000UL, #prio,    \
+                          __func__, ##args);                                   \
         } else {                                                               \
             PRINT_WRAPPER(prio, "[%6ld.%03ld] %s: " fmt, (long)_ts.tv_sec,     \
-                _ts.tv_nsec / 1000000UL, #prio, ##args);                       \
+                          _ts.tv_nsec / 1000000UL, #prio, ##args);             \
         }                                                                      \
     } while (0)
 

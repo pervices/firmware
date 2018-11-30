@@ -49,8 +49,7 @@ static int uart_synth_fd = 1;
 static int uart_tx_fd = 2;
 static int uart_rx_fd = 3;
 
-static int contains(const char* str, char letter, int size)
-{
+static int contains(const char *str, char letter, int size) {
     int cnt = 0;
     for (int i = 0; i < size; i++) {
         if (str[i] == letter)
@@ -74,21 +73,32 @@ static void dump_args(void)
 static void help(void)
 {
     printf("Usage: mcu"
-           "[%s /dev/tty] "
-           "[%s /dev/tty] "
-           "[%s /dev/tty] "
-           "[%s] "
-           "[%s] "
-           "[%s [t|r|s]] "
-           "[%s milliseconds]\n",
-        ARG_MCU_UART_TX, ARG_MCU_UART_RX, ARG_MCU_UART_SN, ARG_MCU_SILENT,
-        ARG_MCU_CONSOLE, ARG_MCU_FWD, ARG_MCU_TIMEOUT);
+        "[%s /dev/tty] "
+        "[%s /dev/tty] "
+        "[%s /dev/tty] "
+        "[%s] "
+        "[%s] "
+        "[%s [t|r|s]] "
+        "[%s milliseconds]\n",
+        ARG_MCU_UART_TX,
+        ARG_MCU_UART_RX,
+        ARG_MCU_UART_SN,
+        ARG_MCU_SILENT,
+        ARG_MCU_CONSOLE,
+        ARG_MCU_FWD,
+        ARG_MCU_TIMEOUT);
     exit(1);
 }
 
-static boolean streql(char* a, char* b) { return strcmp(a, b) == 0; }
+static boolean streql(char* a, char* b)
+{
+    return strcmp(a, b) == 0;
+}
 
-static boolean last(const int arg, const int argc) { return arg == argc - 1; }
+static boolean last(const int arg, const int argc)
+{
+    return arg == argc - 1;
+}
 
 static void parse_args(int argc, char* argv[])
 {
@@ -103,19 +113,23 @@ static void parse_args(int argc, char* argv[])
             console = TRUE;
 
             // if argument to specify this is a forward command
-        } else if (streql(argv[i], ARG_MCU_UART_SN) && !last(i, argc)) {
+        }
+        else if (streql(argv[i], ARG_MCU_UART_SN) && !last(i, argc)) {
 
             UART_SN = argv[i + 1];
             i++;
-        } else if (streql(argv[i], ARG_MCU_UART_TX) && !last(i, argc)) {
+        }
+        else if (streql(argv[i], ARG_MCU_UART_TX) && !last(i, argc)) {
 
             UART_TX = argv[i + 1];
             i++;
-        } else if (streql(argv[i], ARG_MCU_UART_RX) && !last(i, argc)) {
+        }
+        else if (streql(argv[i], ARG_MCU_UART_RX) && !last(i, argc)) {
 
             UART_RX = argv[i + 1];
             i++;
-        } else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
+        }
+        else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
             fwd = TRUE;
             i++;
             if (argv[i][0] == 't') {
@@ -136,18 +150,19 @@ static void parse_args(int argc, char* argv[])
             i++;
             sscanf(argv[i], "%" SCNu32 "", &timeout);
 
-        } else {
+        }
+        else {
             // usage menu
             help();
         }
     }
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
 
     parse_args(argc, argv);
     dump_args();
+
 
     // initialize the comm port
     if (init_uart_comm(&uart_synth_fd, UART_SN, 0) < 0) {
@@ -176,7 +191,7 @@ int main(int argc, char* argv[])
             strcat(buf, "\r");
         }
 
-        send_uart_comm(uart_comm_fd, (uint8_t*)buf, strlen(buf));
+        send_uart_comm(uart_comm_fd, (uint8_t *)buf, strlen(buf));
 
         // if not silent, read the output
         if (!silent) {
@@ -184,8 +199,8 @@ int main(int argc, char* argv[])
             uint16_t total_bytes = 0, cur_bytes = 0;
 
             while (contains(buf, '>', total_bytes) < 1) {
-                if (recv_uart_comm(uart_comm_fd, ((uint8_t*)buf) + total_bytes,
-                        &cur_bytes, MAX_UART_LEN - total_bytes)) {
+                if (recv_uart_comm(uart_comm_fd, ((uint8_t *)buf) + total_bytes,
+                                   &cur_bytes, MAX_UART_LEN - total_bytes)) {
                     return 0;
                 }
                 total_bytes += cur_bytes;

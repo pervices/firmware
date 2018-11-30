@@ -35,7 +35,7 @@ typedef struct cmd {
     char data[MAX_PROP_LEN]; // data is the property value
 } cmd_t;
 
-int parse_cmd(cmd_t* cmd, uint8_t* data);
-void build_cmd(cmd_t* cmd, uint8_t* data, size_t max_size);
+int parse_cmd(cmd_t *cmd, uint8_t *data);
+void build_cmd(cmd_t *cmd, uint8_t *data, size_t max_size);
 
 #endif

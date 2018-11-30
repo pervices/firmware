@@ -27,17 +27,17 @@
 
 // PLL Constructors
 
-pllparam_t pll_def = { PLL1_R_FIXED, PLL1_N_DEFAULT, PLL1_D_DEFAULT,
-    PLL1_X2EN_DEFAULT, PLL1_OUTFREQ_DEFAULT, PLL1_FB_DEFAULT };
-pllparam_t pll_def_r_5 = { PLL1_R_FIXED_5, PLL1_N_DEFAULT, PLL1_D_DEFAULT,
-    PLL1_X2EN_DEFAULT, PLL1_OUTFREQ_DEFAULT, PLL1_FB_DEFAULT };
+pllparam_t pll_def = {PLL1_R_FIXED,      PLL1_N_DEFAULT,       PLL1_D_DEFAULT,
+                      PLL1_X2EN_DEFAULT, PLL1_OUTFREQ_DEFAULT, PLL1_FB_DEFAULT};
+pllparam_t pll_def_r_5 = {PLL1_R_FIXED_5,       PLL1_N_DEFAULT,
+                          PLL1_D_DEFAULT,       PLL1_X2EN_DEFAULT,
+                          PLL1_OUTFREQ_DEFAULT, PLL1_FB_DEFAULT};
 
 #ifdef _PLL_DEBUG_STANDALONE
 // ==========================
 // Main
 // ==========================
-int main(void)
-{
+int main(void) {
     uint64_t reqFreq = 250e6;
     pllparam_t pll;
 
@@ -79,11 +79,11 @@ int main(void)
         printf("Requested: %" PRIu64
                ", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, "
                "Noise: %.10lf, Noise (dBc): %.10lf \n",
-            reqFreq, actual_reference, actual_output, diff, 20 * log10(noise),
-            20 * log10(dbc_noise1));
+               reqFreq, actual_reference, actual_output, diff,
+               20 * log10(noise), 20 * log10(dbc_noise1));
         printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: %li, "
                "2xOut: %i\n",
-            pll.vcoFreq, pll.d, pll.R, pll.N, pll.x2en);
+               pll.vcoFreq, pll.d, pll.R, pll.N, pll.x2en);
 #endif
 
         if (diff < 0) {
@@ -111,11 +111,11 @@ int main(void)
             printf("\t Requested: %" PRIu64
                    ", Reference: %.10lf, Output: %.10lf, Difference: %.10lf, "
                    "Noise: %.10lf, Noise (dBc): %.10lf \n",
-                reqFreq, actual_reference, actual_output, diff,
-                20 * log10(noise), 20 * log10(dbc_noise1));
+                   reqFreq, actual_reference, actual_output, diff,
+                   20 * log10(noise), 20 * log10(dbc_noise1));
             printf("\t Using: VcoFreq: %Lf, Divider: %li, Rdiv: %li, Ndiv: "
                    "%li, 2xOut: %i\n",
-                pll.vcoFreq, pll.d, pll.R, pll.N, pll.x2en);
+                   pll.vcoFreq, pll.d, pll.R, pll.N, pll.x2en);
             printdebug = 0;
         }
 #endif
@@ -131,8 +131,7 @@ int main(void)
 // ==========================
 // Common functions
 // ==========================
-double setFreq(uint64_t* reqFreq, pllparam_t* pll)
-{
+double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
 
     // Crimson has two PLLs feeding each other. The first PLL is used to
     // generate a reference frequency that is used by the second PLL to
@@ -184,8 +183,8 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll)
 
     // 2. Use the reference to determine R, N, and pfd frequency
     // Crimson RTM5 Phase coherance under 575MHz
-    long double pd_freq
-        = (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
+    long double pd_freq =
+        (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
 
     double N1 = 0;
 
@@ -210,40 +209,40 @@ double setFreq(uint64_t* reqFreq, pllparam_t* pll)
     if (!pll->divFBen) {
         pll->vcoFreq = (long double)pd_freq * (long double)pll->N;
     } else {
-        pll->vcoFreq
-            = (long double)pd_freq * (uint64_t)pll->N * (uint64_t)pll->d;
+        pll->vcoFreq =
+            (long double)pd_freq * (uint64_t)pll->N * (uint64_t)pll->d;
     }
 
     if (!pll_CheckParams(pll, 1)) {
 #ifndef _PLL_DEBUG_STANDALONE
         PRINT(ERROR,
-            "BAD PLL SETTINGS: PLL1: N: %" PRIu32 ", R: %" PRIu16
-            ", D: %" PRIu16 ", x2en: %" PRIu8 ", VCO: %Lf.\n",
-            pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
+              "BAD PLL SETTINGS: PLL1: N: %" PRIu32 ", R: %" PRIu16
+              ", D: %" PRIu16 ", x2en: %" PRIu8 ", VCO: %Lf.\n",
+              pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
 #else
         printf("BAD PLL SETTINGS: PLL1: N: %" PRIu32 ", R: %" PRIu16
                ", D: %" PRIu16 ", x2en: %" PRIu8 ", VCO: %Lf.\n",
-            pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
+               pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
 #endif
     }
 
     *reqFreq = temp;
-    double actual_output = ((double)pll->vcoFreq / (double)pll->d)
-        + (pll->x2en) * ((double)pll->vcoFreq / (double)pll->d);
+    double actual_output =
+        ((double)pll->vcoFreq / (double)pll->d) +
+        (pll->x2en) * ((double)pll->vcoFreq / (double)pll->d);
 
     return actual_output;
 };
 
-uint8_t pll_CheckParams(pllparam_t* pllparam, uint8_t is_pll1)
-{
+uint8_t pll_CheckParams(pllparam_t *pllparam, uint8_t is_pll1) {
 
     if (is_pll1) {
-        if ((pllparam->N > PLL1_N_MAX) || (pllparam->N < PLL1_N_MIN)
-            || (pllparam->R > _PLL_RATS_MAX_DENOM) || (pllparam->R > PLL1_R_MAX)
-            || (pllparam->R < PLL1_R_MIN) || (pllparam->d > PLL1_DIV_MAX)
-            || (pllparam->d < 1) || (pllparam->d > 1 && (pllparam->d & 1) != 0)
-            || (pllparam->x2en > 1) || (pllparam->vcoFreq > PLL1_VCO_MAX_HZ)
-            || (pllparam->vcoFreq < PLL1_VCO_MIN_HZ)) {
+        if ((pllparam->N > PLL1_N_MAX) || (pllparam->N < PLL1_N_MIN) ||
+            (pllparam->R > _PLL_RATS_MAX_DENOM) || (pllparam->R > PLL1_R_MAX) ||
+            (pllparam->R < PLL1_R_MIN) || (pllparam->d > PLL1_DIV_MAX) ||
+            (pllparam->d < 1) || (pllparam->d > 1 && (pllparam->d & 1) != 0) ||
+            (pllparam->x2en > 1) || (pllparam->vcoFreq > PLL1_VCO_MAX_HZ) ||
+            (pllparam->vcoFreq < PLL1_VCO_MIN_HZ)) {
             return 0;
         }
     }
@@ -251,8 +250,7 @@ uint8_t pll_CheckParams(pllparam_t* pllparam, uint8_t is_pll1)
     return 1;
 }
 
-void pll_SetVCO(uint64_t* reqFreq, pllparam_t* pll)
-{
+void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
     // Configure VCO frequency and DIV values for PLL1
     if (*reqFreq > PLL1_VCO_MAX_HZ) {
         pll->x2en = 1;

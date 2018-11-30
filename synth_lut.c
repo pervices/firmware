@@ -44,45 +44,45 @@ extern void server_ready_led();
 
 enum { RX, TX };
 
-extern int set_freq_internal(
-    const bool tx, const unsigned channel, const double freq);
+extern int set_freq_internal(const bool tx, const unsigned channel,
+                             const double freq);
 
 struct synth_lut_ctx {
     const bool tx;
-    const char* id;
+    const char *id;
     // "/var/crimson/calibration-data/TXA-XXXXXXXXXXXXXXXXXXXXXX.bin", where
     // "XXXX.." are lowercase hex digits
     char fn[PATH_MAX];
     int fd;
-    synth_rec_t* fm;
+    synth_rec_t *fm;
     size_t fs;
     bool enabled;
     pthread_mutex_t lock;
 
-    size_t (*channel)(struct synth_lut_ctx* ctx);
-    void (*disable)(struct synth_lut_ctx* ctx);
-    int (*enable)(struct synth_lut_ctx* ctx);
-    void (*erase)(struct synth_lut_ctx* ctx);
-    int (*is_calibrated)(struct synth_lut_ctx* ctx, bool* is);
-    int (*get)(struct synth_lut_ctx* ctx, const double freq, synth_rec_t* rec);
-    int (*init)(struct synth_lut_ctx* ctx);
-    int (*set_freq)(struct synth_lut_ctx* ctx, const double freq);
-    int (*autocal_enable)(struct synth_lut_ctx* ctx, const bool en);
-    int (*autocal_values)(struct synth_lut_ctx* ctx, synth_rec_t* rec);
+    size_t (*channel)(struct synth_lut_ctx *ctx);
+    void (*disable)(struct synth_lut_ctx *ctx);
+    int (*enable)(struct synth_lut_ctx *ctx);
+    void (*erase)(struct synth_lut_ctx *ctx);
+    int (*is_calibrated)(struct synth_lut_ctx *ctx, bool *is);
+    int (*get)(struct synth_lut_ctx *ctx, const double freq, synth_rec_t *rec);
+    int (*init)(struct synth_lut_ctx *ctx);
+    int (*set_freq)(struct synth_lut_ctx *ctx, const double freq);
+    int (*autocal_enable)(struct synth_lut_ctx *ctx, const bool en);
+    int (*autocal_values)(struct synth_lut_ctx *ctx, synth_rec_t *rec);
 };
 
-static size_t _synth_lut_channel(struct synth_lut_ctx* ctx);
-static void _synth_lut_disable(struct synth_lut_ctx* ctx);
-static int _synth_lut_enable(struct synth_lut_ctx* ctx);
-static void _synth_lut_erase(struct synth_lut_ctx* ctx);
-static int _synth_lut_is_calibrated(struct synth_lut_ctx* ctx, bool* is);
-static int _synth_lut_get(
-    struct synth_lut_ctx* ctx, const double freq, synth_rec_t* rec);
-static int _synth_lut_init(struct synth_lut_ctx* ctx);
-static int _synth_lut_set_freq(struct synth_lut_ctx* ctx, const double freq);
-static int _synth_lut_autocal_enable(struct synth_lut_ctx* ctx, const bool en);
-static int _synth_lut_autocal_values(
-    struct synth_lut_ctx* ctx, synth_rec_t* rec);
+static size_t _synth_lut_channel(struct synth_lut_ctx *ctx);
+static void _synth_lut_disable(struct synth_lut_ctx *ctx);
+static int _synth_lut_enable(struct synth_lut_ctx *ctx);
+static void _synth_lut_erase(struct synth_lut_ctx *ctx);
+static int _synth_lut_is_calibrated(struct synth_lut_ctx *ctx, bool *is);
+static int _synth_lut_get(struct synth_lut_ctx *ctx, const double freq,
+                          synth_rec_t *rec);
+static int _synth_lut_init(struct synth_lut_ctx *ctx);
+static int _synth_lut_set_freq(struct synth_lut_ctx *ctx, const double freq);
+static int _synth_lut_autocal_enable(struct synth_lut_ctx *ctx, const bool en);
+static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
+                                     synth_rec_t *rec);
 
 #define DEF_RTX_CTX(rtx, rtxbool, ch)                                          \
     {                                                                          \
@@ -120,9 +120,8 @@ static struct synth_lut_ctx synth_lut_tx_ctx[] = {
 
 #define SYNTH_LUT_LEN ((size_t)(((FREQ_TOP - FREQ_BOTTOM) / LO_STEP_SIZE) + 1))
 
-static int synth_lut_uart_cmd(
-    const int fd, char* query, char* resp, const size_t resp_max_sz)
-{
+static int synth_lut_uart_cmd(const int fd, char *query, char *resp,
+                              const size_t resp_max_sz) {
     int r;
 
     uint16_t resp_sz = 0;
@@ -135,21 +134,21 @@ static int synth_lut_uart_cmd(
 
     if (!isatty(fd)) {
         r = errno;
-        PRINT(
-            ERROR, "fd %d is not a tty (%d,%s)\n", fd, errno, strerror(errno));
+        PRINT(ERROR, "fd %d is not a tty (%d,%s)\n", fd, errno,
+              strerror(errno));
         goto out;
     }
 
     r = tcflush(fd, TCIOFLUSH);
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "tcflush on fd %d failed (%d,%s)\n", fd, errno,
-            strerror(errno));
+              strerror(errno));
     }
 
     r = write(fd, query, strlen(query));
     if (strlen(query) != r) {
         PRINT(ERROR, "failed to send query '%s' on uart_fd %d\n", query, fd,
-            errno, strerror(errno));
+              errno, strerror(errno));
         r = errno;
         goto out;
     }
@@ -174,8 +173,8 @@ static int synth_lut_uart_cmd(
                 break;
             }
             PRINT(ERROR,
-                "failed to receive response to command '%s' on uart_fd %d\n",
-                query, fd);
+                  "failed to receive response to command '%s' on uart_fd %d\n",
+                  query, fd);
             r = errno;
             goto out;
 
@@ -237,15 +236,15 @@ out:
 #endif
 
 static int synth_lut_calibrate_n_for_freq(const double freq, const size_t n,
-    struct synth_lut_ctx* ctx_[], synth_rec_t* rec_[])
-{
+                                          struct synth_lut_ctx *ctx_[],
+                                          synth_rec_t *rec_[]) {
     int r;
 
     size_t i;
     bool tx;
     size_t chan_i;
-    struct synth_lut_ctx* ctx;
-    synth_rec_t* rec;
+    struct synth_lut_ctx *ctx;
+    synth_rec_t *rec;
 
     // disable autocal for all channels
     for (i = 0; i < n; i++) {
@@ -265,7 +264,8 @@ static int synth_lut_calibrate_n_for_freq(const double freq, const size_t n,
         r = ctx->set_freq(ctx, freq);
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR, "failed to set %s %c @ %u MHz (%d,%s)\n",
-                tx ? "TX" : "RX", 'A' + chan_i, freq / 1000000, r, strerror(r));
+                  tx ? "TX" : "RX", 'A' + chan_i, freq / 1000000, r,
+                  strerror(r));
             goto out;
         }
     }
@@ -279,14 +279,15 @@ static int synth_lut_calibrate_n_for_freq(const double freq, const size_t n,
         r = ctx->autocal_values(ctx, rec);
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR,
-                "failed to read back autocal values %s %c @ %u MHz (%d,%s)\n",
-                tx ? "TX" : "RX", 'A' + chan_i, freq / 1000000, r, strerror(r));
+                  "failed to read back autocal values %s %c @ %u MHz (%d,%s)\n",
+                  tx ? "TX" : "RX", 'A' + chan_i, freq / 1000000, r,
+                  strerror(r));
             goto out;
         }
 
         PRINT(INFO, "%s %c @ %u MHz: { %u, %u, %u }\n", ctx->tx ? "TX" : "RX",
-            'A' + chan_i, (unsigned)(freq / 1000000), rec->core, rec->band,
-            rec->bias);
+              'A' + chan_i, (unsigned)(freq / 1000000), rec->core, rec->band,
+              rec->bias);
     }
 
     // disable autocal for all channels
@@ -305,16 +306,15 @@ out:
     return r;
 }
 
-static struct synth_lut_ctx* synth_lut_find(const bool tx, const size_t channel)
-{
+static struct synth_lut_ctx *synth_lut_find(const bool tx,
+                                            const size_t channel) {
 
-    struct synth_lut_ctx* it = NULL;
+    struct synth_lut_ctx *it = NULL;
 
     // PRINT( INFO, "Looking for %s %c\n", tx ? "TX" : "RX", 'A' + channel );
 
     if (tx) {
-        FOR_EACH(it, synth_lut_tx_ctx)
-        {
+        FOR_EACH(it, synth_lut_tx_ctx) {
             // PRINT( INFO, "Considering TX %c @ %p\n", 'A' + i, &
             // synth_lut_tx_ctx[ i ] );
             if (channel == it->channel(it)) {
@@ -323,8 +323,7 @@ static struct synth_lut_ctx* synth_lut_find(const bool tx, const size_t channel)
             }
         }
     } else {
-        FOR_EACH(it, synth_lut_rx_ctx)
-        {
+        FOR_EACH(it, synth_lut_rx_ctx) {
             // PRINT( INFO, "Considering RX %c @ %p\n", 'A' + i, &
             // synth_lut_rx_ctx[ i ] );
             if (channel == it->channel(it)) {
@@ -374,8 +373,7 @@ static int synth_lut_calibrate_one(struct synth_lut_ctx *ctx) {
 }
 #endif
 
-static int synth_lut_recalibrate_all()
-{
+static int synth_lut_recalibrate_all() {
 
     int r;
 
@@ -384,12 +382,12 @@ static int synth_lut_recalibrate_all()
     double freq;
     size_t n_channels;
     size_t cmdbuf_sz;
-    char* cmdbuf = NULL;
+    char *cmdbuf = NULL;
 
-    synth_rec_t** rec = NULL;
-    struct synth_lut_ctx** ctx = NULL;
+    synth_rec_t **rec = NULL;
+    struct synth_lut_ctx **ctx = NULL;
 
-    synth_rec_t* rect = NULL;
+    synth_rec_t *rect = NULL;
 
     synth_lut_erase_all();
 
@@ -449,19 +447,19 @@ static int synth_lut_recalibrate_all()
         r = synth_lut_calibrate_n_for_freq(freq, n_channels, ctx, rec);
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR, "%u MHz failed (%d,%s)\n", (unsigned)(freq / 1000000),
-                r, strerror(r));
+                  r, strerror(r));
             goto out;
         }
     }
 
     for (j = 0; j < n_channels; j++) {
 
-        cmdbuf_sz = strlen("'mkdir -p $(dirname ") + strlen(ctx[j]->fn)
-            + strlen(")'") + sizeof('\0');
+        cmdbuf_sz = strlen("'mkdir -p $(dirname ") + strlen(ctx[j]->fn) +
+                    strlen(")'") + sizeof('\0');
         cmdbuf = malloc(cmdbuf_sz);
         if (NULL == cmdbuf) {
             PRINT(ERROR, "Failed to allocate memory for mkdir -p (%d,%s)\n",
-                errno, strerror(errno));
+                  errno, strerror(errno));
             goto out;
         }
         snprintf(cmdbuf, cmdbuf_sz, "mkdir -p $(dirname %s)", ctx[j]->fn);
@@ -470,7 +468,7 @@ static int synth_lut_recalibrate_all()
         if (EXIT_SUCCESS != r) {
             errno = EIO;
             PRINT(ERROR, "Failed to run command %s\n", cmdbuf, errno,
-                strerror(errno));
+                  strerror(errno));
             goto out;
         }
 
@@ -479,12 +477,12 @@ static int synth_lut_recalibrate_all()
         // then reopen the file, read-only
 
         r = open(ctx[j]->fn, O_RDWR | O_SYNC | O_CREAT,
-            S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+                 S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
         if (-1 == r) {
             r = errno;
             PRINT(ERROR,
-                "Failed to create / open calibration data file %s (%d,%s)\n",
-                ctx[j]->fn, errno, strerror(errno));
+                  "Failed to create / open calibration data file %s (%d,%s)\n",
+                  ctx[j]->fn, errno, strerror(errno));
             goto out;
         }
         ctx[j]->fd = r;
@@ -493,7 +491,7 @@ static int synth_lut_recalibrate_all()
         if (-1 == r) {
             r = errno;
             PRINT(ERROR, "Failed to write calibration data (%d,%s)\n", errno,
-                strerror(errno));
+                  strerror(errno));
             remove(ctx[j]->fn);
             goto out;
         }
@@ -503,9 +501,9 @@ static int synth_lut_recalibrate_all()
         if (SYNTH_LUT_LEN * sizeof(synth_rec_t) != r) {
             r = EINVAL;
             PRINT(ERROR,
-                "Wrote wrong number of bytes to calibration data file. "
-                "Expected: %u, Actual: %u\n",
-                SYNTH_LUT_LEN * sizeof(synth_rec_t), r);
+                  "Wrote wrong number of bytes to calibration data file. "
+                  "Expected: %u, Actual: %u\n",
+                  SYNTH_LUT_LEN * sizeof(synth_rec_t), r);
             remove(ctx[j]->fn);
             goto out;
         }
@@ -513,8 +511,8 @@ static int synth_lut_recalibrate_all()
         r = close(ctx[j]->fd);
         if (-1 == r) {
             PRINT(ERROR,
-                "Warning: Failed to close calibration data file (%d,%s)\n",
-                errno, strerror(errno));
+                  "Warning: Failed to close calibration data file (%d,%s)\n",
+                  errno, strerror(errno));
         }
         ctx[j]->fd = -1;
     }
@@ -553,8 +551,7 @@ out:
     return r;
 }
 
-static size_t _synth_lut_channel(struct synth_lut_ctx* ctx)
-{
+static size_t _synth_lut_channel(struct synth_lut_ctx *ctx) {
 
     size_t r;
 
@@ -568,8 +565,7 @@ static size_t _synth_lut_channel(struct synth_lut_ctx* ctx)
     return r;
 }
 
-static void _synth_lut_disable(struct synth_lut_ctx* ctx)
-{
+static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     int r;
 
     char cmdbuf[PATH_MAX];
@@ -582,14 +578,14 @@ static void _synth_lut_disable(struct synth_lut_ctx* ctx)
     ctx->enabled = false;
 
     PRINT(INFO, "Disabling %s %c\n", ctx->tx ? "TX" : "RX",
-        'A' + ctx->channel(ctx));
+          'A' + ctx->channel(ctx));
 
     if (true && MAP_FAILED != ctx->fm && -1 != ctx->fd) {
         PRINT(INFO, "Unmapping %s\n", ctx->fn);
         r = munmap(ctx->fm, ctx->fs);
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR, "Warning: Failed to unmap %s (%d,%s)\n", ctx->fn, r,
-                strerror(errno));
+                  strerror(errno));
         }
     }
     ctx->fm = MAP_FAILED;
@@ -600,24 +596,23 @@ static void _synth_lut_disable(struct synth_lut_ctx* ctx)
         r = close(ctx->fd);
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR, "Warning: Failed to close %s (%d,%s)\n", ctx->fn, r,
-                strerror(errno));
+                  strerror(errno));
         }
     }
     ctx->fd = -1;
 
     snprintf(cmdbuf, sizeof(cmdbuf),
-        "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
-        ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+             "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
     system(cmdbuf);
 
 out:
     pthread_mutex_unlock(&ctx->lock);
 }
 
-void synth_lut_disable(const bool tx, const size_t channel)
-{
+void synth_lut_disable(const bool tx, const size_t channel) {
 
-    struct synth_lut_ctx* it = synth_lut_find(tx, channel);
+    struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         goto out;
@@ -629,8 +624,7 @@ out:
     return;
 }
 
-static void _synth_lut_erase(struct synth_lut_ctx* ctx)
-{
+static void _synth_lut_erase(struct synth_lut_ctx *ctx) {
 
     PRINT(INFO, "Erasing %s\n", ctx->fn);
 
@@ -641,17 +635,16 @@ static void _synth_lut_erase(struct synth_lut_ctx* ctx)
     if (-1 == remove(ctx->fn)) {
         if (ENOENT != errno) {
             PRINT(ERROR, "unable to remove %s (%d,%s)\n", ctx->fn, errno,
-                strerror(errno));
+                  strerror(errno));
         }
     }
 
     pthread_mutex_unlock(&ctx->lock);
 }
 
-void synth_lut_erase(const bool tx, const size_t channel)
-{
+void synth_lut_erase(const bool tx, const size_t channel) {
 
-    struct synth_lut_ctx* it = synth_lut_find(tx, channel);
+    struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         goto out;
@@ -663,24 +656,22 @@ out:
     return;
 }
 
-void synth_lut_erase_all()
-{
+void synth_lut_erase_all() {
 
-    struct synth_lut_ctx* it;
+    struct synth_lut_ctx *it;
 
     FOR_EACH(it, synth_lut_rx_ctx) { it->erase(it); }
 
     FOR_EACH(it, synth_lut_tx_ctx) { it->erase(it); }
 }
 
-static int _synth_lut_enable(struct synth_lut_ctx* ctx)
-{
+static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
 
     static const size_t n = SYNTH_LUT_LEN;
 
     int r;
 
-    synth_rec_t* rec = NULL;
+    synth_rec_t *rec = NULL;
     char cmdbuf[PATH_MAX];
 
     pthread_mutex_lock(&ctx->lock);
@@ -693,12 +684,12 @@ static int _synth_lut_enable(struct synth_lut_ctx* ctx)
     server_init_led();
 
     PRINT(INFO, "Enabling sythesizer calibration tables on %s %c..\n",
-        ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx));
+          ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx));
 
     r = ctx->init(ctx);
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "Failed to initialize %s %c (%d,%s)\n",
-            ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
+              ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
         goto out;
     }
 
@@ -706,7 +697,7 @@ static int _synth_lut_enable(struct synth_lut_ctx* ctx)
     r = ctx->is_calibrated(ctx, &calib);
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "Failed to check calibration status %s %c (%d,%s)\n",
-            ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
+              ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
         goto out;
     }
 
@@ -714,7 +705,7 @@ static int _synth_lut_enable(struct synth_lut_ctx* ctx)
         r = synth_lut_recalibrate_all();
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR, "Failed to recalibrate all (%d,%s)\n", errno,
-                strerror(errno));
+                  strerror(errno));
         }
         goto out;
     }
@@ -728,7 +719,7 @@ static int _synth_lut_enable(struct synth_lut_ctx* ctx)
     if (-1 == r) {
         r = errno;
         PRINT(ERROR, "Failed to open calibration data file %s (%d,%s)\n",
-            ctx->fn, errno, strerror(errno));
+              ctx->fn, errno, strerror(errno));
         goto out;
     }
     ctx->fd = r;
@@ -737,20 +728,20 @@ static int _synth_lut_enable(struct synth_lut_ctx* ctx)
     if (MAP_FAILED == ctx->fm) {
         r = errno;
         PRINT(ERROR, "Failed to map calibration file %s (%d,%s)\n", ctx->fn,
-            errno, strerror(errno));
+              errno, strerror(errno));
         goto out;
     }
     ctx->fs = n * sizeof(*rec);
 
     PRINT(INFO, "Mapped %u records of calibration data for %s %s at %p\n", n,
-        ctx->tx ? "TX" : "RX", ctx->id, ctx->fm);
+          ctx->tx ? "TX" : "RX", ctx->id, ctx->fm);
 
     r = EXIT_SUCCESS;
     ctx->enabled = true;
 
     snprintf(cmdbuf, sizeof(cmdbuf),
-        "echo 1 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
-        ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+             "echo 1 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
     system(cmdbuf);
 
 out:
@@ -767,11 +758,10 @@ out:
     return r;
 }
 
-int synth_lut_enable(const bool tx, const size_t channel)
-{
+int synth_lut_enable(const bool tx, const size_t channel) {
     int r;
 
-    struct synth_lut_ctx* it = synth_lut_find(tx, channel);
+    struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         r = ENOENT;
@@ -784,9 +774,8 @@ out:
     return r;
 }
 
-static int _synth_lut_get(
-    struct synth_lut_ctx* ctx, const double freq, synth_rec_t* rec)
-{
+static int _synth_lut_get(struct synth_lut_ctx *ctx, const double freq,
+                          synth_rec_t *rec) {
     int r;
 
     double integral;
@@ -804,14 +793,13 @@ static int _synth_lut_get(
 
     channel = ctx->channel(ctx);
 
-    if (false || freq < FREQ_BOTTOM
-        || 0
-            != (fractional = modf(
-                    (freq - FREQ_BOTTOM) / (double)LO_STEP_SIZE, &integral))
-        || integral >= ctx->fs / sizeof(*rec)) {
+    if (false || freq < FREQ_BOTTOM ||
+        0 != (fractional = modf((freq - FREQ_BOTTOM) / (double)LO_STEP_SIZE,
+                                &integral)) ||
+        integral >= ctx->fs / sizeof(*rec)) {
         PRINT(ERROR,
-            "unable to find calibration data for %s %c at frequency %f\n",
-            ctx->tx ? "TX" : "RX", 'A' + channel, freq);
+              "unable to find calibration data for %s %c at frequency %f\n",
+              ctx->tx ? "TX" : "RX", 'A' + channel, freq);
         r = EINVAL;
         goto out;
     }
@@ -829,12 +817,11 @@ out:
     return r;
 }
 
-int synth_lut_get(
-    const bool tx, const uint8_t channel, const double freq, synth_rec_t* rec)
-{
+int synth_lut_get(const bool tx, const uint8_t channel, const double freq,
+                  synth_rec_t *rec) {
     int r;
 
-    struct synth_lut_ctx* it = synth_lut_find(tx, channel);
+    struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         r = ENOENT;
@@ -847,8 +834,7 @@ out:
     return r;
 }
 
-static int _synth_lut_init(struct synth_lut_ctx* ctx)
-{
+static int _synth_lut_init(struct synth_lut_ctx *ctx) {
 
     char req[] = "status -s";
 
@@ -860,7 +846,7 @@ static int _synth_lut_init(struct synth_lut_ctx* ctx)
     int uart_fd;
 
     regex_t preg;
-    const char* regex = "\\([0-9a-f]\\)\\+[\n>]*";
+    const char *regex = "\\([0-9a-f]\\)\\+[\n>]*";
     regmatch_t pmatch[2];
 
     pthread_mutexattr_t attr;
@@ -879,7 +865,7 @@ static int _synth_lut_init(struct synth_lut_ctx* ctx)
     if (EXIT_SUCCESS != r) {
         regerror(r, &preg, buf, sizeof(buf));
         PRINT(ERROR, "Failed to compile regular expression '%s' (%d,%s)\n",
-            regex, r, buf);
+              regex, r, buf);
         r = EINVAL;
         goto out;
     }
@@ -887,18 +873,18 @@ static int _synth_lut_init(struct synth_lut_ctx* ctx)
     uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
     memset(buf, '\0', sizeof(buf));
-    r = synth_lut_uart_cmd(uart_fd, (char*)req, buf, sizeof(buf));
+    r = synth_lut_uart_cmd(uart_fd, (char *)req, buf, sizeof(buf));
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "Failed to issue command '%s' to %s %c (%d,%s)\n", req,
-            ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
+              ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
         goto free_re;
     }
 
     r = regexec(&preg, buf, 2, pmatch, 0);
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR,
-            "Failed to match '%s' to regular expression '%s' for %s %c\n", buf,
-            regex, ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx));
+              "Failed to match '%s' to regular expression '%s' for %s %c\n",
+              buf, regex, ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx));
         regerror(r, &preg, buf, sizeof(buf));
         PRINT(ERROR, "(%d,%s)\n", r, buf);
         r = EINVAL;
@@ -909,8 +895,8 @@ static int _synth_lut_init(struct synth_lut_ctx* ctx)
     buf[pmatch[1].rm_eo] = '\0';
 
     snprintf(ctx->fn, sizeof(ctx->fn),
-        "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
-        'A' + ctx->channel(ctx), buf);
+             "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             'A' + ctx->channel(ctx), buf);
     r = EXIT_SUCCESS;
 
 free_re:
@@ -920,22 +906,19 @@ out:
     return r;
 }
 
-int synth_lut_enable_all()
-{
+int synth_lut_enable_all() {
     int r;
 
-    struct synth_lut_ctx* it;
+    struct synth_lut_ctx *it;
 
-    FOR_EACH(it, synth_lut_rx_ctx)
-    {
+    FOR_EACH(it, synth_lut_rx_ctx) {
         r = it->enable(it);
         if (EXIT_SUCCESS != r) {
             goto out;
         }
     }
 
-    FOR_EACH(it, synth_lut_tx_ctx)
-    {
+    FOR_EACH(it, synth_lut_tx_ctx) {
         r = it->enable(it);
         if (EXIT_SUCCESS != r) {
             goto out;
@@ -946,20 +929,18 @@ out:
     return r;
 }
 
-void synth_lut_disable_all()
-{
-    struct synth_lut_ctx* it;
+void synth_lut_disable_all() {
+    struct synth_lut_ctx *it;
 
     FOR_EACH(it, synth_lut_rx_ctx) { it->disable(it); }
 
     FOR_EACH(it, synth_lut_tx_ctx) { it->disable(it); }
 }
 
-bool synth_lut_is_enabled(const bool tx, const size_t channel)
-{
+bool synth_lut_is_enabled(const bool tx, const size_t channel) {
     bool r;
 
-    struct synth_lut_ctx* it = synth_lut_find(tx, channel);
+    struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         r = false;
@@ -972,8 +953,7 @@ out:
     return r;
 }
 
-static int _synth_lut_is_calibrated(struct synth_lut_ctx* ctx, bool* is)
-{
+static int _synth_lut_is_calibrated(struct synth_lut_ctx *ctx, bool *is) {
 
     int r;
 
@@ -984,7 +964,7 @@ static int _synth_lut_is_calibrated(struct synth_lut_ctx* ctx, bool* is)
     r = ctx->init(ctx);
     if (EXIT_SUCCESS != r) {
         PRINT(INFO, "Failed to initialize %s %c (%d,%s)\n",
-            ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
+              ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx), r, strerror(r));
         goto out;
     }
 
@@ -997,7 +977,7 @@ static int _synth_lut_is_calibrated(struct synth_lut_ctx* ctx, bool* is)
         }
         r = errno;
         PRINT(ERROR, "Failed to stat %s (%d,%s)\n", ctx->fn, errno,
-            strerror(errno));
+              strerror(errno));
         goto out;
     }
 
@@ -1009,11 +989,10 @@ out:
     return r;
 }
 
-bool synth_lut_is_calibrated(const bool tx, const size_t channel)
-{
+bool synth_lut_is_calibrated(const bool tx, const size_t channel) {
     bool r;
     int rr;
-    struct synth_lut_ctx* it = synth_lut_find(tx, channel);
+    struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         r = false;
@@ -1022,7 +1001,7 @@ bool synth_lut_is_calibrated(const bool tx, const size_t channel)
     rr = it->is_calibrated(it, &r);
     if (EXIT_SUCCESS != rr) {
         PRINT(ERROR, "unable to check calibration for %s %c\n",
-            tx ? "TX" : "RX", 'A' + channel);
+              tx ? "TX" : "RX", 'A' + channel);
         r = false;
         goto out;
     }
@@ -1031,40 +1010,39 @@ out:
     return r;
 }
 
-int synth_lut_enable_all_if_calibrated()
-{
+int synth_lut_enable_all_if_calibrated() {
     int r;
 
-    struct synth_lut_ctx* it;
+    struct synth_lut_ctx *it;
     bool is_calibrated;
 
-    FOR_EACH(it, synth_lut_rx_ctx)
-    {
-        if (true && EXIT_SUCCESS == (r = it->is_calibrated(it, &is_calibrated))
-            && is_calibrated && EXIT_SUCCESS == (r = it->enable(it))) {
+    FOR_EACH(it, synth_lut_rx_ctx) {
+        if (true &&
+            EXIT_SUCCESS == (r = it->is_calibrated(it, &is_calibrated)) &&
+            is_calibrated && EXIT_SUCCESS == (r = it->enable(it))) {
             PRINT(INFO, "Enabled synth lut for %s %c\n", it->tx ? "TX" : "RX",
-                it->id);
+                  it->id);
         }
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR,
-                "Warning: Failed to check calibration or enable synth lut "
-                "for %s %c\n",
-                it->tx ? "TX" : "RX", it->id);
+                  "Warning: Failed to check calibration or enable synth lut "
+                  "for %s %c\n",
+                  it->tx ? "TX" : "RX", it->id);
         }
     }
 
-    FOR_EACH(it, synth_lut_tx_ctx)
-    {
-        if (true && EXIT_SUCCESS == (r = it->is_calibrated(it, &is_calibrated))
-            && is_calibrated && EXIT_SUCCESS == (r = it->enable(it))) {
+    FOR_EACH(it, synth_lut_tx_ctx) {
+        if (true &&
+            EXIT_SUCCESS == (r = it->is_calibrated(it, &is_calibrated)) &&
+            is_calibrated && EXIT_SUCCESS == (r = it->enable(it))) {
             PRINT(INFO, "Enabled synth lut for %s %c\n", it->tx ? "TX" : "RX",
-                it->id);
+                  it->id);
         }
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR,
-                "Warning: Failed to check calibration or enable synth lut "
-                "for %s %c\n",
-                it->tx ? "TX" : "RX", it->id);
+                  "Warning: Failed to check calibration or enable synth lut "
+                  "for %s %c\n",
+                  it->tx ? "TX" : "RX", it->id);
         }
     }
 
@@ -1073,8 +1051,7 @@ int synth_lut_enable_all_if_calibrated()
     return r;
 }
 
-static int _synth_lut_set_freq(struct synth_lut_ctx* ctx, const double freq)
-{
+static int _synth_lut_set_freq(struct synth_lut_ctx *ctx, const double freq) {
     int r;
 
     pthread_mutex_lock(&ctx->lock);
@@ -1086,8 +1063,7 @@ static int _synth_lut_set_freq(struct synth_lut_ctx* ctx, const double freq)
     return r;
 }
 
-static int _synth_lut_autocal_enable(struct synth_lut_ctx* ctx, const bool en)
-{
+static int _synth_lut_autocal_enable(struct synth_lut_ctx *ctx, const bool en) {
     int r;
 
     pthread_mutex_lock(&ctx->lock);
@@ -1104,7 +1080,7 @@ static int _synth_lut_autocal_enable(struct synth_lut_ctx* ctx, const bool en)
 
     // tell the mcu to use autocal
     snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %c -A %c", 'a' + chan_i,
-        en ? '1' : '0');
+             en ? '1' : '0');
     r = synth_lut_uart_cmd(uart_fd, cmd_buf, resp_buf, sizeof(resp_buf));
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "synth_lut_uart_cmd() failed (%d,%s)\n", r, strerror(r));
@@ -1118,9 +1094,8 @@ out:
     return r;
 }
 
-static int _synth_lut_autocal_values(
-    struct synth_lut_ctx* ctx, synth_rec_t* rec)
-{
+static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
+                                     synth_rec_t *rec) {
 
     int r;
 
@@ -1145,8 +1120,8 @@ static int _synth_lut_autocal_values(
 
     if (3 != sscanf(resp_buf, "%u,%u,%u", &core, &band, &bias)) {
         PRINT(ERROR,
-            "unable to parse response '%s', expecting number,number,number\n",
-            resp_buf);
+              "unable to parse response '%s', expecting number,number,number\n",
+              resp_buf);
         r = EINVAL;
         goto out;
     }

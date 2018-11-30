@@ -40,12 +40,11 @@
 #include "led.h"
 #include "time_it.h"
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
 
     int ret = 0;
     int i = 0;
-    cmd_t cmd = { 0 };
+    cmd_t cmd = {0};
 
     uint8_t load_profile = 0;
     uint8_t save_profile = 0;
@@ -71,7 +70,7 @@ int main(int argc, char* argv[])
 
     int comm_fds[ARRAY_SIZE(port_nums)];
 
-    const char* const enet_dev = "eth0";
+    const char *const enet_dev = "eth0";
 
     extern int verbose;
     verbose = 0;
@@ -96,8 +95,8 @@ int main(int argc, char* argv[])
             uint64_t fpgaver;
             read_hps_reg("sys3", &ver39_32);
             read_hps_reg("sys4", &ver31_0);
-            fpgaver = (((uint64_t)ver39_32 & 0xff) << 32)
-                | (((uint64_t)ver31_0 & 0xffffffff) << 0);
+            fpgaver = (((uint64_t)ver39_32 & 0xff) << 32) |
+                      (((uint64_t)ver31_0 & 0xffffffff) << 0);
             printf("FPGA: %llx\n", fpgaver);
 
             return 0;
@@ -121,7 +120,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
         if (init_udp_comm(&(comm_fds[i]), enet_dev, port_nums[i], 0) < 0) {
             PRINT(ERROR, "%s, cannot initialize network %s\n", __func__,
-                enet_dev);
+                  enet_dev);
             return RETURN_ERROR_COMM_INIT;
         }
     }
@@ -150,8 +149,8 @@ int main(int argc, char* argv[])
     synth_lut_enable_all_if_calibrated();
 
     // Pass the profile pointers down to properties.c
-    pass_profile_pntr_manager(
-        &load_profile, &save_profile, load_profile_path, save_profile_path);
+    pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
+                              save_profile_path);
 
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Crimson server is up\n");
@@ -186,7 +185,7 @@ int main(int argc, char* argv[])
                 PRINT(VERBOSE, "select timed-out\n");
             } else {
                 PRINT(VERBOSE, "select failed on fd %d: %s (%d)\n", -1,
-                    strerror(errno), errno);
+                      strerror(errno), errno);
             }
 
             continue;
@@ -204,10 +203,10 @@ int main(int argc, char* argv[])
                 sa_len = sizeof(sa);
                 memset(buffer, 0, sizeof(buffer));
                 ret2 = recvfrom(comm_fds[i], buffer, sizeof(buffer) - 1, 0,
-                    (struct sockaddr*)&sa, &sa_len);
+                                (struct sockaddr *)&sa, &sa_len);
                 if (ret2 < 0) {
                     PRINT(ERROR, "recvfrom failed: %s (%d)\n", strerror(errno),
-                        errno);
+                          errno);
                     ret--;
                     continue;
                 }
@@ -222,8 +221,8 @@ int main(int argc, char* argv[])
                 cmd.status = CMD_SUCCESS;
 
                 if (cmd.op == OP_GET) {
-                    if (get_property(cmd.prop, cmd.data, MAX_PROP_LEN)
-                        != RETURN_SUCCESS) {
+                    if (get_property(cmd.prop, cmd.data, MAX_PROP_LEN) !=
+                        RETURN_SUCCESS) {
                         cmd.status = CMD_ERROR;
                     }
                 } else {
@@ -233,11 +232,11 @@ int main(int argc, char* argv[])
                 }
 
                 build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
-                ret2 = sendto(comm_fds[i], buffer, strlen((char*)buffer), 0,
-                    (struct sockaddr*)&sa, sa_len);
+                ret2 = sendto(comm_fds[i], buffer, strlen((char *)buffer), 0,
+                              (struct sockaddr *)&sa, sa_len);
                 if (ret2 < 0) {
                     PRINT(ERROR, "sendto failed: %s (%d)\n", strerror(errno),
-                        errno);
+                          errno);
                     ret--;
                     continue;
                 }

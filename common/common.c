@@ -19,10 +19,9 @@
 
 int verbose;
 
-void PRINT_WRAPPER(print_t priority, const char* format, ...)
-{
+void PRINT_WRAPPER(print_t priority, const char *format, ...) {
 
-    FILE* o;
+    FILE *o;
 
     va_list args;
     va_start(args, format);

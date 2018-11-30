@@ -26,7 +26,7 @@
 #endif
 
 #ifndef ARRAY_OFFSET
-#define ARRAY_OFFSET(it, arr) (((char*)(it) - (char*)(arr)) / sizeof(*(it)))
+#define ARRAY_OFFSET(it, arr) (((char *)(it) - (char *)(arr)) / sizeof(*(it)))
 #endif
 
 #ifndef FOR_EACH

@@ -18,29 +18,29 @@
 // XXX: @CF: 20170711: we should really just write new code in C++, update build
 // system, etc
 
-#include <arpa/inet.h> // htonl(3), htons(3)
-#include <errno.h> // errno
-#include <getopt.h> // getopt(3)
-#include <inttypes.h> // PRIu32, PRIx64..
-#include <libgen.h> // basename(3)
-#include <limits.h> // PATH_MAX
+#include <arpa/inet.h>  // htonl(3), htons(3)
+#include <errno.h>      // errno
+#include <getopt.h>     // getopt(3)
+#include <inttypes.h>   // PRIu32, PRIx64..
+#include <libgen.h>     // basename(3)
+#include <limits.h>     // PATH_MAX
 #include <netinet/in.h> // in_port_t
-#include <signal.h> // signal(2)
-#include <stdbool.h> // true, false..
-#include <stdio.h> // fpritnf(3), snprintf(3)
-#include <stdint.h> // uint32_t..
-#include <stdlib.h> // EXIT_SUCCESS
-#include <string.h> // strerror(3)
-#include <syslog.h> // openlog(3), setlogmask(3)
+#include <signal.h>     // signal(2)
+#include <stdbool.h>    // true, false..
+#include <stdio.h>      // fpritnf(3), snprintf(3)
+#include <stdint.h>     // uint32_t..
+#include <stdlib.h>     // EXIT_SUCCESS
+#include <string.h>     // strerror(3)
+#include <syslog.h>     // openlog(3), setlogmask(3)
 #include <sys/select.h> // select(2)
 #include <sys/socket.h> // recvfrom(2), socket(2), sendto(2)
-#include <sys/types.h> // for portability (see socket(2))
-#include <unistd.h> // close(2), pipe(2), write(2)
+#include <sys/types.h>  // for portability (see socket(2))
+#include <unistd.h>     // close(2), pipe(2), write(2)
 
 #include "common/array-utils.h" // ARRAY_SIZE
-#include "common/common.h" // UDP_FLOW_CNTRL_PORT
+#include "common/common.h"      // UDP_FLOW_CNTRL_PORT
 #define HAVE_SYSLOG
-#include "common/ied.h" // I(), E(), D()
+#include "common/ied.h"    // I(), E(), D()
 #include "common/minmax.h" // min(), max()
 // XXX: @CF: 20170711: This is ugly. Use structs to access memory-mapped
 // registers. Use init / fini.
@@ -68,8 +68,8 @@ struct flow_context {
 
     int r;
     int argc;
-    char** argv;
-    char* ident;
+    char **argv;
+    char *ident;
     bool should_exit;
 
     bool signal_caught;
@@ -80,8 +80,8 @@ struct flow_context {
 
     int highest_fd;
 };
-#define FC_DEFAULT                                                               \
-    {                                                                            \
+#define FC_DEFAULT                                                             \
+    {                                                                          \
         .r = EXIT_SUCCESS, .argc = argc, .argv = argv, .ident = NULL,          \
         .should_exit = false, .signal_caught = false,                          \
         .signal_fd =                                                           \
@@ -90,7 +90,7 @@ struct flow_context {
                 -1,                                                            \
             },                                                                 \
         .server_socket = -1, .server_port = UDP_FLOW_CNTRL_PORT,               \
-        .highest_fd = -1, \
+        .highest_fd = -1,                                                      \
     }
 
 typedef void (*sighandler_t)(int);
@@ -101,8 +101,7 @@ typedef void (*sighandler_t)(int);
  * @param a  A pointer to the current highest value
  * @param b  A possible successor to the current highest value
  */
-static inline void cas(int* a, int b)
-{
+static inline void cas(int *a, int b) {
     if (b >= *a) {
         *a = b;
     }
@@ -115,15 +114,14 @@ static const int signals_to_catch[] = {
     SIGTERM,
     SIGINT,
 };
-static struct flow_context* _fc;
+static struct flow_context *_fc;
 static uint8_t flow_buffer[1 << 9]; // 512 bytes should be plenty
 static char flow_progname[PATH_MAX];
 
-static void sighandler(int signum)
-{
+static void sighandler(int signum) {
 
     int r;
-    struct flow_context* fc = _fc;
+    struct flow_context *fc = _fc;
 
     D("received signal %d", signum);
 
@@ -156,8 +154,7 @@ static void sighandler(int signum)
  * @param argv  The command-line arguments
  * @return      Upon success, zero. A non-zero errno code, otherwise.
  */
-static void flow_init(struct flow_context* fc)
-{
+static void flow_init(struct flow_context *fc) {
 
     int r;
     int i;
@@ -169,7 +166,7 @@ static void flow_init(struct flow_context* fc)
     // determine the service name
     if (NULL == fc->ident) {
         memcpy(flow_progname, fc->argv[0],
-            MIN(strlen(fc->argv[0]), sizeof(flow_progname - 1)));
+               MIN(strlen(fc->argv[0]), sizeof(flow_progname - 1)));
         fc->ident = basename(flow_progname);
     }
 
@@ -226,7 +223,7 @@ static void flow_init(struct flow_context* fc)
     sa.sin_addr.s_addr = htonl(INADDR_ANY);
     sa_len = sizeof(sa);
 
-    r = bind(fc->server_socket, (struct sockaddr*)&sa, sa_len);
+    r = bind(fc->server_socket, (struct sockaddr *)&sa, sa_len);
     if (-1 == r) {
         r = errno;
         E("bind(2) failed");
@@ -244,8 +241,7 @@ out:
  *
  * @param fc    The flow control context
  */
-static void flow_fini(struct flow_context* fc)
-{
+static void flow_fini(struct flow_context *fc) {
 
     int r;
     int i;
@@ -288,12 +284,11 @@ static void flow_fini(struct flow_context* fc)
  *
  * @param fc    The flow control context
  */
-static void flow_request_process(struct flow_context* fc)
-{
+static void flow_request_process(struct flow_context *fc) {
 
     struct xg_cmd_flc_time_diff {
-        uint64_t cmd; // FLOW_CONTROL_TIME_DIFF := 1
-        int64_t tv_sec; // see <time.h>
+        uint64_t cmd;    // FLOW_CONTROL_TIME_DIFF := 1
+        int64_t tv_sec;  // see <time.h>
         int64_t tv_tick; // same order of magnitude as tv_nsec
     } __attribute__((packed));
 
@@ -306,7 +301,7 @@ static void flow_request_process(struct flow_context* fc)
     uint32_t fifo_lvl[4];
 
     r = recvfrom(fc->server_socket, flow_buffer, sizeof(flow_buffer), 0,
-        (struct sockaddr*)&sa, &sa_len);
+                 (struct sockaddr *)&sa, &sa_len);
     if (-1 == r) {
         r = errno;
         E("recvfrom(2) failed");
@@ -320,10 +315,10 @@ static void flow_request_process(struct flow_context* fc)
     // memory-mapped registers.
 
     // read flow control time diff
-    read_hps_reg("flc1", &((uint32_t*)&flc_time_diff.tv_sec)[0]);
-    read_hps_reg("flc2", &((uint32_t*)&flc_time_diff.tv_sec)[1]);
-    read_hps_reg("flc3", &((uint32_t*)&flc_time_diff.tv_tick)[0]);
-    read_hps_reg("flc4", &((uint32_t*)&flc_time_diff.tv_tick)[1]);
+    read_hps_reg("flc1", &((uint32_t *)&flc_time_diff.tv_sec)[0]);
+    read_hps_reg("flc2", &((uint32_t *)&flc_time_diff.tv_sec)[1]);
+    read_hps_reg("flc3", &((uint32_t *)&flc_time_diff.tv_tick)[0]);
+    read_hps_reg("flc4", &((uint32_t *)&flc_time_diff.tv_tick)[1]);
 
     // read fifo levels
     read_hps_reg("res_ro0", &fifo_lvl[0]);
@@ -335,21 +330,21 @@ static void flow_request_process(struct flow_context* fc)
     fifo_lvl[2] = (fifo_lvl[2] & 0xffff) >> 0;
     fifo_lvl[3] = (fifo_lvl[3] & 0xffff) >> 0;
 
-    r = snprintf((char*)flow_buffer, sizeof(flow_buffer),
-        "flow,%" PRIu32 ",%" PRIu32 ",%" PRIu32 ",%" PRIu32 ",%" PRIx64
-        ",%" PRIx64 "\n",
-        fifo_lvl[0], fifo_lvl[1], fifo_lvl[2], fifo_lvl[3],
-        flc_time_diff.tv_sec, flc_time_diff.tv_tick);
+    r = snprintf((char *)flow_buffer, sizeof(flow_buffer),
+                 "flow,%" PRIu32 ",%" PRIu32 ",%" PRIu32 ",%" PRIu32 ",%" PRIx64
+                 ",%" PRIx64 "\n",
+                 fifo_lvl[0], fifo_lvl[1], fifo_lvl[2], fifo_lvl[3],
+                 flc_time_diff.tv_sec, flc_time_diff.tv_tick);
     if (r >= sizeof(flow_buffer)) {
         errno = ENOMEM;
         r = errno;
         E("sprintf(3) requires a buffer of %d bytes, but only %d are available",
-            r, sizeof(flow_buffer));
+          r, sizeof(flow_buffer));
         goto out;
     }
 
-    r = sendto(fc->server_socket, flow_buffer, strlen((char*)flow_buffer), 0,
-        (struct sockaddr*)&sa, sa_len);
+    r = sendto(fc->server_socket, flow_buffer, strlen((char *)flow_buffer), 0,
+               (struct sockaddr *)&sa, sa_len);
     if (-1 == r) {
         r = errno;
         E("sendto(2) failed");
@@ -372,8 +367,7 @@ out:
  *
  * @param fc    The flow control context
  */
-static void flow(struct flow_context* fc)
-{
+static void flow(struct flow_context *fc) {
 
     int r;
 
@@ -433,22 +427,21 @@ static void flow(struct flow_context* fc)
     }
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
     int i;
 
     struct flow_context fc = FC_DEFAULT;
 
-    void (*fp[])(struct flow_context*) = {
+    void (*fp[])(struct flow_context *) = {
         flow_init,
         flow,
         flow_fini,
     };
 
     for (i = 0, fc.r = EXIT_SUCCESS; i < ARRAY_SIZE(fp); i++) {
-        if (false
-            || EXIT_SUCCESS
-                == fc.r // only run stage if previous stages were successful
+        if (false ||
+            EXIT_SUCCESS ==
+                fc.r // only run stage if previous stages were successful
             || ARRAY_SIZE(fp) - 1 == i) // always run flow_fini() at the end
         {
             fp[i](&fc);

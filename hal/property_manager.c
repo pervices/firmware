@@ -40,8 +40,8 @@
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
 static int uart_synth_comm_fd = 0;
-static int uart_tx_comm_fd[NUM_CHANNELS] = { 0 };
-static int uart_rx_comm_fd[NUM_CHANNELS] = { 0 };
+static int uart_tx_comm_fd[NUM_CHANNELS] = {0};
+static int uart_rx_comm_fd[NUM_CHANNELS] = {0};
 
 // Inotify's file descriptor
 static int inotify_fd;
@@ -50,9 +50,8 @@ static int inotify_fd;
 static uint8_t _options = 0;
 
 // Helper function to write to property
-static void write_to_file(const char* path, const char* data)
-{
-    FILE* fd;
+static void write_to_file(const char *path, const char *data) {
+    FILE *fd;
     if (!(fd = fopen(path, "w"))) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
@@ -64,9 +63,8 @@ static void write_to_file(const char* path, const char* data)
 }
 
 // Helper function to read to property
-static void read_from_file(const char* path, char* data, size_t max_len)
-{
-    FILE* fd;
+static void read_from_file(const char *path, char *data, size_t max_len) {
+    FILE *fd;
     if (!(fd = fopen(path, "r"))) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
@@ -89,8 +87,7 @@ static void change_group_permissions_for_all(void)
 }
 
 // Helper function to make properties
-static void make_prop(prop_t* prop)
-{
+static void make_prop(prop_t *prop) {
     char cmd[MAX_PATH_LEN];
     char path[MAX_PATH_LEN];
 
@@ -151,7 +148,7 @@ static void make_prop(prop_t* prop)
 
         // TODO: replace with symlinkat(2)
         snprintf(cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s",
-            prop->symlink_target, prop->path);
+                 prop->symlink_target, prop->path);
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
@@ -161,14 +158,13 @@ static void make_prop(prop_t* prop)
 
 // Helper function to add the property to inotify
 // crimson continues if this fails, but will give an error
-static void add_prop_to_inotify(prop_t* prop)
-{
+static void add_prop_to_inotify(prop_t *prop) {
     char path[MAX_PATH_LEN];
 
     // check if RO property
     if (prop->permissions != RO) {
-        prop->wd = inotify_add_watch(
-            inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
+        prop->wd = inotify_add_watch(inotify_fd, get_abs_path(prop, path),
+                                     IN_CLOSE_WRITE);
     }
 
     if (prop->wd < 0)
@@ -176,16 +172,15 @@ static void add_prop_to_inotify(prop_t* prop)
 }
 
 // Helper function to call power-on reset values
-static void init_prop_val(prop_t* prop)
-{
+static void init_prop_val(prop_t *prop) {
     char path[MAX_PATH_LEN];
     memset(path, 0, MAX_PATH_LEN);
 
     // exceptions for values that must persist through hard resets
-    if (strcmp(prop->path, "fpga/link/net/hostname") == 0
-        || strcmp(prop->path, "fpga/link/net/ip_addr") == 0
-        || strcmp(prop->path, "save_config") == 0
-        || strcmp(prop->path, "load_config") == 0) {
+    if (strcmp(prop->path, "fpga/link/net/hostname") == 0 ||
+        strcmp(prop->path, "fpga/link/net/ip_addr") == 0 ||
+        strcmp(prop->path, "save_config") == 0 ||
+        strcmp(prop->path, "load_config") == 0) {
         return;
     }
 
@@ -198,8 +193,7 @@ static void init_prop_val(prop_t* prop)
 // TODO: @CF: modify function to first open base directory and then to use
 // relative ops (openat, mkdirat, fchownat, fchmodat, etc) Helper function for
 // building a tree in the home directory
-static void build_tree(void)
-{
+static void build_tree(void) {
 
     // Sets up IPs and Ports.
     // This was introduced when the XMACRO
@@ -209,7 +203,7 @@ static void build_tree(void)
     dump_tree();
 
     PRINT(VERBOSE, "Building tree, %i properties found\n", get_num_prop());
-    prop_t* prop;
+    prop_t *prop;
 
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
@@ -234,8 +228,7 @@ static void build_tree(void)
 int get_inotify_fd() { return inotify_fd; }
 
 // Initialize handler functions
-int init_property(uint8_t options)
-{
+int init_property(uint8_t options) {
 
     // uart transactions
     PRINT(VERBOSE, "Initializing UART\n");
@@ -258,8 +251,8 @@ int init_property(uint8_t options)
 
 #elif defined(TATE)
 
-#define X(ch)                                                                  \
-    init_uart_comm(&uart_tx_comm_fd[INT(ch)], "/dev/ttytatetx" STR(ch), 0);    \
+#define X(ch)                                                               \
+    init_uart_comm(&uart_tx_comm_fd[INT(ch)], "/dev/ttytatetx" STR(ch), 0); \
     init_uart_comm(&uart_rx_comm_fd[INT(ch)], "/dev/ttytaterx" STR(ch), 0);
     CHANNELS
 #undef X
@@ -270,11 +263,9 @@ int init_property(uint8_t options)
     PRINT(INFO, "array rx size: %d\n", NUM_CHANNELS);
 
     PRINT(INFO, "TX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++)
-        PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
+    for (int i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
     PRINT(INFO, "RX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++)
-        PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
+    for (int i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
 
     PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
     PRINT(VERBOSE, "Initializing Inotify\n");
@@ -298,8 +289,7 @@ int init_property(uint8_t options)
 }
 
 // non-standard set property (file modification)
-void check_property_inotifies(void)
-{
+void check_property_inotifies(void) {
     uint8_t buf[EVENT_BUF_LEN];
     char prop_data[MAX_PROP_LEN];
     char prop_ret[MAX_PROP_LEN];
@@ -318,8 +308,8 @@ void check_property_inotifies(void)
     ssize_t i = 0;
     while (i < len) {
         // gets the event structure
-        struct inotify_event* event = (struct inotify_event*)&buf[i];
-        prop_t* prop = get_prop_from_wd(event->wd);
+        struct inotify_event *event = (struct inotify_event *)&buf[i];
+        prop_t *prop = get_prop_from_wd(event->wd);
 
         // check if prop exists, prop will not exist if concurrent modifications
         // were made to the file while in this loop
@@ -336,7 +326,7 @@ void check_property_inotifies(void)
             strcpy(prop_ret, prop_data);
 
             PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__,
-                prop->path, prop_data);
+                  prop->path, prop_data);
 
             const int t0 = time_it();
             prop->handler(prop_data, prop_ret);
@@ -376,10 +366,9 @@ void check_property_inotifies(void)
 }
 
 // Save properties to file
-int save_properties(const char* file)
-{
+int save_properties(const char *file) {
     // open the file, if file exists, overwrite the file
-    FILE* fout = fopen(file, "w");
+    FILE *fout = fopen(file, "w");
     if (!fout)
         return RETURN_ERROR;
 
@@ -389,7 +378,7 @@ int save_properties(const char* file)
     // loop through all properties and write them to file
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
-        prop_t* cur_prop = get_prop(i);
+        prop_t *cur_prop = get_prop(i);
         if (cur_prop && cur_prop->permissions != WO) {
             get_property(cur_prop->path, prop_val, MAX_PROP_LEN);
             fprintf(fout, "%s,%s\n", cur_prop->path, prop_val);
@@ -403,23 +392,22 @@ int save_properties(const char* file)
 }
 
 // Load properties from file
-int load_properties(const char* file)
-{
+int load_properties(const char *file) {
     PRINT(DEBUG, "loading properties from %s!\n", file);
 
     // open the file for reading
-    FILE* fin = fopen(file, "r");
+    FILE *fin = fopen(file, "r");
     if (!fin)
         return RETURN_ERROR;
 
     // temp buffer to store the property values
-    char prop[MAX_PROP_LEN] = { 0 };
+    char prop[MAX_PROP_LEN] = {0};
 
     // loop through all properties, if there are incompatibilities, error out
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
 
-        prop_t* cur_prop = get_prop(i);
+        prop_t *cur_prop = get_prop(i);
         if (!cur_prop) {
             PRINT(ERROR, "invalid property %s\n", prop);
             continue;
@@ -438,7 +426,7 @@ int load_properties(const char* file)
         prop[MAX_PROP_LEN - 1] = 0;
 
         // divide up the property and value
-        char* prop_val = strchr(prop, ',');
+        char *prop_val = strchr(prop, ',');
         *prop_val = 0;
         prop_val++;
 
@@ -458,11 +446,10 @@ int load_properties(const char* file)
 }
 
 // Standard get property
-int get_property(const char* prop, char* data, size_t max_len)
-{
+int get_property(const char *prop, char *data, size_t max_len) {
     memset(data, 0, max_len);
     char path[MAX_PATH_LEN];
-    prop_t* temp = get_prop_from_cmd(prop);
+    prop_t *temp = get_prop_from_cmd(prop);
 
     // check if valid property
     if (!temp) {
@@ -482,8 +469,7 @@ int get_property(const char* prop, char* data, size_t max_len)
     return RETURN_SUCCESS;
 }
 
-int get_channel_for_path(const char* path)
-{
+int get_channel_for_path(const char *path) {
 
     // PRINT( VERBOSE,"%s(): %s\n", __func__, NULL == path ? "(null)" : path );
 
@@ -505,10 +491,9 @@ int get_channel_for_path(const char* path)
     return path[3] - 'a';
 }
 
-void power_on_channel(bool tx, int channel)
-{
+void power_on_channel(bool tx, int channel) {
     char buf[MAX_PATH_LEN];
-    prop_t* prop;
+    prop_t *prop;
 
     snprintf(buf, sizeof(buf), "%s/%c/pwr", tx ? "tx" : "rx", 'a' + channel);
     prop = get_prop_from_cmd(buf);
@@ -519,8 +504,7 @@ void power_on_channel(bool tx, int channel)
     write_to_file(get_abs_path(prop, buf), "1");
 }
 
-void power_on_channel_fixup(char* path)
-{
+void power_on_channel_fixup(char *path) {
     bool tx;
     int channel = get_channel_for_path(path);
     if (-1 == channel) {
@@ -533,10 +517,9 @@ void power_on_channel_fixup(char* path)
 }
 
 // standard set property
-int set_property(const char* prop, const char* data)
-{
+int set_property(const char *prop, const char *data) {
     char path[MAX_PATH_LEN];
-    prop_t* temp = get_prop_from_cmd(prop);
+    prop_t *temp = get_prop_from_cmd(prop);
 
     // check if valid property
     if (!temp) {
@@ -563,8 +546,7 @@ int set_property(const char* prop, const char* data)
 }
 
 // Pass the pointers for load/saving profiles flags
-void pass_profile_pntr_manager(
-    uint8_t* load, uint8_t* save, char* load_path, char* save_path)
-{
+void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
+                               char *save_path) {
     pass_profile_pntr_prop(load, save, load_path, save_path);
 }
