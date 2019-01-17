@@ -29,29 +29,37 @@
 // specification.
 
 #if defined(VAUNT)
-    #define CHANNELS  \
-        X(a) /*  0 */ \
-        X(b) /*  1 */ \
-        X(c) /*  2 */ \
-        X(d) /*  3 */
+    #define CHANNELS \
+        X(a, io) \
+        X(b, io) \
+        X(c, io) \
+        X(d, io)
 #elif defined(TATE)
-    #define CHANNELS  \
-        X(a) /*  0 */ \
-        X(b) /*  1 */ \
-        X(c) /*  2 */ \
-        X(d) /*  3 */ \
-        X(e) /*  4 */ \
-        X(f) /*  5 */ \
-        X(g) /*  6 */ \
-        X(h) /*  7 */ \
-        X(i) /*  8 */ \
-        X(j) /*  9 */ \
-        X(k) /* 10 */ \
-        X(l) /* 11 */ \
-        X(m) /* 12 */ \
-        X(n) /* 13 */ \
-        X(o) /* 14 */ \
-        X(p) /* 15 */
+    #define CHANNELS \
+        X(a, tx) \
+        X(b, tx) \
+        X(c, tx) \
+        X(d, tx) \
+        X(e, tx) \
+        X(f, tx) \
+        X(g, tx) \
+        X(h, tx) \
+        X(i, tx) \
+        X(j, tx) \
+        X(k, tx) \
+        X(l, tx) \
+        X(m, tx) \
+        X(n, tx) \
+        X(o, tx) \
+        X(p, tx)
+#elif defined(TATE_TEST)
+    #define CHANNELS \
+        X(a, tx) \
+        X(b, tx) \
+        X(c, tx) \
+        X(d, tx)
+    #undef TATE_TEST
+    #define TATE
 #else
     #error "Project name (VAUNT | TATE) not specified or not recognized."
 #endif
@@ -67,7 +75,7 @@
 
 // Channel names as strings.
 static const char* const channel_names[] = {
-#define X(ch) STR(ch),
+#define X(ch, io) STR(ch),
     CHANNELS
 #undef X
 };

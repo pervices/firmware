@@ -17,7 +17,7 @@
 
 /* clang-format off */
 
-#if 1
+#if 0
     #include "property_manager.h"
 
     #include "comm_manager.h"
@@ -81,8 +81,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
-static void change_group_permissions_for_all(void)
-{
+static void change_group_permissions_for_all(void) {
     system("chgrp dev-grp0 -R /var/crimson");
 }
 
@@ -248,24 +247,22 @@ int init_property(uint8_t options) {
         uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
     for (int i = 1; i < NUM_CHANNELS; i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
-
 #elif defined(TATE)
-
-#define X(ch)                                                               \
-    init_uart_comm(&uart_tx_comm_fd[INT(ch)], "/dev/ttytatetx" STR(ch), 0); \
-    init_uart_comm(&uart_rx_comm_fd[INT(ch)], "/dev/ttytaterx" STR(ch), 0);
+#define X(ch, io)                                                              \
+    init_uart_comm(&uart_##io##_comm_fd[INT(ch)], UART_GENERIC STR(ch), 0);
     CHANNELS
 #undef X
-
 #endif
 
     PRINT(INFO, "array tx size: %d\n", NUM_CHANNELS);
     PRINT(INFO, "array rx size: %d\n", NUM_CHANNELS);
 
     PRINT(INFO, "TX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
+    for (int i = 0; i < NUM_CHANNELS; i++)
+        PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
     PRINT(INFO, "RX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
+    for (int i = 0; i < NUM_CHANNELS; i++)
+        PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
 
     PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
     PRINT(VERBOSE, "Initializing Inotify\n");
