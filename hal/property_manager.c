@@ -249,9 +249,9 @@ int init_property(uint8_t options) {
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
 #elif defined(TATE)
     static char name[512];
-#define X(ch, io)                               \
-    const int chan_##ch = INT(ch);              \
-    sprintf(name, UART_GENERIC "%d", chan_##ch); \
+#define X(ch, io)                                                              \
+    const int chan_##ch = INT(ch);                                             \
+    sprintf(name, UART_GENERIC "%d", chan_##ch);                               \
     init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
     CHANNELS
 #undef X
