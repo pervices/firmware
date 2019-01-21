@@ -17,9 +17,9 @@
 
 /* clang-format off */
 
-#if 0
-    #include "property_manager.h"
+#include "property_manager.h"
 
+#if 1
     #include "comm_manager.h"
     #include "common.h"
     #include "mmap.h" // shouldn't need to include this, this is here for errata fixing
@@ -248,8 +248,11 @@ int init_property(uint8_t options) {
     for (int i = 1; i < NUM_CHANNELS; i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
 #elif defined(TATE)
-#define X(ch, io)                                                              \
-    init_uart_comm(&uart_##io##_comm_fd[INT(ch)], UART_GENERIC STR(ch), 0);
+    static char name[512];
+#define X(ch, io)                               \
+    const int chan_##ch = INT(ch);              \
+    sprintf(name, UART_GENERIC "%d", chan_##ch); \
+    init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
     CHANNELS
 #undef X
 #endif
