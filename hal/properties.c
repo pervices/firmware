@@ -145,9 +145,11 @@ static int read_uart(int uartfd) {
     uint16_t total_bytes = 0, cur_bytes = 0;
 
     const long t0 = time_it();
+
     while (contains(buf, '>', total_bytes) < 1) {
-        if (recv_uart_comm(uartfd, ((uint8_t *)buf) + total_bytes, &cur_bytes,
-                           MAX_UART_LEN - total_bytes)) {
+        if (recv_uart_comm(uartfd, ((uint8_t *)buf) + total_bytes, &cur_bytes, MAX_UART_LEN - total_bytes)) {
+            strcpy((char *)uart_ret_buf, "");
+
             return 0;
         }
         total_bytes += cur_bytes;
@@ -417,6 +419,7 @@ static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
 }
 
 static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
+    puts("here");
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 6 : 9);
@@ -868,8 +871,8 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /* Set gain adjustment */                                          \
-            read_hps_reg("txg" STR(ch), &old_val);                             \
-            write_hps_reg("txg" STR(ch),                                       \
+            read_hps_reg("txga", &old_val);                             \
+            write_hps_reg("txga",                                       \
                           (old_val & ~(0xff << 0)) |                           \
                               (interp_gain_lut[(resamp_factor)] << 0));        \
         } else {                                                               \
@@ -878,8 +881,8 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
             write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));             \
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /* Set gain adjustment */                                          \
-            read_hps_reg("txg" STR(ch), &old_val);                             \
-            write_hps_reg("txg" STR(ch),                                       \
+            read_hps_reg("txga", &old_val);                             \
+            write_hps_reg("txga",                                       \
                           (old_val & ~(0xff << 0)) |                           \
                               (interp_gain_lut[(base_factor)] << 0));          \
         }                                                                      \
@@ -1321,8 +1324,8 @@ CHANNELS
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /*Set gain adjustment */                                           \
             gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;       \
-            read_hps_reg("rxg" STR(ch), &old_val);                             \
-            write_hps_reg("rxg" STR(ch), (old_val & ~(0xff << 0)) |            \
+            read_hps_reg("rxga", &old_val);                             \
+            write_hps_reg("rxga", (old_val & ~(0xff << 0)) |            \
                                              (((uint16_t)gain_factor) << 0));  \
         } else {                                                               \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
@@ -1331,8 +1334,8 @@ CHANNELS
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
-            read_hps_reg("rxg" STR(ch), &old_val);                             \
-            write_hps_reg("rxg" STR(ch), (old_val & ~(0xff << 0)) |            \
+            read_hps_reg("rxga", &old_val);                             \
+            write_hps_reg("rxga", (old_val & ~(0xff << 0)) |            \
                                              (((uint16_t)gain_factor) << 0));  \
         }                                                                      \
                                                                                \

@@ -52,14 +52,6 @@
         X(n, tx) \
         X(o, tx) \
         X(p, tx)
-#elif defined(TATE_TEST)
-    #define CHANNELS \
-        X(a, tx) \
-        X(b, tx) \
-        X(c, tx) \
-        X(d, tx)
-    #undef TATE_TEST
-    #define TATE
 #else
     #error "Project name (VAUNT | TATE) not specified or not recognized."
 #endif

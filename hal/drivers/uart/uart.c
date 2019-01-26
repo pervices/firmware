@@ -18,7 +18,7 @@
 #include "uart.h"
 
 // Maximum before a UART command is considered a fail
-#define TIMEOUT 1000000UL // us, 1.0 seconds
+#define TIMEOUT 100000UL // us, 1.0 seconds
 
 // Minimum time between UART commands
 #define TIME_INTERVAL 50000 // us, 0.05 seconds
@@ -105,6 +105,23 @@ void set_uart_blocking(int fd, int should_block) {
 }
 
 int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
+
+    if(fd == 0 || fd == 1 || fd == 2)
+    {
+        puts("cannot write to standard devices");
+        exit(1);
+    }
+
+    //
+    // NOTE:
+    // All UART FDS are set to -1 at startup.
+    // Writing with a -1 FD will do nothing.
+    // This was done to preserve legacy Crimson UART READ / WRITES while porting to TATE.
+    //
+
+    if(fd == -1)
+        return RETURN_SUCCESS;
+
     gettimeofday(&tstart, NULL);
 
     int rd_len = 0;
@@ -126,6 +143,23 @@ int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
 }
 
 int send_uart(int fd, uint8_t *data, uint16_t size) {
+
+    if(fd == 0 || fd == 1 || fd == 2)
+    {
+        puts("cannot write to standard devices");
+        exit(1);
+    }
+
+    //
+    // NOTE:
+    // All UART FDS are set to -1 at startup.
+    // Writing with a -1 FD will do nothing.
+    // This was done to preserve legacy Crimson UART READ / WRITES while porting to TATE.
+    //
+
+    if(fd == -1)
+        return RETURN_SUCCESS;
+
     if (_options & SERVER_DEBUG_OPT)
         PRINT(DEBUG, "%s(): %s\n", __func__, data);
 
@@ -150,6 +184,8 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
 
 // Flushes UART on HPS side
 int flush_uart(int fd) {
+    if(fd == -1)
+        return RETURN_SUCCESS;
     if (tcflush(fd, TCIOFLUSH) == 0)
         return RETURN_SUCCESS;
     else

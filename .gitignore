@@ -2,6 +2,7 @@
 #Recursively ignore the following compilable files;
 *.o
 *.a
+*.un~
 *.out
 *.lst
 *.map

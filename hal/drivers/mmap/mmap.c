@@ -35,6 +35,9 @@ static uint8_t _options = 0;
 void set_mem_debug_opt(uint8_t options) { _options = options; }
 
 static int reg_read(uint32_t addr, uint32_t *data) {
+#if 1
+    return RETURN_SUCCESS;
+#else
     if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
@@ -44,9 +47,13 @@ static int reg_read(uint32_t addr, uint32_t *data) {
     *data = *mmap_addr;
 
     return RETURN_SUCCESS;
+#endif
 }
 
 static int reg_write(uint32_t addr, uint32_t *data) {
+#if 1
+    return RETURN_SUCCESS;
+#else
     if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
@@ -57,6 +64,7 @@ static int reg_write(uint32_t addr, uint32_t *data) {
     msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
 
     return RETURN_SUCCESS;
+#endif
 }
 
 int read_hps_addr(uint32_t addr, uint32_t *data) {

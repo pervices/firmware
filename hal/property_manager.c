@@ -39,9 +39,9 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-static int uart_synth_comm_fd = 0;
-static int uart_tx_comm_fd[NUM_CHANNELS] = {0};
-static int uart_rx_comm_fd[NUM_CHANNELS] = {0};
+int uart_synth_comm_fd;
+int uart_tx_comm_fd[32];
+int uart_rx_comm_fd[32];
 
 // Inotify's file descriptor
 static int inotify_fd;
@@ -56,6 +56,7 @@ static void write_to_file(const char *path, const char *data) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
     }
+    puts("die?");
     fprintf(fd, "%s", data);
     fclose(fd);
 
@@ -199,29 +200,32 @@ static void build_tree(void) {
     // in channels.h was developed to help aid the port from VAUNT to TATE.
     patch_tree();
 
-    dump_tree();
+    //dump_tree();
 
-    PRINT(VERBOSE, "Building tree, %i properties found\n", get_num_prop());
+    PRINT(INFO, "\tXXX: Building tree, %i properties found\n", get_num_prop());
     prop_t *prop;
 
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
         prop = get_prop(i);
+        PRINT(INFO, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
         make_prop(prop);
+        PRINT(INFO, "\tXXX: MADE PROP\n");
         if (PROP_TYPE_SYMLINK != prop->type) {
             add_prop_to_inotify(prop);
             init_prop_val(prop);
         }
-        PRINT(VERBOSE, "made prop: %s wd: %i\n", prop->path, prop->wd);
     }
 
+    PRINT(INFO, "\tXXX: Changing permissions for all\n");
     change_group_permissions_for_all();
 
     // force property initofy check (writing of defaults) after init
+    PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
     check_property_inotifies();
 
-    PRINT(VERBOSE, "Last wd val: %i\n", get_prop(i - 1)->wd);
-    PRINT(VERBOSE, "Done building tree\n");
+    PRINT(INFO, "\tXXX: Last wd val: %i\n", get_prop(i - 1)->wd);
+    PRINT(INFO, "\tXXX: Done building tree\n");
 }
 
 int get_inotify_fd() { return inotify_fd; }
@@ -237,16 +241,34 @@ int init_property(uint8_t options) {
     set_uart_debug_opt(options);
     set_mem_debug_opt(options);
 
-    /* Setup all UART devices */
-    init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
+    // XXX 
+    uart_synth_comm_fd = -1;
+
+    for(int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
+        uart_tx_comm_fd[i] = -1;
+
+    for(int i = 0; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
+        uart_rx_comm_fd[i] = -1;
+
+    /* Setup all UART devices XXX: SHOULD RETURN -1 */
+    //init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
 #if defined(VAUNT)
+
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
+
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
-    for (int i = 1; i < NUM_CHANNELS; i++)
+
+    //
+    // Copy over.
+    //
+
+    for (int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
         uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
-    for (int i = 1; i < NUM_CHANNELS; i++)
+
+    for (int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
+
 #elif defined(TATE)
     static char name[512];
 #define X(ch, io)                                                              \
@@ -257,14 +279,13 @@ int init_property(uint8_t options) {
 #undef X
 #endif
 
-    PRINT(INFO, "array tx size: %d\n", NUM_CHANNELS);
-    PRINT(INFO, "array rx size: %d\n", NUM_CHANNELS);
-
+    PRINT(INFO, "SYNTH FDS\n");
+    PRINT(INFO, "%d\n", uart_synth_comm_fd);
     PRINT(INFO, "TX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++)
+    for (int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
         PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
     PRINT(INFO, "RX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++)
+    for (int i = 0; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
         PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
 
     PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
@@ -296,6 +317,8 @@ void check_property_inotifies(void) {
     char path[MAX_PATH_LEN];
     int n;
 
+    PRINT(INFO, "XXX: CHECKING INOTIFY\n");
+
     // returns if inotify_fd has no bytes to read to prevent server from hanging
     ioctl(inotify_fd, FIONREAD, &n);
     if (n == 0) {
@@ -307,6 +330,7 @@ void check_property_inotifies(void) {
 
     ssize_t i = 0;
     while (i < len) {
+        printf("%d / %d \n", i, len);
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
@@ -332,7 +356,7 @@ void check_property_inotifies(void) {
             prop->handler(prop_data, prop_ret);
             const int t1 = time_it();
 
-            printf("%s :: %d\n", path, t1 - t0);
+            PRINT(INFO, "%s :: %s -> %s :: %d\n", path, prop_data, prop_ret, t1 - t0);
 
             if (prop->permissions == RO) {
                 memset(prop_ret, 0, sizeof(prop_ret));

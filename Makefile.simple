@@ -1,16 +1,15 @@
-BIN = server
-
 CC = gcc
 
 LDFLAGS = -lpthread -lm
 
-CFLAGS  = -DVERSIONGITBRANCH=\"master\"
+CFLAGS  = -DTATE # Project we are using.
+
+CFLAGS += -DVERSIONGITBRANCH=\"master\"
 CFLAGS += -DVERSIONGITREVISION=\"rtm5-v2.0.4-49-g2edf38f7-dirty\"
 CFLAGS += -DVERSIONDATE=\"2019-01-17-21:44:50\"
 CFLAGS += -DVERSION=\"1\"
-CFLAGS += -DTATE_TEST
 CFLAGS += -Wl,-no-undefined
-CFLAGS += -g -O2
+CFLAGS += -g -Og -rdynamic
 CFLAGS += -Icommon
 CFLAGS += -Ihal
 CFLAGS += -Ihal/drivers
@@ -20,8 +19,7 @@ CFLAGS += -Ihal/drivers/udp
 CFLAGS += -Iparser
 CFLAGS += -I.
 
-SOURCE  = server.c
-SOURCE += led.c
+SOURCE  = led.c
 SOURCE += synth_lut.c
 SOURCE += common/common.c
 SOURCE += parser/parser.c
@@ -35,7 +33,13 @@ SOURCE += hal/drivers/udp/udp.c
 SOURCE += hal/drivers/uart/uart.c
 
 all:
-	$(CC) $(SOURCE) $(CFLAGS) $(LDFLAGS) -o $(BIN)
+	$(CC) server.c $(SOURCE) $(CFLAGS) $(LDFLAGS) -o server
+
+#.PHONY:
+#stream: stream.c
+#	$(CC) stream.c hal/drivers/udp/udp.c\
+#		common/common.c hal/comm_manager.c\
+#		hal/drivers/uart/uart.c $(CFLAGS) $(LDFLAGS) -o stream
 
 clean:
-	rm -f $(BIN)
+	rm -f server stream
