@@ -76,7 +76,6 @@ int main(int argc, char *argv[]) {
     verbose = 0;
 
     fd_set rfds;
-
     ret = mmap_init();
     if (EXIT_SUCCESS != ret) {
         PRINT(ERROR, "mmap_init failed\n");
@@ -109,12 +108,16 @@ int main(int argc, char *argv[]) {
     PRINT(INFO, "Starting Crimson server\n");
 
     server_init_led();
+    
+    PRINT(INFO, "Started LEDs\n");
 
     // Check for an argument for debug mode
     if (argc >= 2) {
         if (strcmp(argv[1], "-d") == 0)
             options |= SERVER_DEBUG_OPT;
     }
+
+    PRINT(INFO, "Checked for debug arg\n");
 
     // Initialize network communications for each port
     for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
@@ -124,6 +127,8 @@ int main(int argc, char *argv[]) {
             return RETURN_ERROR_COMM_INIT;
         }
     }
+
+    PRINT(INFO, "Network init done\n");
 
     // Buffer used for read/write
     uint8_t buffer[UDP_PAYLOAD_LEN];
@@ -145,8 +150,8 @@ int main(int argc, char *argv[]) {
     // Perform autocalibration of the frequency synthesizers
     // N.B. this must be done after init_property() because uart init is mixed
     // in with it for some reason
-    atexit(synth_lut_disable_all);
-    synth_lut_enable_all_if_calibrated();
+    //atexit(synth_lut_disable_all);
+    //synth_lut_enable_all_if_calibrated();
 
     // Pass the profile pointers down to properties.c
     pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
@@ -155,8 +160,9 @@ int main(int argc, char *argv[]) {
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Crimson server is up\n");
 
+#if 1
     server_ready_led();
-
+    PRINT(INFO, "SERVER READY LED\n");
     // Main loop, look for commands, if exists, service it and respond
     for (;;) {
 
@@ -280,5 +286,6 @@ int main(int argc, char *argv[]) {
         close_udp_comm(comm_fds[i]);
     }
 
+#endif
     return 0;
 }

@@ -19,7 +19,7 @@
 #include "uart.h"
 #include "udp.h"
 
-#define MAX_DEVICES 16
+#define MAX_DEVICES 32
 #define USED_DEVICE 1
 #define FREE_DEVICE 0
 
@@ -59,15 +59,22 @@ int close_udp_comm(int fd) {
  **************************************/
 // Array of UART devices, file descriptors
 static int uart_devices[MAX_DEVICES];
-static uint8_t used_uart_devices[MAX_DEVICES] = {FREE_DEVICE};
 
-int get_uart_tx_fd() { return uart_devices[1]; }
-int get_uart_rx_fd() { return uart_devices[2]; }
+static uint8_t used_uart_devices[MAX_DEVICES] = {
+    USED_DEVICE, // stdin
+    USED_DEVICE, // stdout
+    USED_DEVICE, // stderr
+};
 
 // Gets the next available file descriptor
 static int get_next_uart_fd(int *fd) {
+
+    //
+    // ASSUMING stdin / stdout / stderr occupy the file descriptors below 3,
+    // fd UART devies
+    //
     int i;
-    for (i = 0; i < MAX_DEVICES; i++) {
+    for (i = 0; i < MAX_DEVICES; i++) { // XXX
         if (used_uart_devices[i] == FREE_DEVICE) {
             *fd = i;
             return RETURN_SUCCESS;
@@ -77,14 +84,16 @@ static int get_next_uart_fd(int *fd) {
 }
 
 int init_uart_comm(int *fd, const char *dev, uint16_t options) {
+
     if (get_next_uart_fd(fd) < 0)
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
 
-    PRINT(VERBOSE, "Found file descriptor %i\n", *fd);
+    PRINT(DEBUG, "Found file descriptor %i\n", *fd);
     used_uart_devices[*fd] = USED_DEVICE;
-    PRINT(VERBOSE, "Opening UART port: %s\n", dev);
+    PRINT(DEBUG, "Opening UART port: %s\n", dev);
 
     // Allocate space for uart device
+    printf("opening %s as %d\n", dev, *fd);
     uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
     if (uart_devices[*fd] < 0) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
@@ -92,7 +101,7 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
     }
     int mydev = uart_devices[*fd];
 
-    PRINT(VERBOSE, "Configuring UART\n");
+    PRINT(DEBUG, "Configuring UART\n");
 
     set_uart_interface_attribs(mydev, B115200,
                                0); // set speed to 115,200 bps, 8n1 (no parity)
@@ -118,6 +127,7 @@ int close_uart_comm(int fd) {
 int recv_uart_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
+    printf("recv %d\n", fd);
     int mydev = uart_devices[fd];
     return recv_uart(mydev, data, size, max_size);
 }
@@ -125,6 +135,7 @@ int recv_uart_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
 int send_uart_comm(int fd, uint8_t *data, uint16_t size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
+    printf("send %d\n", fd);
     int mydev = uart_devices[fd];
     return send_uart(mydev, data, size);
 }

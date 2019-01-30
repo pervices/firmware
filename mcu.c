@@ -41,9 +41,9 @@ static boolean fwd = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
 static char fwd_board = 0;
 
-static const char* UART_SN = "/dev/ttycrimson-time";
-static const char* UART_TX = "/dev/ttycrimson-tx";
-static const char* UART_RX = "/dev/ttycrimson-rx";
+static const char *UART_SN = "/dev/ttycrimson-time";
+static const char *UART_TX = "/dev/ttycrimson-tx";
+static const char *UART_RX = "/dev/ttycrimson-rx";
 
 static int uart_synth_fd = 1;
 static int uart_tx_fd = 2;
@@ -58,8 +58,7 @@ static int contains(const char *str, char letter, int size) {
     return cnt;
 }
 
-static void dump_args(void)
-{
+static void dump_args(void) {
     printf("%s\n", UART_SN);
     printf("%s\n", UART_TX);
     printf("%s\n", UART_RX);
@@ -70,38 +69,25 @@ static void dump_args(void)
     printf("%d\n", uart_comm_fd);
 }
 
-static void help(void)
-{
+static void help(void) {
     printf("Usage: mcu"
-        "[%s /dev/tty] "
-        "[%s /dev/tty] "
-        "[%s /dev/tty] "
-        "[%s] "
-        "[%s] "
-        "[%s [t|r|s]] "
-        "[%s milliseconds]\n",
-        ARG_MCU_UART_TX,
-        ARG_MCU_UART_RX,
-        ARG_MCU_UART_SN,
-        ARG_MCU_SILENT,
-        ARG_MCU_CONSOLE,
-        ARG_MCU_FWD,
-        ARG_MCU_TIMEOUT);
+           "[%s /dev/tty] "
+           "[%s /dev/tty] "
+           "[%s /dev/tty] "
+           "[%s] "
+           "[%s] "
+           "[%s [t|r|s]] "
+           "[%s milliseconds]\n",
+           ARG_MCU_UART_TX, ARG_MCU_UART_RX, ARG_MCU_UART_SN, ARG_MCU_SILENT,
+           ARG_MCU_CONSOLE, ARG_MCU_FWD, ARG_MCU_TIMEOUT);
     exit(1);
 }
 
-static boolean streql(char* a, char* b)
-{
-    return strcmp(a, b) == 0;
-}
+static boolean streql(char *a, char *b) { return strcmp(a, b) == 0; }
 
-static boolean last(const int arg, const int argc)
-{
-    return arg == argc - 1;
-}
+static boolean last(const int arg, const int argc) { return arg == argc - 1; }
 
-static void parse_args(int argc, char* argv[])
-{
+static void parse_args(int argc, char *argv[]) {
     // parse through the arguments
     for (int i = 1; i < argc; i++) {
         // if argument to silent the output
@@ -113,23 +99,19 @@ static void parse_args(int argc, char* argv[])
             console = TRUE;
 
             // if argument to specify this is a forward command
-        }
-        else if (streql(argv[i], ARG_MCU_UART_SN) && !last(i, argc)) {
+        } else if (streql(argv[i], ARG_MCU_UART_SN) && !last(i, argc)) {
 
             UART_SN = argv[i + 1];
             i++;
-        }
-        else if (streql(argv[i], ARG_MCU_UART_TX) && !last(i, argc)) {
+        } else if (streql(argv[i], ARG_MCU_UART_TX) && !last(i, argc)) {
 
             UART_TX = argv[i + 1];
             i++;
-        }
-        else if (streql(argv[i], ARG_MCU_UART_RX) && !last(i, argc)) {
+        } else if (streql(argv[i], ARG_MCU_UART_RX) && !last(i, argc)) {
 
             UART_RX = argv[i + 1];
             i++;
-        }
-        else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
+        } else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
             fwd = TRUE;
             i++;
             if (argv[i][0] == 't') {
@@ -150,8 +132,7 @@ static void parse_args(int argc, char* argv[])
             i++;
             sscanf(argv[i], "%" SCNu32 "", &timeout);
 
-        }
-        else {
+        } else {
             // usage menu
             help();
         }
@@ -162,7 +143,6 @@ int main(int argc, char *argv[]) {
 
     parse_args(argc, argv);
     dump_args();
-
 
     // initialize the comm port
     if (init_uart_comm(&uart_synth_fd, UART_SN, 0) < 0) {

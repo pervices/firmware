@@ -27,9 +27,6 @@
 #define VCS_PATH "/var/crimson/state"
 #endif
 
-extern int get_uart_rx_fd();
-extern int get_uart_tx_fd();
-
 extern void server_init_led();
 extern void server_ready_led();
 
@@ -109,6 +106,18 @@ static struct synth_lut_ctx synth_lut_rx_ctx[] = {
     DEF_RX_CTX(B),
     DEF_RX_CTX(C),
     DEF_RX_CTX(D),
+    DEF_RX_CTX(E),
+    DEF_RX_CTX(F),
+    DEF_RX_CTX(G),
+    DEF_RX_CTX(H),
+    DEF_RX_CTX(I),
+    DEF_RX_CTX(J),
+    DEF_RX_CTX(K),
+    DEF_RX_CTX(L),
+    DEF_RX_CTX(M),
+    DEF_RX_CTX(N),
+    DEF_RX_CTX(O),
+    DEF_RX_CTX(P),
 };
 
 static struct synth_lut_ctx synth_lut_tx_ctx[] = {
@@ -116,6 +125,18 @@ static struct synth_lut_ctx synth_lut_tx_ctx[] = {
     DEF_TX_CTX(B),
     DEF_TX_CTX(C),
     DEF_TX_CTX(D),
+    DEF_TX_CTX(E),
+    DEF_TX_CTX(F),
+    DEF_TX_CTX(G),
+    DEF_TX_CTX(H),
+    DEF_TX_CTX(I),
+    DEF_TX_CTX(J),
+    DEF_TX_CTX(K),
+    DEF_TX_CTX(L),
+    DEF_TX_CTX(M),
+    DEF_TX_CTX(N),
+    DEF_TX_CTX(O),
+    DEF_TX_CTX(P),
 };
 
 #define SYNTH_LUT_LEN ((size_t)(((FREQ_TOP - FREQ_BOTTOM) / LO_STEP_SIZE) + 1))
@@ -314,27 +335,28 @@ static struct synth_lut_ctx *synth_lut_find(const bool tx,
     // PRINT( INFO, "Looking for %s %c\n", tx ? "TX" : "RX", 'A' + channel );
 
     if (tx) {
+        int i = 0;
         FOR_EACH(it, synth_lut_tx_ctx) {
-            // PRINT( INFO, "Considering TX %c @ %p\n", 'A' + i, &
-            // synth_lut_tx_ctx[ i ] );
+            PRINT( INFO, "Considering TX %c @ %p\n", 'A' + i, &synth_lut_tx_ctx[ i ] );
             if (channel == it->channel(it)) {
-                // PRINT( INFO, "Found TX %c\n", 'A' + i );
+                PRINT( INFO, "Found TX %c\n", 'A' + i );
                 break;
             }
+            i++;
         }
     } else {
+        int i = 0;
         FOR_EACH(it, synth_lut_rx_ctx) {
-            // PRINT( INFO, "Considering RX %c @ %p\n", 'A' + i, &
-            // synth_lut_rx_ctx[ i ] );
+            PRINT( INFO, "Considering RX %c @ %p\n", 'A' + i, &synth_lut_rx_ctx[ i ] );
             if (channel == it->channel(it)) {
-                // PRINT( INFO, "Found RX %c\n", 'A' + i );
+                PRINT( INFO, "Found RX %c\n", 'A' + i );
                 break;
             }
+            i++;
         }
     }
 
-    // PRINT( INFO, "Returning %s %c @ %p\n", tx ? "TX" : "RX", 'A' + channel,
-    // it );
+    PRINT( INFO, "Returning %s %c @ %p\n", tx ? "TX" : "RX", 'A' + channel, it );
 
     return it;
 }
@@ -613,6 +635,9 @@ out:
 void synth_lut_disable(const bool tx, const size_t channel) {
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
+
+    printf("disable %p\n", it);
+
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         goto out;
@@ -762,6 +787,10 @@ int synth_lut_enable(const bool tx, const size_t channel) {
     int r;
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
+
+    printf("%p\n", it);
+
+
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         r = ENOENT;
@@ -870,7 +899,10 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
         goto out;
     }
 
-    uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
+    extern int* uart_tx_comm_fd;
+    extern int* uart_rx_comm_fd;
+
+    uart_fd = ctx->tx ? uart_tx_comm_fd[ctx->channel(ctx)] : uart_rx_comm_fd[ctx->channel(ctx)];
 
     memset(buf, '\0', sizeof(buf));
     r = synth_lut_uart_cmd(uart_fd, (char *)req, buf, sizeof(buf));
@@ -1075,8 +1107,11 @@ static int _synth_lut_autocal_enable(struct synth_lut_ctx *ctx, const bool en) {
 
     size_t chan_i;
 
+    extern int* uart_tx_comm_fd;
+    extern int* uart_rx_comm_fd;
+
     chan_i = ctx->channel(ctx);
-    uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
+    uart_fd = ctx->tx ? uart_tx_comm_fd[chan_i] : uart_rx_comm_fd[chan_i];
 
     // tell the mcu to use autocal
     snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %c -A %c", 'a' + chan_i,
@@ -1108,7 +1143,10 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
     bool tx = ctx->tx;
     size_t chan_i = ctx->channel(ctx);
 
-    uart_fd = tx ? get_uart_tx_fd() : get_uart_rx_fd();
+    extern int* uart_tx_comm_fd;
+    extern int* uart_rx_comm_fd;
+
+    uart_fd = tx ? uart_tx_comm_fd[chan_i] : uart_rx_comm_fd[chan_i];
 
     // read the value back
     snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %c -p", 'a' + chan_i);
