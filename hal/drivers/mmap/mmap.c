@@ -35,36 +35,40 @@ static uint8_t _options = 0;
 void set_mem_debug_opt(uint8_t options) { _options = options; }
 
 static int reg_read(uint32_t addr, uint32_t *data) {
-#if 1
-    return RETURN_SUCCESS;
-#else
     if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
 
+#if defined(VAUNT)
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr);
+#elif defined(TATE)
+    volatile uint32_t *mmap_addr =
+        (uint32_t *)((uint8_t *)mmap_base + (-HPS2FPGA_GPR_OFST + addr)/4);
+#endif
+
     *data = *mmap_addr;
 
     return RETURN_SUCCESS;
-#endif
 }
 
 static int reg_write(uint32_t addr, uint32_t *data) {
-#if 1
-    return RETURN_SUCCESS;
-#else
     if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
 
+#if defined(VAUNT)
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr);
+#elif defined(TATE)
+    volatile uint32_t *mmap_addr =
+        (uint32_t *)((uint8_t *)mmap_base + (-HPS2FPGA_GPR_OFST + addr)/4);
+#endif
+
     *mmap_addr = *data;
     msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
 
     return RETURN_SUCCESS;
-#endif
 }
 
 int read_hps_addr(uint32_t addr, uint32_t *data) {
@@ -146,7 +150,12 @@ int mmap_init() {
     }
     mmap_fd = r;
 
-    rr = mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
+#if defined(VAUNT)
+    mmap_len = 0x1000;
+#elif defined(TATE)
+    mmap_len = 0x4000;
+#endif
+    rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
               HPS2FPGA_GPR_OFST);
     if (MAP_FAILED == rr) {
         PRINT(ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror(errno),
@@ -155,7 +164,6 @@ int mmap_init() {
         goto closefd;
     }
     mmap_base = rr;
-    mmap_len = 0x1000;
 
     r = EXIT_SUCCESS;
     goto out;
