@@ -19,9 +19,6 @@
 
 #include <stdlib.h>
 
-#define HPS2FPGA_GPR_OFST (0xff200000)
-#define HPS2FPGA_10G_OFST (0xff300000)
-
 static const reg_t reg_table[] = {
     {0x000 + HPS2FPGA_GPR_OFST, "sys0", 0x00000000, "RW"},
     {0x010 + HPS2FPGA_GPR_OFST, "sys1", 0xffff003f, "RO"},

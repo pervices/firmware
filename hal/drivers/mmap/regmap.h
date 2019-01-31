@@ -27,6 +27,12 @@
 
 #define ALT_LWFPGASLVS_SPAN (ALT_LWH2F_OFST - ALT_LWFPGASLVS_OFST - 1)
 
+#if defined(VAUNT)
+    #define HPS2FPGA_GPR_OFST (0xFF200000)
+#elif defined(TATE)
+    #define HPS2FPGA_GPR_OFST (0x80000000)
+#endif
+
 typedef struct bits {
     char **names;
     uint8_t *spans;
