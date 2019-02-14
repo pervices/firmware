@@ -19,7 +19,11 @@
 #include "mmap.h"
 
 #ifndef HPS2FPGA_GPR_OFST
-#define HPS2FPGA_GPR_OFST (0xff200000)
+#if defined(VAUNT)
+    #define HPS2FPGA_GPR_OFST (0xFF200000)
+#elif defined(TATE)
+    #define HPS2FPGA_GPR_OFST (0x80000000)
+#endif
 #endif
 
 static int mmap_fd = -1;
