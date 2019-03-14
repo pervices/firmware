@@ -1,9 +1,20 @@
-To build the HPS binaries from a host computer,
-you'll have to use make to correctly specify and configure the toolchain:
+To build the HPS binaries from a host computer, you'll have to use make to correctly specify and configure the toolchain;
 
-    sh autogen.sh
+CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+make
 
-    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a\
-    -mtune=cortex-a9 -mfpu=neon" ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+On the internal PV dev machines, you may also use;
 
-    make -j10
+sh autogen.sh
+
+CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
+CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+
+make
+
+To build for either Tate (Cyan) or Vaunt (Crimson), you may specify the option as CFLAG in
+configure.ac. Legal values are either -DVAUNT or -DTATE
