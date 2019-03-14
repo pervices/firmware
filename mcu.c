@@ -33,6 +33,8 @@
 
 #define DEFAULT_TIMEOUT 100 // Milliseconds
 
+//#define DEBUG_OUTPUTS
+
 static int uart_comm_fd = 0;
 static char buf[MAX_UART_LEN] = {};
 static boolean silent = FALSE;
@@ -45,9 +47,9 @@ static const char* UART_SN = "/dev/ttycrimson-time";
 static const char* UART_TX = "/dev/ttycrimson-tx";
 static const char* UART_RX = "/dev/ttycrimson-rx";
 
-static int uart_synth_fd = 1;
-static int uart_tx_fd = 2;
-static int uart_rx_fd = 3;
+static int uart_synth_fd = 0;
+static int uart_tx_fd = 1;
+static int uart_rx_fd = 2;
 
 static int contains(const char *str, char letter, int size) {
     int cnt = 0;
@@ -161,7 +163,9 @@ static void parse_args(int argc, char* argv[])
 int main(int argc, char *argv[]) {
 
     parse_args(argc, argv);
-    dump_args();
+    #ifdef DEBUG_OUTPUTS
+        dump_args();
+    #endif
 
 
     // initialize the comm port

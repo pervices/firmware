@@ -1,5 +1,5 @@
 //
-// Copyright 2014 Per Vices Corporation
+// Copyright 2019 Per Vices Corporation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -85,6 +85,8 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
     PRINT(VERBOSE, "Opening UART port: %s\n", dev);
 
     // Allocate space for uart device
+    PRINT(DEBUG, "Opening %s as %d\n", dev, *fd);
+
     uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
     if (uart_devices[*fd] < 0) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
@@ -118,6 +120,7 @@ int close_uart_comm(int fd) {
 int recv_uart_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
+    PRINT(DEBUG ,"recv %d\n", fd);
     int mydev = uart_devices[fd];
     return recv_uart(mydev, data, size, max_size);
 }
@@ -125,6 +128,7 @@ int recv_uart_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
 int send_uart_comm(int fd, uint8_t *data, uint16_t size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
+    PRINT(DEBUG ,"send %d\n", fd);
     int mydev = uart_devices[fd];
     return send_uart(mydev, data, size);
 }
