@@ -19,11 +19,13 @@
 #include "mmap.h"
 
 #ifndef HPS2FPGA_GPR_OFST
-#if defined(VAUNT)
-    #define HPS2FPGA_GPR_OFST (0xFF200000)
-#elif defined(TATE)
-    #define HPS2FPGA_GPR_OFST (0x80000000)
-#endif
+    #if defined(VAUNT)
+        #define HPS2FPGA_GPR_OFST (0xFF200000)
+    #elif defined(TATE)
+        #define HPS2FPGA_GPR_OFST (0x80000000)
+    #elif
+        #error This file must be called with either -DTATE or -DVAUNT. Check spaces.
+    #endif
 #endif
 
 static int mmap_fd = -1;

@@ -56,7 +56,8 @@ CFLAGS+=" -DVERSIONGITBRANCH=\\\"`git rev-parse --abbrev-ref HEAD`\\\""
 CFLAGS+=" -DVERSIONGITREVISION=\\\"`git describe --abbrev=8 --dirty --always --long`\\\""
 CFLAGS+=" -DVERSIONDATE=\\\"`TZ=UTC date '+%F-%T'`\\\""
 
-CFLAGS+=" -DTATE_TEST"
+CFLAGS+=" -DVAUNT"
+#CFLAGS+=" -DTATE"
 
 LDFLAGS="${LDFLAGS}"
 LDFLAGS+=" -Wl,-no-undefined"
