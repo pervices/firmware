@@ -56,7 +56,7 @@ static void write_to_file(const char *path, const char *data) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
     }
-    puts("die?");
+    //puts("die?"); //Why die? In case something goes wrong?
     fprintf(fd, "%s", data);
     fclose(fd);
 

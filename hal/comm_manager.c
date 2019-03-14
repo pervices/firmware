@@ -94,7 +94,6 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
 
     // Allocate space for uart device
     PRINT(DEBUG, "Opening %s as %d\n", dev, *fd);
-    printf("Opening %s as %d\n", dev, *fd);
 
     uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
     if (uart_devices[*fd] < 0) {

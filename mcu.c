@@ -33,7 +33,7 @@
 
 #define DEFAULT_TIMEOUT 100 // Milliseconds
 
-#define DEBUG_OUTPUTS
+//#define DEBUG_OUTPUTS
 
 static int uart_comm_fd = 0;
 static char buf[MAX_UART_LEN] = {};
