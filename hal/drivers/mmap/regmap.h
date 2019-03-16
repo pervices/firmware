@@ -1,5 +1,5 @@
 //
-// Copyright 2014 Per Vices Corporation
+// Copyright 2014 - 2019 Per Vices Corporation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,25 +25,25 @@
 #include "socal.h"
 #include "hps.h"
 
-#define ALT_LWFPGASLVS_SPAN ( ALT_LWH2F_OFST - ALT_LWFPGASLVS_OFST - 1 )
+#define ALT_LWFPGASLVS_SPAN (ALT_LWH2F_OFST - ALT_LWFPGASLVS_OFST - 1)
 
 typedef struct bits {
-	char** names;
-	uint8_t* spans;
+    char **names;
+    uint8_t *spans;
 } bits_t;
 
 typedef struct reg {
-	uint32_t addr;
-	const char* name;
-	uint32_t def_val;
-	const char* perm;
-	bits_t field;
+    uint32_t addr;
+    const char *name;
+    uint32_t def_val;
+    const char *perm;
+    bits_t field;
 } reg_t;
 
 size_t get_num_regs(void);
-const reg_t* get_reg_from_name(const char* name);
-const reg_t* get_reg_from_addr(uint32_t addr);
-const reg_t* get_reg_from_index(uint32_t index);
+const reg_t *get_reg_from_name(const char *name);
+const reg_t *get_reg_from_addr(uint32_t addr);
+const reg_t *get_reg_from_index(uint32_t index);
 void print_regs(int verbose);
 
 #endif
