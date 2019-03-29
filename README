@@ -1,20 +1,94 @@
-To build the HPS binaries from a host computer, you'll have to use make to correctly specify and configure the toolchain;
+1. Quick Start
 
-CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
-make
+To quickly compile a product variant for Crimson, you can try the following
+commands. Note carefully that they are used for our own, internal, machines, and
+may not work for you. The remainder of this README provides additional
+information on how to get a compile working for you.
 
-On the internal PV dev machines, you may also use;
+1.a Quickstart Compile Routines
 
-sh autogen.sh
+1.a.i Crimson Optimized Compile Commands
 
-CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
-CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
-CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+   sed -i 's/DTATE/DVAUNT/g' configure.ac #Optional, clean git repo defaults to Vaunt.
 
-make
+   sh autogen.sh
 
-To build for either Tate (Cyan) or Vaunt (Crimson), you may specify the option as CFLAG in
-configure.ac. Legal values are either -DVAUNT or -DTATE
+   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
+   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+   CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+        -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+
+   make
+
+1.a.ii Cyan Optimized Compile Commands
+
+   sed -i 's/DVAUNT/DTATE/g' configure.ac
+
+   sh autogen.sh
+
+   CXX="/usr/bin/arm-linux-gnueabi-g++" \
+   CC="/usr/bin/arm-linux-gnueabi-gcc" \
+   CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+        -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
+        ./configure --prefix=/usr --host=arm-linux-gnueabi-g++
+
+   make
+
+2. Specifying Build Variant Target
+
+To specify whether to build a Cyan ("Tate") or Crimson ("Vaunt") server variant
+you will need to modify a CFLAG that is specified in the configure.ac file.
+
+This flag modifies specific properties, such as the number of front end boards,
+and register file mappings to ensure operation. By default, firmware targets
+Crimson ("Vaunt") product variants.
+
+To modify and build the Cyan "Tate", variant, you will need to modify the
+configure.ac file. Locate the line that specifies, "CFLAG+=" -DVAUNT",
+and comment that line out. Then uncomment the following line, "CFLAG+=" -DTATE"
+
+You may also use sed to accomplish this same task.
+
+Only one flag may be specified at a time, and you must specify one of them for
+compilation to succeed.
+
+3. Cross-Compiling from a development computer.
+
+To build the HPS binaries from a host computer, you may be required to specify
+a non-standard location for your compiler and build chain. To ensure that your
+modified build chain is correctly specified and propagated across the build, you
+may specify the specific compiler as a configure flag.
+
+To target the ARM processors used by Crimson and Tate, you can use;
+
+./configure \
+    --prefix=/usr \
+    --host=arm-unknown-linux-gnueabihf
+
+It's likely that your default system toolchain will not immediately support the
+target arm host. If that's the case, you can choose to directly specify the
+compiler using the CC and CXX flags.
+
+For the internal PV machines, we use;
+
+   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++"
+   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc"
+
+3. Compile Optimizations
+
+To further optimize the design for either Crimson or Cyan, you can also specify
+the CFLAGs when calling configure.
+
+For Crimson (Vaunt), the following CFLAGS and configure flags have been tested;
+
+CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+        -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+
+For Cyan (Tate), the following CFLAGS and configure flags have been tested;
+
+CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+        -march=armv7-a -mtune=cortex-a53 -mfpu=neon" \
+        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+
