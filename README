@@ -27,11 +27,11 @@ information on how to get a compile working for you.
 
    sh autogen.sh
 
-   CXX="/usr/bin/arm-linux-gnueabi-g++" \
-   CC="/usr/bin/arm-linux-gnueabi-gcc" \
+   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
+   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-linux-gnueabi-g++
+    ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
 
    make
 
