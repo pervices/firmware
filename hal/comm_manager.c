@@ -22,6 +22,7 @@
 #define MAX_DEVICES 32
 #define USED_DEVICE 1
 #define FREE_DEVICE 0
+//#define DEBUG_OUTPUTS
 
 /**************************************
  * UDP Driver Manager
@@ -94,6 +95,9 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
 
     // Allocate space for uart device
     PRINT(DEBUG, "Opening %s as %d\n", dev, *fd);
+#ifdef DEBUG_OUTPUTS
+        printf("Opening %s as %d\n", dev, *fd);
+#endif
 
     uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
     if (uart_devices[*fd] < 0) {
