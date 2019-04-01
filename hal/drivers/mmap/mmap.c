@@ -45,13 +45,8 @@ static int reg_read(uint32_t addr, uint32_t *data) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
 
-#if defined(VAUNT)
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr);
-#elif defined(TATE)
-    volatile uint32_t *mmap_addr =
-        (uint32_t *)((uint8_t *)mmap_base + (-HPS2FPGA_GPR_OFST + addr)/4);
-#endif
 
     *data = *mmap_addr;
 
@@ -63,13 +58,8 @@ static int reg_write(uint32_t addr, uint32_t *data) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
 
-#if defined(VAUNT)
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr);
-#elif defined(TATE)
-    volatile uint32_t *mmap_addr =
-        (uint32_t *)((uint8_t *)mmap_base + (-HPS2FPGA_GPR_OFST + addr)/4);
-#endif
 
     *mmap_addr = *data;
     msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
