@@ -46,7 +46,7 @@ static int reg_read(uint32_t addr, uint32_t *data) {
     }
 
     volatile uint32_t *mmap_addr =
-        (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr);
+        (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
 
     *data = *mmap_addr;
 
@@ -59,7 +59,7 @@ static int reg_write(uint32_t addr, uint32_t *data) {
     }
 
     volatile uint32_t *mmap_addr =
-        (uint32_t *)((uint8_t *)mmap_base - HPS2FPGA_GPR_OFST + addr);
+        (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
 
     *mmap_addr = *data;
     msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
