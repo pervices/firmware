@@ -34,20 +34,33 @@
 
 #include "channels.h"
 
-// Sample rates are in samples per second (SPS).
-#define BASE_SAMPLE_RATE   325000000.0
-#define RESAMP_SAMPLE_RATE 260000000.0
+#if defined(VAUNT)
+    // Sample rates are in samples per second (SPS).
+    #define BASE_SAMPLE_RATE   325000000.0
+    #define RESAMP_SAMPLE_RATE 260000000.0
+    // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
+    #define DSP_NCO_CONST \
+        ((double)13.215283987692307692307692307692307692307692307692307692307)
+
+    // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
+    #define DAC_NCO_CONST \
+        ((double)216519.21285435076923076923076923076923076923076923076919296)
+#elif defined(TATE)
+    // Sample rates are in samples per second (SPS).
+    #define BASE_SAMPLE_RATE   1000000000.0  //After base rate
+    #define RESAMP_SAMPLE_RATE  800000000.0  //After 4/5 resampling
+    // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
+    #define DSP_NCO_CONST \
+        ((double)4.294967296)
+    // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
+    #define DAC_NCO_CONST \
+        ((double)70368.744177664)
+#else
+    #error This file must be called with either -DTATE or -DVAUNT. Check spaces.
+#endif
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
-
-// (2 ^ 32) / (1 * 322265625)
-#define DSP_NCO_CONST \
-    ((double)13.215283987692307692307692307692307692307692307692307690000)
-
-// (2 ^ 48) / (4 * 322265625)
-#define DAC_NCO_CONST \
-    ((double)216519.21285435076923076923076923076923076923076923076919296)
 
 #define PWR_ON  1
 #define PWR_OFF 0
