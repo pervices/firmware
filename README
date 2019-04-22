@@ -5,6 +5,9 @@ commands. Note carefully that they are used for our own, internal, machines, and
 may not work for you. The remainder of this README provides additional
 information on how to get a compile working for you.
 
+On archlinux, you will need to install the "arm-linux-gnueabihf-gcc" toolchain,
+which is available on yaourt.
+
 1.a Quickstart Compile Routines
 
 1.a.i Crimson Optimized Compile Commands
@@ -13,11 +16,11 @@ information on how to get a compile working for you.
 
    sh autogen.sh
 
-   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
-   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+   CXX="/usr/bin/arm-linux-gnueabihf-g++" \
+   CC="/usr/bin/arm-linux-gnueabihf-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+        ./configure --prefix=/usr --host=arm-linux-gnueabihf
 
    make
 
@@ -27,11 +30,11 @@ information on how to get a compile working for you.
 
    sh autogen.sh
 
-   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
-   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+   CXX="/usr/bin/arm-linux-gnueabihf-g++" \
+   CC="/usr/bin/arm-linux-gnueabihf-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
-    ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+    ./configure --prefix=/usr --host=arm-linux-gnueabihf
 
    make
 
@@ -70,10 +73,12 @@ It's likely that your default system toolchain will not immediately support the
 target arm host. If that's the case, you can choose to directly specify the
 compiler using the CC and CXX flags.
 
-For the internal PV machines, we use;
+For the internal PV machines that haven't been configured with the new toolchain;
 
    CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++"
    CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc"
+
+Otherwise, follow the instructions above.
 
 3. Compile Optimizations
 
@@ -84,11 +89,30 @@ For Crimson (Vaunt), the following CFLAGS and configure flags have been tested;
 
 CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+        ./configure --prefix=/usr --host=arm-linux-gnueabihf
 
 For Cyan (Tate), the following CFLAGS and configure flags have been tested;
 
 CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a53 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+        ./configure --prefix=/usr --host=arm-linux-gnueabihf
 
+4. Installing the toolchain on archlinux
+
+You may opt to install the arm-linux-gnueabihf-gcc on archlinux using yaourt;
+
+yaourt -S arm-linux-gnueabihf-gcc --noconfirm
+
+This will automatically try and install the complete tool chain. If you need to
+install the packages sequentially, you may try doing so, using;
+
+
+yaourt -G arm-linux-gnueabihf-binutils arm-linux-gnueabihf-linux-api-headers \
+    arm-linux-gnueabihf-binutils \
+    arm-linux-gnueabihf-gcc-stage1 \
+    arm-linux-gnueabihf-glibc-headers \
+    arm-linux-gnueabihf-gcc-stage2 \
+    arm-linux-gnueabihf-glibc \
+    arm-linux-gnueabihf-gcc
+
+You'll also need to install the packages in the above order.
