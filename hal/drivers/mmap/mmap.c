@@ -23,7 +23,7 @@
         #define HPS2FPGA_GPR_OFST (0xFF200000)
     #elif defined(TATE)
         #define HPS2FPGA_GPR_OFST (0x80000000)
-    #elif
+    #else
         #error This file must be called with either -DTATE or -DVAUNT. Check spaces.
     #endif
 #endif
