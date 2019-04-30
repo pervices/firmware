@@ -26,12 +26,18 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 
-/* Crimson UART ports.
- * TATE ports are expanded with xmacros. */
-#define UART_SYNTH "/dev/ttycrimson-time"
-#define UART_TX "/dev/ttycrimson-tx"
-#define UART_RX "/dev/ttycrimson-rx"
-#define UART_GENERIC "/dev/ttyMAX"
+/* TATE ports are expanded with xmacros
+* in hal/{channels.h,property_manager.c,properties.c} */
+#if defined(VAUNT)
+    #define UART_TX "/dev/ttycrimson-tx"
+    #define UART_RX "/dev/ttycrimson-rx"
+    #define UART_SYNTH "/dev/ttycrimson-time"
+#elif defined(TATE)
+    #define UART_SYNTH "/dev/ttycyan-time"
+    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
+#else
+    #error "This file must be compiled with either -DTATE or -DVAUNT. Confirm spelling and spaces."
+#endif
 
 int get_inotify_fd();
 

@@ -39,6 +39,10 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
+#if !defined(VAUNT) || !defined(TATE)
+    #error "You must specify either (VAUNT | TATE) when compiling this project."
+#endif
+
 int uart_synth_comm_fd;
 int uart_tx_comm_fd[32];
 int uart_rx_comm_fd[32];
@@ -256,13 +260,10 @@ int init_property(uint8_t options) {
 #if defined(VAUNT)
 
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
-
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
-
     //
     // Copy over.
     //
-
     for (int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
         uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
 
@@ -273,13 +274,13 @@ int init_property(uint8_t options) {
     static char name[512];
 #define X(ch, io)                                                              \
     const int chan_##ch = INT(ch);                                             \
-    sprintf(name, UART_GENERIC "%d", chan_##ch);                               \
+    sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
     init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
     CHANNELS
 #undef X
 #endif
 
-    PRINT(INFO, "SYNTH FDS\n");
+    PRINT(INFO, "Configuring Time Board. Using UART: %s\n", UART_SYNTH);
     PRINT(INFO, "%d\n", uart_synth_comm_fd);
     PRINT(INFO, "TX FDS\n");
     for (int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
