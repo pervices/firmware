@@ -2992,7 +2992,8 @@ static void set_default_int(const char* const path, const int value)
 
 void dump_tree(void)
 {
-    for(int i = 0; i < num_properties; i++)
+    int i;
+    for(i = 0; i < num_properties; i++)
     {
         struct prop p = property_table[i];
         printf("%40s == %40s\n", p.path, p.def_val);

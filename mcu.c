@@ -53,7 +53,8 @@ static int uart_rx_fd = 2;
 
 static int contains(const char *str, char letter, int size) {
     int cnt = 0;
-    for (int i = 0; i < size; i++) {
+    int i;
+    for (i = 0; i < size; i++) {
         if (str[i] == letter)
             cnt++;
     }
@@ -104,8 +105,9 @@ static boolean last(const int arg, const int argc)
 
 static void parse_args(int argc, char* argv[])
 {
+    int i;
     // parse through the arguments
-    for (int i = 1; i < argc; i++) {
+    for (i = 1; i < argc; i++) {
         // if argument to silent the output
         if (streql(argv[i], ARG_MCU_SILENT)) {
             silent = TRUE;

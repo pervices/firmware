@@ -241,12 +241,13 @@ int init_property(uint8_t options) {
     /* Setup all UART devices */
     init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
+    int i;
 #if defined(VAUNT)
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
-    for (int i = 1; i < NUM_CHANNELS; i++)
+    for (i = 1; i < NUM_CHANNELS; i++)
         uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
-    for (int i = 1; i < NUM_CHANNELS; i++)
+    for (i = 1; i < NUM_CHANNELS; i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
 
 #elif defined(TATE)
@@ -263,9 +264,9 @@ int init_property(uint8_t options) {
     PRINT(INFO, "array rx size: %d\n", NUM_CHANNELS);
 
     PRINT(INFO, "TX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
+    for (i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
     PRINT(INFO, "RX FDS\n");
-    for (int i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
+    for (i = 0; i < NUM_CHANNELS; i++) PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
 
     PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
     PRINT(VERBOSE, "Initializing Inotify\n");
