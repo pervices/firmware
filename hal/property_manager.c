@@ -214,7 +214,6 @@ static void build_tree(void) {
         prop = get_prop(i);
         PRINT(INFO, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
         make_prop(prop);
-        PRINT(INFO, "\tXXX: MADE PROP\n");
         if (PROP_TYPE_SYMLINK != prop->type) {
             add_prop_to_inotify(prop);
             init_prop_val(prop);
