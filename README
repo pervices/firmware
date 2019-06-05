@@ -36,6 +36,11 @@ which is available on yaourt.
         -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
     ./configure --prefix=/usr --host=arm-linux-gnueabihf
 
+   alternatively build using the Linaro toolchain on an x86_64 machine (must
+     include linaro binary location in your PATH env variable):
+
+   CXX="aarch64-linux-gnu-g++" CC="aarch64-linux-gnu-gcc" CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall" ./configure --host=x86_64
+
    make
 
 2. Specifying Build Variant Target
