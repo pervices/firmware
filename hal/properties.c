@@ -163,7 +163,7 @@ static int read_uart(int uartfd) {
         if (recv_uart_comm(uartfd, ((uint8_t *)buf) + total_bytes, &cur_bytes, MAX_UART_LEN - total_bytes)) {
             strcpy((char *)uart_ret_buf, "");
 
-            return 0;
+            return RETURN_ERROR;
         }
         total_bytes += cur_bytes;
     }
@@ -965,6 +965,9 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
+        /* Group every four channels into the same QSFP port */                \
+        /* NOTE: This is strictly for tate */                                  \
+        sprintf(ret, "%s", "sfp" STR(((INT(ch)-INT('a')) / 4)+'a'));           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2428,7 +2431,8 @@ static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char *ret,
     static const unsigned sfp_port_max = 1;
 
     unsigned udp_port;
-    uint32_t flc0_reg;
+    uint32_t flc_reg;
+    char* flc_reg_addr = "flc0";
     uint32_t mask;
 
     if (sfp_port > sfp_port_max) {
@@ -2442,11 +2446,16 @@ static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char *ret,
 
     // if number of sfp_ports ever changes, this code needs to be changed
     // a good reason to use structures to access memory-mapped registers.
-    read_hps_reg("flc0", &flc0_reg);
-    mask = 0xffff << (sfp_port * 16);
-    flc0_reg &= ~mask;
-    flc0_reg |= (udp_port << (sfp_port * 16)) & mask;
-    write_hps_reg("flc0", flc0_reg);
+    flc_reg_addr = (sfp_port < 2) ? "flc0" : "flc38";
+    if (sfp_port < 2) {
+        mask = 0xffff << (sfp_port * 16);
+    } else {
+        mask = 0xffff << ((sfp_port>>1) * 16);
+    }
+    read_hps_reg(flc_reg_addr, &flc_reg);
+    flc_reg &= ~mask;
+    flc_reg |= (udp_port << (sfp_port * 16)) & mask;
+    write_hps_reg(flc_reg_addr, flc_reg);
 
     sprintf(ret, "%u", udp_port);
 
@@ -2459,6 +2468,14 @@ static inline int hdlr_fpga_board_flow_control_sfpa_port(const char *data,
 static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data,
                                                          char *ret) {
     return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 1);
+}
+static inline int hdlr_fpga_board_flow_control_sfpc_port(const char *data,
+                                                         char *ret) {
+    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 2);
+}
+static inline int hdlr_fpga_board_flow_control_sfpd_port(const char *data,
+                                                         char *ret) {
+    return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 3);
 }
 
 static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
@@ -2571,6 +2588,9 @@ static int hdlr_fpga_link_rate(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+
+
+
 static int hdlr_fpga_link_sfpa_ip_addr(const char *data, char *ret) {
     uint32_t ip[4];
     if (ipver[0] == IPVER_IPV4) {
@@ -2621,6 +2641,9 @@ static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+
+
+
 static int hdlr_fpga_link_sfpb_ip_addr(const char *data, char *ret) {
     uint32_t ip[4];
     if (ipver[1] == IPVER_IPV4) {
@@ -2670,6 +2693,118 @@ static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
     write_hps_reg("net15", (old_val & ~(0xffff0000)) | (pay_len << 16));
     return RETURN_SUCCESS;
 }
+
+
+
+
+
+static int hdlr_fpga_link_sfpc_ip_addr(const char *data, char *ret) {
+    uint32_t ip[4];
+    if (ipver[0] == IPVER_IPV4) {
+        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net35",
+                      (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]));
+    } else if (ipver[0] == IPVER_IPV6) {
+        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net31", ip[0]);
+        write_hps_reg("net32", ip[1]);
+        write_hps_reg("net33", ip[2]);
+        write_hps_reg("net34", ip[3]);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpc_mac_addr(const char *data, char *ret) {
+    uint8_t mac[6];
+    sscanf(data,
+           "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 "",
+           mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);
+    write_hps_reg("net41", (mac[0] << 8) | (mac[1]));
+    write_hps_reg("net42",
+                  (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpc_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    uint8_t ver;
+    sscanf(data, "%" SCNd8 "", &ver);
+    read_hps_reg("net30", &old_val);
+    if (ver > 0)
+        write_hps_reg("net30", (old_val | 0x4));
+    else
+        write_hps_reg("net30", (old_val & ~(0x4)));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpc_pay_len(const char *data, char *ret) {
+    uint32_t old_val;
+    uint32_t pay_len;
+    sscanf(data, "%" SCNd32 "", &pay_len);
+    read_hps_reg("net30", &old_val);
+    write_hps_reg("net30", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    return RETURN_SUCCESS;
+}
+
+
+
+
+
+static int hdlr_fpga_link_sfpd_ip_addr(const char *data, char *ret) {
+    uint32_t ip[4];
+    if (ipver[1] == IPVER_IPV4) {
+        sscanf(data, "%" SCNd32 ".%" SCNd32 ".%" SCNd32 ".%" SCNd32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        ip[0] = (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]);
+        write_hps_reg("net50", ip[0]);
+    } else if (ipver[1] == IPVER_IPV6) {
+        sscanf(data, "%" SCNx32 ":%" SCNx32 ":%" SCNx32 ":%" SCNx32 "", ip,
+               ip + 1, ip + 2, ip + 3);
+        write_hps_reg("net46", ip[0]);
+        write_hps_reg("net47", ip[1]);
+        write_hps_reg("net48", ip[2]);
+        write_hps_reg("net49", ip[3]);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpd_mac_addr(const char *data, char *ret) {
+    uint8_t mac[6];
+    sscanf(data,
+           "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 "",
+           mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);
+    write_hps_reg("net56", (mac[0] << 8) | (mac[1]));
+    write_hps_reg("net57",
+                  (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpd_ver(const char *data, char *ret) {
+    uint32_t old_val;
+    uint8_t ver;
+    sscanf(data, "%" SCNd8 "", &ver);
+    read_hps_reg("net45", &old_val);
+    if (ver > 0)
+        write_hps_reg("net45", (old_val & ~(1 << 2)) | (1 << 2));
+    else
+        write_hps_reg("net45", (old_val & ~(1 << 2)));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfpd_pay_len(const char *data, char *ret) {
+    uint32_t old_val;
+    uint32_t pay_len;
+    sscanf(data, "%" SCNd32 "", &pay_len);
+    read_hps_reg("net45", &old_val);
+    write_hps_reg("net45", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    return RETURN_SUCCESS;
+}
+
+
+
+
 
 static int hdlr_fpga_link_net_dhcp_en(const char *data, char *ret) {
     return RETURN_SUCCESS;
@@ -2909,6 +3044,60 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
 
+#if defined(TATE)
+#define DEFINE_FPGA()                                                                                                         \
+    DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
+    DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
+    DEFINE_FILE_PROP("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative")          \
+    DEFINE_FILE_PROP("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION)             \
+    DEFINE_FILE_PROP("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)             \
+    DEFINE_FILE_PROP("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "")                  \
+    DEFINE_FILE_PROP("fpga/about/hw_ver"                   , hdlr_fpga_about_hw_ver,                 RW, VERSION)             \
+    DEFINE_FILE_PROP("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001")               \
+    DEFINE_FILE_PROP("fpga/about/name"                     , hdlr_invalid,                           RO, PROJECT_NAME)        \
+    DEFINE_FILE_PROP("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001")               \
+    DEFINE_FILE_PROP("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm")  \
+    DEFINE_FILE_PROP("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809")             \
+    DEFINE_FILE_PROP("fpga/board/flow_control/sfpb_port"   , hdlr_fpga_board_flow_control_sfpb_port, RW, "42809")             \
+    DEFINE_FILE_PROP("fpga/board/flow_control/sfpc_port"   , hdlr_fpga_board_flow_control_sfpc_port, RW, "42809")             \
+    DEFINE_FILE_PROP("fpga/board/flow_control/sfpd_port"   , hdlr_fpga_board_flow_control_sfpd_port, RW, "42809")             \
+    DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20")                \
+    DEFINE_FILE_PROP("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "1250000000")        \
+    DEFINE_FILE_PROP("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2")        \
+    DEFINE_FILE_PROP("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00") \
+    DEFINE_FILE_PROP("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "1400")              \
+    DEFINE_FILE_PROP("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2")        \
+    DEFINE_FILE_PROP("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01") \
+    DEFINE_FILE_PROP("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "1400")              \
+    DEFINE_FILE_PROP("fpga/link/sfpc/ip_addr"              , hdlr_fpga_link_sfpc_ip_addr,            RW, "10.10.12.2")        \
+    DEFINE_FILE_PROP("fpga/link/sfpc/mac_addr"             , hdlr_fpga_link_sfpc_mac_addr,           RW, "aa:00:00:00:00:02") \
+    DEFINE_FILE_PROP("fpga/link/sfpc/ver"                  , hdlr_fpga_link_sfpc_ver,                RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/link/sfpc/pay_len"              , hdlr_fpga_link_sfpc_pay_len,            RW, "1400")              \
+    DEFINE_FILE_PROP("fpga/link/sfpd/ip_addr"              , hdlr_fpga_link_sfpd_ip_addr,            RW, "10.10.13.2")        \
+    DEFINE_FILE_PROP("fpga/link/sfpd/mac_addr"             , hdlr_fpga_link_sfpd_mac_addr,           RW, "aa:00:00:00:00:03") \
+    DEFINE_FILE_PROP("fpga/link/sfpd/ver"                  , hdlr_fpga_link_sfpd_ver,                RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "1400")              \
+    DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
+    DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
+    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
+
+#else
+
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
@@ -2949,6 +3138,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
     DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
     DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
+#endif
 
 #define DEFINE_CM()                                                    \
     DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
