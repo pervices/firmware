@@ -967,7 +967,8 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
         /* TODO: FW support for streaming to management port required */       \
         /* Group every four channels into the same QSFP port */                \
         /* NOTE: This is strictly for tate */                                  \
-        sprintf(ret, "%s", "sfp" STR(((INT(ch)-INT('a')) / 4)+'a'));           \
+        char channel = (INT(ch)/4)+'a';                                        \
+        sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
