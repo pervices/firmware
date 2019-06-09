@@ -47,14 +47,14 @@
         ((double)216519.21285435076923076923076923076923076923076923076919296)
 #elif defined(TATE)
     // Sample rates are in samples per second (SPS).
-    #define BASE_SAMPLE_RATE   1000000000.0  //After base rate
-    #define RESAMP_SAMPLE_RATE  800000000.0  //After 4/5 resampling
+    #define BASE_SAMPLE_RATE   400000000.0  //After base rate
+    #define RESAMP_SAMPLE_RATE 320000000.0  //After 4/5 resampling
     // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
     #define DSP_NCO_CONST \
-        ((double)4.294967296)
+        ((double)13.4217728)
     // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
     #define DAC_NCO_CONST \
-        ((double)70368.744177664)
+        ((double)219902.3255552)
 #else
     #error This file must be called with either -DTATE or -DVAUNT. Check spaces.
 #endif
