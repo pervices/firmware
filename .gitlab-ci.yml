@@ -1,14 +1,63 @@
+# Updated:  2019-06-11
+# Purpose:  On the update of the firmware source code, this CI/CD script will build the firmware
+#            system, create a compressed archive with the output files, and upload that to staging.
+#            It will also update buildlog in the pvtest repo, kicking off rest of the CI test process.
+
+variables:
+    COMPONENT       : 'firmware'
+    PROJECT_INT     : 'vaunt'
+    PROJECT         : 'crimson'
+    VERSION_LENGTH  : 8
+
 stages:
     - build
 
-build:
-    stage: build
-    script: 
+#################
+##### BUILD #####
+#################
+
+build-firmware:
+    stage:  build
+    before_script:
         - apt-get update && apt-get install -y dh-autoreconf
         - autoreconf --install
-        - autoconf && aclocal && sh autogen.sh && sh configure
-        - make && make install && make install-strip
-    artifacts:
-        name: "$CI_JOB_NAME"
-        untracked: true
-        expire_in: 1 day
+        - autoconf && aclocal &&
+    script: 
+        # Capture current date
+        - DATE=$(TZ=UTC date +%F-%H-%M | tr - _)
+        
+        # Set up for build process
+        - DUMPDIR=/tmp/$COMPONENT-build-$DATE
+        - mkdir $DUMPDIR
+        - mkdir $DUMPDIR/build
+        - cp -r * $DUMPDIR/build
+
+        # Put git version file
+        - mkdir $DUMPDIR/.ci_info
+        - echo $CI_COMMIT_SHA >> $DUMPDIR/.ci_info/gitversion
+
+        # Build system
+        - cd $DUMPDIR/build
+        - sed -i 's/DTATE/DVAUNT/g' configure.ac # In case
+        - sh autogen.sh
+        - CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
+            CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+            -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+            ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+        - make
+        - make DESTDIR=$DUMPDIR/build/ install
+
+        # Upload tarball for staging
+        - dir=$(pwd)
+        - cd $DUMPDIR
+        - NEW_TAR=$PROJECT-$COMPONENT-build-$DATE.tar.gz
+        - tar -cvzf $dir/$NEW_TAR *
+        - cd $dir
+        - sh ftp-stage-tarball.sh $NEW_TAR
+        - rm $NEW_TAR
+        - rm -rf $DUMPDIR
+
+        # Trigger downstream CI Pipeline
+        - VERSION=$(echo $CI_COMMIT_SHA | cut -c 1-$VERSION_LENGTH)
+        - "curl --request POST --form token=$CI_JOB_TOKEN --form 'variables[NEW_TAR]=$NEW_TAR' --form 'variables[VERSION]=$VERSION' --form ref=ops/gshe/ci-scripts http://ci.korbin.pv/api/v4/projects/57/trigger/pipeline"
