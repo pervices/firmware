@@ -17,6 +17,8 @@
 
 /* clang-format off */
 
+#if defined(VAUNT)
+
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
 
@@ -34,30 +36,16 @@
 
 #include "channels.h"
 
-#if defined(VAUNT)
-    // Sample rates are in samples per second (SPS).
-    #define BASE_SAMPLE_RATE   325000000.0
-    #define RESAMP_SAMPLE_RATE 260000000.0
-    // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
-    #define DSP_NCO_CONST \
-        ((double)13.215283987692307692307692307692307692307692307692307692307)
+// Sample rates are in samples per second (SPS).
+#define BASE_SAMPLE_RATE   325000000.0
+#define RESAMP_SAMPLE_RATE 260000000.0
+// (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
+#define DSP_NCO_CONST \
+    ((double)13.215283987692307692307692307692307692307692307692307692307)
 
-    // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
-    #define DAC_NCO_CONST \
-        ((double)216519.21285435076923076923076923076923076923076923076919296)
-#elif defined(TATE)
-    // Sample rates are in samples per second (SPS).
-    #define BASE_SAMPLE_RATE   400000000.0  //After base rate
-    #define RESAMP_SAMPLE_RATE 320000000.0  //After 4/5 resampling
-    // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
-    #define DSP_NCO_CONST \
-        ((double)13.4217728)
-    // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
-    #define DAC_NCO_CONST \
-        ((double)219902.3255552)
-#else
-    #error This file must be called with either -DTATE or -DVAUNT. Check spaces.
-#endif
+// (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
+#define DAC_NCO_CONST \
+    ((double)216519.21285435076923076923076923076923076923076923076919296)
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
@@ -2897,13 +2885,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#if defined(VAUNT)
-    #define PROJECT_NAME "crimson_tng"
-#elif defined(TATE)
-    #define PROJECT_NAME "tate" /* Name unknown for now... */
-#else
-    #error "Project name (VAUNT | TATE) not defined"
-#endif
+#define PROJECT_NAME "crimson_tng"
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
@@ -3045,60 +3027,6 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
 
-#if defined(TATE)
-#define DEFINE_FPGA()                                                                                                         \
-    DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
-    DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
-    DEFINE_FILE_PROP("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative")          \
-    DEFINE_FILE_PROP("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION)             \
-    DEFINE_FILE_PROP("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)             \
-    DEFINE_FILE_PROP("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "")                  \
-    DEFINE_FILE_PROP("fpga/about/hw_ver"                   , hdlr_fpga_about_hw_ver,                 RW, VERSION)             \
-    DEFINE_FILE_PROP("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001")               \
-    DEFINE_FILE_PROP("fpga/about/name"                     , hdlr_invalid,                           RO, PROJECT_NAME)        \
-    DEFINE_FILE_PROP("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001")               \
-    DEFINE_FILE_PROP("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm")  \
-    DEFINE_FILE_PROP("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpb_port"   , hdlr_fpga_board_flow_control_sfpb_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpc_port"   , hdlr_fpga_board_flow_control_sfpc_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpd_port"   , hdlr_fpga_board_flow_control_sfpd_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20")                \
-    DEFINE_FILE_PROP("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "1250000000")        \
-    DEFINE_FILE_PROP("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2")        \
-    DEFINE_FILE_PROP("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00") \
-    DEFINE_FILE_PROP("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "1400")              \
-    DEFINE_FILE_PROP("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2")        \
-    DEFINE_FILE_PROP("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01") \
-    DEFINE_FILE_PROP("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "1400")              \
-    DEFINE_FILE_PROP("fpga/link/sfpc/ip_addr"              , hdlr_fpga_link_sfpc_ip_addr,            RW, "10.10.12.2")        \
-    DEFINE_FILE_PROP("fpga/link/sfpc/mac_addr"             , hdlr_fpga_link_sfpc_mac_addr,           RW, "aa:00:00:00:00:02") \
-    DEFINE_FILE_PROP("fpga/link/sfpc/ver"                  , hdlr_fpga_link_sfpc_ver,                RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/sfpc/pay_len"              , hdlr_fpga_link_sfpc_pay_len,            RW, "1400")              \
-    DEFINE_FILE_PROP("fpga/link/sfpd/ip_addr"              , hdlr_fpga_link_sfpd_ip_addr,            RW, "10.10.13.2")        \
-    DEFINE_FILE_PROP("fpga/link/sfpd/mac_addr"             , hdlr_fpga_link_sfpd_mac_addr,           RW, "aa:00:00:00:00:03") \
-    DEFINE_FILE_PROP("fpga/link/sfpd/ver"                  , hdlr_fpga_link_sfpd_ver,                RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "1400")              \
-    DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
-    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
-
-#else
-
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
@@ -3139,7 +3067,6 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
     DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
     DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
-#endif
 
 #define DEFINE_CM()                                                    \
     DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
@@ -3716,3 +3643,5 @@ int set_freq_internal(const bool tx, const unsigned channel,
 out:
     return r;
 }
+
+#endif

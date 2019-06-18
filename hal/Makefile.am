@@ -7,7 +7,8 @@ noinst_LTLIBRARIES = \
 libhal_la_SOURCES = \
 	comm_manager.c \
 	pllcalc.c \
-	properties.c \
+	properties_tate.c \
+	properties_vaunt.c \
 	property_manager.c
 libhal_la_CFLAGS = \
 	-DVERSION=VERSIONDATE
