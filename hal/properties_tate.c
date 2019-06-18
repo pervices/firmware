@@ -877,10 +877,14 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
        DOES NOT PORT WELL.                                                     \
        flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
         uint32_t count;                                                        \
         /* this is technically a 64-bit register, but we currently only need   \
          * the bottom 32-bits */                                               \
-        read_hps_reg("flc14", &count);                                         \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+14;                     \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
         sprintf(ret, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -889,10 +893,14 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
      * DOES NOT PORT WELL.                                                     \
      * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
         uint32_t count;                                                        \
         /* this is technically a 64-bit register, but we currently only need   \
          * the bottom 32-bits */                                               \
-        read_hps_reg("flc6", &count);                                          \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+6;                      \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
         sprintf(ret, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
