@@ -983,9 +983,11 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
        flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {          \
         uint32_t count;                                                        \
+        char flc_reg[8];                                                       \
         /* this is technically a 64-bit register, but we currently only need   \
          * the bottom 32-bits */                                               \
-        read_hps_reg("flc14", &count);                                         \
+        sprintf(flc_reg, "flc%d", 14+(INT(ch)*2));                             \
+        read_hps_reg(flc_reg, &count);                                         \
         sprintf(ret, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -995,9 +997,11 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
      * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {          \
         uint32_t count;                                                        \
+        char flc_reg[8];                                                       \
         /* this is technically a 64-bit register, but we currently only need   \
          * the bottom 32-bits */                                               \
-        read_hps_reg("flc6", &count);                                          \
+        sprintf(flc_reg, "flc%d", 6+(INT(ch)*2));                              \
+        read_hps_reg(flc_reg, &count);                                         \
         sprintf(ret, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
