@@ -587,65 +587,6 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
 /* -------------------------------------------------------------------------- */
 
 #define X(ch, io)                                                              \
-    static int hdlr_tx_##ch##_rf_dac_dither_en(const char *data, char *ret) {  \
-        int r;                                                                 \
-        int en;                                                                \
-                                                                               \
-        r = sscanf(data, "%d", &en);                                           \
-        if (1 != r) {                                                          \
-            return RETURN_ERROR;                                               \
-        }                                                                      \
-        if (en < 0 || en > 1) {                                                \
-            return RETURN_ERROR_PARAM;                                         \
-        }                                                                      \
-        snprintf(buf, sizeof(buf), "dac -c " STR(ch) " -l %u\r", en);          \
-        sprintf(ret, "%u", en);                                                \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_dac_dither_mixer_en(const char *data,         \
-                                                     char *ret) {              \
-        int r;                                                                 \
-        int en;                                                                \
-                                                                               \
-        r = sscanf(data, "%d", &en);                                           \
-        if (1 != r) {                                                          \
-            return RETURN_ERROR;                                               \
-        }                                                                      \
-        if (en < 0 || en > 1) {                                                \
-            return RETURN_ERROR_PARAM;                                         \
-        }                                                                      \
-        snprintf(buf, sizeof(buf), "dac -c " STR(ch) " -3 %u\r", en);          \
-        sprintf(ret, "%u", en);                                                \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_dac_dither_sra_sel(const char *data,          \
-                                                    char *ret) {               \
-        int r;                                                                 \
-        int db;                                                                \
-        int sel;                                                               \
-                                                                               \
-        r = sscanf(data, "%d", &db);                                           \
-        if (1 != r) {                                                          \
-            return RETURN_ERROR;                                               \
-        }                                                                      \
-        if (db < 6 || db > 96 || 0 != db % 6) {                                \
-            return RETURN_ERROR_PARAM;                                         \
-        }                                                                      \
-                                                                               \
-        sprintf(ret, "%u", db);                                                \
-                                                                               \
-        /* 96 dB (max) := 0x0, 90 dB := 0x1, ... 6 dB (min) := 0xf */          \
-        sel = 16 - (db / 6);                                                   \
-                                                                               \
-        snprintf(buf, sizeof(buf), "dac -c " STR(ch) " -b %u\r", sel);         \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
     static int hdlr_tx_##ch##_rf_dac_nco(const char *data, char *ret) {        \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
@@ -739,28 +680,6 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_rf_freq_i_bias(const char *data, char *ret) {    \
-        sscanf(data, "%i", &(i_bias[INT(ch)]));                                \
-        strcpy(buf, "rf -c " STR(ch) " -i ");                                  \
-        sprintf(buf + strlen(buf), "%i", i_bias[INT(ch)]);                     \
-        strcat(buf, " -q ");                                                   \
-        sprintf(buf + strlen(buf), "%i", q_bias[INT(ch)]);                     \
-        strcat(buf, " -m\r");                                                  \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_freq_q_bias(const char *data, char *ret) {    \
-        sscanf(data, "%i", &(q_bias[INT(ch)]));                                \
-        strcpy(buf, "rf -c " STR(ch) " -i ");                                  \
-        sprintf(buf + strlen(buf), "%i", i_bias[INT(ch)]);                     \
-        strcat(buf, " -q ");                                                   \
-        sprintf(buf + strlen(buf), "%i", q_bias[INT(ch)]);                     \
-        strcat(buf, " -m\r");                                                  \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         int gain;                                                              \
         sscanf(data, "%i", &gain);                                             \
@@ -821,14 +740,6 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_status_dacld(const char *data, char *ret) {      \
         strcpy(buf, "status -c " STR(ch) " -p\r");                             \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_status_dacctr(const char *data, char *ret) {     \
-        strcpy(buf, "status -c " STR(ch) " -e\r");                             \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -2151,29 +2062,71 @@ static int hdlr_time_status_ld(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_jesd_pll1(const char *data, char *ret) {
+static int hdlr_time_status_ld_jesd0_pll1(const char *data, char *ret) {
     strcpy(buf, "status -l 11\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_jesd_pll2(const char *data, char *ret) {
+static int hdlr_time_status_ld_jesd0_pll2(const char *data, char *ret) {
     strcpy(buf, "status -l 12\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_pll_pll1(const char *data, char *ret) {
+static int hdlr_time_status_ld_jesd1_pll1(const char *data, char *ret) {
     strcpy(buf, "status -l 21\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_pll_pll2(const char *data, char *ret) {
+static int hdlr_time_status_ld_jesd1_pll2(const char *data, char *ret) {
     strcpy(buf, "status -l 22\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd2_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -l 31\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_jesd2_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -l 32\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll0_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -l 41\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll0_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -l 42\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll1_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -l 51\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_ld_pll1_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -l 52\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
@@ -2186,29 +2139,71 @@ static int hdlr_time_status_lol(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_lol_jesd_pll1(const char *data, char *ret) {
+static int hdlr_time_status_lol_jesd0_pll1(const char *data, char *ret) {
     strcpy(buf, "status -o 11\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_lol_jesd_pll2(const char *data, char *ret) {
+static int hdlr_time_status_lol_jesd0_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 12\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_lol_pll_pll1(const char *data, char *ret) {
+static int hdlr_time_status_lol_jesd1_pll1(const char *data, char *ret) {
     strcpy(buf, "status -o 21\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_lol_pll_pll2(const char *data, char *ret) {
+static int hdlr_time_status_lol_jesd1_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 22\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd2_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -o 31\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_jesd2_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -o 32\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll0_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -o 41\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll0_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -o 42\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll1_pll1(const char *data, char *ret) {
+    strcpy(buf, "status -o 51\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_lol_pll1_pll2(const char *data, char *ret) {
+    strcpy(buf, "status -o 52\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
@@ -2992,26 +2987,26 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll2", hdlr_time_status_ld_jesd_pll2,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd1_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd1_pll2", hdlr_time_status_ld_jesd_pll2,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd2_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd2_pll2", hdlr_time_status_ld_jesd_pll2,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll0_pll1" , hdlr_time_status_ld_pll_pll1,           RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll0_pll2" , hdlr_time_status_ld_pll_pll2,           RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll1_pll1" , hdlr_time_status_ld_pll_pll1,           RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll1_pll2" , hdlr_time_status_ld_pll_pll2,           RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd0_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd0_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd1_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll0_pll1" , hdlr_time_status_lol_pll_pll1,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll0_pll2" , hdlr_time_status_lol_pll_pll2,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll1_pll1" , hdlr_time_status_lol_pll_pll1,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll1_pll2" , hdlr_time_status_lol_pll_pll2,          RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll2", hdlr_time_status_ld_jesd0_pll2,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd1_pll1", hdlr_time_status_ld_jesd1_pll1,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd1_pll2", hdlr_time_status_ld_jesd1_pll2,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd2_pll1", hdlr_time_status_ld_jesd2_pll1,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd2_pll2", hdlr_time_status_ld_jesd2_pll2,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll0_pll1" , hdlr_time_status_ld_pll0_pll1,         RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll0_pll2" , hdlr_time_status_ld_pll0_pll2,         RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll1_pll1" , hdlr_time_status_ld_pll1_pll1,         RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll1_pll2" , hdlr_time_status_ld_pll1_pll2,         RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd0_pll1", hdlr_time_status_lol_jesd0_pll1,       RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd0_pll2", hdlr_time_status_lol_jesd0_pll2,       RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd1_pll1", hdlr_time_status_lol_jesd1_pll1,       RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll0_pll1" , hdlr_time_status_lol_pll0_pll1,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll0_pll2" , hdlr_time_status_lol_pll0_pll2,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll1_pll1" , hdlr_time_status_lol_pll1_pll1,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll1_pll2" , hdlr_time_status_lol_pll1_pll2,        RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
     DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
