@@ -104,18 +104,6 @@ static const char *reg4[] = {
 #undef X
 };
 
-static int i_bias[] = {
-#define X(ch, io) 17,
-    CHANNELS
-#undef X
-};
-
-static int q_bias[] = {
-#define X(ch, io) 17,
-    CHANNELS
-#undef X
-};
-
 uint8_t *_save_profile;
 uint8_t *_load_profile;
 char *_save_profile_path;
@@ -298,9 +286,6 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
 #define X(ch, io)                                                              \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
-    }                                                                          \
-    static int hdlr_tx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
-        return hdlr_XX_X_rf_freq_lut_en(data, ret, true, INT(ch));             \
     }
 CHANNELS
 #undef X
