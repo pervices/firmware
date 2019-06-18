@@ -925,7 +925,7 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             char pwr_cmd [40];                                                 \
-            sscanf(pwr_cmd, "rfe_control %d on", INT(ch));                     \
+            sprintf(pwr_cmd, "rfe_control %d on", INT(ch));                    \
             system(pwr_cmd);                                                   \
             tx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
@@ -966,7 +966,7 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
             /* power off */                                                    \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
-            sscanf(pwr_cmd, "rfe_control %d off", INT(ch));                    \
+            sprintf(pwr_cmd, "rfe_control %d off", INT(ch));                   \
             system(pwr_cmd);                                                   \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
