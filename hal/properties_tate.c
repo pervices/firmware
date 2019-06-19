@@ -1415,6 +1415,9 @@ CHANNELS
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
+            char pwr_cmd [40];                                                 \
+            sprintf(pwr_cmd, "rfe_control %d on", INT(ch));                    \
+            system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
             /* board command */                                                \
@@ -1453,6 +1456,10 @@ CHANNELS
                                                                                \
             /* power off & stream off */                                       \
         } else {                                                               \
+            char pwr_cmd [40];                                                 \
+            sprintf(pwr_cmd, "rfe_control %d off", INT(ch));                   \
+            system(pwr_cmd);                                                   \
+                                                                               \
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
