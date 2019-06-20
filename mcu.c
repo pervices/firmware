@@ -43,13 +43,36 @@ static boolean fwd = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
 static char fwd_board = 0;
 
-static const char *UART_SN = "/dev/ttycrimson-time";
-static const char *UART_TX = "/dev/ttycrimson-tx";
-static const char *UART_RX = "/dev/ttycrimson-rx";
+// Crimson files
+static const char *UART_CRIMSON_SN = "/dev/ttycrimson-time";
+static const char *UART_CRIMSON_TX = "/dev/ttycrimson-tx";
+static const char *UART_CRIMSON_RX = "/dev/ttycrimson-rx";
 
-static int uart_synth_fd = 3;
-static int uart_tx_fd = 4;
-static int uart_rx_fd = 5;
+// Cyan files
+static const char *UART_CYAN_SN = "/dev/ttycyan-time";
+static const char *UART_CYAN_RFE[16]  = {"/dev/ttycyan-rfe-0",
+                                    "/dev/ttycyan-rfe-1",
+                                    "/dev/ttycyan-rfe-2",
+                                    "/dev/ttycyan-rfe-3",
+                                    "/dev/ttycyan-rfe-4",
+                                    "/dev/ttycyan-rfe-5",
+                                    "/dev/ttycyan-rfe-6",
+                                    "/dev/ttycyan-rfe-7",
+                                    "/dev/ttycyan-rfe-8",
+                                    "/dev/ttycyan-rfe-9",
+                                    "/dev/ttycyan-rfe-10",
+                                    "/dev/ttycyan-rfe-11",
+                                    "/dev/ttycyan-rfe-12",
+                                    "/dev/ttycyan-rfe-13",
+                                    "/dev/ttycyan-rfe-14",
+                                    "/dev/ttycyan-rfe-15"};
+
+static int uart_crimson_synth_fd = 3;
+static int uart_crimson_tx_fd = 4;
+static int uart_crimson_rx_fd = 5;
+
+static int uart_cyan_synth_fd = 3;
+static int uart_cyan_rfe_fd[16] = {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
 static int contains(const char *str, char letter, int size) {
     int cnt = 0;
@@ -61,12 +84,24 @@ static int contains(const char *str, char letter, int size) {
 }
 
 static void dump_args(void) {
-    printf("%s\n", UART_SN);
-    printf("%s\n", UART_TX);
-    printf("%s\n", UART_RX);
-    printf("%d\n", uart_synth_fd);
-    printf("%d\n", uart_tx_fd);
-    printf("%d\n", uart_rx_fd);
+    int i = 0;
+#if defined(VAUNT)
+    printf("%s\n", UART_CRIMSON_SN);
+    printf("%s\n", UART_CRIMSON_TX);
+    printf("%s\n", UART_CRIMSON_RX);
+    printf("%d\n", uart_crimson_synth_fd);
+    printf("%d\n", uart_crimson_tx_fd);
+    printf("%d\n", uart_crimson_rx_fd);
+#elif defined(TATE)
+    printf("%s\n", UART_CYAN_SN);
+    for (i = 0; i < 16; i++) {
+        printf("%s\n", UART_CYAN_RFE[i]);
+    }
+    for (i = 0; i < 16; i++) {
+        printf("%d\n", uart_cyan_synth_fd);
+    }
+    printf("%d\n", uart_cyan_rfe_fd[i]);
+#endif
     printf("%d\n", fwd);
     printf("%d\n", uart_comm_fd);
 }
@@ -103,28 +138,30 @@ static void parse_args(int argc, char *argv[]) {
             // if argument to specify this is a forward command
         } else if (streql(argv[i], ARG_MCU_UART_SN) && !last(i, argc)) {
 
-            UART_SN = argv[i + 1];
+            UART_CRIMSON_SN = argv[i + 1];
             i++;
         } else if (streql(argv[i], ARG_MCU_UART_TX) && !last(i, argc)) {
 
-            UART_TX = argv[i + 1];
+            UART_CRIMSON_TX = argv[i + 1];
             i++;
         } else if (streql(argv[i], ARG_MCU_UART_RX) && !last(i, argc)) {
 
-            UART_RX = argv[i + 1];
+            UART_CRIMSON_RX = argv[i + 1];
             i++;
         } else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
             fwd = TRUE;
             i++;
             if (argv[i][0] == 't') {
-                uart_comm_fd = uart_tx_fd;
+                uart_comm_fd = uart_crimson_tx_fd;
                 fwd_board = '1';
             } else if (argv[i][0] == 'r') {
-                uart_comm_fd = uart_rx_fd;
+                uart_comm_fd = uart_crimson_rx_fd;
                 fwd_board = '0';
             } else if (argv[i][0] == 's') {
-                uart_comm_fd = uart_synth_fd;
+                uart_comm_fd = uart_crimson_synth_fd;
                 fwd_board = '2';
+            } else if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
+                uart_comm_fd = uart_cyan_rfe_fd[atoi(argv[i])];
             } else {
                 help();
             }
@@ -143,24 +180,39 @@ static void parse_args(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
 
+    int i;
+
     parse_args(argc, argv);
     #ifdef DEBUG_OUTPUTS
         dump_args();
     #endif
 
+#if defined(VAUNT)
     // initialize the comm port
-    if (init_uart_comm(&uart_synth_fd, UART_SN, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_SN);
+    if (init_uart_comm(&uart_crimson_synth_fd, UART_CRIMSON_SN, 0) < 0) {
+        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_SN);
         return RETURN_ERROR_COMM_INIT;
     }
-    if (init_uart_comm(&uart_tx_fd, UART_TX, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_TX);
+    if (init_uart_comm(&uart_crimson_tx_fd, UART_CRIMSON_TX, 0) < 0) {
+        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_TX);
         return RETURN_ERROR_COMM_INIT;
     }
-    if (init_uart_comm(&uart_rx_fd, UART_RX, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_RX);
+    if (init_uart_comm(&uart_crimson_rx_fd, UART_CRIMSON_RX, 0) < 0) {
+        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_RX);
         return RETURN_ERROR_COMM_INIT;
     }
+#elif defined(TATE)
+    if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
+        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_SN);
+        return RETURN_ERROR_COMM_INIT;
+    }
+    for (i = 0; i < 16; i++) {
+        if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
+            printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_RFE[i]);
+            return RETURN_ERROR_COMM_INIT;
+        }
+    }
+#endif
 
     // initiate UART transaction
     do {
