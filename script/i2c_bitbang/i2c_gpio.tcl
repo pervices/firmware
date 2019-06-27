@@ -1,6 +1,6 @@
 #!/usr/bin/tclsh
 
-source /home/root/gpio_control
+source /usr/bin/gpio_control
 
 
 set ::SCL_GPIO_BIT_OFFSET 7
