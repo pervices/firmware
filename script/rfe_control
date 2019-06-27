@@ -1,0 +1,100 @@
+#!/usr/bin/tclsh
+
+source /home/root/gpio_control
+
+#####################
+# Variables         #
+#####################
+set ::MAX_BOARDS 16
+
+#####################
+# Helper Functions  #
+#####################
+
+proc print_help { } { 
+    puts "Enable and disable Radio Front-End boards"
+    puts "Arguments:"
+    puts "    rfe_control <board_number> <on/off>"
+    puts ""
+    puts "    <board_number>: 0..15"
+    puts "        This is the board number in the digital board."
+    puts "    <on/off>:"
+    puts "        Turn the RFE on or off"
+    puts ""
+}
+
+proc check_inputs { board_number board_state } {
+    if { $board_number < 0 || $board_number >= $::MAX_BOARDS } {
+        puts "Unsupported board number."
+        print_help
+        exit
+    }
+    if { ![string equal $board_state "on"] && ![string equal $board_state "off"] } {
+        puts "Unsupported board state."
+        print_help
+        exit
+    }
+}
+#
+#####################
+# Main Function     #
+#####################
+if {$::argv0 eq [info script]} {    
+    set board_number 0
+    set board_state off
+
+
+    if { $::argc == 2 } {
+        set board_number [lindex $::argv 0]
+        set board_state [lindex $::argv 1]
+    
+        # Check validity of inputs
+        check_inputs $board_number $board_state
+    
+    } else {
+        puts "Invalid Arguments"
+        print_help
+        exit
+    
+    }
+
+    set gpio_chip_label "MAX14830"
+    set gpio_chip_number [expr {$board_number/4} ]
+    # GPIO pin number that connects to Enable signal for this board
+    set en_gpio_pin_number [expr {(($board_number%4)*4)+2}]
+    # GPIO pin number that connects to BoardGood signal for this board
+    set bg_gpio_pin_number [expr {(($board_number%4)*4)+3}]
+
+
+    # Run main gpio code
+    set en_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $en_gpio_pin_number]
+    set bg_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $bg_gpio_pin_number]
+
+
+    if { [string equal $board_state "on"] } {
+        gpio_out $en_gpio_file $::GPIO_WRITE_HIGH
+
+    } elseif { [string equal $board_state "off"] } {
+        set_gpio_direction $en_gpio_file "low"
+        gpio_out $en_gpio_file $::GPIO_WRITE_LOW
+    }
+
+    puts "Reading the state of Board Good after 6 seconds ..."
+    # wait for 6 seconds and read back the value of BoardGood
+    after 6000
+    set board_good [gpio_in $bg_gpio_file]
+
+    if { [string equal $board_state "off"] } {
+         if { $board_good == 0 } {
+             puts "Board was successfully powered down"
+         } else {
+             puts "ERROR: Board is still powered on!!!!"
+         }
+     } elseif { [string equal $board_state "on"] } {
+         if { $board_good == 1 } {
+             puts "Board $board_number was successfully powered on"
+         } else {
+             puts "ERROR: Board $board_number did NOT power on!!!!"
+         }
+    }
+}

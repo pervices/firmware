@@ -1,0 +1,267 @@
+#!/usr/bin/tclsh
+
+#####################
+# Help Function     #
+#####################
+
+proc print_help { } { 
+    puts "Arguments:"
+    puts "    gpio <gpio_label> <chip_number> <pin_number> <direction>"
+    puts ""
+    puts "    <gpio_label>: MAX14830"
+    puts "        This is the gpio label in the /sys/class/gpio/gpiochip*/label directory"
+    puts "        Run the following in terminal to see available gpio chips in your system:"
+    puts "            cat /sys/class/gpio/gpiochip*/label"
+    puts "    <chip_number>:"
+    puts "        The index of the expected Chip with the given lable;"
+    puts "        e.g. there are 4 MAX14830 Chips on the board"
+    puts "    <pin_number>:"
+    puts "        The GPIO pin number in the given chip,"
+    puts "        e.g. MAX14830 has 16 gpio pins, so acceptable values <0..15>"
+    puts "        Get the number of GPIO pins in your chip by running the following in the terminal:"
+    puts "            cat /sys/class/gpio/gpiochip*/ngpio"
+    puts "    <direction>: the following are acceptable inputs:"
+    puts "        in      : declare pin as input and read it"
+    puts "        out_high: declare pin as output and drive high"
+    puts "        out_low : declare pin as output and drive low"
+    puts ""
+    puts "example:"
+    puts ""
+    puts "    Read GPIO Pin 0 of the first MAX14830 chip"
+    puts "        gpio_control MAX14830 0 0 in"
+    puts ""
+    puts "    Drive GPIO Pin 4 of the third MAX14830 chip to VCC"
+    puts "        gpio_control MAX14830 3 4 out_high"
+
+}
+
+#####################
+# Variables         #
+#####################
+set ::GPIO_READ -1
+set ::GPIO_WRITE_LOW  0
+set ::GPIO_WRITE_HIGH 1
+
+
+set ::MAX_GPIO_CHIPS 4
+set ::MAX_GPIO_PINS 16
+set ::MAX_PIN_DIRECTION [list "in" "out_high" "out_low"]
+
+
+proc set_gpio_variables { max_gpio_chips max_gpio_pins } {
+    set ::MAX_GPIO_CHIPS $max_gpio_chips
+    set ::MAX_GPIO_PINS $max_gpio_pins
+}
+
+
+#####################
+# Helper Functions  #
+#####################
+# Function call to emulate [ -f ] bash test command (file exists)
+proc lexists {filename } {
+    expr {![catch {file lstat $filename finfo}]}
+}
+
+# Function call to emulate "echo" linux command
+# Bash equivalent:
+#     echo $write_value > $filename
+proc echo { write_value filename } {
+    set fd [open $filename "w"]
+    puts $fd $write_value
+    close $fd
+}
+
+# Function call to emulate "cat" linux command
+# Bash equivalent:
+#     cat $filename
+proc cat { filename } {
+    set fd [open $filename]
+    set read_data [read $fd]
+    close $fd
+    return [string trim $read_data]
+}
+
+# Function call to emulate "hexdump" linux command without the address field
+# Basically returns the binary data
+# Bash equivalent:
+#     hexdump $filename
+proc hexdump { filename } {
+    set fd [open $filename r]
+    fconfigure $fd -translation binary -encoding binary -buffering full
+    set read_data [read $fd]
+    binary scan $read_data H*@0a* hex ascii
+    set read_data $hex
+    close $fd
+    return $read_data
+}
+
+#####################
+# Input functions   #
+#####################
+proc check_inputs { gpio_chip_number gpio_pin_number gpio_pin_direction } {
+    if { $gpio_chip_number < 0 || $gpio_chip_number >= $::MAX_GPIO_CHIPS } {
+        puts "Unsupported chip number."
+        print_help
+        exit
+    }
+    if { $gpio_pin_number < 0 || $gpio_pin_number >= $::MAX_GPIO_PINS } {
+        puts "Unsupported pin number."
+        print_help
+        exit
+    }
+    if { [lsearch $::MAX_PIN_DIRECTION $gpio_pin_direction] == -1 } {
+        puts "Unsupported pin direction."
+        print_help
+        exit
+    }
+}
+
+#####################
+# GPIO Functionality#
+#####################
+proc get_gpio_file { gpio_chip_label gpio_chip_number gpio_pin_number } {
+    # Get a list of gpiochips present
+    set gpio_chips [glob /sys/class/gpio/gpiochip*]
+
+    set chips_with_intended_label [list]
+    foreach chip $gpio_chips {
+        if { [string equal [cat $chip/label] $gpio_chip_label] } {
+            set reg_info [ hexdump $chip/device/of_node/reg]
+            lappend chips_with_intended_label [list $chip $reg_info]
+        }
+    }
+
+    if { [llength $chips_with_intended_label] == 0 } {
+        puts "GPIO Chip with label \"$gpio_chip_label\" does not exits!"
+        puts "Available GPIO chips can be found by the following command:"
+        puts "    cat /sys/class/gpio/gpiochip*/label"
+        exit
+    }
+
+    # In case there are multiple chips with the same chip label, sort
+    # them out accordint to their index:
+    # e.g. For a system with 4 MAX14830 chips,
+    # the lowest index corresponds to MAX14830@0 
+    # and the highest index corresponds to MAX14830@3
+    #
+    # Note: Sorting happens based on the second element of each list element, which is 
+    #       the reg entry in the of_node of device tree.
+    set chips_with_intended_label [lsort -integer -index 1 $chips_with_intended_label]
+
+    set intended_chip [lindex $chips_with_intended_label $gpio_chip_number]
+    # This list will have two elements:
+    #   0: intended chip
+    #   1: of_node reg info
+    set intended_chip [lindex $intended_chip 0]
+
+    # Get the base GPIO number in sysfs
+    set base_gpio_number [lindex [regexp -inline -- {gpiochip(\d+)} $intended_chip] 1]
+
+    # Extract the global gpio number: base + gpio_offset
+    set global_gpio_number [expr {$base_gpio_number + $gpio_pin_number}]
+
+    set gpio_file "/sys/class/gpio/gpio${global_gpio_number}"
+
+    # If the gpio has not been exported, do it now.
+    if { [lexists $gpio_file] == 0 } {
+        # This will create a file named: gpio${global_gpio_number}
+        # bash equivalent: 
+        #   echo $global_gpio_number > export
+        echo $global_gpio_number "/sys/class/gpio/export" 
+    }
+
+    return $gpio_file
+}
+
+# Sense the value of the GPIO pins without changing the direction
+proc gpio_sense { gpio_file } {
+    return [cat $gpio_file/value]
+}
+
+# Acceptable values for direction are: "in", "out", "high", "low"
+# NOTE: Refer to comment on gpio_out function
+proc set_gpio_direction { gpio_file direction } {
+    echo $direction $gpio_file/direction 
+}
+
+
+# Set the direction to output and drive value
+# NOTE: When setting a GPIO pin direction as output, the kernel accepts
+#       4 values:
+#          1) "in":   input
+#          2) "out":  output and defaults the pin to GND.
+#          3) "high": output and defaults the pin to VCC.
+#          4) "low":  output and defaults the pin to GND.
+#
+#      Due to this behavior, it is user's responsibility to choose the
+#      default before calling gpio_out function.
+proc gpio_out { gpio_file gpio_pin_value } {
+    set gpio_direction "low"
+
+    switch $gpio_pin_value {
+        $::GPIO_WRITE_LOW {
+            set gpio_direction "low"
+        }
+        $::GPIO_WRITE_HIGH {
+            set gpio_direction "high"
+        }
+    }
+
+    set_gpio_direction $gpio_file $gpio_direction
+    echo $gpio_pin_value $gpio_file/value
+}
+
+# Set the direction to input and read value
+proc gpio_in { gpio_file } {
+    echo "in" $gpio_file/direction
+    return [cat $gpio_file/value]
+}
+
+#####################
+# Main Function     #
+#####################
+if {$::argv0 eq [info script]} {    
+    set gpio_chip_label ""
+    set gpio_chip_number 0
+    set gpio_pin_number 0
+    set gpio_pin_direction "in"
+
+    # -1 : input
+    #  0 : drive low
+    #  1 : drive high
+    set gpio_pin_value $::GPIO_READ
+
+    if { $::argc == 4 } {
+        set gpio_chip_label [lindex $::argv 0]
+        set gpio_chip_number [lindex $::argv 1]
+        set gpio_pin_number [lindex $::argv 2]
+        set gpio_pin_direction [lindex $::argv 3]
+    
+        # Check validity of inputs
+        check_inputs $gpio_chip_number $gpio_pin_number $gpio_pin_direction
+
+        if { $gpio_pin_direction == "out_high" } {
+            set gpio_pin_value $::GPIO_WRITE_HIGH
+        } elseif { $gpio_pin_direction == "out_low" } {
+            set gpio_pin_value $::GPIO_WRITE_LOW
+        } elseif { $gpio_pin_direction == "in" } {
+            set gpio_pin_value $::GPIO_READ
+        }
+    
+    } else {
+        puts "Invalid Arguments"
+        print_help
+        exit
+    
+    }
+
+    # Run main gpio code
+    set gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $gpio_pin_number]
+    if { $gpio_pin_value == $::GPIO_READ } {
+        puts [gpio_in $gpio_file]
+    } elseif { $gpio_pin_value == $::GPIO_WRITE_LOW } {
+        gpio_out $gpio_file $gpio_pin_value
+    } elseif { $gpio_pin_value == $::GPIO_WRITE_HIGH } {
+        gpio_out $gpio_file $gpio_pin_value
+    }
+}

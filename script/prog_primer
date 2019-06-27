@@ -1,0 +1,78 @@
+#!/usr/bin/tclsh
+
+set chip_name "pca9539"
+set chip_number 0
+set max_pin_numbers 16
+
+set board_name ""
+set pin_values [list]
+
+if { $argc != 1 } {
+	puts "invalid number of arguments:"
+	puts "  prog_prime {time|rfe0|rfe1|...|rfe15}"
+	exit
+} else {
+	set board_name [lindex $argv 0]
+}
+
+switch $board_name {
+	"time" {
+		set pin_values "0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe0" {                                   
+		set pin_values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe1" {                                   
+		set pin_values "0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe2" {                                   
+		set pin_values "0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe3" {                                   
+		set pin_values "0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe4" {                                   
+		set pin_values "0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe5" {                                   
+		set pin_values "0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe6" {                                   
+		set pin_values "0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe7" {                                   
+		set pin_values "0 0 0 0 1 1 1 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe8" {                                   
+		set pin_values "0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe9" {                                   
+		set pin_values "0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe10" {                                  
+		set pin_values "0 0 0 1 0 1 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe11" {                                  
+		set pin_values "0 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe12" {                                  
+		set pin_values "0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe13" {                                  
+		set pin_values "0 0 0 1 1 0 1 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe14" {                                  
+		set pin_values "0 0 0 1 0 1 1 0 0 0 0 0 0 0 0 0"
+	}                                          
+	"rfe15" {                                  
+		set pin_values "0 0 0 1 1 1 1 0 0 0 0 0 0 0 0 0"
+	}
+}
+for { set i 0 } { $i < $max_pin_numbers } { incr i } {
+	set pin_value "out_low"
+	if { [lindex $pin_values $i] == 1 } {
+		set pin_value "out_high"
+	}
+	puts "gpio_control $chip_name $chip_number $i $pin_value"
+	exec gpio_control $chip_name $chip_number $i $pin_value
+}

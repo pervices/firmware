@@ -1,0 +1,129 @@
+#!/usr/bin/tclsh
+
+source i2c_bb
+
+
+proc help {} {
+    puts "This program, will send a firmware file in Intel HEX format"
+    puts "through I2C bus. Currently it only supports Data records."
+    puts "To know more about different record types see:"
+    puts "   https://en.wikipedia.org/wiki/Intel_HEX"
+    puts ""
+    puts "Command Line Arguments:"
+    puts "    -s : 7-bit I2C slave address"
+    puts "    -f : HEX file (Intel Hex format)"
+    puts ""
+    puts "sample command:"
+    puts "    Program adm2166.hex into a slave at address 0x4f"
+    puts "        hex_i2c_programmer -s 0x4f -f adm2166.hex"
+}
+
+proc parse_argumets { argc argv } {
+    set slave_address 0
+    set hex_file ""
+    if { $argc != 4 } {
+        puts "Invalid number of Arguments:"
+        help
+        exit
+    }
+
+    while { [llength $argv] > 1 } {
+        set switch_term [lindex $argv 0]
+        set switch_value [lindex $argv 1]
+
+        switch $switch_term {
+            "-s" {
+                set slave_address $switch_value
+            }
+            "-f" {
+                set hex_file $switch_value
+            }
+            default {
+                puts "Unknown Switch : $switch_term"
+                help
+                exit
+            }
+        }
+        # delete the first two items in the list since we have
+        # extracted them.
+        set argv [lreplace $argv 0 1]
+    }
+
+    if { [lexists $hex_file] == 0} {
+        puts "ERROR: Specified file does not exits!"
+        exit
+    }
+
+    return [list $slave_address $hex_file]
+}
+
+proc parse_hex_file { hex_file } {
+    set fd [open $hex_file r]
+    set file_content [split [read $fd] "\n"]
+    close $fd
+
+    set hex_content [list ]
+    foreach line $file_content {
+        # we are only interested in lines that start with ":"
+        # For more info see:
+        # https://en.wikipedia.org/wiki/Intel_HEX
+        if { [string range $line 0 0] == ":" } {
+            set byte_count "0x[string range $line 1 2]"
+
+            set address "0x[string range $line 3 6]"
+            set address_upper_bytes "0x[string range $line 3 4]"
+            set address_lower_bytes "0x[string range $line 5 6]"
+            if { [string equal $address_upper_bytes "0x00"] != 1 } {
+                puts "ERROR: invalid address: $address I2C only supports single byte addresses."
+            }
+
+            set record_type "0x[string range $line 7 8]"
+            if { [string equal $record_type "0x01"] } {
+                # End of Hex file reached, must exit
+                return $hex_content
+            } elseif { [string equal $record_type "0x00"] != 1 } {
+                puts "ERROR: Unsupported record type: $record_type"
+                puts "ERROR: Only Data records are supported!"
+                exit
+            }
+
+            # Data is dynamically sized, based on byte_count and we must convert it
+            # to a list of hexadecimal byte values to be passed to I2C write command
+            set data [convert_hex_string_to_byte_list [string range $line 9 [expr {9+($byte_count*2)-1}] ]]
+            set checksum "0x[string range $line [expr {9+$byte_count*2}] [expr {9+($byte_count*2)+1}] ]"
+
+            # XXX TODO: calculate checksum for sanity
+            set full_record [list $address_lower_bytes $byte_count $data]
+
+            lappend hex_content $full_record
+        }
+    }
+
+    puts "ERROR: Malformed HEX file."
+    puts "ERROR: Did not observe an \"End Of File\" record."
+    exit
+}
+
+# Parse Arguments
+set user_provided_info [parse_argumets $::argc $::argv]
+set slave_address [lindex $user_provided_info 0]
+set hex_file [lindex $user_provided_info 1]
+
+set full_record [parse_hex_file $hex_file]
+
+# I2C programming
+initialize_i2c_bus
+
+foreach hex_record $full_record {
+    set internal_address [lindex $hex_record 0]
+    set xfer_length [lindex $hex_record 1]
+    set data [lindex $hex_record 2]
+
+    i2c_acquire_lines
+    i2c_start_condition
+    puts ""
+    puts "WRITE: address: $internal_address, len: $xfer_length, data: $data"
+    write_i2c $slave_address $xfer_length $internal_address $data
+    i2c_stop_condition
+    i2c_release_bus
+}

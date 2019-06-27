@@ -1,0 +1,298 @@
+#!/usr/bin/tclsh
+
+source i2c_gpio.tcl
+
+proc help {} {
+    puts "Command Line Arguments:"
+    puts "    -s : 7-bit slave address"
+    puts "    -l : xfer length in bytes"
+    puts "    -i : internal slave address (slave registers)"
+    puts ""
+    puts "sample command:"
+    puts "    Read 4 bytes from register 0x10 at slave 0xa0:"
+    puts "        i2c_bb -s 0xa0 -l 4 -i 0x10"
+    puts "    Write 2 bytes (value 0x4565) to register 0x23 at slave 0xb2"
+    puts "        i2c_bb -s 0xb2 -l 2 -i 0x23 0x4565"
+    puts "    Write 12 bytes (value 0xbbaa99887766554433221100) to register 0x41 at slave 0x44"
+    puts "        i2c_bb -s 0x44 -l 12 -i 0x41 0xbbaa99887766554433221100"
+    puts ""
+    puts "NOTE: Write Value is interpreted as a Hexadecimal number."
+    puts "NOTE: All arguments are mandatory, except the last one which determines"
+    puts "      whether the operation is read or write."
+    puts "NOTE: Double check to make sure your target device support Block"
+    puts "      Read/Writes which are longer than 4 bytes."
+}
+
+# Break a string of hexadecimal values into a list of byte hex values
+proc convert_hex_string_to_byte_list { hex_value_string } {
+    set byte_list [list ]
+    set hex_string_length [string length $hex_value_string]
+
+    while { $hex_string_length > 2 } {
+        # Copy the string byte by byte and convert them to a one byte hex value
+        lappend byte_list "0x[string range $hex_value_string [expr {$hex_string_length-2}] [expr {$hex_string_length-1}]]"
+        set hex_value_string [string range $hex_value_string 0 [expr {$hex_string_length-3}]]
+        set hex_string_length [string length $hex_value_string]
+    }
+    lappend byte_list "0x$hex_value_string"
+    return $byte_list
+}
+
+# Parse the command line arguments
+# For a read operation:
+#     return [slave_address xfer length internal_address]
+# For a write operation:
+#     return [slave_address xfer length internal_address write_value]
+proc parse_arguments { argc argv } {
+    set write_value 0
+    set operation "R"
+    set slave_address 0
+    set xfer_length 0
+    set internal_address 0
+
+    if { $argc == 7 } {
+        set write_value [lindex $argv 6]
+        # Delete the last element since we have extracted it
+        # This guarantees that the size of list is always even
+        set argv [lreplace $argv 7 7]
+        set operation "W"
+
+        # Convert the write value to an array of bytes
+        set string_length [string length $write_value]
+        # If the write_value starts with "0x" or "0X", remove it.
+        if { [string equal -nocase [string range $write_value 0 1] "0x"] } {
+            set write_value [string range $write_value 2 [expr {$string_length-1}]]
+        }
+        set write_byte_list [convert_hex_string_to_byte_list $write_value]
+    } elseif { $argc != 6 } {
+        puts "Invalid number of Arguments:"
+        help
+        exit
+    }
+
+    while { [llength $argv] > 1 } {
+        set switch_term [lindex $argv 0]
+        set switch_value [lindex $argv 1]
+
+        switch $switch_term {
+            "-s" {
+                set slave_address $switch_value
+            }
+            "-l" {
+                set xfer_length $switch_value
+                if { $xfer_length < 1 } {
+                    puts "Transfer length must be a positive integer!"
+                    help
+                    exit
+                }
+            }
+            "-i" {
+                set internal_address $switch_value
+            }
+            default {
+                puts "Unknown Switch : $switch_term"
+                exit
+            }
+        }
+        # delete the first two items in the list since we have
+        # extracted them.
+        set argv [lreplace $argv 0 1]
+    }
+
+    set return_list []
+    if { $operation == "R" } {
+        set return_list "$slave_address $xfer_length $internal_address"
+    } else {
+        if { [llength $write_byte_list] != $xfer_length } {
+            puts "Write value length([llength $write_byte_list]) != xfer_length([format "%d" $xfer_length])"
+            exit
+        }
+        set return_list "$slave_address $xfer_length $internal_address [list $write_byte_list]"
+    }
+
+    return $return_list
+}
+
+proc set_slave_address_for_read { slave_address } {
+    # For read operation, we must set the R/W bit in the
+    # address to '1'.
+    return [expr { ($slave_address<<1) | 1 }]
+}
+
+proc set_slave_address_for_write { slave_address } {
+    # For write operation, we must set the R/W bit in the
+    # address to '0'.
+    return [expr { ($slave_address<<1) & (~1) }]
+}
+
+proc i2c_drive_bit { bit_value } {
+    scl_low
+    if { $bit_value == 0 } {
+        sda_low
+    } elseif { $bit_value == 1 } {
+        sda_high
+    } else {
+        puts "ERROR: Invalid bit value: $bit_value"
+        exit
+    }
+    scl_high
+}
+
+# Ack signal is active-low
+proc i2c_read_ack_n { } {
+    scl_low
+    set_sda_dir "in"
+    scl_high
+    set read_data [read_sda]
+    scl_low
+    return $read_data
+}
+
+proc i2c_release_bus { } {
+    set_scl_dir "in"
+    set_sda_dir "in"
+}
+
+proc i2c_drive_byte { byte_value } {
+    scl_low
+    set_sda_dir "high"
+    # Bytes go out MSB first
+    for { set i 0 } { $i < 8 } { incr i } {
+        i2c_drive_bit [expr {($byte_value >> (7-$i)) & 1}]
+    }
+    set ack_n [i2c_read_ack_n]
+    if { $ack_n == 1 } {
+        # This is a NACK condition and we must abort transaction
+        # and release the bus
+        puts "Received NACK, Abort!"
+        i2c_release_bus
+        exit
+    }
+    return $ack_n
+}
+
+proc i2c_read_byte { last_byte } {
+    scl_low
+    set_sda_dir "in"
+    set read_byte_value 0
+    # Bytes come in MSB first
+    for { set i 0 } { $i < 8 } { incr i } {
+        scl_low
+        scl_high
+        set sda_pin_value [read_sda]
+        set read_byte_value [expr {($read_byte_value << 1) | $sda_pin_value }]
+    }
+    # Send ACK/NACK
+    scl_low
+    if { $last_byte } {
+        # On the last byte during read, master must send NACK to slave
+        # to terminate communications
+        set_sda_dir "high"
+        sda_high
+    } else {
+        # On any byte other than the last byte during read, master must send ACK to slave
+        # to keep the transfer going
+        set_sda_dir "low"
+        sda_low
+    }
+    scl_high
+    return $read_byte_value
+}
+
+proc i2c_start_condition { } {
+    set_sda_dir "high"
+    sda_high
+    scl_high
+    sda_low
+}
+proc i2c_stop_condition { } {
+    scl_low
+    set_sda_dir "low"
+    sda_low
+    scl_high
+    sda_high
+}
+
+proc initialize_i2c_bus { } {
+    # Initialize the GPIO driver of I2C signals 
+    initialize_i2c_gpio
+}
+proc i2c_acquire_lines { } {
+    # At the beginnig of xfer, drive both lines;
+    set_scl_dir "high"
+    set_sda_dir "high"
+}
+
+proc read_i2c { slave_address xfer_length internal_address } {
+
+    # For both read and write we always send slave address with the write
+    # bit set. In case of read, we will issue a "repeated Start" condition
+    # and set the slave address again, this time with the read bit set.
+    i2c_drive_byte [set_slave_address_for_write $slave_address]
+    i2c_drive_byte $internal_address
+
+    # Read requires a "repeated Start" condition
+    i2c_start_condition
+    # Send the slave address with the read bit set
+    i2c_drive_byte [set_slave_address_for_read $slave_address]
+    # Receive the data bytes
+    set read_data "0x"
+    for { set i 0 } { $i < $xfer_length } { incr i } {
+        set last_byte 0
+        if { $i == [expr { $xfer_length-1 }] } {
+            set last_byte 1
+        }
+        set byte_val [i2c_read_byte $last_byte]
+        # concat the read data with the newly received byte
+        set read_data "$read_data[format "%02x" $byte_val]"
+    }
+    return $read_data
+}
+
+proc write_i2c { slave_address xfer_length internal_address write_byte_list } {
+
+    # For both read and write we always send slave address with the write
+    # bit set. In case of read, we will issue a "repeated Start" condition
+    # and set the slave address again, this time with the read bit set.
+    i2c_drive_byte [set_slave_address_for_write $slave_address]
+    i2c_drive_byte $internal_address
+
+    # No need to send the slave address again. Just send data.
+    for { set i 0 } { $i < $xfer_length } { incr i } {
+        set write_byte_value [lindex $write_byte_list $i]
+        i2c_drive_byte $write_byte_value
+    }
+}
+
+####################################
+# Main I2C functionality
+####################################
+if {$::argv0 eq [info script]} {    
+
+    # Get slave address and other required information from command line
+    set xfer_info [parse_arguments $::argc $::argv]
+    set slave_address    [lindex $xfer_info 0]
+    set xfer_length      [lindex $xfer_info 1]
+    set internal_address [lindex $xfer_info 2]
+    set operation        "R"
+
+    if { [llength $xfer_info] == 4 } {
+        set operation "W"
+    }
+
+    initialize_i2c_bus
+    i2c_acquire_lines
+    i2c_start_condition
+
+    if { [string equal $operation "R"] } {
+        puts [read_i2c $slave_address $xfer_length $internal_address]
+    } else {
+        write_i2c $slave_address $xfer_length $internal_address [lindex $xfer_info 3]
+    }
+
+    i2c_stop_condition
+
+    # At the end of xfer, Release both lines;
+    # to be pulled up by external resistors
+    i2c_release_bus
+}
