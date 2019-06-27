@@ -567,6 +567,9 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
     read_uart(fd);
 }
 
+static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
+    send_uart_comm(fd, buf, len);
+}
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -923,9 +926,9 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
             tx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
             /* board commands */                                               \
-            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
-            usleep(200000);                                                    \
+            /* strcpy(buf, "board -c " STR(ch) " -d\r");               */      \
+            /* ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)); */      \
+            /* usleep(200000);                                         */      \
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
@@ -3311,111 +3314,39 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 // XXX
 // Uses zeroth file descriptor for RX And TX for now until a way is found to
 // convert the channel mask into a integer.
+// This also needs to be extended to convert the chan_mask to a specific RFE
+// for tate.
 void sync_channels(uint8_t chan_mask) {
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
     // usleep(300000); // Some wait time for the reset to be ready
     /* Bring the ADCs & DACs into 'demo' mode for JESD */
 
-    // RX - ADCs
-    strcpy(buf, "power -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -a 1\r");
-    ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
+    //During init, we want to set the RFE to mute,
+    //So that the transient spurs that happen when
+    //you initialy turn on a channel or run a jesd sync
+    //don't make it to the SMA.
+    
+    // // RX - ADCs
+    // strcpy(buf, "power -c ");
+    // strcat(buf, str_chan_mask);
+    // strcat(buf, " -a 1\r");
+    // ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
 
-    // TX - DACs
-    strcpy(buf, "power -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -d 1\r");
-    ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+    // // TX - DACs
+    // strcpy(buf, "power -c ");
+    // strcat(buf, str_chan_mask);
+    // strcat(buf, " -d 1\r");
+    // ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
     /***********************************
      * Start loop.
      * Issue JESD, then read to see if
      * bad
      **********************************/
-#ifdef SYNC_CHECK_DAC_LOOP
-    char key[] = "00\r";
-    char dacalarmA[] = "ff\r";
-    char dacalarmB[] = "ff\r";
-    for (int i = 0; i < 15; i += 1) {
-
-        // Put FPGA JESD core in reset
-        write_hps_reg("res_rw7", 0x40000000);
-        write_hps_reg("res_rw7", 0);
-
-        /* Initiate the SYSREF sequence for jesd
-         * Set all boards' SYSREF detection gate to ON */
-        strcpy(buf, "board -c ");
-        strcat(buf, str_chan_mask);
-        strcat(buf, " -s 1\r");
-        ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-        strcpy(buf, "board -c ");
-        strcat(buf, str_chan_mask);
-        strcat(buf, " -s 1\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-        /* Trigger a SYSREF pulse */
-        // JESD core out of reset
-        usleep(100000); // Some wait time for MCUs to be ready
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
-        // Do it again
-
-        strcpy(buf, "board -c ");
-        strcat(buf, str_chan_mask);
-        strcat(buf, " -s 1\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-        usleep(100000); // Some wait time for MCUs to be ready
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        usleep(100000); // Some wait time for MCUs to be ready
-
-        // CHECK IF ALARMS
-        strcpy(buf, "dac -c a -s\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-        strcpy(dacalarmA, (char *)uart_ret_buf);
-
-        // CHECK IF ALARMS
-        strcpy(buf, "dac -c d -s\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-        strcpy(dacalarmB, (char *)uart_ret_buf);
-
-        if ((dacalarmA[0] == key[0]) && (dacalarmA[1] == key[1]) &&
-            (dacalarmB[0] == key[0]) && (dacalarmB[1] == key[1])) {
-            break;
-        } else {
-            usleep(200000); // Some wait time for MCUs to be ready
-        }
-    }
-    /* Turn off all boards' SYSREF detection gates */
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-#else
     // Put FPGA JESD core in reset
     write_hps_reg("res_rw7", 0x20000000);
     write_hps_reg("res_rw7", 0);
-
-    /* Initiate the SYSREF sequence for jesd
-     * Set all boards' SYSREF detection gate to ON */
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 1\r");
-    ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 1\r");
-    ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
     /* Trigger a SYSREF pulse */
     // JESD core out of reset
@@ -3425,17 +3356,6 @@ void sync_channels(uint8_t chan_mask) {
     strcpy(buf, "clk -y\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
-    /* Turn off all boards' SYSREF detection gates */
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-#endif
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
