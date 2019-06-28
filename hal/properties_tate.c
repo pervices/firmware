@@ -938,8 +938,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i + 16], &old_val);                          \
-                write_hps_reg(reg4[i + 16], old_val & ~0x100);                 \
+                read_hps_reg(reg4[i], &old_val);                               \
+                write_hps_reg(reg4[i], old_val & ~0x100);                      \
             }                                                                  \
                                                                                \
             /* send sync pulse */                                              \
