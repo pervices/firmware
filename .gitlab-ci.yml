@@ -44,11 +44,12 @@ build-firmware:
         - cd $DUMPDIR/build
         - sed -i 's/DTATE/DVAUNT/g' configure.ac # In case
         - sh autogen.sh
-        - CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
-            CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
-            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-            -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-            ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+#        - CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
+#           CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+#            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+#            -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+#            ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+        - sh configure
         - make
         - make DESTDIR=$DUMPDIR/build/ install
 
