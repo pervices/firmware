@@ -22,7 +22,7 @@ image: cfriedt/toolchain:xenial
 build-firmware:
     stage:  build
     before_script:
-        - apt-get update && apt-get install -y dh-autoreconf
+        - apt-get update && apt-get install -y dh-autoreconf ftp
         - autoreconf --install
         - autoconf && aclocal
 
