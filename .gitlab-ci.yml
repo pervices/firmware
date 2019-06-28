@@ -56,7 +56,7 @@ build-firmware:
         - dir=$(pwd)
         - cd $DUMPDIR
         - NEW_TAR=$PROJECT-$COMPONENT-build-$DATE.tar.gz
-        - tar -warning=no-file-changed -cvzf $dir/$NEW_TAR *
+        - tar --warning=no-file-changed -cvzf $dir/$NEW_TAR *
         - cd $dir
         - sh .ci/ftp-stage-tarball.sh $dir $NEW_TAR
         - rm $NEW_TAR
