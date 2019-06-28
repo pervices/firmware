@@ -41,6 +41,7 @@ build-firmware:
         - echo $CI_COMMIT_SHA >> $DUMPDIR/.ci_info/gitversion
 
         # Build system
+        - dir=$(pwd)
         - cd $DUMPDIR/build
         - sed -i 's/DTATE/DVAUNT/g' configure.ac # In case
         - sh autogen.sh
@@ -53,7 +54,6 @@ build-firmware:
         - make DESTDIR=$DUMPDIR/build/ install
 
         # Upload tarball for staging
-        - dir=$(pwd)
         - cd $DUMPDIR
         - NEW_TAR=$PROJECT-$COMPONENT-build-$DATE.tar.gz
         - tar -cvzf $dir/$NEW_TAR * || true

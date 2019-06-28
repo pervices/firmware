@@ -8,9 +8,6 @@
 DIRNAME=$1
 FILENAME=$2
 
-ls $DIRNAME
-ls $FILENAME
-
 ##################
 ##### UPLOAD #####
 ##################
