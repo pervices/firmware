@@ -948,13 +948,13 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             /* enable active dsp channels, and reset the DSP */                \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x100);                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
+                    read_hps_reg(reg4[i + 16], &old_val);                      \
+                    write_hps_reg(reg4[i + 16], old_val | 0x100);              \
+                    read_hps_reg(reg4[i + 16], &old_val);                      \
                     PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
                           toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i], old_val | 0x2);                     \
-                    write_hps_reg(reg4[i], old_val &(~0x2));                   \
+                    write_hps_reg(reg4[i + 16], old_val | 0x2);                \
+                    write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
                 if (rx_power[i] == PWR_ON) {                                   \
                     read_hps_reg(reg4[i], &old_val);                           \
@@ -1452,13 +1452,13 @@ CHANNELS
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 4], &old_val);                       \
-                    write_hps_reg(reg4[i + 4], old_val | 0x100);               \
-                    read_hps_reg(reg4[i + 4], &old_val);                       \
+                    read_hps_reg(reg4[i + 16], &old_val);                      \
+                    write_hps_reg(reg4[i + 16], old_val | 0x100);              \
+                    read_hps_reg(reg4[i + 16], &old_val);                      \
                     PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
                           toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 4], old_val | 0x2);                 \
-                    write_hps_reg(reg4[i + 4], old_val &(~0x2));               \
+                    write_hps_reg(reg4[i + 16], old_val | 0x2);                \
+                    write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
                 if (rx_stream[i] == STREAM_ON) {                               \
                     read_hps_reg(reg4[i], &old_val);                           \
