@@ -58,6 +58,21 @@ if {$::argv0 eq [info script]} {
     
     }
 
+    if { $board_number >= 12 } {
+
+        set gpio_chip_label "pca9539"
+        set gpio_chip_number 0
+        set en_gpio_pin_number [expr {$board_number-5}]
+        set en_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $en_gpio_pin_number]
+        if { [string equal $board_state "on"] } {
+            gpio_out $en_gpio_file $::GPIO_WRITE_HIGH
+        } elseif { [string equal $board_state "off"] } {
+            set_gpio_direction $en_gpio_file "low"
+            gpio_out $en_gpio_file $::GPIO_WRITE_LOW
+        }
+        exit
+    }
+
     set gpio_chip_label "MAX14830"
     set gpio_chip_number [expr {$board_number/4} ]
     # GPIO pin number that connects to Enable signal for this board
