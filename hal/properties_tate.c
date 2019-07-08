@@ -2894,6 +2894,74 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+//Enable manual override:
+//mem rw res_rw7 1.
+//Registers 0:31= res_rw4[31:0]
+//Registers 32:63 = res_rw5[31:0]
+//Registers 64:95 = res_rw6[15:0]
+
+static int hdlr_fpga_gpio_override_en(const char *data, char *ret) {
+    uint32_t old_val = 0;
+    // check if override is enabled
+    if (strcmp(data, "0") != 0) {
+        //Read res_rw7
+        read_hps_reg("res_rw7", &old_val);
+        //Mask lowest bit with 1 then write to res_rw7 
+        write_hps_reg("res_rw7", old_val | 0x1);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_gpio_gpio000(const char *data, char *ret) {
+    uint32_t old_val = 0;
+    // check if it is enabled
+    if (strcmp(data, "0") != 0) {
+        //Read res_r4 for bits 0 to 31
+        read_hps_reg("res_rw4", &old_val);
+        //Mask lowest bit with 1 then write to res_rw4
+        write_hps_reg("res_rw4", old_val | 0x1);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_gpio_gpio032(const char *data, char *ret) {
+    uint32_t old_val = 0;
+    // check if it is enabled
+    if (strcmp(data, "0") != 0) {
+        //Read res_rw5 for bits 32 to 63
+        read_hps_reg("res_rw5", &old_val);
+        //Mask lowest bit with 1 then write to res_rw4
+        write_hps_reg("res_rw5", old_val | 0x1);
+    }
+    return RETURN_SUCCESS;
+}
+
+
+static int hdlr_fpga_gpio_gpio079(const char *data, char *ret) {
+    uint32_t old_val = 0;
+    // check if it is enabled
+    if (strcmp(data, "0") != 0) {
+        //Read res_rw6 for bits 64 to 79
+        read_hps_reg("res_rw6", &old_val);
+        //Mask lowest bit with 1 then write to res_rw4
+        write_hps_reg("res_rw6", old_val | 0x8000);
+    }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_gpio_gpio_all(const char *data, char *ret) {
+    uint32_t old_val = 0;
+    // check if override is enabled
+    if (strcmp(data, "0") != 0) {
+        // since writing 1 to all bits in these two don't need to read first
+        write_hps_reg("res_rw4", 0xffffffff);
+        write_hps_reg("res_rw5", 0xffffffff);
+        // this one needs a read and mask
+        read_hps_reg("res_rw6", &old_val);
+        write_hps_reg("res_rw6", old_val | 0x0000ffff);
+}
+
+
 /* clang-format off */
 
 /* -------------------------------------------------------------------------- */
@@ -3097,7 +3165,15 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     DEFINE_FILE_PROP("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "1400")              \
     DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
     DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
-    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
+    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")      \
+    \
+    \
+    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_fpga_gpio_override_en,             RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio000"                        , hdlr_fpga_gpio_gpio000,                 RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio032"                        , hdlr_fpga_gpio_gpio032,                 RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio079"                        , hdlr_fpga_gpio_gpio079,                 RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_fpga_gpio_gpio_all,                RW, "0")                 
+
 
 
 #define DEFINE_CM()                                                    \
