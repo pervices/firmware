@@ -35,6 +35,7 @@
 #endif
 
 #include "channels.h"
+#include "gpio_pins.h"
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   400000000.0  //After base rate
@@ -2894,7 +2895,6 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -2919,7 +2919,7 @@ static int hdlr_gpio_override_en(const char *data, char *ret) {
     }
     return RETURN_SUCCESS;
 }
-
+/*
 static int hdlr_gpio_gpio000(const char *data, char *ret) {
     uint32_t old_val = 0;
     // check if it is enabled
@@ -2934,7 +2934,7 @@ static int hdlr_gpio_gpio000(const char *data, char *ret) {
     }
     return RETURN_SUCCESS;
 }
-
+*/
 static int hdlr_gpio_gpio032(const char *data, char *ret) {
     uint32_t old_val = 0;
     // check if it is enabled
@@ -2985,6 +2985,21 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// X Macro for GPIO2
+// need to add if statement for the register
+#define Q(pin_num, reg_g, mask_bit)                                            \
+    static int hldr_gpio_##pin_num##(const char *data, char *ret) {            \
+        uint32_t old_val = 0;                                                  \
+        read_hps_reg(#reg_g, &old_val);                                        \
+        if (strcmp(data, "0") != 0) {                                          \
+            write_hps_reg(#reg_g, old_val | #mask_bit);                        \
+        } else {                                                               \
+            write_hps_reg(#reg_g,old_val & (~#mask_bit));                      \
+        }                                                                      \
+    return RETURN_SUCCESS;                                                     \
+    }
+    GPIO_PINS;
+#undef Q
 
 /* clang-format off */
 
@@ -3194,10 +3209,12 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
     
 #define DEFINE_GPIO()                                                                                                         \
     DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio000"                        , hdlr_gpio_gpio000,                      RW, "0")                 \
     DEFINE_FILE_PROP("gpio/gpio032"                        , hdlr_gpio_gpio032,                      RW, "0")                 \
     DEFINE_FILE_PROP("gpio/gpio079"                        , hdlr_gpio_gpio079,                      RW, "0")                 \
     DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")                 
+    
+#define GPIO2(_p)                                                                                                             \
+    DEFINE_FILE_PROP("gpio/gpio" #_p                       , hdlr_gpio_##_p##               ,        RW, "0")
 
 
 #define DEFINE_CM()                                                    \
