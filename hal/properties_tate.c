@@ -2894,13 +2894,18 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* --------------------------------- GPIO ----------------------------------- */
+/* -------------------------------------------------------------------------- */
+
 //Enable manual override:
 //mem rw res_rw7 1.
 //Registers 0:31= res_rw4[31:0]
 //Registers 32:63 = res_rw5[31:0]
 //Registers 64:95 = res_rw6[15:0]
 
-static int hdlr_fpga_gpio_override_en(const char *data, char *ret) {
+static int hdlr_gpio_override_en(const char *data, char *ret) {
     uint32_t old_val = 0;
     // check if override is enabled
     if (strcmp(data, "0") != 0) {
@@ -2908,11 +2913,14 @@ static int hdlr_fpga_gpio_override_en(const char *data, char *ret) {
         read_hps_reg("res_rw7", &old_val);
         //Mask lowest bit with 1 then write to res_rw7 
         write_hps_reg("res_rw7", old_val | 0x1);
+    } else {
+        read_hps_reg("res_rw7", &old_val);
+        write_hps_reg("res_rw7",old_val & (~0x1));
     }
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_gpio_gpio000(const char *data, char *ret) {
+static int hdlr_gpio_gpio000(const char *data, char *ret) {
     uint32_t old_val = 0;
     // check if it is enabled
     if (strcmp(data, "0") != 0) {
@@ -2920,11 +2928,14 @@ static int hdlr_fpga_gpio_gpio000(const char *data, char *ret) {
         read_hps_reg("res_rw4", &old_val);
         //Mask lowest bit with 1 then write to res_rw4
         write_hps_reg("res_rw4", old_val | 0x1);
+    } else {
+        read_hps_reg("res_rw4", &old_val);
+        write_hps_reg("res_rw4",old_val & (~0x1));
     }
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_gpio_gpio032(const char *data, char *ret) {
+static int hdlr_gpio_gpio032(const char *data, char *ret) {
     uint32_t old_val = 0;
     // check if it is enabled
     if (strcmp(data, "0") != 0) {
@@ -2932,24 +2943,30 @@ static int hdlr_fpga_gpio_gpio032(const char *data, char *ret) {
         read_hps_reg("res_rw5", &old_val);
         //Mask lowest bit with 1 then write to res_rw4
         write_hps_reg("res_rw5", old_val | 0x1);
+    } else {
+        read_hps_reg("res_rw5", &old_val);
+        write_hps_reg("res_rw5",old_val & (~0x1));
     }
     return RETURN_SUCCESS;
 }
 
 
-static int hdlr_fpga_gpio_gpio079(const char *data, char *ret) {
+static int hdlr_gpio_gpio079(const char *data, char *ret) {
     uint32_t old_val = 0;
     // check if it is enabled
     if (strcmp(data, "0") != 0) {
         //Read res_rw6 for bits 64 to 79
         read_hps_reg("res_rw6", &old_val);
-        //Mask lowest bit with 1 then write to res_rw4
+        //Mask relevant bit with 1 then write to res_rw4
         write_hps_reg("res_rw6", old_val | 0x8000);
+    } else {
+        read_hps_reg("res_rw6", &old_val);
+        write_hps_reg("res_rw6",old_val & (~0x8000));
     }
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_gpio_gpio_all(const char *data, char *ret) {
+static int hdlr_gpio_gpio_all(const char *data, char *ret) {
     uint32_t old_val = 0;
     // check if override is enabled
     if (strcmp(data, "0") != 0) {
@@ -2959,6 +2976,13 @@ static int hdlr_fpga_gpio_gpio_all(const char *data, char *ret) {
         // this one needs a read and mask
         read_hps_reg("res_rw6", &old_val);
         write_hps_reg("res_rw6", old_val | 0x0000ffff);
+    } else {
+        write_hps_reg("res_rw4", 0x0);
+        write_hps_reg("res_rw5", 0x0);
+        read_hps_reg("res_rw6", &old_val);
+        write_hps_reg("res_rw6",old_val & (~0x0000ffff));
+    }
+    return RETURN_SUCCESS;
 }
 
 
@@ -3165,15 +3189,15 @@ static int hdlr_fpga_gpio_gpio_all(const char *data, char *ret) {
     DEFINE_FILE_PROP("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "1400")              \
     DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
     DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
-    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")      \
-    \
-    \
-    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_fpga_gpio_override_en,             RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio000"                        , hdlr_fpga_gpio_gpio000,                 RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio032"                        , hdlr_fpga_gpio_gpio032,                 RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio079"                        , hdlr_fpga_gpio_gpio079,                 RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_fpga_gpio_gpio_all,                RW, "0")                 
+    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
 
+    
+#define DEFINE_GPIO()                                                                                                         \
+    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio000"                        , hdlr_gpio_gpio000,                      RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio032"                        , hdlr_gpio_gpio032,                      RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio079"                        , hdlr_gpio_gpio079,                      RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")                 
 
 
 #define DEFINE_CM()                                                    \
@@ -3194,6 +3218,7 @@ static prop_t property_table[] = {
 #undef X
     DEFINE_TIME()
     DEFINE_FPGA()
+    DEFINE_GPIO()
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
     DEFINE_CM()
