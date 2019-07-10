@@ -2938,7 +2938,6 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
 }
 
 // X Macro for GPIO
-// need to change mask bit
 #define X(_p, io)                                                             \
     static int hdlr_gpio_##_p##_pin(const char *data, char *ret) {            \
         uint32_t old_val = 0;                                                 \
@@ -2955,9 +2954,9 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
         read_hps_reg(res_reg_addr, &old_val);                                 \
         if (strcmp(data, "0") != 0) {                                         \
             /*Read res_r4 for bits 0 to 31 */                                 \
-            write_hps_reg(res_reg_addr, old_val | 0x1);                       \
+            write_hps_reg(res_reg_addr, old_val | (1 << (pin_number%32)));    \
         } else {                                                              \
-            write_hps_reg(res_reg_addr,old_val & (~0x1));                     \
+            write_hps_reg(res_reg_addr, old_val & (~(1 << (pin_number%32)))); \
         }                                                                     \
         return RETURN_SUCCESS;                                                \
     }
