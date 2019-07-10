@@ -2942,7 +2942,7 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
     static int hdlr_gpio_##_p##_pin(const char *data, char *ret) {            \
         uint32_t old_val = 0;                                                 \
         int pin_number = 0;                                                   \
-        sscanf("_p", "%d", &pin_number);                                      \
+        sscanf(#_p, "%d", &pin_number);                                      \
         char res_reg_addr[8] = "res_rw4";                                     \
         if (pin_number < 32) {                                                \
             memcpy(res_reg_addr, "res_rw4", 8);                               \
