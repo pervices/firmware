@@ -2919,79 +2919,49 @@ static int hdlr_gpio_override_en(const char *data, char *ret) {
     }
     return RETURN_SUCCESS;
 }
-/*
-static int hdlr_gpio_gpio000(const char *data, char *ret) {
-    uint32_t old_val = 0;
-    // check if it is enabled
-    if (strcmp(data, "0") != 0) {
-        //Read res_r4 for bits 0 to 31
-        read_hps_reg("res_rw4", &old_val);
-        //Mask lowest bit with 1 then write to res_rw4
-        write_hps_reg("res_rw4", old_val | 0x1);
-    } else {
-        read_hps_reg("res_rw4", &old_val);
-        write_hps_reg("res_rw4",old_val & (~0x1));
-    }
-    return RETURN_SUCCESS;
-}
-*/
-static int hdlr_gpio_gpio032(const char *data, char *ret) {
-    uint32_t old_val = 0;
-    // check if it is enabled
-    if (strcmp(data, "0") != 0) {
-        //Read res_rw5 for bits 32 to 63
-        read_hps_reg("res_rw5", &old_val);
-        //Mask lowest bit with 1 then write to res_rw4
-        write_hps_reg("res_rw5", old_val | 0x1);
-    } else {
-        read_hps_reg("res_rw5", &old_val);
-        write_hps_reg("res_rw5",old_val & (~0x1));
-    }
-    return RETURN_SUCCESS;
-}
-
-
-static int hdlr_gpio_gpio079(const char *data, char *ret) {
-    uint32_t old_val = 0;
-    // check if it is enabled
-    if (strcmp(data, "0") != 0) {
-        //Read res_rw6 for bits 64 to 79
-        read_hps_reg("res_rw6", &old_val);
-        //Mask relevant bit with 1 then write to res_rw4
-        write_hps_reg("res_rw6", old_val | 0x8000);
-    } else {
-        read_hps_reg("res_rw6", &old_val);
-        write_hps_reg("res_rw6",old_val & (~0x8000));
-    }
-    return RETURN_SUCCESS;
-}
 
 static int hdlr_gpio_gpio_all(const char *data, char *ret) {
     uint32_t old_val = 0;
-    // check if override is enabled
+    read_hps_reg("res_rw6", &old_val);
     if (strcmp(data, "0") != 0) {
         // since writing 1 to all bits in these two don't need to read first
         write_hps_reg("res_rw4", 0xffffffff);
         write_hps_reg("res_rw5", 0xffffffff);
         // this one needs a read and mask
-        read_hps_reg("res_rw6", &old_val);
         write_hps_reg("res_rw6", old_val | 0x0000ffff);
     } else {
         write_hps_reg("res_rw4", 0x0);
         write_hps_reg("res_rw5", 0x0);
-        read_hps_reg("res_rw6", &old_val);
         write_hps_reg("res_rw6",old_val & (~0x0000ffff));
     }
     return RETURN_SUCCESS;
 }
 
-// X Macro for GPIO2
-// need to add if statement for the register
-#define X(ch, io)                                                              \
-    static int hdlr_gpio_##ch##_pin(const char *data, char *ret) {            \
-        return RETURN_SUCCESS;                                                 \
+// X Macro for GPIO
+// need to change mask bit
+#define X(_p, io)                                                             \
+    static int hdlr_gpio_##_p##_pin(const char *data, char *ret) {            \
+        uint32_t old_val = 0;                                                 \
+        int pin_number = 0;                                                   \
+        sscanf("_p", "%d", &pin_number);                                      \
+        char res_reg_addr[8] = "res_rw4";                                     \
+        if (pin_number < 32) {                                                \
+            memcpy(res_reg_addr, "res_rw4", 8);                               \
+        } else if (pin_number < 64) {                                         \
+            memcpy(res_reg_addr, "res_rw5", 8);                               \
+        } else {                                                              \
+            memcpy(res_reg_addr, "res_rw6", 8);                               \
+        }                                                                     \
+        read_hps_reg(res_reg_addr, &old_val);                                 \
+        if (strcmp(data, "0") != 0) {                                         \
+            /*Read res_r4 for bits 0 to 31 */                                 \
+            write_hps_reg(res_reg_addr, old_val | 0x1);                       \
+        } else {                                                              \
+            write_hps_reg(res_reg_addr,old_val & (~0x1));                     \
+        }                                                                     \
+        return RETURN_SUCCESS;                                                \
     }
-CHANNELS
+GPIO_PINS
 #undef X
 
 /* clang-format off */
@@ -3200,15 +3170,8 @@ CHANNELS
     DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
 
     
-#define DEFINE_GPIO()                                                                                                         \
-    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio032"                        , hdlr_gpio_gpio032,                      RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio079"                        , hdlr_gpio_gpio079,                      RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")                 
-    
-#define GPIO2(_c)                                                                                                             \
-    DEFINE_FILE_PROP("gpio/gpio" #_c "pin"                 , hdlr_gpio_##_c##_pin               ,        RW, "0")
-
+#define DEFINE_GPIO(_p)                                                                                                        \
+    DEFINE_FILE_PROP("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0")
 
 #define DEFINE_CM()                                                    \
     DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
@@ -3226,12 +3189,13 @@ static prop_t property_table[] = {
 #define X(ch, io) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
-#define X(ch, io) GPIO2(ch)
-    CHANNELS
-#undef X
     DEFINE_TIME()
     DEFINE_FPGA()
-    DEFINE_GPIO()
+#define X(_p, io) DEFINE_GPIO(_p)
+    GPIO_PINS
+#undef X
+    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")                 
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
     DEFINE_CM()
