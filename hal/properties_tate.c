@@ -1532,7 +1532,7 @@ CHANNELS
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
-    }
+    }   
 CHANNELS
 #undef X
 
@@ -2987,19 +2987,12 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
 
 // X Macro for GPIO2
 // need to add if statement for the register
-#define Q(pin_num, reg_g, mask_bit)                                            \
-    static int hldr_gpio_##pin_num##(const char *data, char *ret) {            \
-        uint32_t old_val = 0;                                                  \
-        read_hps_reg(#reg_g, &old_val);                                        \
-        if (strcmp(data, "0") != 0) {                                          \
-            write_hps_reg(#reg_g, old_val | #mask_bit);                        \
-        } else {                                                               \
-            write_hps_reg(#reg_g,old_val & (~#mask_bit));                      \
-        }                                                                      \
-    return RETURN_SUCCESS;                                                     \
+#define X(ch, io)                                                              \
+    static int hdlr_gpio_##ch##_pin(const char *data, char *ret) {            \
+        return RETURN_SUCCESS;                                                 \
     }
-    GPIO_PINS;
-#undef Q
+CHANNELS
+#undef X
 
 /* clang-format off */
 
@@ -3213,8 +3206,8 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
     DEFINE_FILE_PROP("gpio/gpio079"                        , hdlr_gpio_gpio079,                      RW, "0")                 \
     DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")                 
     
-#define GPIO2(_p)                                                                                                             \
-    DEFINE_FILE_PROP("gpio/gpio" #_p                       , hdlr_gpio_##_p##               ,        RW, "0")
+#define GPIO2(_c)                                                                                                             \
+    DEFINE_FILE_PROP("gpio/gpio" #_c "pin"                 , hdlr_gpio_##_c##_pin               ,        RW, "0")
 
 
 #define DEFINE_CM()                                                    \
@@ -3231,6 +3224,9 @@ static prop_t property_table[] = {
     CHANNELS
 #undef X
 #define X(ch, io) DEFINE_TX_CHANNEL(ch)
+    CHANNELS
+#undef X
+#define X(ch, io) GPIO2(ch)
     CHANNELS
 #undef X
     DEFINE_TIME()
