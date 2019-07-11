@@ -87,7 +87,11 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 }
 
 static void change_group_permissions_for_all(void) {
+#ifdef TATE
+    system("chgrp dev-grp0 -R /var/cyan");
+#else
     system("chgrp dev-grp0 -R /var/crimson");
+#endif
 }
 
 // Helper function to make properties
@@ -147,12 +151,21 @@ static void make_prop(prop_t *prop) {
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
+#ifdef TATE
+        snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
+#else
         snprintf(cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path);
+#endif
         system(cmd);
 
         // TODO: replace with symlinkat(2)
+#ifdef TATE
+        snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
+                 prop->symlink_target, prop->path);
+#else
         snprintf(cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s",
                  prop->symlink_target, prop->path);
+#endif
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
