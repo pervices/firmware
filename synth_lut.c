@@ -24,7 +24,11 @@
 
 // I couldn't actually find this hard-coded anywhere.
 #ifndef VCS_PATH
+#ifdef TATE
+#define VCS_PATH "/var/cyan/state"
+#else
 #define VCS_PATH "/var/crimson/state"
+#endif
 #endif
 
 extern void server_init_led();
@@ -623,9 +627,15 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     }
     ctx->fd = -1;
 
+#ifdef TATE
+    snprintf(cmdbuf, sizeof(cmdbuf),
+             "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+#else
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+#endif
     system(cmdbuf);
 
 out:
@@ -764,9 +774,15 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
     r = EXIT_SUCCESS;
     ctx->enabled = true;
 
+#ifdef TATE
+    snprintf(cmdbuf, sizeof(cmdbuf),
+             "echo 1 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+#else
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 1 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+#endif
     system(cmdbuf);
 
 out:
@@ -926,9 +942,15 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     // truncate the string to the exact size of the matched regular expression
     buf[pmatch[1].rm_eo] = '\0';
 
+#ifdef TATE
+    snprintf(ctx->fn, sizeof(ctx->fn),
+             "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             'A' + ctx->channel(ctx), buf);
+#else
     snprintf(ctx->fn, sizeof(ctx->fn),
              "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
              'A' + ctx->channel(ctx), buf);
+#endif
     r = EXIT_SUCCESS;
 
 free_re:
