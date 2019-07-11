@@ -865,6 +865,9 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
         /* set the appropriate sample rate */                                  \
         memset(ret, 0, MAX_PROP_LEN);                                          \
                                                                                \
+        int channel = INT(ch);                                                 \
+        int shift = (channel%4)*8;                                             \
+                                                                               \
         if (resamp_err < base_err) {                                           \
             write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
@@ -872,20 +875,20 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /* Set gain adjustment */                                          \
-            read_hps_reg("txga", &old_val);                             \
-            write_hps_reg("txga",                                       \
-                          (old_val & ~(0xff << 0)) |                           \
-                              (interp_gain_lut[(resamp_factor)] << 0));        \
+            read_hps_reg("txga", &old_val);                                    \
+            write_hps_reg("txga",                                              \
+                          (old_val & ~(0xff << shift)) |                       \
+                              (interp_gain_lut[(resamp_factor)] << shift));    \
         } else {                                                               \
             write_hps_reg("tx" STR(ch) "1", base_factor);                      \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));             \
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /* Set gain adjustment */                                          \
-            read_hps_reg("txga", &old_val);                             \
-            write_hps_reg("txga",                                       \
-                          (old_val & ~(0xff << 0)) |                           \
-                              (interp_gain_lut[(base_factor)] << 0));          \
+            read_hps_reg("txga", &old_val);                                    \
+            write_hps_reg("txga",                                              \
+                          (old_val & ~(0xff << channel)) |                     \
+                              (interp_gain_lut[(base_factor)] << channel));    \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1325,6 +1328,9 @@ CHANNELS
         memset(ret, 0, MAX_PROP_LEN);                                          \
         int gain_factor;                                                       \
                                                                                \
+        int channel = INT(ch);                                                 \
+        int shift = (channel%4)*8;                                             \
+                                                                               \
         if (resamp_err < base_err) {                                           \
             write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
@@ -1333,9 +1339,9 @@ CHANNELS
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /*Set gain adjustment */                                           \
             gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;       \
-            read_hps_reg("rxga", &old_val);                             \
-            write_hps_reg("rxga", (old_val & ~(0xff << 0)) |            \
-                                             (((uint16_t)gain_factor) << 0));  \
+            read_hps_reg("rxga", &old_val);                                    \
+            write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
+                                  (((uint16_t)gain_factor) << shift));         \
         } else {                                                               \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
@@ -1343,9 +1349,9 @@ CHANNELS
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
-            read_hps_reg("rxga", &old_val);                             \
-            write_hps_reg("rxga", (old_val & ~(0xff << 0)) |            \
-                                             (((uint16_t)gain_factor) << 0));  \
+            read_hps_reg("rxga", &old_val);                                    \
+            write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
+                                  (((uint16_t)gain_factor) << shift));         \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
