@@ -1,0 +1,27 @@
+#!/bin/bash
+
+
+partition_offset_0=`/home/root/rsu_client -l 0 | grep OFFSET | awk '{printf "%s\n", $2}'`
+partition_offset_1=`/home/root/rsu_client -l 1 | grep OFFSET | awk '{printf "%s\n", $2}'`
+current_image=`/home/root/rsu_client -g | grep "CURRENT IMAGE" | awk '{printf "%s\n", $3}'`
+
+if [ $current_image == $partition_offset_0 ]; then
+    echo "WARNING: FPGA is running the Fallback image in QSPI partition 0." > /dev/kmsg
+    gpio_control pca9539 0 7 out_low
+    gpio_control pca9539 0 8 out_high
+elif [ $current_image == $partition_offset_1 ]; then
+    echo "NOTE: FPGA is running the production image in QSPI partition 1." > /dev/kmsg
+    gpio_control pca9539 0 7 out_high
+    gpio_control pca9539 0 8 out_low
+else
+    echo "FATAL: FPGA is running an unknown image." > /dev/kmsg
+    gpio_control pca9539 0 7 out_low
+    gpio_control pca9539 0 8 out_high
+    while true; do
+        sleep 0.5
+        gpio_control pca9539 0 8 out_high
+        sleep 0.5
+        gpio_control pca9539 0 8 out_low
+
+    done
+fi
