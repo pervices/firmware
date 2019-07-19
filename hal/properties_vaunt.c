@@ -888,7 +888,7 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
             read_hps_reg("txga", &old_val);                                    \
             write_hps_reg("txga",                                              \
                           (old_val & ~(0xff << channel)) |                     \
-                              (interp_gain_lut[(base_factor)] << channel));    \
+                              (interp_gain_lut[(base_factor)] << shift));      \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
