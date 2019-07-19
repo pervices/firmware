@@ -267,7 +267,7 @@ int init_property(uint8_t options) {
         uart_rx_comm_fd[i] = -1;
 
     /* Setup all UART devices XXX: SHOULD RETURN -1 */
-    //init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
+    init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
 #if defined(VAUNT)
 
