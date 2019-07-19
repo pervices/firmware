@@ -159,7 +159,7 @@ static int read_uart(int uartfd) {
 // Finds the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor(double rate, double base_rate,
                                       double *err) {
-    double max_factor = 65536; // 2^16
+    double max_factor = 65535; // 2^16 - 1
     double min_factor = 1;
     double lower_factor_violation = 0;
     double upper_factor_violation = 0;
