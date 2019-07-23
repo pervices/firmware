@@ -80,36 +80,41 @@ if {$::argv0 eq [info script]} {
     # GPIO pin number that connects to BoardGood signal for this board
     set bg_gpio_pin_number [expr {(($board_number%4)*4)+3}]
 
-
     # Run main gpio code
     set en_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $en_gpio_pin_number]
     set bg_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $bg_gpio_pin_number]
 
+    set board_good [gpio_in $bg_gpio_file]
 
     if { [string equal $board_state "on"] } {
-        gpio_out $en_gpio_file $::GPIO_WRITE_HIGH
+        set_gpio_direction $en_gpio_file "high"
 
     } elseif { [string equal $board_state "off"] } {
         set_gpio_direction $en_gpio_file "low"
-        gpio_out $en_gpio_file $::GPIO_WRITE_LOW
     }
 
-    puts "Reading the state of Board Good after 6 seconds ..."
-    # wait for 6 seconds and read back the value of BoardGood
-    after 6000
     set board_good [gpio_in $bg_gpio_file]
 
     if { [string equal $board_state "off"] } {
-         if { $board_good == 0 } {
-             puts "Board was successfully powered down"
-         } else {
-             puts "ERROR: Board is still powered on!!!!"
-         }
-     } elseif { [string equal $board_state "on"] } {
-         if { $board_good == 1 } {
-             puts "Board $board_number was successfully powered on"
-         } else {
-             puts "ERROR: Board $board_number did NOT power on!!!!"
-         }
+        if { $board_good == 0 } {
+            puts "Board was successfully powered down"
+        } else {
+            puts "ERROR: Board is still powered on!!!!"
+        }
+    } elseif { [string equal $board_state "on"] } {
+        if { $board_good == 1 } {
+            # if board was already on, don't wait
+            puts "Board $board_number was successfully powered on"
+        } else {
+            puts "Reading the state of Board Good after 6 seconds ..."
+            # wait for 6 seconds and read back the value of BoardGood
+            after 6000
+            set board_good [gpio_in $bg_gpio_file]
+            if { $board_good == 1 } {
+                puts "Board $board_number was successfully powered on"
+            } else {
+                puts "ERROR: Board $board_number did NOT power on!!!!"
+            }
+        }
     }
 }
