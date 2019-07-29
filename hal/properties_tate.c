@@ -915,7 +915,22 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /* In the new context, pwr means resetting the DSP channel and */          \
+    /* pwr_board function will actually turn the RFE boards on or off */       \
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {               \
+        uint32_t old_val;                                                      \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                        \
+        if (power == PWR_ON) {                                                 \
+            write_hps_reg("tx" STR(ch) "4", old_val & ~0x2);                   \
+        }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+                                                                               \
+    static int hdlr_tx_##ch##_pwr_board(const char *data, char *ret) {         \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
@@ -3033,6 +3048,7 @@ GPIO_PINS
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
