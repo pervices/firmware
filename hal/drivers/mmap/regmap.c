@@ -431,6 +431,24 @@ static const reg_t reg_table[] = {
     {0x1dd8 + HPS2FPGA_GPR_OFST, "flc74", 0x00000000, "RO"},
     {0x1ddC + HPS2FPGA_GPR_OFST, "flc75", 0x00000000, "RO"},
 
+    {0x1f00 + HPS2FPGA_GPR_OFST, "res_rw8" , 0x00000000, "RW"},
+    {0x1f10 + HPS2FPGA_GPR_OFST, "res_rw9" , 0x00000000, "RW"},
+    {0x1f20 + HPS2FPGA_GPR_OFST, "res_rw10", 0x00000000, "RW"},
+    {0x1f30 + HPS2FPGA_GPR_OFST, "res_rw11", 0x00000000, "RW"},
+    {0x1f40 + HPS2FPGA_GPR_OFST, "res_rw12", 0x00000000, "RW"},
+    {0x1f50 + HPS2FPGA_GPR_OFST, "res_rw13", 0x00000000, "RW"},
+    {0x1f60 + HPS2FPGA_GPR_OFST, "res_rw14", 0x00000000, "RW"},
+    {0x1f70 + HPS2FPGA_GPR_OFST, "res_rw15", 0x00000000, "RW"},
+
+    {0x1f80 + HPS2FPGA_GPR_OFST, "res_ro8" , 0x00000000, "RO"},
+    {0x1f90 + HPS2FPGA_GPR_OFST, "res_ro9" , 0x00000000, "RO"},
+    {0x1fa0 + HPS2FPGA_GPR_OFST, "res_ro10", 0x00000000, "RO"},
+    {0x1fb0 + HPS2FPGA_GPR_OFST, "res_ro11", 0x00000000, "RO"},
+    {0x1fc0 + HPS2FPGA_GPR_OFST, "res_ro12", 0x00000000, "RO"},
+    {0x1fd0 + HPS2FPGA_GPR_OFST, "res_ro13", 0x00000000, "RO"},
+    {0x1fe0 + HPS2FPGA_GPR_OFST, "res_ro14", 0x00000000, "RO"},
+    {0x1ff0 + HPS2FPGA_GPR_OFST, "res_ro15", 0x00000000, "RO"},
+
     // C Clone.
     {0x2000 + HPS2FPGA_GPR_OFST, "sys42", 0x00000000, "RW"},
     {0x2010 + HPS2FPGA_GPR_OFST, "sys43", 0xffff003f, "RO"},
@@ -629,6 +647,24 @@ static const reg_t reg_table[] = {
     {0x2dd8 + HPS2FPGA_GPR_OFST, "flc112", 0x00000000, "RO"},
     {0x2ddC + HPS2FPGA_GPR_OFST, "flc113", 0x00000000, "RO"},
 
+    {0x2f00 + HPS2FPGA_GPR_OFST, "res_rw16", 0x00000000, "RW"},
+    {0x2f10 + HPS2FPGA_GPR_OFST, "res_rw17", 0x00000000, "RW"},
+    {0x2f20 + HPS2FPGA_GPR_OFST, "res_rw18", 0x00000000, "RW"},
+    {0x2f30 + HPS2FPGA_GPR_OFST, "res_rw19", 0x00000000, "RW"},
+    {0x2f40 + HPS2FPGA_GPR_OFST, "res_rw20", 0x00000000, "RW"},
+    {0x2f50 + HPS2FPGA_GPR_OFST, "res_rw21", 0x00000000, "RW"},
+    {0x2f60 + HPS2FPGA_GPR_OFST, "res_rw22", 0x00000000, "RW"},
+    {0x2f70 + HPS2FPGA_GPR_OFST, "res_rw23", 0x00000000, "RW"},
+
+    {0x2f80 + HPS2FPGA_GPR_OFST, "res_ro16", 0x00000000, "RO"},
+    {0x2f90 + HPS2FPGA_GPR_OFST, "res_ro17", 0x00000000, "RO"},
+    {0x2fa0 + HPS2FPGA_GPR_OFST, "res_ro18", 0x00000000, "RO"},
+    {0x2fb0 + HPS2FPGA_GPR_OFST, "res_ro19", 0x00000000, "RO"},
+    {0x2fc0 + HPS2FPGA_GPR_OFST, "res_ro20", 0x00000000, "RO"},
+    {0x2fd0 + HPS2FPGA_GPR_OFST, "res_ro21", 0x00000000, "RO"},
+    {0x2fe0 + HPS2FPGA_GPR_OFST, "res_ro22", 0x00000000, "RO"},
+    {0x2ff0 + HPS2FPGA_GPR_OFST, "res_ro23", 0x00000000, "RO"},
+
     // D Clone.
     {0x3000 + HPS2FPGA_GPR_OFST, "sys63", 0x00000000, "RW"},
     {0x3010 + HPS2FPGA_GPR_OFST, "sys64", 0xffff003f, "RO"},
@@ -826,6 +862,24 @@ static const reg_t reg_table[] = {
     {0x3dd4 + HPS2FPGA_GPR_OFST, "flc149", 0x00000000, "RO"},
     {0x3dd8 + HPS2FPGA_GPR_OFST, "flc150", 0x00000000, "RO"},
     {0x3ddC + HPS2FPGA_GPR_OFST, "flc151", 0x00000000, "RO"},
+
+    {0x3f00 + HPS2FPGA_GPR_OFST, "res_rw24", 0x00000000, "RW"},
+    {0x3f10 + HPS2FPGA_GPR_OFST, "res_rw25", 0x00000000, "RW"},
+    {0x3f20 + HPS2FPGA_GPR_OFST, "res_rw26", 0x00000000, "RW"},
+    {0x3f30 + HPS2FPGA_GPR_OFST, "res_rw27", 0x00000000, "RW"},
+    {0x3f40 + HPS2FPGA_GPR_OFST, "res_rw28", 0x00000000, "RW"},
+    {0x3f50 + HPS2FPGA_GPR_OFST, "res_rw29", 0x00000000, "RW"},
+    {0x3f60 + HPS2FPGA_GPR_OFST, "res_rw30", 0x00000000, "RW"},
+    {0x3f70 + HPS2FPGA_GPR_OFST, "res_rw31", 0x00000000, "RW"},
+
+    {0x3f80 + HPS2FPGA_GPR_OFST, "res_ro24", 0x00000000, "RO"},
+    {0x3f90 + HPS2FPGA_GPR_OFST, "res_ro25", 0x00000000, "RO"},
+    {0x3fa0 + HPS2FPGA_GPR_OFST, "res_ro26", 0x00000000, "RO"},
+    {0x3fb0 + HPS2FPGA_GPR_OFST, "res_ro27", 0x00000000, "RO"},
+    {0x3fc0 + HPS2FPGA_GPR_OFST, "res_ro28", 0x00000000, "RO"},
+    {0x3fd0 + HPS2FPGA_GPR_OFST, "res_ro29", 0x00000000, "RO"},
+    {0x3fe0 + HPS2FPGA_GPR_OFST, "res_ro30", 0x00000000, "RO"},
+    {0x3ff0 + HPS2FPGA_GPR_OFST, "res_ro31", 0x00000000, "RO"},
 
 };
 
