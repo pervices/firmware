@@ -42,7 +42,7 @@
 #define RESAMP_SAMPLE_RATE 320000000.0  //After 4/5 resampling
 // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
-    ((double)13.4217728)
+    ((double)10.73741824)
 // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
 #define DAC_NCO_CONST \
     ((double)219902.3255552)
