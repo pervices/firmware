@@ -38,8 +38,8 @@
 #include "gpio_pins.h"
 
 // Sample rates are in samples per second (SPS).
-#define BASE_SAMPLE_RATE   400000000.0  //After base rate
-#define RESAMP_SAMPLE_RATE 320000000.0  //After 4/5 resampling
+#define BASE_SAMPLE_RATE   200000000.0  //After base rate
+#define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling
 // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
     ((double)10.73741824)
