@@ -64,4 +64,4 @@ build-firmware:
 
         # Trigger downstream CI Pipeline
         - VERSION=$(echo $CI_COMMIT_SHA | cut -c 1-$VERSION_LENGTH)
-        - "curl --request POST --form token=$CI_JOB_TOKEN --form variables[NEW_TAR]=$NEW_TAR --form variables[VERSION]=$VERSION --form ref=ops/gshe/ci-scripts http://ci.korbin.pv/api/v4/projects/57/trigger/pipeline"
+        - "curl --request POST --form token=$CI_JOB_TOKEN --form variables[NEW_TAR]=$NEW_TAR --form variables[VERSION]=$VERSION --form ref=master http://ci.korbin.pv/api/v4/projects/57/trigger/pipeline"
