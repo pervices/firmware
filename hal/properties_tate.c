@@ -2448,12 +2448,13 @@ static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char *ret,
                                                   unsigned sfp_port) {
 
     static const unsigned udp_port_max = (1 << 16) - 1;
-    static const unsigned sfp_port_max = 1;
+    static const unsigned sfp_port_max = 3;
 
     unsigned udp_port;
     uint32_t flc_reg;
     char* flc_reg_addr = "flc0";
     uint32_t mask;
+    uint32_t shift_amount;
 
     if (sfp_port > sfp_port_max) {
         return RETURN_ERROR_PARAM;
@@ -2468,13 +2469,14 @@ static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char *ret,
     // a good reason to use structures to access memory-mapped registers.
     flc_reg_addr = (sfp_port < 2) ? "flc0" : "flc38";
     if (sfp_port < 2) {
-        mask = 0xffff << (sfp_port * 16);
+        shift_amount = (sfp_port * 16);
     } else {
-        mask = 0xffff << ((sfp_port>>1) * 16);
+        shift_amount = ((sfp_port-2) * 16);
     }
+    mask = 0xffff << shift_amount;
     read_hps_reg(flc_reg_addr, &flc_reg);
     flc_reg &= ~mask;
-    flc_reg |= (udp_port << (sfp_port * 16)) & mask;
+    flc_reg |= (udp_port << shift_amount) & mask;
     write_hps_reg(flc_reg_addr, flc_reg);
 
     sprintf(ret, "%u", udp_port);
@@ -3149,9 +3151,9 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpb_port"   , hdlr_fpga_board_flow_control_sfpb_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpc_port"   , hdlr_fpga_board_flow_control_sfpc_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpd_port"   , hdlr_fpga_board_flow_control_sfpd_port, RW, "42809")             \
+    DEFINE_FILE_PROP("fpga/board/flow_control/sfpb_port"   , hdlr_fpga_board_flow_control_sfpb_port, RW, "42810")             \
+    DEFINE_FILE_PROP("fpga/board/flow_control/sfpc_port"   , hdlr_fpga_board_flow_control_sfpc_port, RW, "42811")             \
+    DEFINE_FILE_PROP("fpga/board/flow_control/sfpd_port"   , hdlr_fpga_board_flow_control_sfpd_port, RW, "42812")             \
     DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
