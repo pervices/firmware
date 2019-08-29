@@ -12,6 +12,9 @@ variables:
 stages:
     - build
 
+# Docker image brings in git, build-essential, curl; runs bash
+image: cfriedt/toolchain:xenial
+
 #################
 ##### BUILD #####
 #################
@@ -19,9 +22,10 @@ stages:
 build-firmware:
     stage:  build
     before_script:
-        - apt-get update && apt-get install -y dh-autoreconf
+        - apt-get update && apt-get install -y dh-autoreconf ftp
         - autoreconf --install
-        - autoconf && aclocal &&
+        - autoconf && aclocal
+
     script: 
         # Capture current date
         - DATE=$(TZ=UTC date +%F-%H-%M | tr - _)
@@ -37,27 +41,27 @@ build-firmware:
         - echo $CI_COMMIT_SHA >> $DUMPDIR/.ci_info/gitversion
 
         # Build system
+        - dir=$(pwd)
         - cd $DUMPDIR/build
         - sed -i 's/DTATE/DVAUNT/g' configure.ac # In case
         - sh autogen.sh
-        - CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
-            CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
-            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-            -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-            ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+#        - CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
+#           CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+#            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+#            -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+        - sh ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
         - make
         - make DESTDIR=$DUMPDIR/build/ install
 
         # Upload tarball for staging
-        - dir=$(pwd)
         - cd $DUMPDIR
         - NEW_TAR=$PROJECT-$COMPONENT-build-$DATE.tar.gz
-        - tar -cvzf $dir/$NEW_TAR *
+        - tar -cvzf $dir/$NEW_TAR * || true
         - cd $dir
-        - sh ftp-stage-tarball.sh $NEW_TAR
+        - sh .ci/ftp-stage-tarball.sh $dir $NEW_TAR
         - rm $NEW_TAR
         - rm -rf $DUMPDIR
 
         # Trigger downstream CI Pipeline
         - VERSION=$(echo $CI_COMMIT_SHA | cut -c 1-$VERSION_LENGTH)
-        - "curl --request POST --form token=$CI_JOB_TOKEN --form 'variables[NEW_TAR]=$NEW_TAR' --form 'variables[VERSION]=$VERSION' --form ref=ops/gshe/ci-scripts http://ci.korbin.pv/api/v4/projects/57/trigger/pipeline"
+        - "curl --request POST --form token=$CI_JOB_TOKEN --form variables[NEW_TAR]=$NEW_TAR --form variables[VERSION]=$VERSION --form ref=master http://ci.korbin.pv/api/v4/projects/57/trigger/pipeline"
