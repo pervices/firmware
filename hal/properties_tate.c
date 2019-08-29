@@ -2093,9 +2093,9 @@ static int hdlr_time_source_pll(const char *data, char *ret) {
 #endif
 
 static int hdlr_time_status_ld(const char *data, char *ret) {
-    strcpy(buf, "status -l\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
+    // strcpy(buf, "status -l\r");
+    // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    // strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
@@ -2170,9 +2170,9 @@ static int hdlr_time_status_ld_pll1_pll2(const char *data, char *ret) {
 }
 
 static int hdlr_time_status_lol(const char *data, char *ret) {
-    strcpy(buf, "status -o\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
+    // strcpy(buf, "status -o\r");
+    // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    // strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
