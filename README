@@ -7,6 +7,9 @@ information on how to get a compile working for you.
 
 1.a Quickstart Compile Routines
 
+The following commands are quick start commands to enable cross compiling of
+firmware from an x86_64 host to the arm computer.
+
 1.a.i Crimson Optimized Compile Commands
 
    sed -i 's/DTATE/DVAUNT/g' configure.ac #Optional, clean git repo defaults to Vaunt.
@@ -17,12 +20,15 @@ information on how to get a compile working for you.
    CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+   CPPFLAGS="" \
+   CXXFLAGS="" \
+        ./configure --prefix=/usr --host=x86_64
 
    make
 
 1.a.ii Cyan Optimized Compile Commands
 
+   # When compiling cyan, use the master-testing branch.
    sed -i 's/DVAUNT/DTATE/g' configure.ac
 
    sh autogen.sh
@@ -31,7 +37,9 @@ information on how to get a compile working for you.
    CC="/usr/bin/arm-linux-gnueabi-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-linux-gnueabi-g++
+   CPPFLAGS="" \
+   CXXFLAGS="" \
+        ./configure --prefix=/usr --host=x86_64
 
    make
 
@@ -53,7 +61,9 @@ You may also use sed to accomplish this same task.
 Only one flag may be specified at a time, and you must specify one of them for
 compilation to succeed.
 
-3. Cross-Compiling from a development computer.
+3. Compiling the sources
+
+3a. Cross-Compiling from a development computer
 
 To build the HPS binaries from a host computer, you may be required to specify
 a non-standard location for your compiler and build chain. To ensure that your
@@ -64,7 +74,7 @@ To target the ARM processors used by Crimson and Tate, you can use;
 
 ./configure \
     --prefix=/usr \
-    --host=arm-unknown-linux-gnueabihf
+    --host=x86_64
 
 It's likely that your default system toolchain will not immediately support the
 target arm host. If that's the case, you can choose to directly specify the
@@ -75,7 +85,29 @@ For the internal PV machines, we use;
    CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++"
    CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc"
 
-3. Compile Optimizations
+3b. Compiling on the Device
+
+To compile from the device, simply copy over all the sources, and then compile
+as follows;
+
+
+   sed -i 's/DTATE/DVAUNT/g' configure.ac #Optional, clean git repo defaults to Vaunt.
+   # To compile Cyan, comment the above line, and uncomment the two lines below;
+   # git checkout master-testing
+   # sed -i 's/DVAUNT/DTATE/g' configure.ac
+
+   sh autogen.sh
+
+   # Update --host flag to arm-linux-gnueabi-g++
+   CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+        -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
+   CPPFLAGS="" \
+   CXXFLAGS="" \
+        ./configure --prefix=/usr
+
+   make
+
+4. Compile Optimizations
 
 To further optimize the design for either Crimson or Cyan, you can also specify
 the CFLAGs when calling configure.
@@ -84,11 +116,15 @@ For Crimson (Vaunt), the following CFLAGS and configure flags have been tested;
 
 CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+CPPFLAGS="" \
+CXXFLAGS="" \      
+	./configure --prefix=/usr --host=x86_64
 
 For Cyan (Tate), the following CFLAGS and configure flags have been tested;
 
 CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a53 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
+CPPFLAGS="" \
+CXXFLAGS="" \
+        ./configure --prefix=/usr --host=x86_64
 
