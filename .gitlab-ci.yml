@@ -28,7 +28,7 @@ build-firmware:
 
     script: 
         # Capture current date
-        - DATE=$(TZ=UTC date +%F-%H-%M | tr - _)
+        - DATE=$(TZ=UTC date +%F-s%s | tr - _)
         
         # Set up for build process
         - DUMPDIR=/tmp/$COMPONENT-build-$DATE
