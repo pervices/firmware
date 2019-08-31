@@ -3196,8 +3196,12 @@ void sync_channels(uint8_t chan_mask) {
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
     // usleep(300000); // Some wait time for the reset to be ready
-    /* Bring the ADCs & DACs into 'demo' mode for JESD */
 
+    // Issue JESD sync to ensure FPGA IP is sync'd
+    strcpy(buf, "sync -k -k -k\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    /* Bring the ADCs & DACs into 'demo' mode for JESD */
     // RX - ADCs
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
@@ -3238,8 +3242,8 @@ void sync_channels(uint8_t chan_mask) {
 
         /* Trigger a SYSREF pulse */
         // JESD core out of reset
-        usleep(100000); // Some wait time for MCUs to be ready
-        strcpy(buf, "clk -y\r");
+        usleep(200000); // Some wait time for MCUs to be ready
+        strcpy(buf, "sync -k -k -k\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
         // Do it again
@@ -3248,10 +3252,10 @@ void sync_channels(uint8_t chan_mask) {
         strcat(buf, str_chan_mask);
         strcat(buf, " -s 1\r");
         ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-        usleep(100000); // Some wait time for MCUs to be ready
-        strcpy(buf, "clk -y\r");
+        usleep(200000); // Some wait time for MCUs to be ready
+        strcpy(buf, "sync -k -k -k\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        usleep(100000); // Some wait time for MCUs to be ready
+        usleep(200000); // Some wait time for MCUs to be ready
 
         // CHECK IF ALARMS
         strcpy(buf, "dac -c a -s\r");
@@ -3302,8 +3306,9 @@ void sync_channels(uint8_t chan_mask) {
     // JESD core out of reset
     write_hps_reg("res_rw7", 0);
 
-    usleep(100000); // Some wait time for MCUs to be ready
-    strcpy(buf, "clk -y\r");
+    usleep(200000); // Some wait time for MCUs to be ready
+    strcpy(buf, "sync -k -k -k\r");
+    usleep(200000); // Some wait time for MCUs to be ready
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
     /* Turn off all boards' SYSREF detection gates */
@@ -3317,6 +3322,8 @@ void sync_channels(uint8_t chan_mask) {
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
 #endif
+    strcpy(buf, "sync -k -k -k\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
