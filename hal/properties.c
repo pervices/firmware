@@ -882,7 +882,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             /* Set gain adjustment */                                          \
             read_hps_reg("txga", &old_val);                                    \
             write_hps_reg("txga",                                              \
-                          (old_val & ~(0xff << channel)) |                     \
+                          (old_val & ~(0xff << shift)) |                     \
                               (interp_gain_lut[(base_factor)] << shift));      \
         }                                                                      \
                                                                                \
