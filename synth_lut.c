@@ -24,7 +24,7 @@
 
 // I couldn't actually find this hard-coded anywhere.
 #ifndef VCS_PATH
-#define VCS_PATH "/var/crimson/state"
+#define VCS_PATH "/var/volatile/crimson/state"
 #endif
 
 extern int get_uart_rx_fd();
@@ -50,7 +50,7 @@ extern int set_freq_internal(const bool tx, const unsigned channel,
 struct synth_lut_ctx {
     const bool tx;
     const char *id;
-    // "/var/crimson/calibration-data/TXA-XXXXXXXXXXXXXXXXXXXXXX.bin", where
+    // "/var/volatile/crimson/calibration-data/TXA-XXXXXXXXXXXXXXXXXXXXXX.bin", where
     // "XXXX.." are lowercase hex digits
     char fn[PATH_MAX];
     int fd;
@@ -602,7 +602,7 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     ctx->fd = -1;
 
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
+             "echo 0 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
     system(cmdbuf);
 
@@ -740,7 +740,7 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
     ctx->enabled = true;
 
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
+             "echo 1 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
     system(cmdbuf);
 
@@ -895,7 +895,7 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     buf[pmatch[1].rm_eo] = '\0';
 
     snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             "/var/volatile/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
              'A' + ctx->channel(ctx), buf);
     r = EXIT_SUCCESS;
 
