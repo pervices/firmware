@@ -83,7 +83,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 
 static void change_group_permissions_for_all(void)
 {
-    system("chgrp dev-grp0 -R /var/crimson");
+    system("chgrp dev-grp0 -R /var/volatile/crimson");
 }
 
 // Helper function to make properties
@@ -143,11 +143,11 @@ static void make_prop(prop_t *prop) {
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
-        snprintf(cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path);
+        snprintf(cmd, sizeof(cmd), "rm -Rf /var/volatile/crimson/state/%s", prop->path);
         system(cmd);
 
         // TODO: replace with symlinkat(2)
-        snprintf(cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s",
+        snprintf(cmd, sizeof(cmd), "cd /var/volatile/crimson/state; ln -sf %s %s",
                  prop->symlink_target, prop->path);
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);

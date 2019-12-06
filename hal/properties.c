@@ -1695,7 +1695,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 
     int atten = 0;
 
-    mask_rx = cm_chanmask_get("/var/crimson/state/cm/chanmask-rx");
+    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
 
     sscanf(data, "%d", &atten);
 
@@ -1744,7 +1744,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 
     double gain = 0;
 
-    mask_rx = cm_chanmask_get("/var/crimson/state/cm/chanmask-rx");
+    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
 
     sscanf(data, "%lf", &gain);
 
@@ -1794,7 +1794,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 
     double gain = 0;
 
-    mask_tx = cm_chanmask_get("/var/crimson/state/cm/chanmask-tx");
+    mask_tx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-tx");
 
     sscanf(data, "%lf", &gain);
 
@@ -1851,8 +1851,8 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     read_hps_reg("sync_mode", &sync_mode);
     read_hps_reg("sync_mask", &sync_mask);
 
-    mask_rx = cm_chanmask_get("/var/crimson/state/cm/chanmask-rx");
-    mask_tx = cm_chanmask_get("/var/crimson/state/cm/chanmask-tx");
+    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
+    mask_tx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-tx");
 
     sync_mask = (mask_tx << 16) | mask_rx;
     if (0 == sync_mask) {
@@ -1945,8 +1945,8 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
     read_hps_reg("sync_mode", &sync_mode);
     read_hps_reg("sync_mask", &sync_mask);
 
-    mask_rx = cm_chanmask_get("/var/crimson/state/cm/chanmask-rx");
-    mask_tx = cm_chanmask_get("/var/crimson/state/cm/chanmask-tx");
+    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
+    mask_tx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-tx");
 
     sync_mask = (mask_tx << 16) | mask_rx;
     if (0 == sync_mask) {
@@ -3074,7 +3074,7 @@ prop_t *get_prop_from_hdlr(int (*hdlr)(const char *, char *)) {
 
 int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
 
-    const char *vcs = "/var/crimson/state/";
+    const char *vcs = "/var/volatile/crimson/state/";
     const size_t vcsl = strlen(vcs);
     char origcwd[MAX_PATH_LEN];
     char *temp;
@@ -3142,7 +3142,7 @@ void pass_uart_tx_fd(int *fd) { uart_tx_fd = fd; }
 void pass_uart_rx_fd(int *fd) { uart_rx_fd = fd; }
 
 char *get_abs_path(prop_t *prop, char *path) {
-    strcpy(path, "/var/crimson");
+    strcpy(path, "/var/volatile/crimson");
     strcat(path, "/state/");
     strcat(path, prop->path);
     return path;
@@ -3157,7 +3157,7 @@ char *get_abs_dir(prop_t *prop, char *path) {
         i++;
     }
 
-    strcpy(path, "/var/crimson");
+    strcpy(path, "/var/volatile/crimson");
     strcat(path, "/state/");
 
     size_t temp_len = 0;
