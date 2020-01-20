@@ -3142,8 +3142,7 @@ void pass_uart_tx_fd(int *fd) { uart_tx_fd = fd; }
 void pass_uart_rx_fd(int *fd) { uart_rx_fd = fd; }
 
 char *get_abs_path(prop_t *prop, char *path) {
-    strcpy(path, "/var/volatile/crimson");
-    strcat(path, "/state/");
+    strcpy(path, STATE_DIR);
     strcat(path, prop->path);
     return path;
 }
@@ -3156,9 +3155,7 @@ char *get_abs_dir(prop_t *prop, char *path) {
             len = i;
         i++;
     }
-
-    strcpy(path, "/var/volatile/crimson");
-    strcat(path, "/state/");
+    strcpy(path, STATE_DIR);
 
     size_t temp_len = 0;
 
