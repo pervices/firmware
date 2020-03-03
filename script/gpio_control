@@ -8,16 +8,15 @@ proc print_help { } {
     puts "Arguments:"
     puts "    gpio <gpio_label> <chip_number> <pin_number> <direction>"
     puts ""
-    puts "    <gpio_label>: MAX14830"
-    puts "        This is the gpio label in the /sys/class/gpio/gpiochip*/label directory"
+    puts "    <gpio_label>: dig_pca"
+    puts "        This is the gpio name in the /sys/class/gpio/gpiochip*/device/of_node/name directory"
     puts "        Run the following in terminal to see available gpio chips in your system:"
-    puts "            cat /sys/class/gpio/gpiochip*/label"
+    puts "            cat /sys/class/gpio/gpiochip*/device/of_node/name"
     puts "    <chip_number>:"
     puts "        The index of the expected Chip with the given lable;"
-    puts "        e.g. there are 4 MAX14830 Chips on the board"
     puts "    <pin_number>:"
     puts "        The GPIO pin number in the given chip,"
-    puts "        e.g. MAX14830 has 16 gpio pins, so acceptable values <0..15>"
+    puts "        e.g. pca9539 has 16 gpio pins, so acceptable values <0..15>"
     puts "        Get the number of GPIO pins in your chip by running the following in the terminal:"
     puts "            cat /sys/class/gpio/gpiochip*/ngpio"
     puts "    <direction>: the following are acceptable inputs:"
@@ -27,11 +26,11 @@ proc print_help { } {
     puts ""
     puts "example:"
     puts ""
-    puts "    Read GPIO Pin 0 of the first MAX14830 chip"
-    puts "        gpio_control MAX14830 0 0 in"
+    puts "    Drive the first pin of the digital board pca9539"
+    puts "        gpio_control dig_pca 0 0 out_low"
     puts ""
-    puts "    Drive GPIO Pin 4 of the third MAX14830 chip to VCC"
-    puts "        gpio_control MAX14830 3 4 out_high"
+    puts "    Read the fifth pin of the backplane rf gle_req pca9539"
+    puts "        gpio_control bp_gle 0 4 in"
 
 }
 
@@ -125,7 +124,7 @@ proc get_gpio_file { gpio_chip_label gpio_chip_number gpio_pin_number } {
 
     set chips_with_intended_label [list]
     foreach chip $gpio_chips {
-        if { [string equal [cat $chip/label] $gpio_chip_label] } {
+        if { [string equal [cat $chip/device/of_node/name] $gpio_chip_label] } {
             set reg_info [ hexdump $chip/device/of_node/reg]
             lappend chips_with_intended_label [list $chip $reg_info]
         }

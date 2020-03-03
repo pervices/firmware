@@ -1,6 +1,6 @@
 #!/usr/bin/tclsh
 
-set chip_name "pca9539"
+set chip_name "dig_pca"
 set chip_number 0
 set max_pin_numbers 16
 
