@@ -576,21 +576,29 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 /* -------------------------------------------------------------------------- */
 
 #define X(ch, io)                                                              \
-    static int hdlr_tx_##ch##_rf_dac_nco(const char *data, char *ret) {        \
+    static int hdlr_tx_##ch##_dac_nco_dac0freq(const char *data, char *ret) {  \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
-        uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);            \
-        sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);                \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
                                                                                \
-        strcpy(buf, "dac -c " STR(ch) " -e 0 -n ");                            \
-        sprintf(buf + strlen(buf), "%" PRIu32 "",                              \
-                (uint32_t)(nco_steps >> 32));                                  \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
                                                                                \
-        strcpy(buf, "dac -o ");                                                \
-        sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);        \
-        strcat(buf, "\r");                                                     \
+        /* the following is mean to print                          */          \
+        /* "nco -t d -n 0 -h %i -m %i -s", freq_hz, freq_mhz);     */          \
+        /* as   "nco -t d -n 0 -h %i", freq_hz                     */          \
+        /* then "nco -m %i -s", freq_mhz                           */          \
+        strcpy(buf, "nco -t d -n 0 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -3069,7 +3077,8 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac0freq"         , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
