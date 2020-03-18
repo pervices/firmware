@@ -32,6 +32,7 @@
     #include <stdbool.h>
     #include <stdio.h>
     #include <string.h>
+    #include <math.h>
 #endif
 
 #include "channels.h"
@@ -763,6 +764,28 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_gain_ch0atten(const char *data, char *ret) { \
+        double atten;                                                          \
+        sscanf(data, "%lf", &atten);                                           \
+        uint32_t gaincode = 0;                                                 \
+                                                                               \
+        /* limit min atten (max gain) */                                       \
+        if (atten < -6.018 ) {                                                 \
+            atten = -6.018;                                                    \
+        }                                                                      \
+                                                                               \
+        /* convert from atten (dB) to gain code (dac register) */              \
+        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
+                                                                               \
+        /* send uart command */                                                \
+        strcpy(buf, "dac -c 0 -g ");                                           \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
+        strcat(buf, "\r");                                                     \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -3249,7 +3272,13 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch2freq"          , hdlr_tx_##_c##_dac_nco_ch2freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch3freq"          , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch4freq"          , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch5freq"          , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch5freq"          , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch0atten"        , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         
+//     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch1atten"        , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
+//     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch2atten"        , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
+//     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch3atten"        , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
+//     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch4atten"        , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
+//     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch5atten"        , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
