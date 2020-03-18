@@ -591,10 +591,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        /* the following is mean to print                          */          \
-        /* "nco -t d -n 0 -h %i -m %i -s", freq_hz, freq_mhz);     */          \
-        /* as   "nco -t d -n 0 -h %i", freq_hz                     */          \
-        /* then "nco -m %i -s", freq_mhz                           */          \
         strcpy(buf, "nco -t d -n 0 -h ");                                      \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
