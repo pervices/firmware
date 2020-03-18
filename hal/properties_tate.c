@@ -600,6 +600,174 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_dac_nco_dac1freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t d -n 1 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 0 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 1 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 2 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 3 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 4 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                                                                                                              \
+    static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 5 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_rf_dac_temp(const char *data, char *ret) {       \
         strcpy(buf, "board -c " STR(ch) " -t\r");                              \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
@@ -3074,7 +3242,14 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac0freq"         , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac0freq"         , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac1freq"         , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch0freq"          , hdlr_tx_##_c##_dac_nco_ch0freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch1freq"          , hdlr_tx_##_c##_dac_nco_ch1freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch2freq"          , hdlr_tx_##_c##_dac_nco_ch2freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch3freq"          , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch4freq"          , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch5freq"          , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
