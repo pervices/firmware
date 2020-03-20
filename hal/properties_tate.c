@@ -966,10 +966,18 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        strcpy(buf, "rf -c " STR(ch) " -b ");                                  \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
+    static int hdlr_tx_##ch##_rf_band(const char *data, char *ret) {           \
+        /* if the setting is a valid band, send to tx board*/                  \
+        int band;                                                              \
+        sscanf(data, "%i", &band);                                             \
+        if ((band == 0) || (band == 1) || (band == 9)) {                       \
+            strcpy(buf, "rf -b ");                                             \
+            sprintf(buf + strlen(buf),"%i", band);                             \
+            strcat(buf, "\r");                                                 \
+        }                                                                      \
+        else {  /* otherwise mute the tx board */                              \
+            strcpy(buf, "rf -z\r");                                            \
+        }                                                                      \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3388,11 +3396,11 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch2atten"        , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch3atten"        , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch4atten"        , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch5atten"        , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch5atten"        , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")         
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/band"             , hdlr_tx_##_c##_rf_freq_band,            RW, "1")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
