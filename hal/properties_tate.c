@@ -1001,6 +1001,17 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+										\
+    static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
+	    uint16_t atten;							\
+	    sscanf(data, "%u", &atten);						\
+	    strcpy(buf, "rf -a ");						\
+	    sprintf(buf + strlen(buf),"%u", atten);				\
+	    strcat(buf, "\r");							\
+	    ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));		\
+										\
+	    return RETURN_SUCCESS;						\
+    }										\
                                                                                \
     static int hdlr_tx_##ch##_rf_board_dump(const char *data, char *ret) {     \
         /* send the uart commands and read back the output and write to file   \
@@ -3397,7 +3408,8 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch3atten"        , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch4atten"        , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch5atten"        , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")         
+    DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/atten"		   , hdlr_tx_##_c##_rf_atten,		     RW, "31")
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
