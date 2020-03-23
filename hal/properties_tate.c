@@ -1125,7 +1125,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dsp_nco_adj(const char *data, char *ret) {       \
+    static int hdlr_tx_##ch##_dsp_fpga_nco(const char *data, char *ret) {       \
         double freq;                                                           \
         uint32_t old_val;                                                      \
         uint8_t direction;                                                     \
@@ -1616,7 +1616,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_dsp_nco_adj(const char *data, char *ret) {       \
+    static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {       \
         double freq;                                                           \
         uint32_t old_val;                                                      \
         uint8_t direction;                                                     \
@@ -2227,7 +2227,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 
 #define X(ch, io)                                                              \
     if (i == INT(ch))                                                          \
-        hdlr = hdlr_rx_##ch##_dsp_nco_adj;
+        hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
         CHANNELS
 #undef X
 
@@ -2252,7 +2252,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         }
 #define X(ch, io)                                                              \
     if (i == INT(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_dsp_nco_adj;
+        hdlr = hdlr_tx_##ch##_dsp_fpga_nco;
         CHANNELS
 #undef X
 
@@ -3360,7 +3360,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_nco_adj,             RW, "-15000000") \
+    DEFINE_FILE_PROP("rx/" #_c "/dsp/fpga_nco"             , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000") \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001")       \
@@ -3397,7 +3397,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/fpga_nco"             , hdlr_tx_##_c##_dsp_fpga_nco,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac0freq"         , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac1freq"         , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
