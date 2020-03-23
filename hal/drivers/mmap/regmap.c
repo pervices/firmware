@@ -146,6 +146,8 @@ static const reg_t reg_table[] = {
     {0x874 + HPS2FPGA_GPR_OFST, "txa14", 0x00000000, "RW"},
     {0x878 + HPS2FPGA_GPR_OFST, "txa15", 0x00000000, "RW"},
     {0x87c + HPS2FPGA_GPR_OFST, "txa16", 0x00000000, "RW"},
+    {0x880 + HPS2FPGA_GPR_OFST, "txa17", 0x00000000, "RW"},
+    {0x884 + HPS2FPGA_GPR_OFST, "txa18", 0x00000000, "RW"},
 
     {0x900 + HPS2FPGA_GPR_OFST, "txb0", 0x00000000, "RW"},
     {0x910 + HPS2FPGA_GPR_OFST, "txb1", 0x000000ff, "RW"},
@@ -164,6 +166,8 @@ static const reg_t reg_table[] = {
     {0x974 + HPS2FPGA_GPR_OFST, "txb14", 0x00000000, "RW"},
     {0x978 + HPS2FPGA_GPR_OFST, "txb15", 0x00000000, "RW"},
     {0x97c + HPS2FPGA_GPR_OFST, "txb16", 0x00000000, "RW"},
+    {0x980 + HPS2FPGA_GPR_OFST, "txb17", 0x00000000, "RW"},
+    {0x984 + HPS2FPGA_GPR_OFST, "txb18", 0x00000000, "RW"},
 
     {0xa00 + HPS2FPGA_GPR_OFST, "txc0", 0x00000000, "RW"},
     {0xa10 + HPS2FPGA_GPR_OFST, "txc1", 0x000000ff, "RW"},
@@ -182,6 +186,8 @@ static const reg_t reg_table[] = {
     {0xa74 + HPS2FPGA_GPR_OFST, "txc14", 0x00000000, "RW"},
     {0xa78 + HPS2FPGA_GPR_OFST, "txc15", 0x00000000, "RW"},
     {0xa7c + HPS2FPGA_GPR_OFST, "txc16", 0x00000000, "RW"},
+    {0xa80 + HPS2FPGA_GPR_OFST, "txc17", 0x00000000, "RW"},
+    {0xa84 + HPS2FPGA_GPR_OFST, "txc18", 0x00000000, "RW"},
 
     {0xb00 + HPS2FPGA_GPR_OFST, "txd0", 0x00000000, "RW"},
     {0xb10 + HPS2FPGA_GPR_OFST, "txd1", 0x000000ff, "RW"},
@@ -200,6 +206,8 @@ static const reg_t reg_table[] = {
     {0xb74 + HPS2FPGA_GPR_OFST, "txd14", 0x00000000, "RW"},
     {0xb78 + HPS2FPGA_GPR_OFST, "txd15", 0x00000000, "RW"},
     {0xb7c + HPS2FPGA_GPR_OFST, "txd16", 0x00000000, "RW"},
+    {0xb80 + HPS2FPGA_GPR_OFST, "txd17", 0x00000000, "RW"},
+    {0xb84 + HPS2FPGA_GPR_OFST, "txd18", 0x00000000, "RW"},
 
     {0xc00 + HPS2FPGA_GPR_OFST, "rxga", 0x80808080, "RW"},
     {0xc10 + HPS2FPGA_GPR_OFST, "txga", 0x80808080, "RW"},
@@ -392,6 +400,8 @@ static const reg_t reg_table[] = {
     {0x1874 + HPS2FPGA_GPR_OFST, "txe14", 0x00000000, "RW"},
     {0x1878 + HPS2FPGA_GPR_OFST, "txe15", 0x00000000, "RW"},
     {0x187c + HPS2FPGA_GPR_OFST, "txe16", 0x00000000, "RW"},
+    {0x1880 + HPS2FPGA_GPR_OFST, "txe17", 0x00000000, "RW"},
+    {0x1884 + HPS2FPGA_GPR_OFST, "txe18", 0x00000000, "RW"},
 
 
     {0x1900 + HPS2FPGA_GPR_OFST, "txf0", 0x00000000, "RW"},
@@ -411,6 +421,8 @@ static const reg_t reg_table[] = {
     {0x1974 + HPS2FPGA_GPR_OFST, "txf14", 0x00000000, "RW"},
     {0x1978 + HPS2FPGA_GPR_OFST, "txf15", 0x00000000, "RW"},
     {0x197c + HPS2FPGA_GPR_OFST, "txf16", 0x00000000, "RW"},
+    {0x1980 + HPS2FPGA_GPR_OFST, "txf17", 0x00000000, "RW"},
+    {0x1984 + HPS2FPGA_GPR_OFST, "txf18", 0x00000000, "RW"},
 
 
     {0x1a00 + HPS2FPGA_GPR_OFST, "txg0", 0x00000000, "RW"},
@@ -430,6 +442,8 @@ static const reg_t reg_table[] = {
     {0x1a74 + HPS2FPGA_GPR_OFST, "txg14", 0x00000000, "RW"},
     {0x1a78 + HPS2FPGA_GPR_OFST, "txg15", 0x00000000, "RW"},
     {0x1a7c + HPS2FPGA_GPR_OFST, "txg16", 0x00000000, "RW"},
+    {0x1a80 + HPS2FPGA_GPR_OFST, "txg17", 0x00000000, "RW"},
+    {0x1a84 + HPS2FPGA_GPR_OFST, "txg18", 0x00000000, "RW"},
 
 
     {0x1b00 + HPS2FPGA_GPR_OFST, "txh0", 0x00000000, "RW"},
@@ -449,6 +463,8 @@ static const reg_t reg_table[] = {
     {0x1b74 + HPS2FPGA_GPR_OFST, "txh14", 0x00000000, "RW"},
     {0x1b78 + HPS2FPGA_GPR_OFST, "txh15", 0x00000000, "RW"},
     {0x1b7c + HPS2FPGA_GPR_OFST, "txh16", 0x00000000, "RW"},
+    {0x1b80 + HPS2FPGA_GPR_OFST, "txh17", 0x00000000, "RW"},
+    {0x1b84 + HPS2FPGA_GPR_OFST, "txh18", 0x00000000, "RW"},
 
     {0x1c00 + HPS2FPGA_GPR_OFST, "rxge", 0x80808080, "RW"},
     {0x1c10 + HPS2FPGA_GPR_OFST, "txge", 0x80808080, "RW"},
@@ -642,6 +658,8 @@ static const reg_t reg_table[] = {
     {0x2874 + HPS2FPGA_GPR_OFST, "txi14", 0x00000000, "RW"},
     {0x2878 + HPS2FPGA_GPR_OFST, "txi15", 0x00000000, "RW"},
     {0x287c + HPS2FPGA_GPR_OFST, "txi16", 0x00000000, "RW"},
+    {0x2880 + HPS2FPGA_GPR_OFST, "txi17", 0x00000000, "RW"},
+    {0x2884 + HPS2FPGA_GPR_OFST, "txi18", 0x00000000, "RW"},
 
     {0x2900 + HPS2FPGA_GPR_OFST, "txj0", 0x00000000, "RW"},
     {0x2910 + HPS2FPGA_GPR_OFST, "txj1", 0x000000ff, "RW"},
@@ -660,6 +678,8 @@ static const reg_t reg_table[] = {
     {0x2974 + HPS2FPGA_GPR_OFST, "txj14", 0x00000000, "RW"},
     {0x2978 + HPS2FPGA_GPR_OFST, "txj15", 0x00000000, "RW"},
     {0x297c + HPS2FPGA_GPR_OFST, "txj16", 0x00000000, "RW"},
+    {0x2980 + HPS2FPGA_GPR_OFST, "txj17", 0x00000000, "RW"},
+    {0x2984 + HPS2FPGA_GPR_OFST, "txj18", 0x00000000, "RW"},
 
     {0x2a00 + HPS2FPGA_GPR_OFST, "txk0", 0x00000000, "RW"},
     {0x2a10 + HPS2FPGA_GPR_OFST, "txk1", 0x000000ff, "RW"},
@@ -678,6 +698,8 @@ static const reg_t reg_table[] = {
     {0x2a74 + HPS2FPGA_GPR_OFST, "txk14", 0x00000000, "RW"},
     {0x2a78 + HPS2FPGA_GPR_OFST, "txk15", 0x00000000, "RW"},
     {0x2a7c + HPS2FPGA_GPR_OFST, "txk16", 0x00000000, "RW"},
+    {0x2a80 + HPS2FPGA_GPR_OFST, "txk17", 0x00000000, "RW"},
+    {0x2a84 + HPS2FPGA_GPR_OFST, "txk18", 0x00000000, "RW"},
 
     {0x2b00 + HPS2FPGA_GPR_OFST, "txl0", 0x00000000, "RW"},
     {0x2b10 + HPS2FPGA_GPR_OFST, "txl1", 0x000000ff, "RW"},
@@ -696,6 +718,8 @@ static const reg_t reg_table[] = {
     {0x2b74 + HPS2FPGA_GPR_OFST, "txl14", 0x00000000, "RW"},
     {0x2b78 + HPS2FPGA_GPR_OFST, "txl15", 0x00000000, "RW"},
     {0x2b7c + HPS2FPGA_GPR_OFST, "txl16", 0x00000000, "RW"},
+    {0x2b80 + HPS2FPGA_GPR_OFST, "txl17", 0x00000000, "RW"},
+    {0x2b84 + HPS2FPGA_GPR_OFST, "txl18", 0x00000000, "RW"},
 
 
     {0x2c00 + HPS2FPGA_GPR_OFST, "rxgi", 0x80808080, "RW"},
@@ -890,6 +914,8 @@ static const reg_t reg_table[] = {
     {0x3874 + HPS2FPGA_GPR_OFST, "txm14", 0x00000000, "RW"},
     {0x3878 + HPS2FPGA_GPR_OFST, "txm15", 0x00000000, "RW"},
     {0x387c + HPS2FPGA_GPR_OFST, "txm16", 0x00000000, "RW"},
+    {0x3880 + HPS2FPGA_GPR_OFST, "txm17", 0x00000000, "RW"},
+    {0x3884 + HPS2FPGA_GPR_OFST, "txm18", 0x00000000, "RW"},
 
     {0x3900 + HPS2FPGA_GPR_OFST, "txn0", 0x00000000, "RW"},
     {0x3910 + HPS2FPGA_GPR_OFST, "txn1", 0x000000ff, "RW"},
@@ -908,6 +934,8 @@ static const reg_t reg_table[] = {
     {0x3974 + HPS2FPGA_GPR_OFST, "txn14", 0x00000000, "RW"},
     {0x3978 + HPS2FPGA_GPR_OFST, "txn15", 0x00000000, "RW"},
     {0x397c + HPS2FPGA_GPR_OFST, "txn16", 0x00000000, "RW"},
+    {0x3980 + HPS2FPGA_GPR_OFST, "txn17", 0x00000000, "RW"},
+    {0x3984 + HPS2FPGA_GPR_OFST, "txn18", 0x00000000, "RW"},
 
     {0x3a00 + HPS2FPGA_GPR_OFST, "txo0", 0x00000000, "RW"},
     {0x3a10 + HPS2FPGA_GPR_OFST, "txo1", 0x000000ff, "RW"},
@@ -926,6 +954,8 @@ static const reg_t reg_table[] = {
     {0x3a74 + HPS2FPGA_GPR_OFST, "txo14", 0x00000000, "RW"},
     {0x3a78 + HPS2FPGA_GPR_OFST, "txo15", 0x00000000, "RW"},
     {0x3a7c + HPS2FPGA_GPR_OFST, "txo16", 0x00000000, "RW"},
+    {0x3a80 + HPS2FPGA_GPR_OFST, "txo17", 0x00000000, "RW"},
+    {0x3a84 + HPS2FPGA_GPR_OFST, "txo18", 0x00000000, "RW"},
 
     {0x3b00 + HPS2FPGA_GPR_OFST, "txp0", 0x00000000, "RW"},
     {0x3b10 + HPS2FPGA_GPR_OFST, "txp1", 0x000000ff, "RW"},
@@ -944,6 +974,8 @@ static const reg_t reg_table[] = {
     {0x3b74 + HPS2FPGA_GPR_OFST, "txp14", 0x00000000, "RW"},
     {0x3b78 + HPS2FPGA_GPR_OFST, "txp15", 0x00000000, "RW"},
     {0x3b7c + HPS2FPGA_GPR_OFST, "txp16", 0x00000000, "RW"},
+    {0x3b80 + HPS2FPGA_GPR_OFST, "txp17", 0x00000000, "RW"},
+    {0x3b84 + HPS2FPGA_GPR_OFST, "txp18", 0x00000000, "RW"},
 
     {0x3c00 + HPS2FPGA_GPR_OFST, "rxgm", 0x80808080, "RW"},
     {0x3c10 + HPS2FPGA_GPR_OFST, "txgm", 0x80808080, "RW"},
