@@ -3230,6 +3230,20 @@ static int hdlr_fpga_board_led(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_rstreq_all_dsp(const char *data, char *ret) {
+    uint32_t res_rw7;
+    // assert reset
+    read_hps_reg("res_rw7", &res_rw7);
+    res_rw7 = res_rw7 | 0x80000000;
+    write_hps_reg("res_rw7", res_rw7);
+
+    // de-assert reset
+    read_hps_reg("res_rw7", &res_rw7);
+    res_rw7 = res_rw7 & (~0x80000000);
+    write_hps_reg("res_rw7", res_rw7);
+
+    return RETURN_SUCCESS;
+}
 static int hdlr_fpga_board_rstreq(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -4033,13 +4047,14 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/rstreq_all_dsp"           , hdlr_fpga_board_rstreq_all_dsp,         WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20")                \
     DEFINE_FILE_PROP("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "1250000000")        \
+    DEFINE_FILE_PROP("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "5000000000")        \
     DEFINE_FILE_PROP("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2")        \
     DEFINE_FILE_PROP("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00") \
     DEFINE_FILE_PROP("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0")                 \
