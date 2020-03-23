@@ -1124,7 +1124,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \                                                                           \
+                                                                               \
     static int hdlr_tx_##ch##_dsp_ch0fpga_nco(const char *data, char *ret) {   \
         double freq;                                                           \
         uint32_t old_val;                                                      \
@@ -1304,52 +1304,41 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {         \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
     static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
+        write_hps_reg("tx" STR(ch) "15", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
+        write_hps_reg("tx" STR(ch) "16", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch2port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
+        /* CH2 CURRENTLY UNSUPPORTED */                                        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
+        write_hps_reg("tx" STR(ch) "17", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
+        write_hps_reg("tx" STR(ch) "18", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch5port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
+        /* CH5 CURRENTLY UNSUPPORTED */                                         \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2662,7 +2651,12 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         }
 #define X(ch, io)                                                              \
     if (i == INT(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_dsp_fpga_nco;
+        hdlr = hdlr_tx_##ch##_dsp_ch0fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch1fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch2fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch3fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch4fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch5fpga_nco;                                 \
         CHANNELS
 #undef X
 
@@ -3882,7 +3876,6 @@ GPIO_PINS
     //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5uflow"              , hdlr_tx_##_c##_qa_ch5uflow,             RW, "0")         \
     //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch2fpga_nco"          , hdlr_tx_##_c##_dsp_ch2fpga_nco,         RW, "0")         \
     //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch5fpga_nco"          , hdlr_tx_##_c##_dsp_ch5fpga_nco,         RW, "0")         \
-    //DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0")         \
     //DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
     //DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
     //DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
