@@ -1412,6 +1412,72 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
                                                                                \
     /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch1fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch2fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch3fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch4fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch5fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
        DOES NOT PORT WELL.                                                     \
        flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {          \
@@ -3591,6 +3657,12 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa")      \
     DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch4fifo_lvl"           , hdlr_tx_##_c##_qa_ch4fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5fifo_lvl"           , hdlr_tx_##_c##_qa_ch5fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0")         \
