@@ -1158,6 +1158,205 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_dsp_ch0fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        write_hps_reg("tx" STR(ch) "4",                                        \
+                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch1fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        write_hps_reg("tx" STR(ch) "4",                                        \
+                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch2fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        write_hps_reg("tx" STR(ch) "4",                                        \
+                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch3fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        write_hps_reg("tx" STR(ch) "4",                                        \
+                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch4fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        write_hps_reg("tx" STR(ch) "4",                                        \
+                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch5fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        write_hps_reg("tx" STR(ch) "4",                                        \
+                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
         read_hps_reg("tx" STR(ch) "4", &old_val);                              \
@@ -3398,6 +3597,12 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/fpga_nco"             , hdlr_tx_##_c##_dsp_fpga_nco,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch0fpga_nco"          , hdlr_tx_##_c##_dsp_ch0fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch1fpga_nco"          , hdlr_tx_##_c##_dsp_ch1fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch2fpga_nco"          , hdlr_tx_##_c##_dsp_ch2fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch3fpga_nco"          , hdlr_tx_##_c##_dsp_ch3fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch4fpga_nco"          , hdlr_tx_##_c##_dsp_ch4fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch5fpga_nco"          , hdlr_tx_##_c##_dsp_ch5fpga_nco,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac0freq"         , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac1freq"         , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
