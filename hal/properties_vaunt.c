@@ -957,8 +957,13 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
         /* Group every four channels into the same QSFP port */                \
-        /* NOTE: This is strictly for tate */                                  \
-        char channel = (INT(ch)/4)+'a';                                        \
+        char channel = 'a';                                                    \
+        if ( (INT(ch) == 0) || (INT(ch) == 2) ) {                              \
+            char channel = 'a';                                                \
+        } else if ( (INT(ch) == 1) || (INT(ch) == 3) ) {                       \
+            char channel = 'b';                                                \
+        }                                                                      \
+                                                                               \
         sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1428,6 +1433,15 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
+        /* Group every four channels into the same QSFP port */                \
+        char channel = 'a';                                                    \
+        if ( (INT(ch) == 0) || (INT(ch) == 2) ) {                              \
+            char channel = 'a';                                                \
+        } else if ( (INT(ch) == 1) || (INT(ch) == 3) ) {                       \
+            char channel = 'b';                                                \
+        }                                                                      \
+                                                                               \
+        sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
