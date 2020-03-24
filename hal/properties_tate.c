@@ -4058,15 +4058,12 @@ void patch_tree(void) {
     CHANNELS
 #undef X
 
-#define X(ch, io)                                                              \
-    set_default_int("tx/" #ch "/link/ch0port",                                 \
-                    base_port + INT(ch)*4 + 0 + NUM_CHANNELS);                 \
-    set_default_int("tx/" #ch "/link/ch1port",                                 \
-                    base_port + INT(ch)*4 + 1 + NUM_CHANNELS);                 \
-    set_default_int("tx/" #ch "/link/ch3port",                                 \
-                    base_port + INT(ch)*4 + 2 + NUM_CHANNELS);                 \
-    set_default_int("tx/" #ch "/link/ch4port",                                 \
-                    base_port + INT(ch)*4 + 3 + NUM_CHANNELS);                 \
+#define X(ch, io)                                                                                       \
+    set_default_int("tx/" #ch "/link/ch0port", base_port + INT(ch)*4 + 0 + NUM_CHANNELS);               \
+    set_default_int("tx/" #ch "/link/ch1port", base_port + INT(ch)*4 + 1 + NUM_CHANNELS);               \
+    set_default_int("tx/" #ch "/link/ch3port", base_port + INT(ch)*4 + 2 + NUM_CHANNELS);               \
+    set_default_int("tx/" #ch "/link/ch4port", base_port + INT(ch)*4 + 3 + NUM_CHANNELS);
+
     CHANNELS
 #undef X
 }
