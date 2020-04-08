@@ -40,7 +40,7 @@
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   200000000.0  //After base rate
-#define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling
+#define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
     ((double)10.73741824)
@@ -1098,8 +1098,9 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         int shift = (channel%4)*8;                                             \
         char reg_name[5];                                                      \
         sprintf(reg_name, "txg%c", reg);                                       \
-                                                                               \
-        if (resamp_err < base_err) {                                           \
+      /* Disable resampler configuration by setting following to false */      \
+      /*  if (resamp_err < base_err) {                                  */     \
+        if ( false ) {                                                         \
             write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val | (1 << 15));              \
