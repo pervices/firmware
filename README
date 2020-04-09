@@ -16,8 +16,8 @@ firmware from an x86_64 host to the arm computer.
 
    sh autogen.sh
 
-   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
-   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
+   CXX="/usr/bin/arm-unknown-linux-gnueabihf-g++" \
+   CC="/usr/bin/arm-unknown-linux-gnueabihf-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
    CPPFLAGS="" \
@@ -40,8 +40,7 @@ firmware from an x86_64 host to the arm computer.
    CPPFLAGS="" \
    CXXFLAGS="" \
         ./configure --prefix=/usr --host=x86_64
-
-   make
+make
 
 2. Specifying Build Variant Target
 
@@ -80,10 +79,11 @@ It's likely that your default system toolchain will not immediately support the
 target arm host. If that's the case, you can choose to directly specify the
 compiler using the CC and CXX flags.
 
-For the internal PV machines, we use;
+For the internal PV machines, we require the use of the "arm-linux-gnueabihf-gcc" 
+toolchain, to target crimson, and we use the linaro gcc for cyan.
 
-   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++"
-   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc"
+   CXX="/usr/bin/arm-unknown-linux-gnueabihf-g++"
+   CC="/usr/bin/arm-unknown-linux-gnueabihf-gcc"
 
 3b. Compiling on the Device
 
@@ -105,6 +105,9 @@ as follows;
    CXXFLAGS="" \
         ./configure --prefix=/usr
 
+   make
+
+4. Compile Optimizations
    make
 
 4. Compile Optimizations
