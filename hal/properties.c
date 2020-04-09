@@ -33,6 +33,9 @@
 
 #include "channels.h"
 
+#define BASE_DIR "/var/volatile/crimson/"
+#define STATE_DIR "/var/volatile/crimson/state/"
+
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
 #define RESAMP_SAMPLE_RATE 260000000.0
