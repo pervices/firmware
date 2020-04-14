@@ -40,7 +40,7 @@
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   200000000.0  //After base rate
-#define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling
+#define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
     ((double)10.73741824)
@@ -982,6 +982,11 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
+        /* TODO: */                                                            \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         int gain;                                                              \
         sscanf(data, "%i", &gain);                                             \
@@ -1093,8 +1098,9 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         int shift = (channel%4)*8;                                             \
         char reg_name[5];                                                      \
         sprintf(reg_name, "txg%c", reg);                                       \
-                                                                               \
-        if (resamp_err < base_err) {                                           \
+      /* Disable resampler configuration by setting following to false */      \
+      /*  if (resamp_err < base_err) {                                  */     \
+        if ( false ) {                                                         \
             write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val | (1 << 15));              \
@@ -1120,7 +1126,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dsp_nco_adj(const char *data, char *ret) {       \
+    static int hdlr_tx_##ch##_dsp_ch0fpga_nco(const char *data, char *ret) {   \
         double freq;                                                           \
         uint32_t old_val;                                                      \
         uint8_t direction;                                                     \
@@ -1139,7 +1145,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
+        write_hps_reg("tx" STR(ch) "10", nco_steps);                           \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -1147,9 +1153,119 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
-        write_hps_reg("tx" STR(ch) "4",                                        \
-                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
+        write_hps_reg("tx" STR(ch) "14",                                       \
+                      (old_val & ~(0x1 << 0)) | (direction << 0));             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch1fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "11", nco_steps);                           \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
+        write_hps_reg("tx" STR(ch) "14",                                       \
+                      (old_val & ~(0x1 << 1)) | (direction << 1));             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch2fpga_nco(const char *data, char *ret) {   \
+        /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch3fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "12", nco_steps);                           \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
+        write_hps_reg("tx" STR(ch) "14",                                       \
+                      (old_val & ~(0x1 << 2)) | (direction << 2));             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch4fpga_nco(const char *data, char *ret) {   \
+        double freq;                                                           \
+        uint32_t old_val;                                                      \
+        uint8_t direction;                                                     \
+                                                                               \
+        /* check for a minus or plus sign at the front */                      \
+        if (data[0] == '-') {                                                  \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 1;                                                     \
+        } else if (data[0] == '+') {                                           \
+            sscanf(data + 1, "%lf", &freq);                                    \
+            direction = 0;                                                     \
+        } else {                                                               \
+            sscanf(data, "%lf", &freq);                                        \
+            direction = 0;                                                     \
+        }                                                                      \
+                                                                               \
+        /* write NCO adj */                                                    \
+        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        write_hps_reg("tx" STR(ch) "13", nco_steps);                           \
+        if (direction > 0) {                                                   \
+            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+        } else {                                                               \
+            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+        }                                                                      \
+                                                                               \
+        /* write direction */                                                  \
+        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
+        write_hps_reg("tx" STR(ch) "14",                                       \
+                      (old_val & ~(0x1 << 4)) | (direction << 4));             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+                                                                               \
+    static int hdlr_tx_##ch##_dsp_ch5fpga_nco(const char *data, char *ret) {   \
+        /* CH5 CURRENTLY UNSUPPORTED */                                        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1189,10 +1305,41 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {         \
+    static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "5", port);                                 \
+        write_hps_reg("tx" STR(ch) "15", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg("tx" STR(ch) "16", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_link_ch2port(const char *data, char *ret) {      \
+        /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg("tx" STR(ch) "17", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg("tx" STR(ch) "18", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_link_ch5port(const char *data, char *ret) {      \
+        /* CH5 CURRENTLY UNSUPPORTED */                                         \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1200,6 +1347,72 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
      * DOES NOT PORT WELL.                                                     \
      * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {       \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch1fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch2fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch3fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch4fifo_lvl(const char *data, char *ret) {    \
+        uint32_t lvl;                                                          \
+        read_hps_reg("res_ro4", &lvl);                                         \
+        lvl &= 0xffff;                                                         \
+        sprintf(ret, "%u", lvl);                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * r04 uses different offsets for channels starting at index 4? */         \
+    static int hdlr_tx_##ch##_qa_ch5fifo_lvl(const char *data, char *ret) {    \
         uint32_t lvl;                                                          \
         read_hps_reg("res_ro4", &lvl);                                         \
         lvl &= 0xffff;                                                         \
@@ -1224,9 +1437,201 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
                                                                                \
     /* XXX:                                                                    \
+       DOES NOT PORT WELL.                                                     \
+       flc14 uses different offsets for chanenls starting at index 14? */      \
+    static int hdlr_tx_##ch##_qa_ch0oflow(const char *data, char *ret) {       \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+14;                     \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+       DOES NOT PORT WELL.                                                     \
+       flc14 uses different offsets for chanenls starting at index 14? */      \
+    static int hdlr_tx_##ch##_qa_ch1oflow(const char *data, char *ret) {       \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+14;                     \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+       DOES NOT PORT WELL.                                                     \
+       flc14 uses different offsets for chanenls starting at index 14? */      \
+    static int hdlr_tx_##ch##_qa_ch2oflow(const char *data, char *ret) {       \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+14;                     \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+       DOES NOT PORT WELL.                                                     \
+       flc14 uses different offsets for chanenls starting at index 14? */      \
+    static int hdlr_tx_##ch##_qa_ch3oflow(const char *data, char *ret) {       \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+14;                     \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+       DOES NOT PORT WELL.                                                     \
+       flc14 uses different offsets for chanenls starting at index 14? */      \
+    static int hdlr_tx_##ch##_qa_ch4oflow(const char *data, char *ret) {       \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+14;                     \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+       DOES NOT PORT WELL.                                                     \
+       flc14 uses different offsets for chanenls starting at index 14? */      \
+    static int hdlr_tx_##ch##_qa_ch5oflow(const char *data, char *ret) {       \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+14;                     \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
      * DOES NOT PORT WELL.                                                     \
      * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+6;                      \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * flc6 uses different offsets for channels starting at index 6? */        \
+    static int hdlr_tx_##ch##_qa_ch0uflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+6;                      \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * flc6 uses different offsets for channels starting at index 6? */        \
+    static int hdlr_tx_##ch##_qa_ch1uflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+6;                      \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * flc6 uses different offsets for channels starting at index 6? */        \
+    static int hdlr_tx_##ch##_qa_ch2uflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+6;                      \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * flc6 uses different offsets for channels starting at index 6? */        \
+    static int hdlr_tx_##ch##_qa_ch3uflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+6;                      \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * flc6 uses different offsets for channels starting at index 6? */        \
+    static int hdlr_tx_##ch##_qa_ch4uflow(const char *data, char *ret) {          \
+        int flc_reg_num;                                                       \
+        char flc_reg[8];                                                       \
+        uint32_t count;                                                        \
+        /* this is technically a 64-bit register, but we currently only need   \
+         * the bottom 32-bits */                                               \
+        flc_reg_num = ((INT(ch)/4)*38)+((INT(ch)%4)*2)+6;                      \
+        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
+        read_hps_reg(flc_reg, &count);                                         \
+        sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* XXX:                                                                    \
+     * DOES NOT PORT WELL.                                                     \
+     * flc6 uses different offsets for channels starting at index 6? */        \
+    static int hdlr_tx_##ch##_qa_ch5uflow(const char *data, char *ret) {          \
         int flc_reg_num;                                                       \
         char flc_reg[8];                                                       \
         uint32_t count;                                                        \
@@ -1611,7 +2016,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_dsp_nco_adj(const char *data, char *ret) {       \
+    static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {       \
         double freq;                                                           \
         uint32_t old_val;                                                      \
         uint8_t direction;                                                     \
@@ -2222,7 +2627,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 
 #define X(ch, io)                                                              \
     if (i == INT(ch))                                                          \
-        hdlr = hdlr_rx_##ch##_dsp_nco_adj;
+        hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
         CHANNELS
 #undef X
 
@@ -2247,7 +2652,12 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         }
 #define X(ch, io)                                                              \
     if (i == INT(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_dsp_nco_adj;
+        hdlr = hdlr_tx_##ch##_dsp_ch0fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch1fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch2fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch3fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch4fpga_nco;                                 \
+        hdlr = hdlr_tx_##ch##_dsp_ch5fpga_nco;                                 \
         CHANNELS
 #undef X
 
@@ -2726,6 +3136,20 @@ static int hdlr_fpga_board_led(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_board_rstreq_all_dsp(const char *data, char *ret) {
+    uint32_t res_rw7;
+    // assert reset
+    read_hps_reg("res_rw7", &res_rw7);
+    res_rw7 = res_rw7 | 0x80000000;
+    write_hps_reg("res_rw7", res_rw7);
+
+    // de-assert reset
+    read_hps_reg("res_rw7", &res_rw7);
+    res_rw7 = res_rw7 & (~0x80000000);
+    write_hps_reg("res_rw7", res_rw7);
+
+    return RETURN_SUCCESS;
+}
 static int hdlr_fpga_board_rstreq(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -3355,7 +3779,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_nco_adj,             RW, "-15000000") \
+    DEFINE_FILE_PROP("rx/" #_c "/dsp/fpga_nco"             , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000") \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001")       \
@@ -3385,31 +3809,47 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output")    \
     DEFINE_FILE_PROP("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa")      \
-    DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/link/ch0port"             , hdlr_tx_##_c##_link_ch0port,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch4fifo_lvl"           , hdlr_tx_##_c##_qa_ch4fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch0oflow"              , hdlr_tx_##_c##_qa_ch0oflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch1oflow"              , hdlr_tx_##_c##_qa_ch1oflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch3oflow"              , hdlr_tx_##_c##_qa_ch3oflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch4oflow"              , hdlr_tx_##_c##_qa_ch4oflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch0uflow"              , hdlr_tx_##_c##_qa_ch0uflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch1uflow"              , hdlr_tx_##_c##_qa_ch1uflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch3uflow"              , hdlr_tx_##_c##_qa_ch3uflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/ch4uflow"              , hdlr_tx_##_c##_qa_ch4uflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch0fpga_nco"          , hdlr_tx_##_c##_dsp_ch0fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch1fpga_nco"          , hdlr_tx_##_c##_dsp_ch1fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch3fpga_nco"          , hdlr_tx_##_c##_dsp_ch3fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch4fpga_nco"          , hdlr_tx_##_c##_dsp_ch4fpga_nco,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac0freq"         , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac1freq"         , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch0freq"          , hdlr_tx_##_c##_dac_nco_ch0freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch1freq"          , hdlr_tx_##_c##_dac_nco_ch1freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch2freq"          , hdlr_tx_##_c##_dac_nco_ch2freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch3freq"          , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch4freq"          , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch5freq"          , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch0atten"        , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch1atten"        , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch2atten"        , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch3atten"        , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch4atten"        , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch5atten"        , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac0freq"      , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac1freq"      , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch0freq"       , hdlr_tx_##_c##_dac_nco_ch0freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch1freq"       , hdlr_tx_##_c##_dac_nco_ch1freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch2freq"       , hdlr_tx_##_c##_dac_nco_ch2freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch3freq"       , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch4freq"       , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch5freq"       , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch0atten"     , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch1atten"     , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch2atten"     , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch3atten"     , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch4atten"     , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch5atten"     , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/atten"		   , hdlr_tx_##_c##_rf_atten,		     RW, "31")
+    DEFINE_FILE_PROP("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31")        \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")        
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
@@ -3427,6 +3867,19 @@ GPIO_PINS
 //    DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
 //    DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
 //    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     \
+    //    DEFINE_FILE_PROP("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5fifo_lvl"           , hdlr_tx_##_c##_qa_ch5fifo_lvl,          RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2oflow"              , hdlr_tx_##_c##_qa_ch2oflow,             RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5oflow"              , hdlr_tx_##_c##_qa_ch5oflow,             RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2uflow"              , hdlr_tx_##_c##_qa_ch2uflow,             RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5uflow"              , hdlr_tx_##_c##_qa_ch5uflow,             RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch2fpga_nco"          , hdlr_tx_##_c##_dsp_ch2fpga_nco,         RW, "0")         \
+    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch5fpga_nco"          , hdlr_tx_##_c##_dsp_ch5fpga_nco,         RW, "0")         \
+    //DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
+    //DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
+    //DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
@@ -3498,13 +3951,14 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
+    DEFINE_FILE_PROP("fpga/board/rstreq_all_dsp"           , hdlr_fpga_board_rstreq_all_dsp,         WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20")                \
     DEFINE_FILE_PROP("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "1250000000")        \
+    DEFINE_FILE_PROP("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "5000000000")        \
     DEFINE_FILE_PROP("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2")        \
     DEFINE_FILE_PROP("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00") \
     DEFINE_FILE_PROP("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0")                 \
@@ -3605,14 +4059,12 @@ void patch_tree(void) {
     CHANNELS
 #undef X
 
-#define X(ch, io)                                                              \
-    set_default_int("tx/" #ch "/link/port",                                    \
-                    base_port + INT(ch) + NUM_CHANNELS);                       \
-    set_default_int("tx/" #ch "/qa/fifo_lvl",                                  \
-                    base_port + INT(ch) + NUM_CHANNELS);                       \
-    set_default_int("tx/" #ch "/qa/oflow",                                     \
-                    base_port + INT(ch) + NUM_CHANNELS);                       \
-    set_default_int("tx/" #ch "/qa/uflow", base_port + INT(ch) + NUM_CHANNELS);
+#define X(ch, io)                                                                                       \
+    set_default_int("tx/" #ch "/link/ch0port", base_port + INT(ch)*4 + 0 + NUM_CHANNELS);               \
+    set_default_int("tx/" #ch "/link/ch1port", base_port + INT(ch)*4 + 1 + NUM_CHANNELS);               \
+    set_default_int("tx/" #ch "/link/ch3port", base_port + INT(ch)*4 + 2 + NUM_CHANNELS);               \
+    set_default_int("tx/" #ch "/link/ch4port", base_port + INT(ch)*4 + 3 + NUM_CHANNELS);
+
     CHANNELS
 #undef X
 }

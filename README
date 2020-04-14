@@ -75,11 +75,11 @@ compiler using the CC and CXX flags.
 
 For the internal PV machines that haven't been configured with the new toolchain;
 
-   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++"
-   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc"
+   CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
+   CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
 
-Otherwise, follow the instructions above.
-
+And then add the CFLAGS and instructions appropriate for either crimson or cyan.
+   
 3. Compile Optimizations
 
 To further optimize the design for either Crimson or Cyan, you can also specify

@@ -225,7 +225,7 @@ static void build_tree(void) {
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
         prop = get_prop(i);
-        PRINT(INFO, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
+        // PRINT(INFO, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
         make_prop(prop);
         if (PROP_TYPE_SYMLINK != prop->type) {
             add_prop_to_inotify(prop);
@@ -343,7 +343,7 @@ void check_property_inotifies(void) {
 
     ssize_t i = 0;
     while (i < len) {
-        printf("%d / %d \n", i, len);
+        // printf("%d / %d \n", i, len);
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
@@ -369,7 +369,7 @@ void check_property_inotifies(void) {
             prop->handler(prop_data, prop_ret);
             const int t1 = time_it();
 
-            PRINT(INFO, "%s :: %s -> %s :: %d\n", path, prop_data, prop_ret, t1 - t0);
+            // PRINT(INFO, "%s :: %s -> %s :: %d\n", path, prop_data, prop_ret, t1 - t0);
 
             if (prop->permissions == RO) {
                 memset(prop_ret, 0, sizeof(prop_ret));
