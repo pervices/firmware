@@ -406,7 +406,6 @@ static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
 }
 
 static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
-    puts("here");
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 6 : 9);
