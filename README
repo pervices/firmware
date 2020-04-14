@@ -26,22 +26,20 @@ which is available on yaourt.
 
 1.a.ii Cyan Optimized Compile Commands
 
+   # When compiling cyan, use the master-testing branch.
    sed -i 's/DVAUNT/DTATE/g' configure.ac
 
    sh autogen.sh
 
-   CXX="/usr/bin/arm-linux-gnueabihf-g++" \
-   CC="/usr/bin/arm-linux-gnueabihf-gcc" \
+   CXX="/usr/bin/arm-linux-gnueabi-g++" \
+   CC="/usr/bin/arm-linux-gnueabi-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
-    ./configure --prefix=/usr --host=arm-linux-gnueabihf
-
-   alternatively build using the Linaro toolchain on an x86_64 machine (must
-     include linaro binary location in your PATH env variable):
-
-   CXX="aarch64-linux-gnu-g++" CC="aarch64-linux-gnu-gcc" CFLAGS="-Wall -g -O3 -pipe -fomit-frame-pointer -Wall" ./configure --host=x86_64
-
-   make
+   CPPFLAGS="" \
+   CXXFLAGS="" \
+        ./configure --prefix=/usr --host=x86_64
+    
+    make
 
 2. Specifying Build Variant Target
 
