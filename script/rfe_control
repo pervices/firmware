@@ -39,7 +39,7 @@ proc check_inputs { board_number board_state } {
 #####################
 # Main Function     #
 #####################
-if {$::argv0 eq [info script]} {    
+if {$::argv0 eq [info script]} {
     set board_number 0
     set board_state off
 
@@ -58,31 +58,26 @@ if {$::argv0 eq [info script]} {
     
     }
 
-    if { $board_number >= 12 } {
+    set gpio_chip_label_pwr_en "pb_pwr"
+    set gpio_chip_label_board_good "bp_bg"
 
-        set gpio_chip_label "pca9539"
-        set gpio_chip_number 0
-        set en_gpio_pin_number [expr {$board_number-5}]
-        set en_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $en_gpio_pin_number]
-        if { [string equal $board_state "on"] } {
-            gpio_out $en_gpio_file $::GPIO_WRITE_HIGH
-        } elseif { [string equal $board_state "off"] } {
-            set_gpio_direction $en_gpio_file "low"
-            gpio_out $en_gpio_file $::GPIO_WRITE_LOW
-        }
-        exit
-    }
+    # The rfe control signals are not mapped one-to-one to the PCA9539 GPIO pins, therefore
+    # the following table is used to correctly map an rfe control to it's GPIO pin.
+    # For more information, see the backplane's schematic.
+    set board_to_gpio_map_pwr_en [list 2 1 0 14 3 4 5 6 8 12 7 13 11 9 10 15]
+    set board_to_gpio_map_board_good [list 6 7 8 15 5 4 3 2 10 14 1 12 11 0 13 9]
 
-    set gpio_chip_label "MAX14830"
-    set gpio_chip_number [expr {$board_number/4} ]
     # GPIO pin number that connects to Enable signal for this board
-    set en_gpio_pin_number [expr {(($board_number%4)*4)+2}]
+    set gpio_chip_number_pwr_en 0
+    set en_gpio_pin_number [lindex $board_to_gpio_map_pwr_en $board_number]
+
     # GPIO pin number that connects to BoardGood signal for this board
-    set bg_gpio_pin_number [expr {(($board_number%4)*4)+3}]
+    set gpio_chip_number_board_good 0
+    set bg_gpio_pin_number [lindex $board_to_gpio_map_board_good $board_number]
 
     # Run main gpio code
-    set en_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $en_gpio_pin_number]
-    set bg_gpio_file [get_gpio_file $gpio_chip_label $gpio_chip_number $bg_gpio_pin_number]
+    set en_gpio_file [get_gpio_file $gpio_chip_label_pwr_en $gpio_chip_number_pwr_en $en_gpio_pin_number]
+    set bg_gpio_file [get_gpio_file $gpio_chip_label_board_good $gpio_chip_number_board_good $bg_gpio_pin_number]
 
     set board_good [gpio_in $bg_gpio_file]
 

@@ -32,6 +32,7 @@
     #include <stdbool.h>
     #include <stdio.h>
     #include <string.h>
+    #include <math.h>
 #endif
 
 #include "channels.h"
@@ -576,20 +577,324 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 /* -------------------------------------------------------------------------- */
 
 #define X(ch, io)                                                              \
-    static int hdlr_tx_##ch##_rf_dac_nco(const char *data, char *ret) {        \
+    static int hdlr_tx_##ch##_dac_nco_dac0freq(const char *data, char *ret) {  \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
-        uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);            \
-        sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);                \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
                                                                                \
-        strcpy(buf, "dac -c " STR(ch) " -e 0 -n ");                            \
-        sprintf(buf + strlen(buf), "%" PRIu32 "",                              \
-                (uint32_t)(nco_steps >> 32));                                  \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t d -n 0 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_dac1freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t d -n 1 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 0 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 1 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 2 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 3 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 4 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                                                                                                              \
+    static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {  \
+        double freq;                                                           \
+        sscanf(data, "%lf", &freq);                                            \
+        uint32_t freq_hz = 0;                                                  \
+        uint32_t freq_mhz = 0;                                                 \
+                                                                               \
+        /* split the frequency into MHz + Hz */                                \
+        if (freq < 1000000){                                                   \
+            freq_hz = freq;                                                    \
+        }                                                                      \
+        else {                                                                 \
+            freq_mhz = (uint32_t)(freq / 1000000);                             \
+            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+        }                                                                      \
+                                                                               \
+        strcpy(buf, "nco -t c -n 5 -h ");                                      \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
+        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
+        strcat(buf, " -s\r");                                                  \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_gain_ch0atten(const char *data, char *ret) { \
+        double atten;                                                          \
+        sscanf(data, "%lf", &atten);                                           \
+        uint32_t gaincode = 0;                                                 \
+                                                                               \
+        /* limit min atten (max gain) */                                       \
+        if (atten < -6.018 ) {                                                 \
+            atten = -6.018;                                                    \
+        }                                                                      \
+                                                                               \
+        /* convert from atten (dB) to gain code (dac register) */              \
+        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
+                                                                               \
+        /* send uart command */                                                \
+        strcpy(buf, "dac -c 0 -g ");                                           \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
-        strcpy(buf, "dac -o ");                                                \
-        sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_gain_ch1atten(const char *data, char *ret) { \
+        double atten;                                                          \
+        sscanf(data, "%lf", &atten);                                           \
+        uint32_t gaincode = 0;                                                 \
+                                                                               \
+        /* limit min atten (max gain) */                                       \
+        if (atten < -6.018 ) {                                                 \
+            atten = -6.018;                                                    \
+        }                                                                      \
+                                                                               \
+        /* convert from atten (dB) to gain code (dac register) */              \
+        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
+                                                                               \
+        /* send uart command */                                                \
+        strcpy(buf, "dac -c 1 -g ");                                           \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
+        strcat(buf, "\r");                                                     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_gain_ch2atten(const char *data, char *ret) { \
+        double atten;                                                          \
+        sscanf(data, "%lf", &atten);                                           \
+        uint32_t gaincode = 0;                                                 \
+                                                                               \
+        /* limit min atten (max gain) */                                       \
+        if (atten < -6.018 ) {                                                 \
+            atten = -6.018;                                                    \
+        }                                                                      \
+                                                                               \
+        /* convert from atten (dB) to gain code (dac register) */              \
+        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
+                                                                               \
+        /* send uart command */                                                \
+        strcpy(buf, "dac -c 2 -g ");                                           \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
+        strcat(buf, "\r");                                                     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_gain_ch3atten(const char *data, char *ret) { \
+        double atten;                                                          \
+        sscanf(data, "%lf", &atten);                                           \
+        uint32_t gaincode = 0;                                                 \
+                                                                               \
+        /* limit min atten (max gain) */                                       \
+        if (atten < -6.018 ) {                                                 \
+            atten = -6.018;                                                    \
+        }                                                                      \
+                                                                               \
+        /* convert from atten (dB) to gain code (dac register) */              \
+        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
+                                                                               \
+        /* send uart command */                                                \
+        strcpy(buf, "dac -c 3 -g ");                                           \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
+        strcat(buf, "\r");                                                     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_gain_ch4atten(const char *data, char *ret) { \
+        double atten;                                                          \
+        sscanf(data, "%lf", &atten);                                           \
+        uint32_t gaincode = 0;                                                 \
+                                                                               \
+        /* limit min atten (max gain) */                                       \
+        if (atten < -6.018 ) {                                                 \
+            atten = -6.018;                                                    \
+        }                                                                      \
+                                                                               \
+        /* convert from atten (dB) to gain code (dac register) */              \
+        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
+                                                                               \
+        /* send uart command */                                                \
+        strcpy(buf, "dac -c 4 -g ");                                           \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
+        strcat(buf, "\r");                                                     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_gain_ch5atten(const char *data, char *ret) { \
+        double atten;                                                          \
+        sscanf(data, "%lf", &atten);                                           \
+        uint32_t gaincode = 0;                                                 \
+                                                                               \
+        /* limit min atten (max gain) */                                       \
+        if (atten < -6.018 ) {                                                 \
+            atten = -6.018;                                                    \
+        }                                                                      \
+                                                                               \
+        /* convert from atten (dB) to gain code (dac register) */              \
+        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
+                                                                               \
+        /* send uart command */                                                \
+        strcpy(buf, "dac -c 5 -g ");                                           \
+        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
@@ -661,10 +966,18 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        strcpy(buf, "rf -c " STR(ch) " -b ");                                  \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
+    static int hdlr_tx_##ch##_rf_band(const char *data, char *ret) {           \
+        /* if the setting is a valid band, send to tx board*/                  \
+        int band;                                                              \
+        sscanf(data, "%i", &band);                                             \
+        if ((band == 0) || (band == 1) || (band == 9)) {                       \
+            strcpy(buf, "rf -b ");                                             \
+            sprintf(buf + strlen(buf),"%i", band);                             \
+            strcat(buf, "\r");                                                 \
+        }                                                                      \
+        else {  /* otherwise mute the tx board */                              \
+            strcpy(buf, "rf -z\r");                                            \
+        }                                                                      \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -688,6 +1001,17 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+										\
+    static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
+	    uint16_t atten;							\
+	    sscanf(data, "%u", &atten);						\
+	    strcpy(buf, "rf -a ");						\
+	    sprintf(buf + strlen(buf),"%u", atten);				\
+	    strcat(buf, "\r");							\
+	    ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));		\
+										\
+	    return RETURN_SUCCESS;						\
+    }										\
                                                                                \
     static int hdlr_tx_##ch##_rf_board_dump(const char *data, char *ret) {     \
         /* send the uart commands and read back the output and write to file   \
@@ -3069,11 +3393,26 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac0freq"         , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/dac1freq"         , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch0freq"          , hdlr_tx_##_c##_dac_nco_ch0freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch1freq"          , hdlr_tx_##_c##_dac_nco_ch1freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch2freq"          , hdlr_tx_##_c##_dac_nco_ch2freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch3freq"          , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch4freq"          , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/nco/ch5freq"          , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch0atten"        , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch1atten"        , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch2atten"        , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch3atten"        , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch4atten"        , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dac/gain/ch5atten"        , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/atten"		   , hdlr_tx_##_c##_rf_atten,		     RW, "31")
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/band"             , hdlr_tx_##_c##_rf_freq_band,            RW, "1")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \

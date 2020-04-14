@@ -20,7 +20,7 @@ which is available on yaourt.
    CC="/usr/bin/arm-linux-gnueabihf-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-        ./configure --prefix=/usr --host=arm-linux-gnueabihf
+        ./configure --prefix=/usr --host=x86_64
 
    make
 
@@ -30,18 +30,13 @@ which is available on yaourt.
 
    sh autogen.sh
 
-   CXX="/usr/bin/arm-linux-gnueabihf-g++" \
-   CC="/usr/bin/arm-linux-gnueabihf-gcc" \
+   CXX="aarch64-linux-gnu-g++" \
+   CC="aarch64-linux-gnu-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-        -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
-    ./configure --prefix=/usr --host=arm-linux-gnueabihf
+        -march=armv8-a -mtune=cortex-a53 " \
+    ./configure --prefix=/usr --host=x86_64
 
-   alternatively build using the Linaro toolchain on an x86_64 machine (must
-     include linaro binary location in your PATH env variable):
-
-   CXX="aarch64-linux-gnu-g++" CC="aarch64-linux-gnu-gcc" CFLAGS="-Wall -g -O3 -pipe -fomit-frame-pointer -Wall" ./configure --host=x86_64
-
-   make
+   make -j9
 
 2. Specifying Build Variant Target
 
