@@ -40,7 +40,8 @@ firmware from an x86_64 host to the arm computer.
    CPPFLAGS="" \
    CXXFLAGS="" \
         ./configure --prefix=/usr --host=x86_64
-make
+    
+    make
 
 2. Specifying Build Variant Target
 
@@ -105,9 +106,6 @@ as follows;
    CXXFLAGS="" \
         ./configure --prefix=/usr
 
-   make
-
-4. Compile Optimizations
    make
 
 4. Compile Optimizations
