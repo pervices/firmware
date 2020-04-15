@@ -1259,7 +1259,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /* write direction */                                                  \
         read_hps_reg("tx" STR(ch) "14", &old_val);                             \
         write_hps_reg("tx" STR(ch) "14",                                       \
-                      (old_val & ~(0x1 << 4)) | (direction << 4));             \
+                      (old_val & ~(0x1 << 3)) | (direction << 3));             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
