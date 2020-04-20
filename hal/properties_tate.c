@@ -3660,6 +3660,50 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_reset(const char *data, char *ret) {
+    /* The reset controllet is like a waterfall:
+     * Global Reset -> 40G Reset -> JESD Reset -> DSP Reset
+     * Whichever Reset step we begin on will be followed by the others.
+     * Reset is initiated by setting one bit high in the res_rw7 register
+     * Global Reset    res_rw7[30]      Triggered by writing 1 to state tree
+     * 40G Reset       res_rw7[29]      write 2 to state tree
+     * JESD Reset      res_rw7[28]      write 3 to state tree
+     * DSP Reset       res_rw7[27]      write 4 to state tree
+     * Writing 0 to the state tree will not trigger any reset
+     */
+    int reset_type = 0;
+    uint32_t tmp_reg = 0;
+    
+    sscanf(data, "%lf", &reset_type);
+    
+    read_hps_reg("res_rw7", &tmp_reg);
+    
+    if (reset_type == 1){       // global reset bit 30
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 30)));
+    }
+    else if (reset_type == 2) { // 40G reset bit 29
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 29)));
+    }
+    else if (reset_type == 3) { // JESD reset bit 28
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 28)));
+    }
+    else if (reset_type == 4) { // DSP reset bit 27
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 27)));
+    }
+    /* register sys[18] shows the reset status 
+     * the bits are [31:0] chanMode = {
+     * w_40gModulePresent,                                                         // 4-bits
+     * w_X40gStatusRxPcsReady & w_X40gStatusRxBlockLock & w_X40gStatusRxAmLock,    // 4-bits
+     * {2'b00, w_ResetSequencerState},                                             // 8-bits
+     * w_ResetSequencerUnknownStateError,                                          // 1-bit
+     * w_ResetSequencer40gResetSerialInterfaceTxWaitError,                         // 1-bit
+     * w_ResetSequencer40gResetSerialInterfaceRxWaitError,                         // 1-bit
+     * 13'b0    
+     * };
+     */   
+    return RETURN_SUCCESS;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -3929,6 +3973,7 @@ GPIO_PINS
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
+    DEFINE_FILE_PROP("fpga/reset"                          , hdlr_fpga_reset,                        RW, "0")                 \
     DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative")          \
     DEFINE_FILE_PROP("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION)             \
