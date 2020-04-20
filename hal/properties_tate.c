@@ -1735,6 +1735,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
+        strcpy(buf, "status -g\r");                                            \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        strcpy(ret, (char *)uart_ret_buf);                                     \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
@@ -2702,6 +2710,14 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 
 static int hdlr_time_clk_cmd(const char *data, char *ret) {
     return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_good(const char *data, char *ret) {
+     strcpy(buf, "status -g\r");
+     ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+     strcpy(ret, (char *)uart_ret_buf);
+     
+     return RETURN_SUCCESS;
 }
 
 #if 0
@@ -3843,6 +3859,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
+    DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -3929,6 +3946,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
