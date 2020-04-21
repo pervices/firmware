@@ -587,3 +587,32 @@ void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
                                char *save_path) {
     pass_profile_pntr_prop(load, save, load_path, save_path);
 }
+
+int property_good(char *path) {
+    char property_read[5];
+    char fullpath[200] = "/var/cyan/state/";
+    
+    strcat(&fullpath, path);
+    // need to write to the property to force an update
+    set_property(&fullpath,"0");
+    usleep(500000);
+    // then read from the property
+    get_property(&fullpath,property_read,5);
+    
+    if(strcmp(&property_read,"good") != 0){
+        //return 5;
+        
+        //THIS IS A HACK so that I don't have to flush the uart buffers
+        //TODO remove this and put a good uart flush in server.c
+        //double check that it is bad by trying to read it again
+        usleep(600000);
+        set_property(&fullpath,"0");
+        usleep(400000);
+        // then read from the property
+        get_property(&fullpath,property_read,5);
+        if(strcmp(&property_read,"good") != 0){
+            return 5;
+        }
+    }
+    return 1;
+}
