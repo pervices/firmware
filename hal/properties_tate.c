@@ -1708,7 +1708,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                     write_hps_reg(reg4[i], old_val | 0x2);                     \
                     write_hps_reg(reg4[i], old_val &(~0x2));                   \
                 }                                                              \
-            }                                                                  \
+                }                                                                  \
                                                                                \
             /* power off */                                                    \
         } else {                                                               \
@@ -1730,6 +1730,18 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
                                                                                \
             tx_power[INT(ch)] = PWR_OFF;                                       \
+        }                                                                      \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_reboot(const char *data, char *ret) {            \
+        int reboot;                                                            \
+        sscanf(data, "%i", &reboot);                                           \
+                                                                               \
+        if (reboot == 1) {                                                     \
+            strcpy(buf, "board -r\r");                                         \
+            ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)); \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -3859,7 +3871,8 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
-    DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")         \
+    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
