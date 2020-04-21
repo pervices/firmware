@@ -3923,24 +3923,24 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch5atten"     , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
     DEFINE_FILE_PROP("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31")        \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")        
+    DEFINE_FILE_PROP("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
+    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     \
     //    DEFINE_FILE_PROP("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0")         \
     //    DEFINE_FILE_PROP("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0")         \
     //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0")         \
