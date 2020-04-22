@@ -744,7 +744,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+                                                                                                                                                              \
     static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {  \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
@@ -909,14 +909,15 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_rf_freq_val(const char *data, char *ret) {       \
+    static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
         uint64_t freq = 0;                                                     \
         sscanf(data, "%" SCNd64 "", &freq);                                    \
                                                                                \
-        /* if freq = 0, mute PLL */                                            \
+        /* if freq = 0, do nothing */                                          \
         if (freq == 0) {                                                       \
-            strcpy(buf, "rf -c " STR(ch) " -z\r");                             \
-            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+          /* Don't mute channel as FPGA/DAC-CP/DAC-MDP tuning might be used*/  \
+          /* strcpy(buf, "rf -c " STR(ch) " -z\r");                        */  \
+          /* ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));       */  \
                                                                                \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
@@ -979,11 +980,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             strcpy(buf, "rf -z\r");                                            \
         }                                                                      \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
-        /* TODO: */                                                            \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1708,7 +1704,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                     write_hps_reg(reg4[i], old_val | 0x2);                     \
                     write_hps_reg(reg4[i], old_val &(~0x2));                   \
                 }                                                              \
-                }                                                                  \
+            }                                                                  \
                                                                                \
             /* power off */                                                    \
         } else {                                                               \
@@ -2579,7 +2575,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 
 #define X(ch, io)                                                              \
     if (i == INT(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_rf_freq_val;
+        hdlr = hdlr_tx_##ch##_rf_lo_freq;
         CHANNELS
 #undef X
 
@@ -2600,7 +2596,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
+static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
     int r;
 
     char inbuf[256];
@@ -4079,7 +4075,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0")
+    DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")
 
 static prop_t property_table[] = {
 #define X(ch, io) DEFINE_RX_CHANNEL(ch)
@@ -4518,7 +4514,7 @@ int set_freq_internal(const bool tx, const unsigned channel,
     };
 
     static const fp_t tx_fp[] = {
-#define X(ch, io) hdlr_tx_##ch##_rf_freq_val,
+#define X(ch, io) hdlr_tx_##ch##_rf_lo_freq,
         CHANNELS
 #undef X
     };
