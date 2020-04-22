@@ -209,11 +209,10 @@ int main(int argc, char *argv[]) {
             strcat(&prop_path,"/reboot");
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
             set_property(&prop_path,"1");
-            usleep(10000000); // wait for board to reboot
         }
         usleep(500000); // wait for uart to be ready
     }
-    PRINT(INFO, "JESD: %i boards bad\n",count_bad);
+    PRINT(INFO, "JESD: first pass %i boards bad\n",count_bad);
     if (count_bad > 0) { // if any had to be rebooted confirm that they came up properly
         count_bad = 0;
         usleep(10000000); // wait to ensure that any rebooted boards are up
@@ -229,7 +228,7 @@ int main(int argc, char *argv[]) {
             }
             usleep(1000000); // wait for uart to be ready
          }
-         PRINT(INFO, "JESD: %i boards bad\n",count_bad);
+         PRINT(INFO, "JESD: %i boards still bad after reboot\n",count_bad);
     }
     if (count_bad > 0) { // if any were still bad try resetting fpga then all boards
         set_property("fpga/reset","3");
@@ -265,7 +264,7 @@ int main(int argc, char *argv[]) {
             }
             usleep(500000); // wait for uart to be ready
         }
-        PRINT(INFO, "JESD: %i boards bad\n",count_bad);
+        PRINT(INFO, "JESD: Final count %i boards bad\n",count_bad);
     }
     if (count_bad > 0) { // at this point if a board is still bad we have to restart cyan
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
