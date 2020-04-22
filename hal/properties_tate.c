@@ -596,7 +596,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -620,7 +620,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -644,7 +644,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -668,7 +668,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -692,7 +692,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -716,7 +716,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -740,7 +740,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -764,7 +764,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -786,7 +786,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 0 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -808,7 +808,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 1 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -830,7 +830,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 2 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -852,7 +852,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 3 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -874,7 +874,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 4 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -896,7 +896,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 5 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
