@@ -908,14 +908,15 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_rf_freq_val(const char *data, char *ret) {       \
+    static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
         uint64_t freq = 0;                                                     \
         sscanf(data, "%" SCNd64 "", &freq);                                    \
                                                                                \
-        /* if freq = 0, mute PLL */                                            \
+        /* if freq = 0, do nothing */                                          \
         if (freq == 0) {                                                       \
-            strcpy(buf, "rf -c " STR(ch) " -z\r");                             \
-            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+          /* Don't mute channel as FPGA/DAC-CP/DAC-MDP tuning might be used*/  \
+          /* strcpy(buf, "rf -c " STR(ch) " -z\r");                        */  \
+          /* ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));       */  \
                                                                                \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
@@ -978,11 +979,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             strcpy(buf, "rf -z\r");                                            \
         }                                                                      \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
-        /* TODO: */                                                            \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1258,7 +1254,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /* write direction */                                                  \
         read_hps_reg("tx" STR(ch) "14", &old_val);                             \
         write_hps_reg("tx" STR(ch) "14",                                       \
-                      (old_val & ~(0x1 << 4)) | (direction << 4));             \
+                      (old_val & ~(0x1 << 3)) | (direction << 3));             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1730,6 +1726,26 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
             tx_power[INT(ch)] = PWR_OFF;                                       \
         }                                                                      \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_reboot(const char *data, char *ret) {            \
+        int reboot;                                                            \
+        sscanf(data, "%i", &reboot);                                           \
+                                                                               \
+        if (reboot == 1) {                                                     \
+            strcpy(buf, "board -r\r");                                         \
+            ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)); \
+        }                                                                      \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
+        strcpy(buf, "status -g\r");                                            \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2558,7 +2574,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 
 #define X(ch, io)                                                              \
     if (i == INT(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_rf_freq_val;
+        hdlr = hdlr_tx_##ch##_rf_lo_freq;
         CHANNELS
 #undef X
 
@@ -2579,7 +2595,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
+static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
     int r;
 
     char inbuf[256];
@@ -2681,6 +2697,18 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 /* --------------------------------- TIME ----------------------------------- */
 /* -------------------------------------------------------------------------- */
 
+static int hdlr_time_reboot(const char *data, char *ret) {
+        int reboot;
+        sscanf(data, "%i", &reboot);
+        
+        if (reboot == 1) {
+            strcpy(buf, "board -r\r");
+            ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+        }                                                         
+        
+        return RETURN_SUCCESS;
+    }                    
+
 static int hdlr_time_clk_pps(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -2701,6 +2729,14 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 
 static int hdlr_time_clk_cmd(const char *data, char *ret) {
     return RETURN_SUCCESS;
+}
+
+static int hdlr_time_status_good(const char *data, char *ret) {
+     strcpy(buf, "status -g\r");
+     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+     strcpy(ret, (char *)uart_ret_buf);
+     
+     return RETURN_SUCCESS;
 }
 
 #if 0
@@ -3659,6 +3695,50 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_reset(const char *data, char *ret) {
+    /* The reset controllet is like a waterfall:
+     * Global Reset -> 40G Reset -> JESD Reset -> DSP Reset
+     * Whichever Reset step we begin on will be followed by the others.
+     * Reset is initiated by setting one bit high in the res_rw7 register
+     * Global Reset    res_rw7[30]      Triggered by writing 1 to state tree
+     * 40G Reset       res_rw7[29]      write 2 to state tree
+     * JESD Reset      res_rw7[28]      write 3 to state tree
+     * DSP Reset       res_rw7[27]      write 4 to state tree
+     * Writing 0 to the state tree will not trigger any reset
+     */
+    int reset_type = 0;
+    uint32_t tmp_reg = 0;
+    
+    sscanf(data, "%lf", &reset_type);
+    
+    read_hps_reg("res_rw7", &tmp_reg);
+    
+    if (reset_type == 1){       // global reset bit 30
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 30)));
+    }
+    else if (reset_type == 2) { // 40G reset bit 29
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 29)));
+    }
+    else if (reset_type == 3) { // JESD reset bit 28
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 28)));
+    }
+    else if (reset_type == 4) { // DSP reset bit 27
+        write_hps_reg("res_rw7", (tmp_reg & (1 << 27)));
+    }
+    /* register sys[18] shows the reset status 
+     * the bits are [31:0] chanMode = {
+     * w_40gModulePresent,                                                         // 4-bits
+     * w_X40gStatusRxPcsReady & w_X40gStatusRxBlockLock & w_X40gStatusRxAmLock,    // 4-bits
+     * {2'b00, w_ResetSequencerState},                                             // 8-bits
+     * w_ResetSequencerUnknownStateError,                                          // 1-bit
+     * w_ResetSequencer40gResetSerialInterfaceTxWaitError,                         // 1-bit
+     * w_ResetSequencer40gResetSerialInterfaceRxWaitError,                         // 1-bit
+     * 13'b0    
+     * };
+     */   
+    return RETURN_SUCCESS;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -3798,6 +3878,8 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
+    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -3848,24 +3930,24 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch5atten"     , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
     DEFINE_FILE_PROP("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31")        \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")        
+    DEFINE_FILE_PROP("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
+    DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
+    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
+//     DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
+//     DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
-//    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     \
     //    DEFINE_FILE_PROP("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0")         \
     //    DEFINE_FILE_PROP("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0")         \
     //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0")         \
@@ -3881,9 +3963,11 @@ GPIO_PINS
     //DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
 
 #define DEFINE_TIME()                                                                                                 \
+    DEFINE_FILE_PROP("time/reboot"                         , hdlr_time_reboot,                       RW, "0")         \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
@@ -3928,6 +4012,7 @@ GPIO_PINS
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
+    DEFINE_FILE_PROP("fpga/reset"                          , hdlr_fpga_reset,                        RW, "0")                 \
     DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative")          \
     DEFINE_FILE_PROP("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION)             \
@@ -3989,7 +4074,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0")
+    DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")
 
 static prop_t property_table[] = {
 #define X(ch, io) DEFINE_RX_CHANNEL(ch)
@@ -4428,7 +4513,7 @@ int set_freq_internal(const bool tx, const unsigned channel,
     };
 
     static const fp_t tx_fp[] = {
-#define X(ch, io) hdlr_tx_##ch##_rf_freq_val,
+#define X(ch, io) hdlr_tx_##ch##_rf_lo_freq,
         CHANNELS
 #undef X
     };

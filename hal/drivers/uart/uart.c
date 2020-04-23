@@ -18,9 +18,7 @@
 #include "uart.h"
 
 // Maximum before a UART command is considered a fail
-// #define TIMEOUT 100000UL // us, 1.0 seconds
-// For Tate Development, UART does not work:
-#define TIMEOUT 1000UL // 1 ms
+#define TIMEOUT 100000UL // us, 1.0 seconds
 
 // Minimum time between UART commands
 #define TIME_INTERVAL 50000 // us, 0.05 seconds
