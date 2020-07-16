@@ -2188,20 +2188,6 @@ static int hdlr_time_status_ld_jesd_pll2(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_pll_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -l 21\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -l 22\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_time_status_lol(const char *data, char *ret) {
     strcpy(buf, "status -o\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -2218,20 +2204,6 @@ static int hdlr_time_status_lol_jesd_pll1(const char *data, char *ret) {
 
 static int hdlr_time_status_lol_jesd_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 12\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -o 21\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -o 22\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
@@ -2905,12 +2877,8 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll2", hdlr_time_status_ld_jesd_pll2,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll_pll1" , hdlr_time_status_ld_pll_pll1,           RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll_pll2" , hdlr_time_status_ld_pll_pll2,           RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll_pll1" , hdlr_time_status_lol_pll_pll1,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll_pll2" , hdlr_time_status_lol_pll_pll2,          RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
     DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
