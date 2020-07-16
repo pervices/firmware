@@ -65,7 +65,7 @@
 #define _PLL_OUT_MAX_DEVIATION 500000
 
 // Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
+#define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
 
 // ADF4355 PLL Specifications
 #define PLL1_REF_MAX_HZ 600000000ULL
