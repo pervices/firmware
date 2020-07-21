@@ -2096,6 +2096,20 @@ static int hdlr_time_source_extsine(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Internal Source Tuning
+static int hdlr_time_source_vtune(const char *data, char *ret) {
+    // read the vtune value    
+    uint16_t vtune = 0;
+    sscanf(data, "%" SCNd16 "", &vtune);
+    // send it to the mcu
+    strcpy(buf, "debug -o ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", vtune);
+    strcat(buf, "\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    
+    return RETURN_SUCCESS;
+}
+
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
@@ -2881,6 +2895,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
     DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
+    DEFINE_FILE_PROP("time/source/vtune"                   , hdlr_time_source_vtune,                 RW, "1403")      \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_pll"          , hdlr_time_sync_lmk_sync_tgl_pll,        WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
@@ -2897,7 +2912,9 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001")       \
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
-
+    
+    // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
+    
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
