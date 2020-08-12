@@ -67,6 +67,10 @@
 // Core reference feeds to PLL0
 #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
 
+// PLL IDs
+#define PLL_ID_ADF5355 5355
+#define PLL_ID_LMX2595 2595
+
 // ADF4355 PLL Specifications
 #define PLL1_REF_MAX_HZ 600000000ULL
 #define PLL1_REF_MIN_HZ 10000000ULL
@@ -100,8 +104,23 @@
 #define PLL1_X2EN_DEFAULT                                                      \
     (0) // RFoutput doubler enabled (0=off, 1=on (RFout is doubled))
 #define PLL1_OUTFREQ_DEFAULT (2800000000) // Resulting VCO Output Frequency
-#define PLL1_FB_DEFAULT (1)               // VCO divider feedback
+#define PLL1_FB_DEFAULT (1)               // VCO divider feedback for ADF5355
 
+
+// LMX2595 Specifications
+// (NB: a lot of this is duplicated from lmx2595_ll.h)
+#define LMX2595_RFOUT_MAX_HZ 20000000000ULL     // from datasheet
+#define LMX2595_RFOUT_MIN_HZ 10000000ULL        // from datasheet
+#define LMX2595_VCO_MAX1_HZ 15000000000ULL      // vco frequency limit if d is 6 or less
+#define LMX2595_VCO_MAX2_HZ 11500000000ULL      // vco frequency limit if d if 8 or more
+#define LMX2595_D_THRESH_VCO 7                  // set border between check for VCO upper limit
+#define LMX2595_VCO_MIN_HZ 7500000000ULL        // from datasheet
+#define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
+#define LMX2595_DIV_MIN 1       // from datasheet
+#define LMX2595_N_MAX 524287    // from datasheet
+#define LMX2595_N_MIN 28        // from datasheet
+#define LMX2595_R_MAX 255       // could technically get higher using pre-div, but currently unsupported
+#define LMX2595_R_MIN 1         // from datasheet
 /*
 
  * This file has the following sections:
@@ -116,12 +135,24 @@
 
 // Define a generic structure to hold PLL values.
 typedef struct {
-    uint16_t R;          // Reference divider R
-    uint32_t N;          // VCO Frequency divider N
-    uint16_t d;          // VCO Output Frequency divider
-    uint8_t x2en;        // VCO Output Frequency doubler (enabled when 1)
-    long double vcoFreq; // Resulting VCO Output Frequency
-    uint8_t divFBen;     // Feedback from divider (enabled when 1, default 0)
+    uint32_t id;            // ID code for PLL IC
+    uint64_t ref_freq;      // Core Reference Frequency (in Hz)
+    uint16_t R;             // Reference divider R
+    uint32_t N;             // VCO Frequency divider N
+    uint16_t d;             // VCO Output Frequency divider
+    uint8_t x2en;           // VCO Output Frequency doubler (enabled when 1)
+    long double vcoFreq;    // Resulting VCO Output Frequency
+    uint8_t divFBen;        // Feedback from divider (enabled when 1, default 0)
+    uint64_t rf_out_max;    // limit for RF output (in Hz)
+    uint64_t rf_out_min;    // limit for RF output (in Hz)
+    uint64_t vco_f_max;     // limit for VCO freq (in Hz)
+    uint64_t vco_f_min;     // limit for VCO freq (in Hz)
+    uint16_t d_max;         // limit for output divider d
+    uint16_t d_min;         // limit for output divider d
+    uint32_t n_max;         // limit for feedback divider n
+    uint16_t n_min;         // limit for feedback divider n
+    uint16_t r_max;         // limit for reference divider r
+    uint16_t r_min;         // limit for reference divider r
 } pllparam_t;
 
 // Set Output Frequency
