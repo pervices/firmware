@@ -2045,6 +2045,39 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_lmx_freq(const char* data, char* ret) {
+    uint64_t freq = 0;
+    sscanf(data, "%" SCNd64 "", &freq);
+    /* if freq = 0, mute PLL */
+    if (freq == 0) {
+        strcpy(buf, "lmx -k\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        return RETURN_SUCCESS;
+    }
+    
+    /* if freq out of bounds, mute lmx*/
+    if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {
+        strcpy(buf, "lmx -k\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(ERROR,"LMX Freq Invalid \n");
+        return RETURN_ERROR;
+    }
+    
+    /* run the pll calc algorithm */
+    pllparam_t pll;
+    pll.id = PLL_ID_LMX2595;
+    long double outfreq = 0;
+    outfreq = setFreq(&freq, &pll);
+    
+    /* Send Parameters over to the MCU */
+    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+                                                                        
+    sprintf(ret, "%Lf", outfreq);
+    
+    return RETURN_SUCCESS;   
+}
+
+
 #if 0
 static int hdlr_time_source_vco(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
@@ -2887,6 +2920,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "0")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
@@ -3470,6 +3504,54 @@ out:
     }
 
     return r;
+}
+
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+    // extract lo variables and pass to MCU (LMX2595)
+    
+    double freq = pll->vcoFreq / pll->d;
+
+    // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
+    strcpy(buf, "lmx -k \r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    
+    // Send Reference in MHz to MCU
+    strcpy(buf, "lmx -o ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX R
+    strcpy(buf, "lmx -r ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX N
+    strcpy(buf, "lmx -n ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX D
+    strcpy(buf, "lmx -d ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output RF Power
+    strcpy(buf, "lmx -p ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 60 /*TODO: pll->power*/);
+    // default to high power
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output Frequency in MHz
+    strcpy(buf, "lmx -f ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    usleep(100000);
 }
 
 int set_freq_internal(const bool tx, const unsigned channel,
