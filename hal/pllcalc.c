@@ -27,11 +27,39 @@
 
 // PLL Constructors
 
-pllparam_t pll_def = {PLL1_R_FIXED,      PLL1_N_DEFAULT,       PLL1_D_DEFAULT,
-                      PLL1_X2EN_DEFAULT, PLL1_OUTFREQ_DEFAULT, PLL1_FB_DEFAULT};
-pllparam_t pll_def_r_5 = {PLL1_R_FIXED_5,       PLL1_N_DEFAULT,
-                          PLL1_D_DEFAULT,       PLL1_X2EN_DEFAULT,
-                          PLL1_OUTFREQ_DEFAULT, PLL1_FB_DEFAULT};
+//default ADF5355 constructor
+pllparam_t pll_def = {      PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
+                            PLL1_R_FIXED,           PLL1_N_DEFAULT, 
+                            PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+                            PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+                            PLL1_RFOUT_MAX_HZ,      PLL1_RFOUT_MIN_HZ,
+                            PLL1_VCO_MAX_HZ,        PLL1_VCO_MIN_HZ,
+                            PLL1_DIV_MAX,           PLL1_DIV_MIN,
+                            PLL1_N_MAX,             PLL1_N_MIN,
+                            PLL1_R_MAX,             PLL1_R_MIN
+};
+//ADF5355 constructor for r divider = 5
+pllparam_t pll_def_r_5 = {  PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
+                            PLL1_R_FIXED_5,         PLL1_N_DEFAULT,
+                            PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+                            PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+                            PLL1_RFOUT_MAX_HZ,      PLL1_RFOUT_MIN_HZ,
+                            PLL1_VCO_MAX_HZ,        PLL1_VCO_MIN_HZ,
+                            PLL1_DIV_MAX,           PLL1_DIV_MIN,
+                            PLL1_N_MAX,             PLL1_N_MIN,
+                            PLL1_R_MAX,             PLL1_R_MIN
+};
+// default LMX2595 constructor
+pllparam_t pll_def_lmx2595 = {  PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ,
+                                PLL1_R_FIXED,           PLL1_N_DEFAULT,
+                                PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+                                PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+                                LMX2595_RFOUT_MAX_HZ,   LMX2595_RFOUT_MIN_HZ,
+                                LMX2595_VCO_MAX1_HZ,    LMX2595_VCO_MIN_HZ,
+                                LMX2595_DIV_MAX,        LMX2595_DIV_MIN,
+                                LMX2595_N_MAX,          LMX2595_N_MIN,
+                                LMX2595_R_MAX,          LMX2595_R_MIN
+};
 
 #ifdef _PLL_DEBUG_STANDALONE
 // ==========================
@@ -40,6 +68,7 @@ pllparam_t pll_def_r_5 = {PLL1_R_FIXED_5,       PLL1_N_DEFAULT,
 int main(void) {
     uint64_t reqFreq = 250e6;
     pllparam_t pll;
+    pll.id = PLL_ID_ADF5355;
 
     // Debug parameters;
     double max_diff = PLL_CORE_REF_FREQ_HZ / PLL1_R_FIXED;
@@ -160,10 +189,14 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     //  - Assumes a single PLL design, and therefore fixed reference.
     //
 
-    if (*reqFreq < (PLL_CORE_REF_FREQ_HZ * PLL_ADF5355_MAX_N))
-        *pll = pll_def_r_5;
-    else
+    // set default values depending on which PLL 
+    if (pll->id == PLL_ID_LMX2595) { 
+        *pll = pll_def_lmx2595;
+     } else { //if no PLL ID provided, assume ADF5355 so that old code continues to work
         *pll = pll_def;
+        if (*reqFreq < (pll->ref_freq * PLL_ADF5355_MAX_N)) // divide input if it's too high to reach req_fred
+            *pll = pll_def_r_5;                             // otherwise leave R = 1 for best phase noise
+    }
 
     uint64_t temp = *reqFreq;
 
@@ -172,45 +205,59 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     //*reqFreq = mhzFreq * 5e6;
 
     // Sanitize the input to be within range
-    if (*reqFreq > PLL1_RFOUT_MAX_HZ)
-        *reqFreq = PLL1_REF_MAX_HZ;
-    else if (*reqFreq < PLL1_RFOUT_MIN_HZ)
-        *reqFreq = PLL1_RFOUT_MIN_HZ;
+    if (*reqFreq > pll->rf_out_max)
+        *reqFreq = pll->rf_out_max;
+    else if (*reqFreq < pll->rf_out_min)
+        *reqFreq = pll->rf_out_min;
 
-    // 1. Determine VCO frequency, and also frequency doubler or output divider
-    // values.
+    // 1. Determine VCO frequency, frequency doubler, and output divider values.
     pll_SetVCO(reqFreq, pll);
 
-    // 2. Use the reference to determine R, N, and pfd frequency
-    // Crimson RTM5 Phase coherance under 575MHz
+    // 2. Use the reference to determine N, and pfd frequency
     long double pd_freq =
-        (long double)PLL_CORE_REF_FREQ_HZ / (long double)pll->R;
-
+            (long double)pll->ref_freq / (long double)pll->R;
+            
     double N1 = 0;
+    
+    if (pll->id == PLL_ID_ADF5355) {
+        // For phase coherency we need to stick with step sizes
+        // corresponding to a reference as defined (currently 25e6)
+        // However when reqFreq is below threshold we will divide
+        // reference by 5.
+        // Determine the values of the N and dividers for PLL1
+        if (!pll->divFBen) {
+            pll->divFBen = 0;
+            N1 = (double)pll->vcoFreq / (double)pd_freq;
+        } else {
+            N1 = (double)pll->vcoFreq / (double)pll->d;
+            N1 = N1 / (long double)pll->ref_freq;
+            if (N1 < 1)
+                N1 = 1;
+        }
+        pll->N = (uint32_t)N1;
+        pll->N = (uint32_t)N1 * (uint32_t)pll->R;
 
-    // For phase coherency we need to stick with step sizes
-    // corresponding to a reference as defined (currently 25e6)
-    // However when reqFreq is below threshold we will divide
-    // reference by 5.
-    // Determine the values of the N and dividers for PLL1
-    if (!pll->divFBen) {
-        pll->divFBen = 0;
-        N1 = (double)pll->vcoFreq / (double)pd_freq;
-    } else {
-        N1 = (double)pll->vcoFreq / (double)pll->d;
-        N1 = N1 / (long double)PLL_CORE_REF_FREQ_HZ;
-        if (N1 < 1)
-            N1 = 1;
-    }
-    pll->N = (uint32_t)N1;
-    pll->N = (uint32_t)N1 * (uint32_t)pll->R;
-
-    // Set correct, actual, VCO frequency based on output frequency
-    if (!pll->divFBen) {
-        pll->vcoFreq = (long double)pd_freq * (long double)pll->N;
-    } else {
-        pll->vcoFreq =
-            (long double)pd_freq * (uint64_t)pll->N * (uint64_t)pll->d;
+        // Set correct, actual, VCO frequency based on output frequency
+        if (!pll->divFBen) {
+            pll->vcoFreq = (long double)pd_freq * (long double)pll->N;
+        } else {
+            pll->vcoFreq =
+                (long double)pd_freq * (uint64_t)pll->N * (uint64_t)pll->d;
+        }
+    } else if (pll->id == PLL_ID_LMX2595) {
+        // determine includedDivide so we know how much to divide N by
+        uint8_t includedDivide = 1;    
+        if (pll->d > 1) {
+            if ((pll->d % 3 == 0 ) && (pll->d != 24) && (pll->d != 192)) {
+                includedDivide = 6;
+            } else {
+                includedDivide = 4;
+            }
+        }
+        N1 = (double)pll->vcoFreq / (double)pd_freq / includedDivide;
+        pll->N = (uint32_t)N1;
+        // set VCO to actual value based on N
+        pll->vcoFreq = (long double)pd_freq * (uint64_t)pll->N * includedDivide;
     }
 
     if (!pll_CheckParams(pll, 1)) {
@@ -234,15 +281,28 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     return actual_output;
 };
 
-uint8_t pll_CheckParams(pllparam_t *pllparam, uint8_t is_pll1) {
+uint8_t pll_CheckParams(pllparam_t *pll, uint8_t is_pll1) {
 
-    if (is_pll1) {
-        if ((pllparam->N > PLL1_N_MAX) || (pllparam->N < PLL1_N_MIN) ||
-            (pllparam->R > _PLL_RATS_MAX_DENOM) || (pllparam->R > PLL1_R_MAX) ||
-            (pllparam->R < PLL1_R_MIN) || (pllparam->d > PLL1_DIV_MAX) ||
-            (pllparam->d < 1) || (pllparam->d > 1 && (pllparam->d & 1) != 0) ||
-            (pllparam->x2en > 1) || (pllparam->vcoFreq > PLL1_VCO_MAX_HZ) ||
-            (pllparam->vcoFreq < PLL1_VCO_MIN_HZ)) {
+    if (!is_pll1) {//currently only PLL1 is supported for ADF5355
+        return 0;
+    }
+        
+    // checks for all PLLs
+    if ((pll->N > pll->n_max) || (pll->N < pll->n_min) ||                         // N is valid
+        (pll->R > pll->r_max) || (pll->R < pll->r_min) ||                         // R is valid
+        (pll->d > pll->d_max) || (pll->d < pll->d_min) ||                         // d is valid
+        (pll->vcoFreq > pll->vco_f_max) || (pll->vcoFreq < pll->vco_f_min) ||     // vco freq is valid
+        (pll->x2en > 1)) {
+        return 0;
+        }
+    // PLL specific checks
+    if (pll->id == PLL_ID_ADF5355) { // 
+        if ((pll->R > _PLL_RATS_MAX_DENOM) ||         // ensure R is not greater than _PLL_RATS_MAX_DENOM
+            (pll->d > 1 && (pll->d & 1) != 0)) {      // ensure d is an even number
+            return 0;
+        }
+    }else if (pll->id == PLL_ID_LMX2595) { // 
+        if ((pll->vcoFreq > LMX2595_VCO_MAX2_HZ) && (pll->d > LMX2595_D_THRESH_VCO)){    // different VCO freq limit if d is too high
             return 0;
         }
     }
@@ -252,17 +312,17 @@ uint8_t pll_CheckParams(pllparam_t *pllparam, uint8_t is_pll1) {
 
 void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
     // Configure VCO frequency and DIV values for PLL1
-    if (*reqFreq > PLL1_VCO_MAX_HZ) {
+    if (*reqFreq > pll->vco_f_max) {                    // if we need doubler
         pll->x2en = 1;
         pll->d = 1;
         pll->vcoFreq = *reqFreq / 2;
-    } else if (*reqFreq > PLL1_VCO_MIN_HZ) {
+    } else if (*reqFreq > pll->vco_f_min) {             // if we don't need doubler or divider
         pll->x2en = 0;
         pll->d = 1;
         pll->vcoFreq = *reqFreq;
-    } else {
+    } else if (pll->id == PLL_ID_ADF5355){              // determine divider for ADF5355
         pll->x2en = 0;
-        double D_float = (double)PLL1_VCO_MIN_HZ / (double)*reqFreq;
+        double D_float = (double)pll->vco_f_min / (double)*reqFreq;
         uint16_t D = ceil(D_float);
         { // round up to nearest power of 2 (ADF4355/ADF5355)
             D--;
@@ -271,11 +331,39 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
             D = D | (D >> 4);
             D++;
         }
-        if (D > PLL1_DIV_MAX)
-            D = PLL1_DIV_MAX;
-        if (D < PLL1_DIV_MIN)
-            D = PLL1_DIV_MIN;
+        if (D > pll->d_max)
+            D = pll->d_max;
+        if (D < pll->d_min)
+            D = pll->d_min;
         pll->d = D;
         pll->vcoFreq = (uint64_t)D * *reqFreq;
+    } else if (pll->id == PLL_ID_LMX2595){             // determine divider for LMX2595
+        pll->x2en = 0;
+        // determine D based on Table 8 pg 27 of LMX2595 datasheet
+        uint16_t D = 0;
+        if (*reqFreq > 3750000000 ) { D = 2; }
+        else if (*reqFreq > 1875000000 ) { D = 4; }
+        else if (*reqFreq > 1250000000 ) { D = 6; }
+        else if (*reqFreq > 950000000  ) { D = 8; }
+        else if (*reqFreq > 630000000 ) { D = 12; }
+        else if (*reqFreq > 470000000 ) { D = 16; }
+        else if (*reqFreq > 320000000 ) { D = 24; }
+        else if (*reqFreq > 235000000 ) { D = 32; }
+        else if (*reqFreq > 160000000 ) { D = 48; }
+        else if (*reqFreq > 130000000 ) { D = 64; }
+        else if (*reqFreq > 110000000 ) { D = 72; }
+        else if (*reqFreq > 80000000 ) { D = 96; }
+        else if (*reqFreq > 60000000 ) { D = 128; }
+        else if (*reqFreq > 40000000 ) { D = 192; }
+        else if (*reqFreq > 30000000 ) { D = 256; }
+        else if (*reqFreq > 19532000 ) { D = 384; }
+        //else if (*reqFreq > 20000000 ) {D = 384; }    // to allow synchronizing for phase coherency across RF channels D < 512
+        //else if (*reqFreq > 15000000 ) { D = 512; } 
+        //else if (*reqFreq >= 10000000 ) { D = 768; }
+        else { D = 0 ;}                                 // if reqFreq is too low d=0 will cause error during check
+        pll->d = D;
+        pll->vcoFreq = (uint64_t)(D * (*reqFreq));
+    } else {                                            // if unknown IC set d to zero, which is expected to 
+        pll->d = 0;                                     // cause an error because d should always be 1 or more
     }
 }
