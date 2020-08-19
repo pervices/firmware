@@ -1114,6 +1114,14 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_about_hw_ver(const char *data, char *ret) {      \
+         strcpy(buf, "board -h\r");                                            \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        strcpy(ret, (char *)uart_ret_buf);                                     \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
@@ -1616,6 +1624,14 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_about_hw_ver(const char *data, char *ret) {      \
+        strcpy(buf, "board -h\r");                                             \
+        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        strcpy(ret, (char *)uart_ret_buf);                                     \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_rx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
@@ -2048,6 +2064,23 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
 static int hdlr_time_lmx_freq(const char* data, char* ret) {
     uint64_t freq = 0;
     sscanf(data, "%" SCNd64 "", &freq);
+    char prop_read[MAX_PROP_LEN];
+    char prop_path[128];
+    
+    strcpy(prop_path, STATE_DIR);
+    strcat(prop_path, "time/about/hw_ver"); 
+
+    // Read EEPROM, if stock unit do nothing
+    // TODO: instead of checking if stock, check whether LMX populated
+    get_property(&prop_path,prop_read,MAX_PROP_LEN);
+    if (strstr(prop_read,"Non")) {
+        PRINT(ERROR, "No LMX\n");
+        return RETURN_ERROR;
+    }
+
+    // if the EEPROM tells us that time has an LMX set the LMX freq
+    PRINT(INFO, "Setting LMX\n");
+
     /* if freq = 0, mute PLL */
     if (freq == 0) {
         strcpy(buf, "lmx -k\r");
@@ -2316,6 +2349,14 @@ static int hdlr_time_about_mcurev(const char *data, char *ret) {
 
 static int hdlr_time_about_mcufuses(const char *data, char *ret) {
     strcpy(buf, "status -f\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_about_hw_ver(const char *data, char *ret) {
+    strcpy(buf, "board -h\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
 
@@ -2827,6 +2868,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
+    DEFINE_FILE_PROP("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION)     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -2870,6 +2912,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
+    DEFINE_FILE_PROP("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION)     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -2917,10 +2960,12 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")
 
 #define DEFINE_TIME()                                                                                                 \
+    DEFINE_FILE_PROP("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION)     \
+    DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
-    DEFINE_FILE_PROP("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "0")       \
+    DEFINE_FILE_PROP("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "0")         \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
@@ -2944,7 +2989,6 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001")       \
     DEFINE_FILE_PROP("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001")       \
     DEFINE_FILE_PROP("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001")       \
-    DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
     
     // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
