@@ -737,6 +737,22 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_rf_common_lo(const char *data, char *ret) {      \
+        /* TODO: make writing zero restore restore switch to correct setting */\
+        /* TODO: make rf_freq_val avoid setting switch if common_lo on */      \
+        int enable;                                                            \
+        sscanf(data, "%i", &enable);                                         \
+                                                                               \
+        if (enable == 1 ) {                                                    \
+            strcpy(buf, "rf -c " STR(ch) " -e 1\r");                           \
+            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+        } else {                                                               \
+            strcpy(buf, "rf -c " STR(ch) " -e 0\r");                           \
+            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+        }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_rf_freq_i_bias(const char *data, char *ret) {    \
         sscanf(data, "%i", &(i_bias[INT(ch)]));                                \
         strcpy(buf, "rf -c " STR(ch) " -i ");                                  \
@@ -1209,6 +1225,22 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_rf_common_lo(const char *data, char *ret) {      \
+        /* TODO: make writing zero restore restore switch to correct setting */\
+        /* TODO: make rf_freq_val avoid setting switch if common_lo on */      \
+        int enable;                                                            \
+        sscanf(data, "%i", &enable);                                             \
+                                                                               \
+        if (enable == 1 ) {                                                    \
+            strcpy(buf, "rf -c " STR(ch) " -e 1\r");                           \
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+        } else {                                                               \
+            strcpy(buf, "rf -c " STR(ch) " -e 0\r");                           \
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+        }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                          \
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         int gain;                                                              \
         sscanf(data, "%i", &gain);                                             \
@@ -2869,6 +2901,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION)     \
+    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/common_lo"        , hdlr_rx_##_c##_rf_common_lo,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -2913,6 +2946,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION)     \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/common_lo"        , hdlr_tx_##_c##_rf_common_lo,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
