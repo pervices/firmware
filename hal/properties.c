@@ -2675,6 +2675,8 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     char base_cmd[MAX_PROP_LEN] = "/usr/sbin/i2cget -y 0 0x54 0x";
     char cmd[MAX_PROP_LEN] = {0};
     int readreg = 0;
+    int var_count = 0;
+    int i = 0;
 
     // check that EEPROM is programmed properly
     sprintf(cmd, "%s%x", base_cmd, 0);
@@ -2773,6 +2775,32 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     PRINT(INFO, "we read 1 = 0x%x\n", readreg);
     sprintf(buf, "RTM %u - ", readreg);
     strcat(ret, buf);    
+
+    // Check feature registers
+    strcat(ret, "Features:");
+    for (i = 0x10; i <= 0x5f; i++) {
+        sprintf(cmd, "%s%x", base_cmd, i);
+        PRINT(INFO, "%s\n", cmd);
+        if ((fp = popen(cmd, "r")) == NULL) {
+            PRINT(ERROR, "Error opening pipe!\n");
+            return RETURN_ERROR;
+        }    
+        fgets(buf, MAX_PROP_LEN, fp);
+        if (pclose(fp)) {
+            PRINT(ERROR, "Error closing pipe!");
+            return RETURN_ERROR;
+        }
+        sscanf(buf, "0x%x", &readreg);
+        if ((readreg != 0) && (readreg!= 0xff)) {
+            var_count++;
+            sprintf(buf, " reg 0x%x = 0x%x;", i, readreg);
+            strcat(ret, buf);
+        }
+    }
+    if (var_count == 0) {
+        strcat(ret, "None");
+    }
+    strcat(ret, "\n");
 
     return RETURN_SUCCESS;
 }
