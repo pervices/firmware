@@ -2670,12 +2670,110 @@ static int hdlr_server_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
-    uint32_t old_val;
-    read_hps_reg("sys1", &old_val);
+    FILE *fp = NULL;
+    char buf[MAX_PROP_LEN] = {0};
+    char base_cmd[MAX_PROP_LEN] = "/usr/sbin/i2cget -y 0 0x54 0x";
+    char cmd[MAX_PROP_LEN] = {0};
+    int readreg = 0;
 
-    old_val = (old_val >> 7) & 0xf;
+    // check that EEPROM is programmed properly
+    sprintf(cmd, "%s%x", base_cmd, 0);
+    PRINT(INFO, "%s\n", cmd);
+    if ((fp = popen(cmd, "r")) == NULL) {
+        PRINT(ERROR, "Error opening pipe!\n");
+        return RETURN_ERROR;
+    }
+    fgets(buf, MAX_PROP_LEN, fp);
+     if (pclose(fp)) {
+        PRINT(ERROR, "Error closin pipe!");
+        return RETURN_ERROR;
+    }
+    sscanf(buf, "0x%x", &readreg);
+    PRINT(INFO, "we read  0 = 0x%x\n", readreg);
+    if (readreg != 0xaa ) {
+        PRINT(ERROR, "EEPROM not programmed or does not exist");
+        return RETURN_ERROR;
+    }
 
-    sprintf(ret, "ver. 0x%02x", old_val);
+    // check product
+    sprintf(cmd, "%s%x", base_cmd, 1);
+    PRINT(INFO, "%s\n", cmd);
+    if ((fp = popen(cmd, "r")) == NULL) {
+        PRINT(ERROR, "Error opening pipe!\n");
+        return RETURN_ERROR;
+    }
+    fgets(buf, MAX_PROP_LEN, fp);
+    if (pclose(fp)) {
+        PRINT(ERROR, "Error closing pipe!");
+        return RETURN_ERROR;
+    }
+    sscanf(buf, "0x%x", &readreg);
+    PRINT(INFO, "we read 1 = 0x%x\n", readreg);
+    switch(readreg) {
+    case 1:
+        strcpy(ret, "Crimson ");
+        break;
+    case 2:
+        strcpy(ret, "Cyan ");
+        break;
+    default:
+        strcpy(ret, "Unrecognized ");
+    }
+
+    // check board type
+    sprintf(cmd, "%s%x", base_cmd, 2);
+    PRINT(INFO, "%s\n", cmd);
+    if ((fp = popen(cmd, "r")) == NULL) {
+        PRINT(ERROR, "Error opening pipe!\n");
+        return RETURN_ERROR;
+    }
+    fgets(buf, MAX_PROP_LEN, fp);
+    if (pclose(fp)) {
+        PRINT(ERROR, "Error closing pipe!");
+        return RETURN_ERROR;
+    }
+    sscanf(buf, "0x%x", &readreg);
+    PRINT(INFO, "we read 1 = 0x%x\n", readreg);
+    switch(readreg) {
+        case 1:
+            strcat(ret, "Time ");
+            break;
+        case 2:
+            strcat(ret, "TX ");
+            break;
+        case 3:
+            strcat(ret, "RX ");
+            break;
+        case 4:
+            strcat(ret, "Dig ");
+            break;
+        case 5:
+            strcat(ret, "BP ");
+            break;
+        case 6:
+            strcat(ret, "PWR ");
+            break; 
+        default:
+            strcat(ret, "Unrecognized ");
+    }
+
+    // Check revision register
+    sprintf(cmd, "%s%x", base_cmd, 3);
+    PRINT(INFO, "%s\n", cmd);
+    if ((fp = popen(cmd, "r")) == NULL) {
+        PRINT(ERROR, "Error opening pipe!\n");
+        return RETURN_ERROR;
+    }
+    fgets(buf, MAX_PROP_LEN, fp);
+    if (pclose(fp)) {
+        PRINT(ERROR, "Error closing pipe!");
+        return RETURN_ERROR;
+    }
+    sscanf(buf, "0x%x", &readreg);
+    PRINT(INFO, "we read 1 = 0x%x\n", readreg);
+    sprintf(buf, "RTM %u - ", readreg);
+    strcat(ret, buf);    
+
     return RETURN_SUCCESS;
 }
 
