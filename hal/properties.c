@@ -2683,17 +2683,20 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
+        strcpy(ret, "ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     fgets(buf, MAX_PROP_LEN, fp);
      if (pclose(fp)) {
         PRINT(ERROR, "Error closin pipe!");
+        strcpy(ret, "ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
     PRINT(INFO, "we read  0 = 0x%x\n", readreg);
     if (readreg != 0xaa ) {
         PRINT(ERROR, "EEPROM not programmed or does not exist");
+        strcpy(ret, "ERROR: EEPROM not programmed or does not exist");
         return RETURN_ERROR;
     }
 
@@ -2702,11 +2705,13 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
+        strcpy(ret, "ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     fgets(buf, MAX_PROP_LEN, fp);
     if (pclose(fp)) {
         PRINT(ERROR, "Error closing pipe!");
+        strcpy(ret, "ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
@@ -2727,11 +2732,13 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
+        strcat(ret, " ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     fgets(buf, MAX_PROP_LEN, fp);
     if (pclose(fp)) {
         PRINT(ERROR, "Error closing pipe!");
+        strcat(ret, " ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
@@ -2764,11 +2771,13 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
+        strcat(ret, " ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     fgets(buf, MAX_PROP_LEN, fp);
     if (pclose(fp)) {
         PRINT(ERROR, "Error closing pipe!");
+        strcat(ret, " ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
@@ -2783,11 +2792,13 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         PRINT(INFO, "%s\n", cmd);
         if ((fp = popen(cmd, "r")) == NULL) {
             PRINT(ERROR, "Error opening pipe!\n");
+            strcat(ret, " ERROR: EEPROM read failed");
             return RETURN_ERROR;
         }    
         fgets(buf, MAX_PROP_LEN, fp);
         if (pclose(fp)) {
             PRINT(ERROR, "Error closing pipe!");
+            strcat(ret, " ERROR: EEPROM read failed");
             return RETURN_ERROR;
         }
         sscanf(buf, "0x%x", &readreg);
