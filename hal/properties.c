@@ -2103,9 +2103,8 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     strcat(prop_path, "time/about/hw_ver"); 
 
     // Read EEPROM, if stock unit do nothing
-    // TODO: instead of checking if stock, check whether LMX populated
     get_property(&prop_path,prop_read,MAX_PROP_LEN);
-    if (strstr(prop_read,"Non")) {
+    if (strstr(prop_read,"reg 0x11 = 0x1") == NULL) {
         PRINT(ERROR, "No LMX\n");
         return RETURN_ERROR;
     }
