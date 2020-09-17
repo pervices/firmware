@@ -2105,8 +2105,8 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     // Read EEPROM, if stock unit do nothing
     get_property(&prop_path,prop_read,MAX_PROP_LEN);
     if (strstr(prop_read,"reg 0x11 = 0x1") == NULL) {
-        PRINT(ERROR, "No LMX\n");
-        return RETURN_ERROR;
+        PRINT(INFO, "No LMX\n");
+        return RETURN_SUCCESS;
     }
 
     // if the EEPROM tells us that time has an LMX set the LMX freq
