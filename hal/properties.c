@@ -882,7 +882,8 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         int channel = INT(ch);                                                 \
         int shift = (channel%4)*8;                                             \
                                                                                \
-        if (resamp_err < base_err) {                                           \
+        /* The 4/5 resampler has been removed from the FPGA */                 \
+        if ( false ) {                                                         \
             write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val | (1 << 15));              \
@@ -1366,8 +1367,8 @@ CHANNELS
         int shift = (channel%4)*8;                                             \
                                                                                \
         int gain_factor;                                                       \
-                                                                               \
-        if (resamp_err < base_err) {                                           \
+        /* The 4/5 resampler has been removed from the FPGA code. */           \
+        if ( false ) {                                                         \
             write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
             write_hps_reg("rx" STR(ch) "4", old_val | (1 << 15));              \
