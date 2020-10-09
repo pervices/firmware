@@ -2986,7 +2986,7 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "tate" /* Name unknown for now... */
+#define PROJECT_NAME "cyan_16t" /* Name unknown for now... */
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
