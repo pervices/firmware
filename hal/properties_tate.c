@@ -958,9 +958,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
-                          &pll, true, INT(ch));                                \
-                                                                               \
+        /* set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \ */
+        /*                   &pll, true, INT(ch));                                \ */
+        /* set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll); */ \
+        set_lo_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);    \
         sprintf(ret, "%Lf", outfreq);                                          \
                                                                                \
         return RETURN_SUCCESS;                                                 \
