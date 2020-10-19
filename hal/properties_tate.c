@@ -1771,6 +1771,15 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_about_logen_present(const char *data, char *ret) { \
+        strcpy(buf, "status -L\r");                                            \
+                                                                               \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        strcpy(ret, (char *)uart_ret_buf);                                     \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_about_mcudevid(const char *data, char *ret) {    \
         strcpy(buf, "status -d\r");                                            \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
@@ -3951,7 +3960,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
-    /* DEFINE_FILE_PROP("tx/" #_c "/about/logen_present"      , hdlr_tx_##_c##_about_logen_present,     RW, false)       \ */
+    DEFINE_FILE_PROP("tx/" #_c "/about/logen_present"      , hdlr_tx_##_c##_about_logen_present,     RW, "0")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
