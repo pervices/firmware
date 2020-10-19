@@ -156,8 +156,9 @@ typedef struct {
 } pllparam_t;
 
 // Set Output Frequency
-double setFreq(uint64_t *reqFreq,
-               pllparam_t *pll1); // Returns the actual frequency set.
+double setFreq(uint64_t *reqFreq, pllparam_t *pll1); // Returns the actual frequency set.
+
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll);
 
 // Return 1 if all sanitary checks for pllparam_t have passed
 uint8_t pll_CheckParams(pllparam_t *pllparam, uint8_t is_pll1);

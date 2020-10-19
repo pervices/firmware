@@ -29,7 +29,7 @@
 
 //default ADF5355 constructor
 pllparam_t pll_def = {      PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
-                            PLL1_R_FIXED,           PLL1_N_DEFAULT, 
+                            PLL1_R_FIXED,           PLL1_N_DEFAULT,
                             PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
                             PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
                             PLL1_RFOUT_MAX_HZ,      PLL1_RFOUT_MIN_HZ,
@@ -189,8 +189,8 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     //  - Assumes a single PLL design, and therefore fixed reference.
     //
 
-    // set default values depending on which PLL 
-    if (pll->id == PLL_ID_LMX2595) { 
+    // set default values depending on which PLL
+    if (pll->id == PLL_ID_LMX2595) {
         *pll = pll_def_lmx2595;
      } else { //if no PLL ID provided, assume ADF5355 so that old code continues to work
         *pll = pll_def;
@@ -216,9 +216,9 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     // 2. Use the reference to determine N, and pfd frequency
     long double pd_freq =
             (long double)pll->ref_freq / (long double)pll->R;
-            
+
     double N1 = 0;
-    
+
     if (pll->id == PLL_ID_ADF5355) {
         // For phase coherency we need to stick with step sizes
         // corresponding to a reference as defined (currently 25e6)
@@ -246,7 +246,7 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
         }
     } else if (pll->id == PLL_ID_LMX2595) {
         // determine includedDivide so we know how much to divide N by
-        uint8_t includedDivide = 1;    
+        uint8_t includedDivide = 1;
         if (pll->d > 1) {
             if ((pll->d % 3 == 0 ) && (pll->d != 24) && (pll->d != 192)) {
                 includedDivide = 6;
@@ -281,12 +281,60 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     return actual_output;
 };
 
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+    // extract lo variables and pass to MCU (LMX2595)
+
+    double freq = pll->vcoFreq / pll->d;
+
+    // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
+    strcpy(buf, "lmx -k \r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // Send Reference in MHz to MCU
+    strcpy(buf, "lmx -o ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX R
+    strcpy(buf, "lmx -r ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX N
+    strcpy(buf, "lmx -n ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX D
+    strcpy(buf, "lmx -d ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output RF Power
+    strcpy(buf, "lmx -p ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 60 /*TODO: pll->power*/);
+    // default to high power
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output Frequency in MHz
+    strcpy(buf, "lmx -f ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    usleep(100000);
+}
+
 uint8_t pll_CheckParams(pllparam_t *pll, uint8_t is_pll1) {
 
     if (!is_pll1) {//currently only PLL1 is supported for ADF5355
         return 0;
     }
-        
+
     // checks for all PLLs
     if ((pll->N > pll->n_max) || (pll->N < pll->n_min) ||                         // N is valid
         (pll->R > pll->r_max) || (pll->R < pll->r_min) ||                         // R is valid
@@ -296,12 +344,12 @@ uint8_t pll_CheckParams(pllparam_t *pll, uint8_t is_pll1) {
         return 0;
         }
     // PLL specific checks
-    if (pll->id == PLL_ID_ADF5355) { // 
+    if (pll->id == PLL_ID_ADF5355) { //
         if ((pll->R > _PLL_RATS_MAX_DENOM) ||         // ensure R is not greater than _PLL_RATS_MAX_DENOM
             (pll->d > 1 && (pll->d & 1) != 0)) {      // ensure d is an even number
             return 0;
         }
-    }else if (pll->id == PLL_ID_LMX2595) { // 
+    }else if (pll->id == PLL_ID_LMX2595) { //
         if ((pll->vcoFreq > LMX2595_VCO_MAX2_HZ) && (pll->d > LMX2595_D_THRESH_VCO)){    // different VCO freq limit if d is too high
             return 0;
         }
@@ -358,12 +406,12 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         else if (*reqFreq > 30000000 ) { D = 256; }
         else if (*reqFreq > 19532000 ) { D = 384; }
         //else if (*reqFreq > 20000000 ) {D = 384; }    // to allow synchronizing for phase coherency across RF channels D < 512
-        //else if (*reqFreq > 15000000 ) { D = 512; } 
+        //else if (*reqFreq > 15000000 ) { D = 512; }
         //else if (*reqFreq >= 10000000 ) { D = 768; }
         else { D = 0 ;}                                 // if reqFreq is too low d=0 will cause error during check
         pll->d = D;
         pll->vcoFreq = (uint64_t)(D * (*reqFreq));
-    } else {                                            // if unknown IC set d to zero, which is expected to 
+    } else {                                            // if unknown IC set d to zero, which is expected to
         pll->d = 0;                                     // cause an error because d should always be 1 or more
     }
 }
