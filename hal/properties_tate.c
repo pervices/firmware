@@ -983,6 +983,18 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##_c##_rf_linearize(const char *data, char *ret) {      \
+        uint8_t lin_amt;                                                       \
+        sscanf(data, "%" SCNd8, &lin_amt);                                     \
+                                                                               \
+        strcpy(buf, "rf -L ");                                                 \
+        sprintf(buf + strlen(buf),"%" SCNd8, lin_amt);                         \
+        strcat(buf, "\r");                                                     \
+                                                                               \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         int gain;                                                              \
         sscanf(data, "%i", &gain);                                             \
@@ -3932,6 +3944,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
     DEFINE_FILE_PROP("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31")        \
     DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/linearize/val"         , hdlr_tx_##_c##_rf_linearize,            RW, "128")         \
     DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001")       \
