@@ -90,19 +90,19 @@ int main(void) {
         // if (pll.x2en)	actual_output *= 2.0;
         // else		actual_output /= (double)pll1.d;
 
-        double diff = (double)reqFreq - actual_output;
         double noise = ((double)pll.N) / ((double)pll.R);
         double dbc_noise1 = (double)pll.N / (double)pll.R;
 
         if (pll.x2en) {
             noise *= 2.0;
             dbc_noise1 *= 2.0;
+            actual_output *= 2.0;
         } else {
             noise = noise / pll.d;
             dbc_noise1 = dbc_noise1 / pll.d;
         }
 
-        dbc_noise1 = dbc_noise1 / 10000;
+        double diff = (double)reqFreq - actual_output;
 
 #ifdef _PLL_DEBUG_VERBOSE
         printf("Requested: %" PRIu64
