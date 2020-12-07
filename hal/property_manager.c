@@ -77,7 +77,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
         pos++;
     }
 
-    // ignore the new line at the end of the file
+    // ignore any new lines found at the end of the file
     while ( pos > 0 && data[pos - 1] == '\n'){
         pos--;
     }
