@@ -72,10 +72,16 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     fgets(data, max_len, fd);
     fclose(fd);
 
-    // remove the new line at the end of the file
     size_t pos = 0;
-    while (data[pos] != '\n' && data[pos] != '\0')
+    while (data[pos] != '\0'){
         pos++;
+    }
+
+    // ignore the new line at the end of the file
+    while (data[pos] == '\n'){
+        pos--;
+    }
+
     data[pos] = '\0';
 
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
