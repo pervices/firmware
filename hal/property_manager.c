@@ -81,6 +81,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     while ( pos > 0 && data[pos - 1] == '\n'){
         pos--;
     }
+    data[pos] = '\0';
 
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
