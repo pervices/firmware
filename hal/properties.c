@@ -2085,9 +2085,9 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     sscanf(data, "%" SCNd64 "", &freq);
     char prop_read[MAX_PROP_LEN];
     char prop_path[128];
-    
+
     strcpy(prop_path, STATE_DIR);
-    strcat(prop_path, "time/about/hw_ver"); 
+    strcat(prop_path, "time/about/hw_ver");
 
     // Read EEPROM, if stock unit do nothing
     get_property(&prop_path,prop_read,MAX_PROP_LEN);
@@ -2105,7 +2105,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         return RETURN_SUCCESS;
     }
-    
+
     /* if freq out of bounds, mute lmx*/
     if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {
         strcpy(buf, "lmx -k\r");
@@ -2113,19 +2113,19 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
         PRINT(ERROR,"LMX Freq Invalid \n");
         return RETURN_ERROR;
     }
-    
+
     /* run the pll calc algorithm */
     pllparam_t pll;
     pll.id = PLL_ID_LMX2595;
     long double outfreq = 0;
     outfreq = setFreq(&freq, &pll);
-    
+
     /* Send Parameters over to the MCU */
     set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
-                                                                        
+
     sprintf(ret, "%Lf", outfreq);
-    
-    return RETURN_SUCCESS;   
+
+    return RETURN_SUCCESS;
 }
 
 
@@ -2182,7 +2182,7 @@ static int hdlr_time_source_extsine(const char *data, char *ret) {
 
 // Internal Source Tuning
 static int hdlr_time_source_vtune(const char *data, char *ret) {
-    // read the vtune value    
+    // read the vtune value
     uint16_t vtune = 0;
     sscanf(data, "%" SCNd16 "", &vtune);
     // send it to the mcu
@@ -2190,7 +2190,7 @@ static int hdlr_time_source_vtune(const char *data, char *ret) {
     sprintf(buf + strlen(buf), "%" PRIu32 "", vtune);
     strcat(buf, "\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    
+
     return RETURN_SUCCESS;
 }
 
@@ -2635,14 +2635,14 @@ static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
 
     old_val2 = old_val2 & 0xff;
 
-    sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
+    sprintf(ret, "%02x%02x\n", old_val2, old_val1);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_server_about_fw_ver(const char *data, char *ret) {
     FILE *fp = NULL;
     char buf[MAX_PROP_LEN] = {0};
-    if ((fp = popen("/usr/bin/server -v", "r")) == NULL) {
+    if ((fp = popen("/usr/bin/server -v | awk 'NR==2 {print $2}'", "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         return RETURN_ERROR;
     }
@@ -2747,7 +2747,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
             break;
         case 6:
             strcat(ret, "PWR ");
-            break; 
+            break;
         default:
             strcat(ret, "Unrecognized ");
     }
@@ -2769,7 +2769,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     sscanf(buf, "0x%x", &readreg);
     PRINT(INFO, "we read 1 = 0x%x\n", readreg);
     sprintf(buf, "RTM %u - ", readreg);
-    strcat(ret, buf);    
+    strcat(ret, buf);
 
     // Check feature registers
     strcat(ret, "Features:");
@@ -2780,7 +2780,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
             PRINT(ERROR, "Error opening pipe!\n");
             strcat(ret, " ERROR: EEPROM read failed");
             return RETURN_ERROR;
-        }    
+        }
         fgets(buf, MAX_PROP_LEN, fp);
         if (pclose(fp)) {
             PRINT(ERROR, "Error closing pipe!");
@@ -3147,9 +3147,9 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001")       \
     DEFINE_FILE_PROP("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001")       \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
-    
+
     // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
-    
+
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
@@ -3709,13 +3709,13 @@ out:
 
 void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
-    
+
     double freq = pll->vcoFreq / pll->d;
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k \r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
-    
+
     // Send Reference in MHz to MCU
     strcpy(buf, "lmx -o ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
