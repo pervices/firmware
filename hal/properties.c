@@ -2385,13 +2385,8 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
     strcpy(buf, "board -v\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
-    /* strcpy(ret, (char *)uart_ret_buf); */
-
     char delimiters[3] = ":\n\r";
-
     ret = strtok((char *) uart_ret_buf, delimiters);
-    ret = strtok(NULL, delimiters);
-    ret = strtok(NULL, delimiters);
     ret = strtok(NULL, delimiters);
     ret = strtok(NULL, delimiters);
     ret = strtok(NULL, delimiters);
