@@ -1125,7 +1125,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_about_hw_ver(const char *data, char *ret) {      \
-         strcpy(buf, "board -h\r");                                            \
+        strcpy(buf, "board -h\r");                                             \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -1134,8 +1134,18 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
                                                                                \
     static int hdlr_tx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        char delimiters[2] = ":\n";                                            \
+                                                                               \
+        char *ptr = strtok((char *)uart_ret_buf, delimiters);                  \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+                                                                               \
+        strcpy(ret, ptr);                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }
@@ -1653,8 +1663,18 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+                                                                               \
+        char delimiters[2] = ":\n";                                            \
+                                                                               \
+        char *ptr = strtok((char *)uart_ret_buf, delimiters);                  \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+        ptr = strtok(NULL, delimiters);                                        \
+                                                                               \
+        strcpy(ret, ptr);                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }
@@ -2386,16 +2406,15 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
     char delimiters[2] = ":\n";
-    char uart_buffer[1024 * 4];
 
-    uart_buffer = (char *) uart_ret_buf;
-    ret = strtok(uart_buffer, delimiters);
-    ret = strtok(NULL, delimiters);
-    ret = strtok(NULL, delimiters);
-    ret = strtok(NULL, delimiters);
-    ret = strtok(NULL, delimiters);
+    char *ptr = strtok((char *)uart_ret_buf, delimiters);
+    ptr = strtok(NULL, delimiters);
+    ptr = strtok(NULL, delimiters);
+    ptr = strtok(NULL, delimiters);
+    ptr = strtok(NULL, delimiters);
+    ptr = strtok(NULL, delimiters);
 
-    /* strcpy(ret, (char *)uart_ret_buf); */
+    strcpy(ret, ptr);
     return RETURN_SUCCESS;
 }
 
