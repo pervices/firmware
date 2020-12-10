@@ -2386,6 +2386,16 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
 
+    char delimiters[2] = ":\n";
+
+    ret = strtok((char *) uart_ret_buf, delimiters);
+    ret = strtok(NULL, delimiters);
+    ret = strtok(NULL, delimiters);
+    ret = strtok(NULL, delimiters);
+    ret = strtok(NULL, delimiters);
+    ret = strtok(NULL, delimiters);
+
+    /* strcpy(ret, (char *)uart_ret_buf); */
     return RETURN_SUCCESS;
 }
 
