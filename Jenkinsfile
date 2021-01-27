@@ -30,6 +30,7 @@ pipeline {
 	post {
 		always {
 			echo 'The build is finished, cleaning up workspace...'
+			sh 'make clean'
 			//might need to use deleteDir() to clean up workspace
 		}
 		failure {
