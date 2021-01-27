@@ -21,7 +21,6 @@ pipeline {
 				label 'citests'
 			}
 			steps {
-				sh 'make clean'
 				sh './autogen.sh'
 				sh 'CXX="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++"'
 				sh 'CC="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc"'
