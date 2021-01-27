@@ -21,7 +21,7 @@ pipeline {
 				label 'citests'
 			}
 			steps {
-				sh './autogen.sh'
+				sh 'make clean || ./autogen.sh'
 				sh 'CXX="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-c++" CC="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf'
 				sh 'make'
 			}
@@ -30,7 +30,6 @@ pipeline {
 	post {
 		always {
 			echo 'The build is finished, cleaning up workspace...'
-			sh 'make clean'
 			//might need to use deleteDir() to clean up workspace
 		}
 		failure {
