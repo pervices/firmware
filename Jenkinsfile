@@ -22,10 +22,7 @@ pipeline {
 			}
 			steps {
 				sh './autogen.sh'
-				sh 'CXX="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++"'
-				sh 'CC="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc"'
-				sh 'CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon"'
-				sh './configure --prefix=/usr --host=arm-unknown-linux-gnueabihf'
+				sh 'CXX="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-c++" CC="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf'
 				sh 'make'
 			}
 		}
