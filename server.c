@@ -152,6 +152,9 @@ int main(int argc, char *argv[]) {
     pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
                               save_profile_path);
 
+    // Write the linux systemtime to the FPGA
+    system("date +%s.%N > /var/volatile/crimson/state/time/clk/set_time");
+
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Crimson server is up\n");
 
