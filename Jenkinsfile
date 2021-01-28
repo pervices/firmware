@@ -1,29 +1,19 @@
 pipeline {
 	agent none
-	//triggers {
-		//cron('0 1,13,17,21 * * *')
-		//This time is in UTC. 
-		//For Eastern time, in spring/summer it would be 9am, 1pm, 5pm, 9pm
-		//For Eastern time, in fall/winter it should be 8am, 12pm, 4pm, 8pm
-	//}
+	triggers {
+		pollSCM('TZ=America/Toronto\nH/10 * * * *')
+		//Polls every 10 minutes
+	}
 	options {
 		ansiColor('xterm')
 	}
-	//parameters {
-	//	booleanParam (
-	//		defaultValue: false,
-	//		description: '',
-	//		name : 'FORCE_FULL_BUILD')
-	//}
 	stages {
 		stage('build') {
 			agent {
 				label 'citests'
 			}
 			steps {
-				sh 'make clean || ./autogen.sh'
-				sh 'CXX="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-c++" CC="/opt/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf'
-				sh 'make'
+				sh 'echo This is just a proxy for another Jenkins pipeline firmware-compile'
 			}
 		}
 	}
