@@ -2065,40 +2065,14 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
 static int hdlr_time_clk_set_time(const char *data, char *ret) {
     long double time;
     sscanf(data, "%Lf", &time);
-    uint32_t old_val;
-    read_hps_reg("sys13", &old_val);
-
     write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
     write_hps_reg("sys10",
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     write_hps_reg("sys11",
                   (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
-    write_hps_reg("sys13", old_val|1);
-    write_hps_reg("sys13", old_val&(~1));
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_clk_source_clk(const char *data, char *ret) {
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_clk_source_sync(const char *data, char *ret) {
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_clk_time_update_mode_on_pps(const char *data, char *ret) {
-    uint32_t old_val;
-    read_hps_reg("sys13", &old_val);
-
-    if (strcmp(data, "hard") == 0) {
-        write_hps_reg("sys13", old_val|(1<<2));
-    } else if (strcmp(data, "soft") == 0) {
-        write_hps_reg("sys13", old_val&(~(1<<2)));
-    } else {
-        PRINT(ERROR, "invalid selection, choose hard or soft");
-        return RETURN_ERROR_PARAM;
-    }
+    write_hps_reg("sys13", 1);
+    write_hps_reg("sys13", 0);
     return RETURN_SUCCESS;
 }
 
@@ -3000,17 +2974,14 @@ static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
 static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     uint32_t systime_lh = 0;
     uint32_t systime_uh = 0;
-    uint32_t old_val;
-    read_hps_reg("sys13", &old_val);
-
     read_hps_reg("sys5", &systime_lh);
     read_hps_reg("sys6", &systime_uh);
     write_hps_reg("sys9", systime_lh);
     write_hps_reg("sys10", systime_uh);
     write_hps_reg("sys11", 0); // Set frac_time to 0
     write_hps_reg("sys12", 0); // Set frac_time to 0
-    write_hps_reg("sys13", old_val|1); // Writing 1, then 0 to sys13 sets the time
-    write_hps_reg("sys13", old_val&(~1)); // to what is written in sys9 through 12
+    write_hps_reg("sys13", 1); // Writing 1, then 0 to sys9 sets the time
+    write_hps_reg("sys13", 0); // to what is written in sys7 and sys8
 
     return RETURN_SUCCESS;
 }
@@ -3150,9 +3121,6 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/set_time"                   , hdlr_time_clk_set_time,                 WO, "0.0")       \
-    DEFINE_FILE_PROP("time/clk/source_clk"                 , hdlr_time_clk_source_clk,               RW, "0.0")       \
-    DEFINE_FILE_PROP("time/clk/source_sync"                , hdlr_time_clk_source_sync,              RW, "0.0")       \
-    DEFINE_FILE_PROP("time/clk/time_update_mode_on_pps"    , hdlr_time_clk_time_update_mode_on_pps,  RW, "hard")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
     DEFINE_FILE_PROP("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "0")         \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
