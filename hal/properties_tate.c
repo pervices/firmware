@@ -41,9 +41,9 @@
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   250000000.0  //After base rate
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
-// (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
+// (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
-    ((double)10.73741824)
+    ((double)17.179869184)
 // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
 #define DAC_NCO_CONST \
     ((double)219902.3255552)
