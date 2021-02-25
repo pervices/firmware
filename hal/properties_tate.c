@@ -44,9 +44,6 @@
 // (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
     ((double)17.179869184)
-// (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
-#define DAC_NCO_CONST \
-    ((double)219902.3255552)
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
