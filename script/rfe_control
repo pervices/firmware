@@ -58,7 +58,7 @@ if {$::argv0 eq [info script]} {
     
     }
 
-    set gpio_chip_label_pwr_en "pb_pwr"
+    set gpio_chip_label_pwr_en "bp_pwr"
     set gpio_chip_label_board_good "bp_bg"
 
     # The rfe control signals are not mapped one-to-one to the PCA9539 GPIO pins, therefore
