@@ -163,114 +163,134 @@ int main(int argc, char *argv[]) {
     pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
                               save_profile_path);
     
-    // TODO find a way to flush uart buffers
+    /* count_bad | 
+     *   value   | meaning 
+     * ----------------------------------------------------
+     *     0     | time is good
+     *     1     | time had to be rebooted, but is good now
+     *     2     | time needs to be rebooted
+     *     3     | already rebooted time once
+     *     4     | already rebooted time twice
+     *     5     | already rebooted time 3 times
+     */
     
     // check that time board plls are locked
-    count_bad = 1;
-    property_good("time/status/status_good");
-    while (count_bad == 1) {
-        usleep(5000000); // wait
-        if (property_good("time/status/status_good") == 1) {
-            count_bad = 0;
-        } else {        
-            PRINT(ERROR,"rebooting time\n");
-            set_property("/var/cyan/state/time/reboot","1");
-            usleep(5000000); // wait
-            PRINT(INFO,"FPGA: reset\n");
-            set_property("/var/cyan/state/fpga/reset","3");
-            usleep(5000000); // wait
-            PRINT(INFO,"sysref pulse attempt\n");
-            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
-            usleep(5000000); // wait
-            for (i = 0; i < 16; i++) {
-                strcpy(&prop_path,"/var/cyan/state/tx/");
-                tmp_char = i + 'a';
-                strcat(&prop_path,&tmp_char);
-                strcat(&prop_path,"/reboot");
-                PRINT(INFO,"PROPERTY: %s\n",prop_path);
-                set_property(&prop_path,"1");
-                usleep(50000); // wait
-            }
-        }
+    if (property_good("time/status/status_good") != 1) {
+            count_bad = 2; //
     }
-    // check that tx boards are all good
-    for (i = 0; i < 16; i++) {
-        strcpy(&prop_path,"tx/");
-        tmp_char = i + 'a';
-        strcat(&prop_path,&tmp_char);
-        strcat(&prop_path,"/jesd_status");
-        PRINT(INFO,"PROPERTY: %s\n",prop_path);
-        if (property_good(&prop_path) != 1) {
-            // if any is not good reboot that board
-            count_bad += 1;
-            PRINT(ERROR,"JESD: rebooting tx %c\n",tmp_char);
+    // if they're not locked, reboot the time board up to three times
+    // note that count_bad is initialized to zero above
+    while ((count_bad >= 2) && (count_bad < 5)) {
+        PRINT(ERROR,"rebooting time\n");
+        set_property("/var/cyan/state/time/reboot","1");
+        usleep(20000000); // wait 20 seconds
+        if (property_good("time/status/status_good") == 1) {
+            count_bad = 1;
+        } else {
+            count_bad++;
+        } //if
+    } //while
+    if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
+        PRINT(INFO,"FPGA: reset\n");
+        set_property("/var/cyan/state/fpga/reset","3");
+        for (i = 0; i < 16; i++) {
             strcpy(&prop_path,"/var/cyan/state/tx/");
+            tmp_char = i + 'a';
             strcat(&prop_path,&tmp_char);
             strcat(&prop_path,"/reboot");
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
             set_property(&prop_path,"1");
-        }
-        usleep(500000); // wait for uart to be ready
-    }
-    PRINT(INFO, "JESD: first pass %i boards bad\n",count_bad);
-    if (count_bad > 0) { // if any had to be rebooted confirm that they came up properly
-        count_bad = 0;
-        usleep(10000000); // wait to ensure that any rebooted boards are up
-        // TODO find a way to flush uart buffer
-        for (i = 0; i < 16; i++) {
+        } //for
+        usleep(15000000); // wait 15 seconds for all boards to come up
+        PRINT(INFO,"sysref pulse attempt\n");
+        set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
+        usleep(1000000); // wait 1 second
+    }//if
+    
+    if (count_bad >= 5)  {// at this point if time board is still bad we have to restart cyan
+        write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
+        abort();
+    } else {
+        count_bad = 0; // reset count_bad to zero, now it will count bad tx board JESD links
+        for (i = 0; i < 16; i++) { // check that tx boards are all good
             strcpy(&prop_path,"tx/");
             tmp_char = i + 'a';
             strcat(&prop_path,&tmp_char);
             strcat(&prop_path,"/jesd_status");
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
-            if (property_good(&prop_path) != 1) {
+            if (property_good(&prop_path) != 1) { // if any is not good reboot that board
                 count_bad += 1;
-            }
-            usleep(1000000); // wait for uart to be ready
-         }
-         PRINT(INFO, "JESD: %i boards still bad after reboot\n",count_bad);
-    }
-    if (count_bad > 0) { // if any were still bad try resetting fpga then all boards
-        set_property("fpga/reset","3");
-        for (i = 0; i < 16; i++) {
-            PRINT(INFO,"FPGA: reset\n"); // reset fpga jesd
-            set_property("/var/cyan/state/fpga/reset","3");
-            usleep(5000000); // wait
-            //issue sysref
-            PRINT(INFO,"sysref pulse attempt\n");
-            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
-            usleep(5000000); // wait
-            for (i = 0; i < 16; i++) {
-                count_bad += 1;
+                PRINT(ERROR,"JESD: rebooting tx %c\n",tmp_char);
                 strcpy(&prop_path,"/var/cyan/state/tx/");
-                tmp_char = i + 'a';
                 strcat(&prop_path,&tmp_char);
                 strcat(&prop_path,"/reboot");
                 PRINT(INFO,"PROPERTY: %s\n",prop_path);
                 set_property(&prop_path,"1");
-                usleep(50000); // wait
-            }
-        }
-        usleep(10000000); // wait for all boards to reboot
-        count_bad = 0;
-        for (i = 0; i < 16; i++) { // then check that all of the tx boards came up
-            strcpy(&prop_path,"tx/");
-            tmp_char = i + 'a';
-            strcat(&prop_path,&tmp_char);
-            strcat(&prop_path,"/jesd_status");
-            PRINT(INFO,"PROPERTY: %s\n",prop_path);
-            if (property_good(&prop_path) != 1) {
-                count_bad += 1;
             }
             usleep(500000); // wait for uart to be ready
         }
-        PRINT(INFO, "JESD: Final count %i boards bad\n",count_bad);
+        PRINT(INFO, "JESD: first pass %i boards bad\n",count_bad);
+        if (count_bad > 0) { // if any had to be rebooted confirm that they came up properly
+            count_bad = 0;
+            usleep(10000000); // wait 10 seconds to ensure that any rebooted boards are up
+            // TODO find a way to flush uart buffer
+            for (i = 0; i < 16; i++) {
+                strcpy(&prop_path,"tx/");
+                tmp_char = i + 'a';
+                strcat(&prop_path,&tmp_char);
+                strcat(&prop_path,"/jesd_status");
+                PRINT(INFO,"PROPERTY: %s\n",prop_path);
+                if (property_good(&prop_path) != 1) {
+                    count_bad += 1;
+                }
+                usleep(1000000); // wait for uart to be ready
+            }
+            PRINT(INFO, "JESD: %i boards still bad after reboot\n",count_bad);
+        }
+        if (count_bad > 0) { // if any were still bad try resetting fpga then all tx boards
+            set_property("fpga/reset","3");
+            for (i = 0; i < 16; i++) {
+                PRINT(INFO,"FPGA: reset\n"); // reset fpga jesd
+                set_property("/var/cyan/state/fpga/reset","3");
+                usleep(5000000); // wait
+                //issue sysref
+                PRINT(INFO,"sysref pulse attempt\n");
+                set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
+                usleep(5000000); // wait
+                for (i = 0; i < 16; i++) {
+                    count_bad += 1;
+                    strcpy(&prop_path,"/var/cyan/state/tx/");
+                    tmp_char = i + 'a';
+                    strcat(&prop_path,&tmp_char);
+                    strcat(&prop_path,"/reboot");
+                    PRINT(INFO,"PROPERTY: %s\n",prop_path);
+                    set_property(&prop_path,"1");
+                    usleep(50000); // wait
+                }
+            }
+            usleep(10000000); // wait 10 seconds for all tx boards to reboot
+            // toggle sysref again for any boards that were rebooted
+            PRINT(INFO,"sysref pulse attempt\n");
+            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
+            count_bad = 0;
+            for (i = 0; i < 16; i++) { // then check that all of the tx boards came up
+                strcpy(&prop_path,"tx/");
+                tmp_char = i + 'a';
+                strcat(&prop_path,&tmp_char);
+                strcat(&prop_path,"/jesd_status");
+                PRINT(INFO,"PROPERTY: %s\n",prop_path);
+                if (property_good(&prop_path) != 1) {
+                    count_bad += 1;
+                }
+                usleep(500000); // wait for uart to be ready
+            }
+            PRINT(INFO, "JESD: Final count %i boards bad\n",count_bad);
+        }
+        if (count_bad > 0) { // at this point if a board is still bad we have to restart cyan
+            write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
+            abort();
+        }
     }
-    if (count_bad > 0) { // at this point if a board is still bad we have to restart cyan
-        write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
-        abort();
-    }
-
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");
