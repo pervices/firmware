@@ -588,7 +588,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t d -n 0 -h ");                                      \
+        strcpy(buf, "nco -t d -n 0 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -612,7 +612,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t d -n 1 -h ");                                      \
+        strcpy(buf, "nco -t d -n 1 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -621,7 +621,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -636,7 +636,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 0 -h ");                                      \
+        strcpy(buf, "nco -t c -n 0 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -645,7 +645,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -660,7 +660,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 1 -h ");                                      \
+        strcpy(buf, "nco -t c -n 1 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -669,7 +669,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -684,7 +684,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 2 -h ");                                      \
+        strcpy(buf, "nco -t c -n 2 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -693,7 +693,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -708,7 +708,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 3 -h ");                                      \
+        strcpy(buf, "nco -t c -n 3 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -717,7 +717,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -732,7 +732,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 4 -h ");                                      \
+        strcpy(buf, "nco -t c -n 4 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -740,8 +740,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                                                                                                              \
-    static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {  \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -756,7 +756,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 5 -h ");                                      \
+        strcpy(buf, "nco -t c -n 5 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
