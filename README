@@ -16,8 +16,8 @@ which is available on yaourt.
 
    sh autogen.sh
 
-   CXX="/usr/bin/arm-linux-gnueabihf-g++" \
-   CC="/usr/bin/arm-linux-gnueabihf-gcc" \
+   CXX="/usr/bin/arm-unknown-linux-gnueabihf-g++" \
+   CC="/usr/bin/arm-unknown-linux-gnueabihf-gcc" \
    CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
         -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
         ./configure --prefix=/usr --host=x86_64
@@ -62,6 +62,12 @@ To build the HPS binaries from a host computer, you may be required to specify
 a non-standard location for your compiler and build chain. To ensure that your
 modified build chain is correctly specified and propagated across the build, you
 may specify the specific compiler as a configure flag.
+
+
+For Crimson, we currently use the armv7l hard-float toolchain that is available here;
+https://archlinuxarm.org/wiki/Distcc_Cross-Compiling 
+
+For Cyan, we should be able to use the ARMv8 toolchain from above, but this is presently untested.
 
 To target the ARM processors used by Crimson and Tate, you can use;
 
