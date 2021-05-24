@@ -39,14 +39,11 @@
 #include "gpio_pins.h"
 
 // Sample rates are in samples per second (SPS).
-#define BASE_SAMPLE_RATE   200000000.0  //After base rate
+#define BASE_SAMPLE_RATE   250000000.0  //After base rate
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
-// (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
+// (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
-    ((double)10.73741824)
-// (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
-#define DAC_NCO_CONST \
-    ((double)219902.3255552)
+    ((double)17.179869184)
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
@@ -591,7 +588,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t d -n 0 -h ");                                      \
+        strcpy(buf, "nco -t d -n 0 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -615,7 +612,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t d -n 1 -h ");                                      \
+        strcpy(buf, "nco -t d -n 1 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -624,7 +621,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -639,7 +636,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 0 -h ");                                      \
+        strcpy(buf, "nco -t c -n 0 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -648,7 +645,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -663,7 +660,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 1 -h ");                                      \
+        strcpy(buf, "nco -t c -n 1 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -672,7 +669,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -687,7 +684,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 2 -h ");                                      \
+        strcpy(buf, "nco -t c -n 2 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -696,7 +693,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -711,7 +708,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 3 -h ");                                      \
+        strcpy(buf, "nco -t c -n 3 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -720,7 +717,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {  \
+    static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -735,7 +732,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 4 -h ");                                      \
+        strcpy(buf, "nco -t c -n 4 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -743,8 +740,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                                                                                                              \
-    static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {  \
+                                                                               \
+    static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {   \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
@@ -759,7 +756,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
-        strcpy(buf, "nco -t c -n 5 -h ");                                      \
+        strcpy(buf, "nco -t c -n 5 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
@@ -2291,7 +2288,7 @@ CHANNELS
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
-    }   
+    }
 CHANNELS
 #undef X
 
@@ -2700,14 +2697,14 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 static int hdlr_time_reboot(const char *data, char *ret) {
         int reboot;
         sscanf(data, "%i", &reboot);
-        
+
         if (reboot == 1) {
             strcpy(buf, "board -r\r");
             ping_write_only(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
-        }                                                         
-        
+        }
+
         return RETURN_SUCCESS;
-    }                    
+    }
 
 static int hdlr_time_clk_pps(const char *data, char *ret) {
     return RETURN_SUCCESS;
@@ -2735,7 +2732,7 @@ static int hdlr_time_status_good(const char *data, char *ret) {
      strcpy(buf, "status -g\r");
      ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
      strcpy(ret, (char *)uart_ret_buf);
-     
+
      return RETURN_SUCCESS;
 }
 
@@ -3708,11 +3705,11 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      */
     int reset_type = 0;
     uint32_t tmp_reg = 0;
-    
+
     sscanf(data, "%lf", &reset_type);
-    
+
     read_hps_reg("res_rw7", &tmp_reg);
-    
+
     if (reset_type == 1){       // global reset bit 30
         write_hps_reg("res_rw7", (tmp_reg & (1 << 30)));
     }
@@ -3725,7 +3722,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     else if (reset_type == 4) { // DSP reset bit 27
         write_hps_reg("res_rw7", (tmp_reg & (1 << 27)));
     }
-    /* register sys[18] shows the reset status 
+    /* register sys[18] shows the reset status
      * the bits are [31:0] chanMode = {
      * w_40gModulePresent,                                                         // 4-bits
      * w_X40gStatusRxPcsReady & w_X40gStatusRxBlockLock & w_X40gStatusRxAmLock,    // 4-bits
@@ -3733,9 +3730,9 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      * w_ResetSequencerUnknownStateError,                                          // 1-bit
      * w_ResetSequencer40gResetSerialInterfaceTxWaitError,                         // 1-bit
      * w_ResetSequencer40gResetSerialInterfaceRxWaitError,                         // 1-bit
-     * 13'b0    
+     * 13'b0
      * };
-     */   
+     */
     return RETURN_SUCCESS;
 }
 
@@ -3755,7 +3752,7 @@ static int hdlr_gpio_override_en(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         //Read res_rw7
         read_hps_reg("res_rw7", &old_val);
-        //Mask lowest bit with 1 then write to res_rw7 
+        //Mask lowest bit with 1 then write to res_rw7
         write_hps_reg("res_rw7", old_val | 0x1);
     } else {
         read_hps_reg("res_rw7", &old_val);
@@ -3813,7 +3810,7 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "tate" /* Name unknown for now... */
+#define PROJECT_NAME "cyan_p1hdr32t"
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
@@ -3937,7 +3934,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
-    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     
+    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
@@ -4063,7 +4060,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
     DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
 
-    
+
 #define DEFINE_GPIO(_p)                                                                                                        \
     DEFINE_FILE_PROP("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0")
 
@@ -4089,7 +4086,7 @@ static prop_t property_table[] = {
     GPIO_PINS
 #undef X
     DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")                 \
-    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")                 
+    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
     DEFINE_CM()
@@ -4308,7 +4305,7 @@ void sync_channels(uint8_t chan_mask) {
     //So that the transient spurs that happen when
     //you initialy turn on a channel or run a jesd sync
     //don't make it to the SMA.
-    
+
     // // RX - ADCs
     // strcpy(buf, "power -c ");
     // strcat(buf, str_chan_mask);
