@@ -2370,6 +2370,8 @@ static int hdlr_time_about_mcufuses(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
 
+    PRINT(ERROR, "Doug's learning modification\n");
+
     return RETURN_SUCCESS;
 }
 
