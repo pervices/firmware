@@ -1631,8 +1631,6 @@ CHANNELS
         strcpy(buf, "status -v\r");                                            \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
         strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                            \
-        PRINT(ERROR, "Doug's learning modification for RX\n");                 \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
