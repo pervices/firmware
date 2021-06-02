@@ -1631,8 +1631,8 @@ CHANNELS
         strcpy(buf, "status -v\r");                                            \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
         strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-                                                                               \
+                                                                            \
+        PRINT(ERROR, "Doug's learning modification for RX\n");                 \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2372,11 +2372,7 @@ static int hdlr_time_about_mcufuses(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
 
-    PRINT(ERROR, "Doug's learning blinking\n");
-
-    //makes the led blink
-    strcat(buf, "echo 9 > /var/volatile/crimson/state/rx/a/board/led\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    PRINT(ERROR, "Doug's learning modification\n");
 
     return RETURN_SUCCESS;
 }
