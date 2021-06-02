@@ -1631,7 +1631,14 @@ CHANNELS
         strcpy(buf, "status -v\r");                                            \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
         strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
+        \
+        PRINT(ERROR, "Doug's blink learning");\
+        \
+        strcpy(buf, "board -l\r");                                             \
+        strcat(buf, "9");                                                     \
+        strcat(buf, "\r");                                                     \
+        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
