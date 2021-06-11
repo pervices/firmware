@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
     if (count_bad >= 5)  {// at this point if time board is still bad we have to restart cyan
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
         abort();
-    } else {
+    } /*else {
         count_bad = 0; // reset count_bad to zero, now it will count bad tx board JESD links
         for (i = 0; i < 16; i++) { // check that tx boards are all good
             strcpy(&prop_path,"tx/");
@@ -290,7 +290,7 @@ int main(int argc, char *argv[]) {
             write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
             abort();
         }
-    }
+    }*/
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");

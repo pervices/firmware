@@ -47,8 +47,13 @@
         X(o, tx) \
         X(p, tx)
 #elif defined(TATE_8R)
+    //Will be only using the populated RF slots
     #define CHANNELS \
-        X(a, rx) \
+        X(b, rx) \
+        X(f, rx) \
+        X(j, rx) \
+        X(n, rx)         
+        /*X(a, rx) \
         X(b, rx) \
         X(c, rx) \
         X(d, rx) \
@@ -63,7 +68,7 @@
         X(m, rx) \
         X(n, rx) \
         X(o, rx) \
-        X(p, rx)
+        X(p, rx)*/
 #elif defined(VAUNT)
     #define CHANNELS \
         X(a, io) \
