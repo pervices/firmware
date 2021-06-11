@@ -28,13 +28,7 @@
 // channels specified. Channel operations will be done in the order of this
 // specification.
 
-#if defined(VAUNT)
-    #define CHANNELS \
-        X(a, io) \
-        X(b, io) \
-        X(c, io) \
-        X(d, io)
-#elif defined(TATE)
+#if defined(TATE)
     #define CHANNELS \
         X(a, tx) \
         X(b, tx) \
@@ -52,8 +46,32 @@
         X(n, tx) \
         X(o, tx) \
         X(p, tx)
+#elif defined(TATE_8R)
+    #define CHANNELS \
+        X(a, rx) \
+        X(b, rx) \
+        X(c, rx) \
+        X(d, rx) \
+        X(e, rx) \
+        X(f, rx) \
+        X(g, rx) \
+        X(h, rx) \
+        X(i, rx) \
+        X(j, rx) \
+        X(k, rx) \
+        X(l, rx) \
+        X(m, rx) \
+        X(n, rx) \
+        X(o, rx) \
+        X(p, rx)
+#elif defined(VAUNT)
+    #define CHANNELS \
+        X(a, io) \
+        X(b, io) \
+        X(c, io) \
+        X(d, io)
 #else
-    #error "Project name (VAUNT | TATE) not specified or not recognized."
+    #error "Project name (TATE | TATE_8R | VAUNT) not specified or not recognized."
 #endif
 
 // Converts an expanded channel to a compile time string.

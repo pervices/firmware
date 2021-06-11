@@ -28,15 +28,18 @@
 
 /* TATE ports are expanded with xmacros
 * in hal/{channels.h,property_manager.c,properties.c} */
-#if defined(VAUNT)
+#if defined(TATE)
+    #define UART_SYNTH "/dev/ttycyan-time"
+    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
+#elif defined(TATE_8R)
+    #define UART_SYNTH "/dev/ttycyan-time"
+    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
+#elif defined(VAUNT)
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
-#elif defined(TATE)
-    #define UART_SYNTH "/dev/ttycyan-time"
-    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
 #else
-    #error "This file must be compiled with either -DTATE or -DVAUNT. Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
 
 int get_inotify_fd();

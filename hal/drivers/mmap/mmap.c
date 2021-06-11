@@ -19,12 +19,14 @@
 #include "mmap.h"
 
 #ifndef HPS2FPGA_GPR_OFST
-    #if defined(VAUNT)
-        #define HPS2FPGA_GPR_OFST (0xFF200000)
-    #elif defined(TATE)
+    #if defined(TATE)
         #define HPS2FPGA_GPR_OFST (0x80000000)
-    #elif
-        #error This file must be called with either -DTATE or -DVAUNT. Check spaces.
+    #elif defined(TATE_8R)
+        #define HPS2FPGA_GPR_OFST (0x80000000)
+    #elif defined(VAUNT)
+        #define HPS2FPGA_GPR_OFST (0xFF200000)
+    #else
+        #error This file must be called with a valid PRODUCT. Check spaces.
     #endif
 #endif
 
@@ -146,11 +148,16 @@ int mmap_init() {
     }
     mmap_fd = r;
 
-#if defined(VAUNT)
-    mmap_len = 0x1000;
-#elif defined(TATE)
+#if defined(TATE)
     mmap_len = 0x4000;
+#elif defined(TATE_8R)
+    mmap_len = 0x4000;
+#elif defined(VAUNT)
+    mmap_len = 0x1000;
+#else
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
+
     rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
               HPS2FPGA_GPR_OFST);
     if (MAP_FAILED == rr) {

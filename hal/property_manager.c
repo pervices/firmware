@@ -39,7 +39,7 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-#if !(defined(VAUNT) || defined(TATE))
+#if !(defined(VAUNT) || defined(TATE) || defined(TATE_8R) )
     #error "You must specify either (VAUNT | TATE) when compiling this project."
 #endif
 
@@ -87,10 +87,14 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 }
 
 static void change_group_permissions_for_all(void) {
-#ifdef TATE
+#if defined(TATE)
     system("chgrp dev-grp0 -R /var/cyan");
-#else
+#elif defined(TATE_8R)
+    system("chgrp dev-grp0 -R /var/cyan");
+#elif defined(VAUNT)
     system("chgrp dev-grp0 -R /var/crimson");
+#else
+    #error This file must be called with a valid PRODUCT. Check spaces.
 #endif
 }
 
@@ -151,20 +155,29 @@ static void make_prop(prop_t *prop) {
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
-#ifdef TATE
+#if defined(TATE)
         snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
-#else
+#elif defined(TATE_8R)
+        snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
+#elif defined(VAUNT)
         snprintf(cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path);
+#else
+        #error This file must be called with a valid PRODUCT. Check spaces.
 #endif
         system(cmd);
 
         // TODO: replace with symlinkat(2)
-#ifdef TATE
+#if defined(TATE)
         snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
                  prop->symlink_target, prop->path);
-#else
+#elif defined(TATE_8R)
+        snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
+                 prop->symlink_target, prop->path);
+#elif defined(VAUNT)
         snprintf(cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s",
                  prop->symlink_target, prop->path);
+#else
+        #error This file must be called with a valid PRODUCT. Check spaces.
 #endif
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
@@ -269,8 +282,23 @@ int init_property(uint8_t options) {
     /* Setup all UART devices XXX: SHOULD RETURN -1 */
     init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
-#if defined(VAUNT)
-
+#if defined(TATE)
+    static char name[512];
+#define X(ch, io)                                                              \
+    const int chan_##ch = INT(ch);                                             \
+    sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
+    init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
+    CHANNELS
+#undef X
+#elif defined(TATE_8R)
+    static char name[512];
+    #define X(ch, io)                                                              \
+        const int chan_##ch = INT(ch);                                             \
+        sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
+        init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
+        CHANNELS
+    #undef X
+#elif defined(VAUNT)
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
     //
@@ -281,15 +309,6 @@ int init_property(uint8_t options) {
 
     for (int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
-
-#elif defined(TATE)
-    static char name[512];
-#define X(ch, io)                                                              \
-    const int chan_##ch = INT(ch);                                             \
-    sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
-    init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
-    CHANNELS
-#undef X
 #endif
 
     PRINT(INFO, "Configuring Time Board. Using UART: %s\n", UART_SYNTH);

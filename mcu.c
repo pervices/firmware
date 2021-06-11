@@ -85,14 +85,7 @@ static int contains(const char *str, char letter, int size) {
 
 static void dump_args(void) {
     int i = 0;
-#if defined(VAUNT)
-    printf("%s\n", UART_CRIMSON_SN);
-    printf("%s\n", UART_CRIMSON_TX);
-    printf("%s\n", UART_CRIMSON_RX);
-    printf("%d\n", uart_crimson_synth_fd);
-    printf("%d\n", uart_crimson_tx_fd);
-    printf("%d\n", uart_crimson_rx_fd);
-#elif defined(TATE)
+#if defined(TATE)
     printf("%s\n", UART_CYAN_SN);
     for (i = 0; i < 16; i++) {
         printf("%s\n", UART_CYAN_RFE[i]);
@@ -101,6 +94,24 @@ static void dump_args(void) {
         printf("%d\n", uart_cyan_synth_fd);
     }
     printf("%d\n", uart_cyan_rfe_fd[i]);
+#elif defined(TATE_8R)
+    printf("%s\n", UART_CYAN_SN);
+    for (i = 0; i < 16; i++) {
+        printf("%s\n", UART_CYAN_RFE[i]);
+    }
+    for (i = 0; i < 16; i++) {
+        printf("%d\n", uart_cyan_synth_fd);
+    }
+    printf("%d\n", uart_cyan_rfe_fd[i]);
+#elif defined(VAUNT)
+    printf("%s\n", UART_CRIMSON_SN);
+    printf("%s\n", UART_CRIMSON_TX);
+    printf("%s\n", UART_CRIMSON_RX);
+    printf("%d\n", uart_crimson_synth_fd);
+    printf("%d\n", uart_crimson_tx_fd);
+    printf("%d\n", uart_crimson_rx_fd);
+#else
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
     printf("%d\n", fwd);
     printf("%d\n", uart_comm_fd);
@@ -187,7 +198,29 @@ int main(int argc, char *argv[]) {
         dump_args();
     #endif
 
-#if defined(VAUNT)
+#if defined(TATE)
+    if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
+        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_SN);
+        return RETURN_ERROR_COMM_INIT;
+    }
+    for (i = 0; i < 16; i++) {
+        if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
+            printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_RFE[i]);
+            return RETURN_ERROR_COMM_INIT;
+        }
+    }
+#elif defined(TATE_8R)
+    if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
+        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_SN);
+        return RETURN_ERROR_COMM_INIT;
+    }
+    for (i = 0; i < 16; i++) {
+        if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
+            printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_RFE[i]);
+            return RETURN_ERROR_COMM_INIT;
+        }
+    }
+#elif defined(VAUNT)
     // initialize the comm port
     if (init_uart_comm(&uart_crimson_synth_fd, UART_CRIMSON_SN, 0) < 0) {
         printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_SN);
@@ -201,18 +234,10 @@ int main(int argc, char *argv[]) {
         printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_RX);
         return RETURN_ERROR_COMM_INIT;
     }
-#elif defined(TATE)
-    if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_SN);
-        return RETURN_ERROR_COMM_INIT;
-    }
-    for (i = 0; i < 16; i++) {
-        if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
-            printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_RFE[i]);
-            return RETURN_ERROR_COMM_INIT;
-        }
-    }
+#else
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
+
 
     // initiate UART transaction
     do {
