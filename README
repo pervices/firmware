@@ -12,48 +12,52 @@ which is available on yaourt.
 
 1.a.i Crimson Optimized Compile Commands
 
-   sed -i 's/DTATE/DVAUNT/g' configure.ac #Optional, clean git repo defaults to Vaunt.
-
    sh autogen.sh
 
-   CXX="/usr/bin/arm-unknown-linux-gnueabihf-g++" \
-   CC="/usr/bin/arm-unknown-linux-gnueabihf-gcc" \
-   CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-        -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-        ./configure --prefix=/usr --host=x86_64
+    ./configure                                             \
+        --prefix=/usr                                       \
+        --host=x86_64                                       \
+        CC="arm-unknown-linux-gnueabihf-gcc"                \
+        CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall  \
+            -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
+        CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
+            -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
+        CXX="arm-unknown-linux-gnueabihf-g++"               \
+        CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
+            -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
+        PRODUCT=VAUNT
 
    make
 
 1.a.ii Cyan Optimized Compile Commands
 
-   sed -i 's/DVAUNT/DTATE/g' configure.ac
-
    sh autogen.sh
 
-   CXX="aarch64-linux-gnu-g++" \
-   CC="aarch64-linux-gnu-gcc" \
-   CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-        -march=armv8-a -mtune=cortex-a53 " \
-    ./configure --prefix=/usr --host=x86_64
+    ./configure                         \
+        --prefix=/usr                   \
+        --host=x86_64                   \
+        CC=aarch64-linux-gnu-gcc        \
+        CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+                -march=armv8-a -mtune=cortex-a53 " \
+        CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+                  -march=armv8-a -mtune=cortex-a53 " \
+        CXX=aarch64-linux-gnu-g++       \
+        CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+                  -march=armv8-a -mtune=cortex-a53 " \
+        PRODUCT=TATE
 
-   make -j9
+    make -j9
 
 2. Specifying Build Variant Target
 
 To specify whether to build a Cyan ("Tate") or Crimson ("Vaunt") server variant
-you will need to modify a CFLAG that is specified in the configure.ac file.
+you will need to specify PRODUCT=VAUNT or PRODUCT=TATE when calling ./configure.
 
-This flag modifies specific properties, such as the number of front end boards,
+This variable modifies specific properties, such as the number of front end boards,
 and register file mappings to ensure operation. By default, firmware targets
 Crimson ("Vaunt") product variants.
 
-To modify and build the Cyan "Tate", variant, you will need to modify the
-configure.ac file. Locate the line that specifies, "CFLAG+=" -DVAUNT",
-and comment that line out. Then uncomment the following line, "CFLAG+=" -DTATE"
-
-You may also use sed to accomplish this same task.
-
-Only one flag may be specified at a time, and you must specify one of them for
+Only one product may be specified at a time, and you must specify one of them for
 compilation to succeed.
 
 3. Cross-Compiling from a development computer.
