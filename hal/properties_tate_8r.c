@@ -3816,7 +3816,7 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "cyan_p1hdr32t"
+#define PROJECT_NAME "cyan_8r"
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
