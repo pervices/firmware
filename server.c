@@ -191,6 +191,9 @@ int main(int argc, char *argv[]) {
         } //if
     } //while
     if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
+        // if there are any RX boards we need to have sysref in continuous 
+        // mode to initialize the ADC properly
+        set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
         PRINT(INFO,"FPGA: reset\n");
         set_property("/var/cyan/state/fpga/reset","3");
         for (i = 0; i < 16; i++) {
@@ -202,6 +205,9 @@ int main(int argc, char *argv[]) {
             set_property(&prop_path,"1");
         } //for
         usleep(15000000); // wait 15 seconds for all boards to come up
+        // set the time board back to pulsed sysref mode
+        set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
+        usleep(50000); // wait a little bit
         PRINT(INFO,"sysref pulse attempt\n");
         set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
         usleep(1000000); // wait 1 second
