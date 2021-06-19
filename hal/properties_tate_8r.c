@@ -2793,6 +2793,22 @@ static int hdlr_time_source_extsine(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// choose pulsed or continuous SYSREF
+static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
+    if (strcmp(data, "pulsed") == 0) {
+        PRINT(INFO, "SYSREF MODE 'pulsed' selected.\n");
+        strcpy(buf, "debug -l 7 -r 139 -w 2\r");
+    } else if (strcmp(data, "continuous") == 0) {
+        PRINT(INFO, "SYSREF MODE 'continuous' selected.\n");
+        strcpy(buf, "debug -l 7 -r 139 -w 3\r");
+    } else {
+        PRINT(ERROR, "SYSREF MODE must be 'continuous' or 'pulsed'.\n");
+        return RETURN_ERROR;
+    }
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
@@ -3995,6 +4011,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll1_pll2" , hdlr_time_status_lol_pll1_pll2,        RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
     DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
+    DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,             RW, "pulsed")    \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_pll"          , hdlr_time_sync_lmk_sync_tgl_pll,        WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
