@@ -2256,6 +2256,18 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
+        int reboot;                                                            \
+        sscanf(data, "%i", &reboot);                                           \
+                                                                               \
+        if (reboot == 1) {                                                     \
+            strcpy(buf, "board -r\r");                                         \
+            ping_write_only(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)); \
+        }                                                                      \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_rx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
@@ -3860,6 +3872,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out")       \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative")  \
     DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0")         \
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0")         \

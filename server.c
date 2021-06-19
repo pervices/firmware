@@ -190,13 +190,12 @@ int main(int argc, char *argv[]) {
             count_bad++;
         } //if
     } //while
+    
     if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
-        // if there are any RX boards we need to have sysref in continuous 
-        // mode to initialize the ADC properly
-        set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
         PRINT(INFO,"FPGA: reset\n");
         set_property("/var/cyan/state/fpga/reset","3");
         for (i = 0; i < 16; i++) {
+            //reboot the tx boards
             strcpy(&prop_path,"/var/cyan/state/tx/");
             tmp_char = i + 'a';
             strcat(&prop_path,&tmp_char);
@@ -205,9 +204,6 @@ int main(int argc, char *argv[]) {
             set_property(&prop_path,"1");
         } //for
         usleep(15000000); // wait 15 seconds for all boards to come up
-        // set the time board back to pulsed sysref mode
-        set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
-        usleep(50000); // wait a little bit
         PRINT(INFO,"sysref pulse attempt\n");
         set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
         usleep(1000000); // wait 1 second
@@ -297,6 +293,22 @@ int main(int argc, char *argv[]) {
             abort();
         }
     }*/
+    
+    // if there are any RX boards we need to have sysref in continuous 
+    // mode to initialize the ADC properly
+    set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
+    usleep(1000000); // wait 1 second to ensure sysref is on
+    for (i = 0; i < 16; i++) {
+        strcpy(&prop_path,"/var/cyan/state/rx/");
+        tmp_char = i + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/reboot");
+        PRINT(INFO,"PROPERTY: %s\n",prop_path);
+        set_property(&prop_path,"1");
+    } //for
+    usleep(25000000); // wait 25 seconds for all boards to come up
+    // set the time board back to pulsed sysref mode
+    set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");
