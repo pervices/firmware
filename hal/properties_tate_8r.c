@@ -2190,7 +2190,6 @@ CHANNELS
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && rx_power[INT(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
-                                                                               \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             char pwr_cmd [40];                                                 \
@@ -2199,8 +2198,6 @@ CHANNELS
             rx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
             /* board command */                                                \
-            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
@@ -4099,6 +4096,9 @@ GPIO_PINS
 
 static prop_t property_table[] = {
     DEFINE_TIME()
+    //power on then reboot rx boards
+    // then wait
+    
 #define X(ch, io) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 //#undef X
