@@ -1795,63 +1795,43 @@ CHANNELS
 /* --------------------------------- RX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-#define X(ch, io)                                                              \
-    static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {       \
-        uint64_t freq = 0;                                                     \
-        sscanf(data, "%" SCNd64 "", &freq);                                    \
-                                                                               \
-        /* if freq = 0, mute PLL */                                            \
-        if (freq == 0) {                                                       \
-            strcpy(buf, "rf -z\r");                             \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
-                                                                               \
-            return RETURN_SUCCESS;                                             \
-        }                                                                      \
-                                                                               \
-        /* if freq out of bounds, kill channel */                              \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
-            strcpy(buf, "board -k\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
-                                                                               \
-            /* Turn OFF RX on HPS */                                           \
-            uint32_t old_val;                                                  \
-                                                                               \
-            /* disable DSP core */                                             \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val | 0x2);                    \
-                                                                               \
-            /* disable channel */                                              \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val &(~0x100));                \
-                                                                               \
-            rx_power[INT(ch)] = PWR_OFF;                                       \
-            rx_stream[INT(ch)] = STREAM_OFF;                                   \
-                                                                               \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
-                         "Shutting Down RX" STR(ch) ".\n");                    \
-                                                                               \
-            return RETURN_ERROR;                                               \
-        }                                                                      \
-                                                                               \
-        /* run the pll calc algorithm */                                       \
-        pllparam_t pll;                                                        \
-        long double outfreq = 0;                                               \
-        outfreq = setFreq(&freq, &pll);                                        \
-                                                                               \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
-                                                                               \
-        /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
-                          &pll, false, INT(ch));                               \
-                                                                               \
-        sprintf(ret, "%Lf", outfreq);                                          \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
+#define X(ch, io)                                                               \
+    static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
+        uint64_t freq = 0;                                                      \
+        sscanf(data, "%" SCNd64 "", &freq);                                     \
+                                                                                \
+        /* if freq = 0, mute PLL */                                             \
+        if (freq == 0) {                                                        \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                   \
+            sprintf(ret, "%Lf", 0);                                             \
+            return RETURN_SUCCESS;                                              \
+        }                                                                       \
+                                                                                \
+        /* if freq out of bounds, mute lmx*/                                    \
+        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                   \
+            PRINT(ERROR,"LMX Freq Invalid \n");                                 \
+            sprintf(ret, "%Lf", 0);                                             \
+            return RETURN_ERROR;                                                \
+        }                                                                       \
+                                                                                \
+        /* run the pll calc algorithm */                                        \
+        pllparam_t pll;                                                         \
+        pll.id = PLL_ID_LMX2595;                                                \
+        long double outfreq = 0;                                                \
+        outfreq = setFreq(&freq, &pll);                                         \
+                                                                                \
+        /* Send Parameters over to the MCU */                                   \
+        set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);  \
+                                                                                \
+        /* Save the frequency that is being set into the property */            \
+        sprintf(ret, "%Lf", outfreq);                                           \
+                                                                                \
+        return RETURN_SUCCESS;                                                  \
+    }                                                                           \
+                                                                                \
     static int hdlr_rx_##ch##_rf_freq_lna(const char *data, char *ret) {       \
         strcpy(buf, "rf -l ");                                  \
         strcat(buf, data);                                                     \
@@ -4583,6 +4563,54 @@ int set_freq_internal(const bool tx, const unsigned channel,
 
 out:
     return r;
+}
+
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+    // extract lo variables and pass to MCU (LMX2595)
+    
+    double freq = pll->vcoFreq / pll->d;
+
+    // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
+    strcpy(buf, "lmx -k \r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    
+    // Send Reference in MHz to MCU
+    strcpy(buf, "lmx -o ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX R
+    strcpy(buf, "lmx -r ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX N
+    strcpy(buf, "lmx -n ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX D
+    strcpy(buf, "lmx -d ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output RF Power
+    strcpy(buf, "lmx -p ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 60 /*TODO: pll->power*/);
+    // default to high power
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output Frequency in MHz
+    strcpy(buf, "lmx -f ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    usleep(100000);
 }
 
 #endif
