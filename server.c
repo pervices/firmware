@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
         } //if
     } //while
     
-    if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
+    /*if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
         PRINT(INFO,"FPGA: reset\n");
         set_property("/var/cyan/state/fpga/reset","3");
         for (i = 0; i < 16; i++) {
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
         PRINT(INFO,"sysref pulse attempt\n");
         set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
         usleep(1000000); // wait 1 second
-    }//if
+    }*///if
     
     if (count_bad >= 5)  {// at this point if time board is still bad we have to restart cyan
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
