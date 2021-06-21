@@ -4100,13 +4100,13 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")
 
 static prop_t property_table[] = {
+    DEFINE_TIME()
 #define X(ch, io) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 //#undef X
 //#define X(ch, io) DEFINE_TX_CHANNEL(ch)
 //    CHANNELS
 #undef X
-    DEFINE_TIME()
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
