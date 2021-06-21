@@ -2687,6 +2687,16 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* --------------------------------- WAIT ----------------------------------- */
+/* -------------------------------------------------------------------------- */
+
+static int hdlr_wait_15_secs (const char *data, char *ret){
+    usleep(15000000);
+    
+    return RETURN_SUCCESS;
+}
+
+/* -------------------------------------------------------------------------- */
 /* --------------------------------- TIME ----------------------------------- */
 /* -------------------------------------------------------------------------- */
 
@@ -3840,6 +3850,13 @@ GPIO_PINS
         .symlink_target = t,         \
     },
 
+#define DEFINE_WAIT_15 \
+    DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
+
+#define DEFINE_RX_PWR_REBOOT(_c)    \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")             
+    
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
@@ -3849,8 +3866,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out")       \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative")  \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0")         \
@@ -4078,8 +4093,12 @@ GPIO_PINS
 static prop_t property_table[] = {
     DEFINE_TIME()
     //power on then reboot rx boards
-    // then wait
-    
+#define X(ch, io) DEFINE_RX_PWR_REBOOT(ch)
+    CHANNELS
+#undef X
+    DEFINE_WAIT_15
+//Wait 15 seconds for all RX to boot/reboot
+//#undef DEFINE_WAIT_15
 #define X(ch, io) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 //#undef X
