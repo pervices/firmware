@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
     
     // if there are any RX boards we need to have sysref in continuous 
     // mode to initialize the ADC properly
-    set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
+    /*set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
     usleep(1000000); // wait 1 second to ensure sysref is on
     for (i = 0; i < 16; i++) {
         strcpy(&prop_path,"/var/cyan/state/rx/");
@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
         strcat(&prop_path,"/reboot");
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
         set_property(&prop_path,"1");
-    } //for
+    }*/ //for
     usleep(25000000); // wait 25 seconds for all boards to come up
     // set the time board back to pulsed sysref mode
     set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");

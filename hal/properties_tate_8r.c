@@ -3999,7 +3999,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
-    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "good")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
@@ -4022,7 +4021,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0")         \
     DEFINE_FILE_PROP("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0")         \
     DEFINE_FILE_PROP("time/board/test"                     , hdlr_time_board_test,                   WO, "0")         \
-    DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
     DEFINE_FILE_PROP("time/board/led"                      , hdlr_time_board_led,                    WO, "0")         \
     DEFINE_FILE_PROP("time/about/id"                       , hdlr_time_about_id,                     RO, "001")       \
     DEFINE_FILE_PROP("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001")       \
@@ -4030,8 +4028,9 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001")       \
     DEFINE_FILE_PROP("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001")       \
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
-    DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
-
+    DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)       \
+    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "good")
+// DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
