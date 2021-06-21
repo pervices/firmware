@@ -2007,7 +2007,8 @@ CHANNELS
         char reg_name[5];                                                      \
         sprintf(reg_name, "rxg%c", reg);                                       \
                                                                                \
-        if (resamp_err < base_err) {                                           \
+        /*if (resamp_err < base_err) {*/                                       \
+        if(false) {/* resamp currently unsupported */                           \
             write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
             write_hps_reg("rx" STR(ch) "4", old_val | (1 << 15));              \
@@ -2033,7 +2034,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {       \
+    static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {      \
         double freq;                                                           \
         uint32_t old_val;                                                      \
         uint8_t direction;                                                     \
