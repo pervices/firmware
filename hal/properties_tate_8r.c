@@ -3999,7 +3999,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
-    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "good")       \
+    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
@@ -4008,17 +4008,27 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd1_pll2", hdlr_time_status_ld_jesd1_pll2,        RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd2_pll1", hdlr_time_status_ld_jesd2_pll1,        RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd2_pll2", hdlr_time_status_ld_jesd2_pll2,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll0_pll1" , hdlr_time_status_ld_pll0_pll1,         RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll0_pll2" , hdlr_time_status_ld_pll0_pll2,         RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll1_pll1" , hdlr_time_status_ld_pll1_pll1,         RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lockdetect_pll1_pll2" , hdlr_time_status_ld_pll1_pll2,         RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd0_pll1", hdlr_time_status_lol_jesd0_pll1,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd0_pll2", hdlr_time_status_lol_jesd0_pll2,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd1_pll1", hdlr_time_status_lol_jesd1_pll1,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll0_pll1" , hdlr_time_status_lol_pll0_pll1,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll0_pll2" , hdlr_time_status_lol_pll0_pll2,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll1_pll1" , hdlr_time_status_lol_pll1_pll1,        RW, "unlocked")  \
+    DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll1_pll2" , hdlr_time_status_lol_pll1_pll2,        RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
     DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
     DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,             RW, "pulsed")    \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
+    DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_pll"          , hdlr_time_sync_lmk_sync_tgl_pll,        WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
+    DEFINE_FILE_PROP("time/sync/lmk_sync_resync_pll"       , hdlr_time_sync_lmk_resync_pll,          WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0")         \
     DEFINE_FILE_PROP("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0")         \
     DEFINE_FILE_PROP("time/board/test"                     , hdlr_time_board_test,                   WO, "0")         \
