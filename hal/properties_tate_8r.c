@@ -3871,7 +3871,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out")       \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative")  \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0")         \
