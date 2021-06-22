@@ -65,6 +65,14 @@
         X(n, rx) \
         X(o, rx) \
         X(p, rx)
+#elif defined(TATE_4R4T)
+    //Will be only using the populated RF slots
+    #define CHANNELS \
+        X(a, io) \
+        X(b, io) \
+        X(c, io) \
+        X(d, io)
+
 #elif defined(VAUNT)
     #define CHANNELS \
         X(a, io) \
@@ -72,7 +80,7 @@
         X(c, io) \
         X(d, io)
 #else
-    #error "Project name (TATE | TATE_8R | VAUNT) not specified or not recognized."
+    #error "Project name (TATE | TATE_8R | TATE_4R4T | VAUNT) not specified or not recognized."
 #endif
 
 // Converts an expanded channel to a compile time string.
