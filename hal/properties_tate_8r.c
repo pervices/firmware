@@ -2188,7 +2188,7 @@ CHANNELS
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[INT(ch)] == PWR_ON)                    \
+        if (power >= PWR_ON && tx_power[INT(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
@@ -2196,12 +2196,12 @@ CHANNELS
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d on", INT(ch));                    \
             system(pwr_cmd);                                                   \
-            rx_power[INT(ch)] = PWR_ON;                                        \
+            tx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
-            /* board command */                                                \
-            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
-            usleep(200000);                                                    \
+            /* board commands */                                               \
+            /* strcpy(buf, "board -c " STR(ch) " -d\r");               */      \
+            /* ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)); */      \
+            /* usleep(200000);                                         */      \
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
@@ -2212,7 +2212,7 @@ CHANNELS
             /* send sync pulse */                                              \
             sync_channels(15);                                                 \
                                                                                \
-            /* Enable active dsp channels, and reset DSP */                    \
+            /* enable active dsp channels, and reset the DSP */                \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 if (tx_power[i] == PWR_ON) {                                   \
                     read_hps_reg(reg4[i + 16], &old_val);                      \
@@ -2223,7 +2223,7 @@ CHANNELS
                     write_hps_reg(reg4[i + 16], old_val | 0x2);                \
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
-                if (rx_stream[i] == STREAM_ON) {                               \
+                if (rx_power[i] == PWR_ON) {                                   \
                     read_hps_reg(reg4[i], &old_val);                           \
                     write_hps_reg(reg4[i], old_val | 0x100);                   \
                     read_hps_reg(reg4[i], &old_val);                           \
@@ -2232,27 +2232,28 @@ CHANNELS
                 }                                                              \
             }                                                                  \
                                                                                \
-            /* power off & stream off */                                       \
+            /* power off */                                                    \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d off", INT(ch));                   \
             system(pwr_cmd);                                                   \
-                                                                               \
-            rx_power[INT(ch)] = PWR_OFF;                                       \
-            rx_stream[INT(ch)] = STREAM_OFF;                                   \
-                                                                               \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
                                                                                \
-            /* disable DSP core */                                             \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val | 0x2);                    \
+            /* disable DSP cores */                                            \
+            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
+            PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
+                  toupper(CHR(ch)));                                           \
+            write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val &(~0x100));                \
+            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
+            write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
+                                                                               \
+            tx_power[INT(ch)] = PWR_OFF;                                       \
         }                                                                      \
+                                                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -3871,7 +3872,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out")       \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative")  \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0")         \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0")         \
@@ -4105,9 +4106,9 @@ static prop_t property_table[] = {
 #define X(ch, io) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
-#define X(ch, io) DEFINE_TX_CHANNEL(ch)
-    CHANNELS
-#undef X
+// #define X(ch, io) DEFINE_TX_CHANNEL(ch)
+//     CHANNELS
+// #undef X
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
