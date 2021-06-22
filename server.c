@@ -306,9 +306,9 @@ int main(int argc, char *argv[]) {
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
         set_property(&prop_path,"1");
     } //for
-    usleep(25000000); // wait 25 seconds for all boards to come up
+//     usleep(25000000); // wait 25 seconds for all boards to come up
     // set the time board back to pulsed sysref mode
-    set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
+//     set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");
