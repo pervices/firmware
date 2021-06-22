@@ -89,8 +89,16 @@
 // Converts an expanded string into a runtime char.
 #define CHR(ch) #ch[0]
 
-// Converts an expanded char into a runtime integer.
-#define INT(ch) ((int)(CHR(ch) - 'a'))
+//creates channel maps
+#if defined (TATE_4R4T)
+    // Converts an expanded char into a runtime integer.
+    #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+    #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
+//old method used by tate 8r, tate, and vaunt
+#else
+    // Converts an expanded char into a runtime integer.
+    #define INT(ch) ((int)(CHR(ch) - 'a'))
+#endif
 
 // Channel names as strings.
 static const char* const channel_names[] = {
