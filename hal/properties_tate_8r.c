@@ -3906,10 +3906,11 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")
 
-#define DEFINE_TX_CHANNEL(_c)                                                                                         
-/*    DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
+#define DEFINE_TX_CHANNEL(_c)                                                                                         \
+    DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
+    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")
+//    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)
+//    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
@@ -3969,7 +3970,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
-    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION) */
+
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
@@ -4113,9 +4114,9 @@ static prop_t property_table[] = {
     DEFINE_TIME()
 #define X(ch, io) DEFINE_RX_CHANNEL(ch)
     CHANNELS
-//#undef X
-//#define X(ch, io) DEFINE_TX_CHANNEL(ch)
-//    CHANNELS
+#undef X
+#define X(ch, io) DEFINE_TX_CHANNEL(ch)
+    CHANNELS
 #undef X
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
@@ -4174,7 +4175,7 @@ void patch_tree(void) {
     set_default_str("rx/" #ch "/link/ip_dest",                                 \
                     ((INT(ch) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
     CHANNELS
-//#undef X
+#undef X
 
 //#define X(ch, io)                                                                                       \
 //    set_default_int("tx/" #ch "/link/ch0port", base_port + INT(ch)*4 + 0 + NUM_CHANNELS);               \
@@ -4183,7 +4184,7 @@ void patch_tree(void) {
 //    set_default_int("tx/" #ch "/link/ch4port", base_port + INT(ch)*4 + 3 + NUM_CHANNELS);
 
 //    CHANNELS
-#undef X
+//#undef X
 }
 
 size_t get_num_prop(void) { return num_properties; }
