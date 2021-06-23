@@ -77,28 +77,28 @@ static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 
 static uint8_t rx_power[] = {
-#define X(ch, io) PWR_OFF,
+#define X(ch, io, crx, ctx) PWR_OFF,
     CHANNELS
 #undef X
 };
 
 static uint8_t tx_power[] = {
-#define X(ch, io) PWR_OFF,
+#define X(ch, io, crx, ctx) PWR_OFF,
     CHANNELS
 #undef X
 };
 
 static uint8_t rx_stream[] = {
-#define X(ch, io) STREAM_OFF,
+#define X(ch, io, crx, ctx) STREAM_OFF,
     CHANNELS
 #undef X
 };
 
 static const char *reg4[] = {
-#define X(ch, io) "rx"STR(ch)"4",
+#define X(ch, io, crx, ctx) "rx"STR(ch)"4",
     CHANNELS
 #undef X
-#define X(ch, io) "tx"STR(ch)"4",
+#define X(ch, io, crx, ctx) "tx"STR(ch)"4",
     CHANNELS
 #undef X
 };
@@ -282,7 +282,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     return r;
 }
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT_RX(ch));            \
     }
@@ -439,7 +439,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     return RETURN_SUCCESS;
 }
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val;                                                              \
@@ -572,7 +572,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     static int hdlr_tx_##ch##_dac_nco_dac0freq(const char *data, char *ret) {  \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
@@ -927,14 +927,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             uint32_t old_val;                                                  \
                                                                                \
             /* disable DSP cores */                                            \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
+            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
             PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
                   toupper(CHR(ch)));                                           \
-            write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                    \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
+            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val &(~0x100));                \
                                                                                \
             tx_power[INT_TX(ch)] = PWR_OFF;                                       \
                                                                                \
@@ -1095,9 +1095,9 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
       /* Disable resampler configuration by setting following to false */      \
       /*  if (resamp_err < base_err) {                                  */     \
         if ( false ) {                                                         \
-            write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val | (1 << 15));              \
+            write_hps_reg("tx" STR_TX(ctx) "1", resamp_factor);                    \
+            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val | (1 << 15));              \
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /* Set gain adjustment */                                          \
@@ -1106,9 +1106,9 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                           (old_val & ~(0xff << shift)) |                       \
                               (interp_gain_lut[(resamp_factor)] << shift));    \
         } else {                                                               \
-            write_hps_reg("tx" STR(ch) "1", base_factor);                      \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));             \
+            write_hps_reg("tx" STR_TX(ctx) "1", base_factor);                      \
+            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val & ~(1 << 15));             \
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /* Set gain adjustment */                                          \
             read_hps_reg(reg_name, &old_val);                                  \
@@ -1139,7 +1139,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "10", nco_steps);                           \
+        write_hps_reg("tx" STR_TX(ctx) "10", nco_steps);                           \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -1147,8 +1147,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
+        read_hps_reg("tx" STR_TX(ctx) "14", &old_val);                             \
+        write_hps_reg("tx" STR_TX(ctx) "14",                                       \
                       (old_val & ~(0x1 << 0)) | (direction << 0));             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1172,7 +1172,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "11", nco_steps);                           \
+        write_hps_reg("tx" STR_TX(ctx) "11", nco_steps);                           \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -1180,8 +1180,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
+        read_hps_reg("tx" STR_TX(ctx) "14", &old_val);                             \
+        write_hps_reg("tx" STR_TX(ctx) "14",                                       \
                       (old_val & ~(0x1 << 1)) | (direction << 1));             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1210,7 +1210,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "12", nco_steps);                           \
+        write_hps_reg("tx" STR_TX(ctx) "12", nco_steps);                           \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -1218,8 +1218,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
+        read_hps_reg("tx" STR_TX(ctx) "14", &old_val);                             \
+        write_hps_reg("tx" STR_TX(ctx) "14",                                       \
                       (old_val & ~(0x1 << 2)) | (direction << 2));             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1243,7 +1243,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "13", nco_steps);                           \
+        write_hps_reg("tx" STR_TX(ctx) "13", nco_steps);                           \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -1251,8 +1251,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
+        read_hps_reg("tx" STR_TX(ctx) "14", &old_val);                             \
+        write_hps_reg("tx" STR_TX(ctx) "14",                                       \
                       (old_val & ~(0x1 << 3)) | (direction << 3));             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1265,10 +1265,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                              \
         PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__, toupper(CHR(ch)));    \
-        write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                        \
-        write_hps_reg("tx" STR(ch) "4", old_val & ~0x2);                       \
+        write_hps_reg("tx" STR_TX(ctx) "4", old_val | 0x2);                        \
+        write_hps_reg("tx" STR_TX(ctx) "4", old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1279,11 +1279,11 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg("tx" STR(ch) "4", old_val | (1 << 14));              \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val | (1 << 14));              \
         else                                                                   \
-            write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 14));             \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val & ~(1 << 14));             \
                                                                                \
         /* sync_channels( 15 ); */                                             \
                                                                                \
@@ -1302,14 +1302,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "15", port);                                 \
+        write_hps_reg("tx" STR_TX(ctx) "15", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "16", port);                                 \
+        write_hps_reg("tx" STR_TX(ctx) "16", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1321,14 +1321,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "17", port);                                 \
+        write_hps_reg("tx" STR_TX(ctx) "17", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "18", port);                                 \
+        write_hps_reg("tx" STR_TX(ctx) "18", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1644,10 +1644,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
-        write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                        \
+        read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                              \
+        write_hps_reg("tx" STR_TX(ctx) "4", old_val | 0x2);                        \
         if (power == PWR_ON) {                                                 \
-            write_hps_reg("tx" STR(ch) "4", old_val & ~0x2);                   \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val & ~0x2);                   \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1714,14 +1714,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));            \
                                                                                \
             /* disable DSP cores */                                            \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
+            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
             PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
                   toupper(CHR(ch)));                                           \
-            write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                    \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
+            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
+            write_hps_reg("tx" STR_TX(ctx) "4", old_val &(~0x100));                \
                                                                                \
             tx_power[INT_TX(ch)] = PWR_OFF;                                       \
         }                                                                      \
@@ -1795,7 +1795,7 @@ CHANNELS
 /* --------------------------------- RX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {       \
         uint64_t freq = 0;                                                     \
         sscanf(data, "%" SCNd64 "", &freq);                                    \
@@ -1817,12 +1817,12 @@ CHANNELS
             uint32_t old_val;                                                  \
                                                                                \
             /* disable DSP core */                                             \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val | 0x2);                    \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val &(~0x100));                \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));                \
                                                                                \
             rx_power[INT_RX(ch)] = PWR_OFF;                                       \
             rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
@@ -1973,9 +1973,9 @@ CHANNELS
         sscanf(data, "%u", &sign);                                             \
         sign = sign ? 0 : 1;                                                   \
                                                                                \
-        read_hps_reg("rx" STR(ch) "4", &old_val);                              \
+        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                              \
         old_val &= ~(1 << 4);                                                  \
-        write_hps_reg("rx" STR(ch) "4", old_val | (sign << 4));                \
+        write_hps_reg("rx" STR_RX(crx) "4", old_val | (sign << 4));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2008,9 +2008,9 @@ CHANNELS
         sprintf(reg_name, "rxg%c", reg);                                       \
                                                                                \
         if (resamp_err < base_err) {                                           \
-            write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val | (1 << 15));              \
+            write_hps_reg("rx" STR_RX(crx) "1", resamp_factor);                    \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val | (1 << 15));              \
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /*Set gain adjustment */                                           \
@@ -2019,9 +2019,9 @@ CHANNELS
             write_hps_reg(reg_name, (old_val & ~(0xff << shift)) |             \
                                     (((uint16_t)gain_factor) << shift));       \
         } else {                                                               \
-            write_hps_reg("rx" STR(ch) "1", base_factor);                      \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 15));             \
+            write_hps_reg("rx" STR_RX(crx) "1", base_factor);                      \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val & ~(1 << 15));             \
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
@@ -2052,7 +2052,7 @@ CHANNELS
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
+        write_hps_reg("rx" STR_RX(crx) "0", nco_steps);                            \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -2060,27 +2060,27 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        read_hps_reg("rx" STR(ch) "4", &old_val);                              \
-        write_hps_reg("rx" STR(ch) "4",                                        \
+        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                              \
+        write_hps_reg("rx" STR_RX(crx) "4",                                        \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
-        read_hps_reg("rx" STR(ch) "4", &old_val);                              \
-        write_hps_reg("rx" STR(ch) "4", old_val | 0x2);                        \
-        write_hps_reg("rx" STR(ch) "4", old_val & ~0x2);                       \
+        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                              \
+        write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                        \
+        write_hps_reg("rx" STR_RX(crx) "4", old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_loopback(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        read_hps_reg("rx" STR(ch) "4", &old_val);                              \
+        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg("rx" STR(ch) "4", (old_val & ~0x1e00) | 0x400);      \
+            write_hps_reg("rx" STR_RX(crx) "4", (old_val & ~0x1e00) | 0x400);      \
         else                                                                   \
-            write_hps_reg("rx" STR(ch) "4", (old_val & ~0x1e00) | 0x000);      \
+            write_hps_reg("rx" STR_RX(crx) "4", (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2091,11 +2091,11 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_vita_en(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        read_hps_reg("rx" STR(ch) "4", &old_val);                              \
+        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg("rx" STR(ch) "4", old_val | (1 << 14));              \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val | (1 << 14));              \
         else                                                                   \
-            write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 14));             \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val & ~(1 << 14));             \
                                                                                \
         /*sync_channels( 15 ); */                                              \
                                                                                \
@@ -2111,7 +2111,7 @@ CHANNELS
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("rx" STR(ch) "8", port);                                 \
+        write_hps_reg("rx" STR_RX(crx) "8", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2119,7 +2119,7 @@ CHANNELS
         uint8_t ip[4];                                                         \
         sscanf(data, "%" SCNd8 ".%" SCNd8 ".%" SCNd8 ".%" SCNd8 "", ip,        \
                ip + 1, ip + 2, ip + 3);                                        \
-        write_hps_reg("rx" STR(ch) "5",                                        \
+        write_hps_reg("rx" STR_RX(crx) "5",                                        \
                       (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3])); \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2130,8 +2130,8 @@ CHANNELS
                "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8           \
                ":%" SCNx8 "",                                                  \
                mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);              \
-        write_hps_reg("rx" STR(ch) "6", (mac[0] << 8) | (mac[1]));             \
-        write_hps_reg("rx" STR(ch) "7", (mac[2] << 24) | (mac[3] << 16) |      \
+        write_hps_reg("rx" STR_RX(crx) "6", (mac[0] << 8) | (mac[1]));             \
+        write_hps_reg("rx" STR_RX(crx) "7", (mac[2] << 24) | (mac[3] << 16) |      \
                                             (mac[4] << 8) | mac[5]);           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2168,12 +2168,12 @@ CHANNELS
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val | 0x2);                    \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val &(~0x100));                \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));                \
                                                                                \
             rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
         }                                                                      \
@@ -2246,12 +2246,12 @@ CHANNELS
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
                                                                                \
             /* disable DSP core */                                             \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val | 0x2);                    \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val &(~0x100));                \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2310,7 +2310,7 @@ CHANNELS
 CHANNELS
 #undef X
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
         int r;                                                                 \
         bool val;                                                              \
@@ -2393,7 +2393,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
         if (0 == (mask_rx & (1 << i))) {
             continue;
         }
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     if (i == INT_RX(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
         CHANNELS
@@ -2443,7 +2443,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     if (i == INT_RX(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
@@ -2493,7 +2493,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_gain_val;
         CHANNELS
@@ -2561,7 +2561,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     if (i == INT_RX(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
@@ -2587,7 +2587,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_lo_freq;
         CHANNELS
@@ -2655,7 +2655,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     if (i == INT_RX(ch))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
         CHANNELS
@@ -2680,7 +2680,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         if (0 == (mask_tx & (1 << i))) {
             continue;
         }
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_dsp_ch0fpga_nco;                                 \
         hdlr = hdlr_tx_##ch##_dsp_ch1fpga_nco;                                 \
@@ -3126,10 +3126,10 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 
 // Dumps all of the board logs for TX, RX, and TIME
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
-#define X(ch, io) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
+#define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
     CHANNELS
 #undef X
-#define X(ch, io) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
+#define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
     CHANNELS
 #undef X
     hdlr_time_board_dump(NULL, NULL);
@@ -3149,13 +3149,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
         usleep(50000);
 
         strcpy(buf, "board -g 1\r");
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
 
         strcpy(buf, "board -g 1\r");
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
@@ -3166,13 +3166,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
         usleep(50000);
 
         strcpy(buf, "board -g 2\r");
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
 
         strcpy(buf, "board -g 2\r");
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
@@ -3244,13 +3244,13 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
     usleep(700000);
 
     strcpy(buf, "board -r\r");
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
     CHANNELS
 #undef X
 
     strcpy(buf, "board -r\r");
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
     CHANNELS
 #undef X
@@ -4110,10 +4110,10 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")
 
 static prop_t property_table[] = {
-#define X(ch, io) DEFINE_RX_CHANNEL(ch)
+#define X(ch, io, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
-#define X(ch, io) DEFINE_TX_CHANNEL(ch)
+#define X(ch, io, crx, ctx) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
     DEFINE_TIME()
@@ -4166,17 +4166,17 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42820;
 
-#define X(ch, io) set_default_int("rx/" #ch "/link/port", base_port + INT_RX(ch));
+#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT_RX(ch));
     CHANNELS
 #undef X
 
-#define X(ch, io)                                                              \
+#define X(ch, io, crx, ctx)                                                              \
     set_default_str("rx/" #ch "/link/ip_dest",                                 \
                     ((INT_RX(ch) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
     CHANNELS
 #undef X
 
-#define X(ch, io)                                                                                       \
+#define X(ch, io, crx, ctx)                                                                                       \
     set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
     set_default_int("tx/" #ch "/link/ch1port", base_port + INT_TX(ch)*4 + 1 + NUM_CHANNELS);               \
     set_default_int("tx/" #ch "/link/ch3port", base_port + INT_TX(ch)*4 + 2 + NUM_CHANNELS);               \
@@ -4540,13 +4540,13 @@ int set_freq_internal(const bool tx, const unsigned channel,
     typedef int (*fp_t)(const char *, char *);
 
     static const fp_t rx_fp[] = {
-#define X(ch, io) hdlr_rx_##ch##_rf_freq_val,
+#define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_freq_val,
         CHANNELS
 #undef X
     };
 
     static const fp_t tx_fp[] = {
-#define X(ch, io) hdlr_tx_##ch##_rf_lo_freq,
+#define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_lo_freq,
         CHANNELS
 #undef X
     };
