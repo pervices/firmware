@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
     if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
         PRINT(INFO,"FPGA: reset\n");
         set_property("/var/cyan/state/fpga/reset","3");
-        for (i = 0; i < 16; i++) {
+        for (i = 0; i < NUM_CHANNELS; i++) {
             //reboot the tx boards
             strcpy(&prop_path,"/var/cyan/state/tx/");
             tmp_char = i + 'a';
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
         abort();
     } /*else {
         count_bad = 0; // reset count_bad to zero, now it will count bad tx board JESD links
-        for (i = 0; i < 16; i++) { // check that tx boards are all good
+        for (i = 0; i < NUM_CHANNELS; i++) { // check that tx boards are all good
             strcpy(&prop_path,"tx/");
             tmp_char = i + 'a';
             strcat(&prop_path,&tmp_char);
@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
             count_bad = 0;
             usleep(10000000); // wait 10 seconds to ensure that any rebooted boards are up
             // TODO find a way to flush uart buffer
-            for (i = 0; i < 16; i++) {
+            for (i = 0; i < NUM_CHANNELS; i++) {
                 strcpy(&prop_path,"tx/");
                 tmp_char = i + 'a';
                 strcat(&prop_path,&tmp_char);
@@ -251,7 +251,7 @@ int main(int argc, char *argv[]) {
         }
         if (count_bad > 0) { // if any were still bad try resetting fpga then all tx boards
             set_property("fpga/reset","3");
-            for (i = 0; i < 16; i++) {
+            for (i = 0; i < NUM_CHANNELS; i++) {
                 PRINT(INFO,"FPGA: reset\n"); // reset fpga jesd
                 set_property("/var/cyan/state/fpga/reset","3");
                 usleep(5000000); // wait
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
                 PRINT(INFO,"sysref pulse attempt\n");
                 set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
                 usleep(5000000); // wait
-                for (i = 0; i < 16; i++) {
+                for (i = 0; i < NUM_CHANNELS; i++) {
                     count_bad += 1;
                     strcpy(&prop_path,"/var/cyan/state/tx/");
                     tmp_char = i + 'a';
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
             PRINT(INFO,"sysref pulse attempt\n");
             set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
             count_bad = 0;
-            for (i = 0; i < 16; i++) { // then check that all of the tx boards came up
+            for (i = 0; i < NUM_CHANNELS; i++) { // then check that all of the tx boards came up
                 strcpy(&prop_path,"tx/");
                 tmp_char = i + 'a';
                 strcat(&prop_path,&tmp_char);
@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
     // mode to initialize the ADC properly
     set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
     usleep(1000000); // wait 1 second to ensure sysref is on
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < NUM_CHANNELS; i++) {
         strcpy(&prop_path,"/var/cyan/state/rx/");
         tmp_char = i + 'a';
         strcat(&prop_path,&tmp_char);
