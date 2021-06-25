@@ -3890,7 +3890,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/fpga_nco"             , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000") \
+    DEFINE_FILE_PROP("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000") \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001")       \
