@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
         } //if
     } //while
     
-    if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
+    /*if (count_bad == 1) { // we need to reset the FPGA JESD and all TX boards
         PRINT(INFO,"FPGA: reset\n");
         set_property("/var/cyan/state/fpga/reset","3");
         for (i = 0; i < NUM_CHANNELS; i++) {
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
         PRINT(INFO,"sysref pulse attempt\n");
         set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
         usleep(1000000); // wait 1 second
-    }//if
+    }*///if
     
     if (count_bad >= 5)  {// at this point if time board is still bad we have to restart cyan
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
     
     // if there are any RX boards we need to have sysref in continuous 
     // mode to initialize the ADC properly
-    set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
+    /*set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
     usleep(1000000); // wait 1 second to ensure sysref is on
     for (i = 0; i < NUM_CHANNELS; i++) {
         strcpy(&prop_path,"/var/cyan/state/rx/");
@@ -305,10 +305,11 @@ int main(int argc, char *argv[]) {
         strcat(&prop_path,"/reboot");
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
         set_property(&prop_path,"1");
-    } //for
+    } */  //for
 //     usleep(25000000); // wait 25 seconds for all boards to come up
+//     usleep(5000000); // wait 5 seconds for all boards to come up
     // set the time board back to pulsed sysref mode
-//     set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
+     set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");

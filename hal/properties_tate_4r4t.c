@@ -1795,62 +1795,43 @@ CHANNELS
 /* --------------------------------- RX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-#define X(ch, io, crx, ctx)                                                              \
-    static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {       \
-        uint64_t freq = 0;                                                     \
-        sscanf(data, "%" SCNd64 "", &freq);                                    \
-                                                                               \
-        /* if freq = 0, mute PLL */                                            \
-        if (freq == 0) {                                                       \
-            strcpy(buf, "rf -z\r");                             \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
-                                                                               \
-            return RETURN_SUCCESS;                                             \
-        }                                                                      \
-                                                                               \
-        /* if freq out of bounds, kill channel */                              \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
-            strcpy(buf, "board -k\r");                          \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
-                                                                               \
-            /* Turn OFF RX on HPS */                                           \
-            uint32_t old_val;                                                  \
-                                                                               \
-            /* disable DSP core */                                             \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
-                                                                               \
-            /* disable channel */                                              \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));                \
-                                                                               \
-            rx_power[INT_RX(ch)] = PWR_OFF;                                       \
-            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
-                                                                               \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
-                         "Shutting Down RX" STR(ch) ".\n");                    \
-                                                                               \
-            return RETURN_ERROR;                                               \
-        }                                                                      \
-                                                                               \
-        /* run the pll calc algorithm */                                       \
-        pllparam_t pll;                                                        \
-        long double outfreq = 0;                                               \
-        outfreq = setFreq(&freq, &pll);                                        \
-                                                                               \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
-                                                                               \
-        /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
-                          &pll, false, INT_RX(ch));                               \
-                                                                               \
-        sprintf(ret, "%Lf", outfreq);                                          \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
+#define X(ch, io)                                                               \
+    static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
+        uint64_t freq = 0;                                                      \
+        sscanf(data, "%" SCNd64 "", &freq);                                     \
+                                                                                \
+        /* if freq = 0, mute PLL */                                             \
+        if (freq == 0) {                                                        \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                   \
+            sprintf(ret, "%Lf", 0);                                             \
+            return RETURN_SUCCESS;                                              \
+        }                                                                       \
+                                                                                \
+        /* if freq out of bounds, mute lmx*/                                    \
+        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                   \
+            PRINT(ERROR,"LMX Freq Invalid \n");                                 \
+            sprintf(ret, "%Lf", 0);                                             \
+            return RETURN_ERROR;                                                \
+        }                                                                       \
+                                                                                \
+        /* run the pll calc algorithm */                                        \
+        pllparam_t pll;                                                         \
+        pll.id = PLL_ID_LMX2595;                                                \
+        long double outfreq = 0;                                                \
+        outfreq = setFreq(&freq, &pll);                                         \
+                                                                                \
+        /* Send Parameters over to the MCU */                                   \
+        set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);  \
+                                                                                \
+        /* Save the frequency that is being set into the property */            \
+        sprintf(ret, "%Lf", outfreq);                                           \
+                                                                                \
+        return RETURN_SUCCESS;                                                  \
+    }                                                                           \
+                                                                                                                                                         \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_lna(const char *data, char *ret) {       \
         strcpy(buf, "rf -l ");                                  \
@@ -2198,9 +2179,7 @@ CHANNELS
             system(pwr_cmd);                                                   \
             rx_power[INT_RX(ch)] = PWR_ON;                                        \
                                                                                \
-            /* board command */                                                \
-            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
+            /* board command */           \
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
@@ -2705,6 +2684,16 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
+    return RETURN_SUCCESS;
+}
+
+/* -------------------------------------------------------------------------- */
+/* --------------------------------- WAIT ----------------------------------- */
+/* -------------------------------------------------------------------------- */
+
+static int hdlr_wait_15_secs (const char *data, char *ret){
+    usleep(15000000);
+    
     return RETURN_SUCCESS;
 }
 
@@ -3862,6 +3851,14 @@ GPIO_PINS
         .symlink_target = t,         \
     },
 
+#define DEFINE_WAIT_15 \
+    DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
+
+#define DEFINE_RX_PWR_REBOOT(_c)    \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")             
+    
+
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
@@ -3871,8 +3868,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out")       \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative")  \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0")         \
@@ -3999,7 +3994,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
-    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
@@ -4015,7 +4009,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
-    DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,             RW, "pulsed")    \
+    DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,             RW, "continuous")    \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0")         \
@@ -4028,7 +4022,9 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001")       \
     DEFINE_FILE_PROP("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001")       \
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
-    DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
+    DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)\
+    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")       
+    //DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
 
 
 #define DEFINE_FPGA()                                                                                                         \
@@ -4098,13 +4094,20 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")
 
 static prop_t property_table[] = {
+    DEFINE_TIME()
+    //power on then reboot rx boards
+#define X(ch, io) DEFINE_RX_PWR_REBOOT(ch)
+    CHANNELS
+#undef X
+    DEFINE_WAIT_15
+//Wait 15 seconds for all RX to boot/reboot
+//#undef DEFINE_WAIT_15
 #define X(ch, io, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
 #define X(ch, io, crx, ctx) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
-    DEFINE_TIME()
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
@@ -4582,6 +4585,54 @@ int set_freq_internal(const bool tx, const unsigned channel,
 
 out:
     return r;
+}
+
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+    // extract lo variables and pass to MCU (LMX2595)
+    
+    double freq = pll->vcoFreq / pll->d;
+
+    // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
+    strcpy(buf, "lmx -k \r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    
+    // Send Reference in MHz to MCU
+    strcpy(buf, "lmx -o ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX R
+    strcpy(buf, "lmx -r ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX N
+    strcpy(buf, "lmx -n ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX D
+    strcpy(buf, "lmx -d ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output RF Power
+    strcpy(buf, "lmx -p ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 60 /*TODO: pll->power*/);
+    // default to high power
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output Frequency in MHz
+    strcpy(buf, "lmx -f ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    usleep(100000);
 }
 
 #endif
