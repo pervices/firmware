@@ -307,13 +307,13 @@ int init_property(uint8_t options) {
     #undef X
 #elif defined(TATE_4R4T) 
     static char name[512];
-    #define X(ch, io)                                                              \
+    #define X(ch, io, crx, ctx)                                                              \
         const int chan_rx_##ch = INT_RX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                              \
-        init_uart_comm(&uart_rx_comm_fd[chan_##ch], name, 0);                      \
-        const int chan_rx_##ch = INT_TX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                              \
-        init_uart_comm(&uart_tx_comm_fd[chan_##ch], name, 0);                      \
+        sprintf(name, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);                      \
+        const int chan_tx_##ch = INT_TX(ch);                                          \
+        sprintf(name, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
+        init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);                      
         CHANNELS
     #undef X
 #elif defined(VAUNT)

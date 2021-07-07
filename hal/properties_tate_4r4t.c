@@ -1795,7 +1795,7 @@ CHANNELS
 /* --------------------------------- RX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-#define X(ch, io)                                                               \
+#define X(ch, io, crx, ctx)                                                               \
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
@@ -1988,7 +1988,8 @@ CHANNELS
         char reg_name[5];                                                      \
         sprintf(reg_name, "rxg%c", reg);                                       \
                                                                                \
-        if (resamp_err < base_err) {                                           \
+        /*if (resamp_err < base_err) {*/\
+        if (false){     \
             write_hps_reg("rx" STR_RX(crx) "1", resamp_factor);                    \
             read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
             write_hps_reg("rx" STR_RX(crx) "4", old_val | (1 << 15));              \
@@ -4096,7 +4097,7 @@ GPIO_PINS
 static prop_t property_table[] = {
     DEFINE_TIME()
     //power on then reboot rx boards
-#define X(ch, io) DEFINE_RX_PWR_REBOOT(ch)
+#define X(ch, io, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
     DEFINE_WAIT_15
