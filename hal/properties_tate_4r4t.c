@@ -43,7 +43,7 @@
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
-    ((double)17.179869184)
+    ((double)4.2949672960)
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
