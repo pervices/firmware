@@ -2163,7 +2163,21 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /* In the new context, pwr means resetting the DSP channel and */          \
+    /* pwr_board function will actually turn the RFE boards on or off */       \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
+        uint32_t old_val;                                                      \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
+        write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
+        if (power == PWR_ON) {                                                 \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val & ~0x2);               \
+        }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {         \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
@@ -3855,14 +3869,17 @@ GPIO_PINS
 #define DEFINE_WAIT_15 \
     DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
 
-#define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
+#define DEFINE_RF_PWR_REBOOT(_c)    \
+    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                , hdlr_rx_##_c##_pwr_board,               RW, "1")         \
+    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")             
     
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_sample_num"  , hdlr_rx_##_c##_trigger_edge_sample_num, RW, "0")         \
@@ -3905,8 +3922,6 @@ GPIO_PINS
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
-    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
@@ -4097,7 +4112,7 @@ GPIO_PINS
 static prop_t property_table[] = {
     DEFINE_TIME()
     //power on then reboot rx boards
-#define X(ch, io, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
+#define X(ch, io, crx, ctx) DEFINE_RF_PWR_REBOOT(ch)
     CHANNELS
 #undef X
     DEFINE_WAIT_15
