@@ -2216,7 +2216,7 @@ CHANNELS
         } else {                                                               \
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
-            system(pwr_cmd);                                                   \
+            /*system(pwr_cmd);*/                                                   \
                                                                                \
             rx_power[INT_RX(ch)] = PWR_OFF;                                       \
             rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
