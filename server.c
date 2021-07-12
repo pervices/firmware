@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
     char prop_path[32];
     char tmp_char;
     int count_bad = 0;
+    int max_attempts = 10;
 
     const int port_nums[] = {
         /* UDP management port */
@@ -174,7 +175,7 @@ int main(int argc, char *argv[]) {
     
     // 2. check that time board plls are locked
     if (property_good("time/status/status_good") != 1) {
-        PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.");
+        PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
         usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
         abort();
@@ -182,8 +183,33 @@ int main(int argc, char *argv[]) {
     
     // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links
-    // TODO: add a check for the RX board JESD links
+    i = 0;
+    count_bad = 0;
+    while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
+        strcpy(&prop_path,"rx/");
+        tmp_char = i + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/jesd_status");
+        PRINT(INFO,"PROPERTY: %s\n",prop_path);
+        if (property_good(&prop_path) != 1) {
+            count_bad += 1;
+            i = 0; // restart checking from the beginning
+            PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
+            set_property("/var/cyan/state/fpga/reset","3");
+            usleep(200000); // wait 0.2s
+            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
+            usleep(200000); // wait 0.2s
+        } else {
+            i++;
+        }
+    }
     
+    if (count_bad >= max_attempts) {
+        PRINT(ERROR,"Some JESD links failed to establish after %i attempts. Stopping server.\n", max_attempts);
+        write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
+        usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
+        abort();
+    }
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");
     
