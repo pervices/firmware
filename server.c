@@ -195,9 +195,10 @@ int main(int argc, char *argv[]) {
             count_bad += 1;
             i = 0; // restart checking from the beginning
             PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
-            set_property("/var/cyan/state/fpga/reset","3");
+            write_hps_reg("res_rw7", 0x10000000); // reset FPGA JESD IP
+            write_hps_reg("res_rw7", 0); // clear reset bit
             usleep(200000); // wait 0.2s
-            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1");
+            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1"); // issue sysref pulse
             usleep(200000); // wait 0.2s
         } else {
             i++;
