@@ -211,6 +211,7 @@ int main(int argc, char *argv[]) {
     
     if (count_bad >= 5)  {// at this point if time board is still bad we have to restart cyan
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
+        usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
         abort();
     } /*else {
         count_bad = 0; // reset count_bad to zero, now it will count bad tx board JESD links

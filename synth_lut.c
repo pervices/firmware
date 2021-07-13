@@ -26,12 +26,14 @@
 #ifndef VCS_PATH
     #if defined(TATE)
         #define VCS_PATH "/var/cyan/state"
+    #elif defined(TATE_4R4T)
+        #define VCS_PATH "/var/cyan/state"
     #elif defined(TATE_8R)
         #define VCS_PATH "/var/cyan/state"
     #elif defined(VAUNT)
         #define VCS_PATH "/var/crimson/state"
     #else
-        #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
+        #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
     #endif
 #endif
 extern void server_init_led();
@@ -625,6 +627,10 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+#elif defined(TATE_4R4T)
+    snprintf(cmdbuf, sizeof(cmdbuf),
+             "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_8R)
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
@@ -634,7 +640,7 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
              "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
     system(cmdbuf);
 
@@ -778,6 +784,10 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 1 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+#elif defined(TATE_4R4T)
+    snprintf(cmdbuf, sizeof(cmdbuf),
+             "echo 1 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_8R)
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 1 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
@@ -787,7 +797,7 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
              "echo 1 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
     system(cmdbuf);
 
@@ -952,6 +962,10 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     snprintf(ctx->fn, sizeof(ctx->fn),
              "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
              'A' + ctx->channel(ctx), buf);
+#elif defined(TATE_4R4T)
+    snprintf(ctx->fn, sizeof(ctx->fn),
+             "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             'A' + ctx->channel(ctx), buf);
 #elif defined(TATE_8R)
     snprintf(ctx->fn, sizeof(ctx->fn),
              "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
@@ -961,7 +975,7 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
              "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
              'A' + ctx->channel(ctx), buf);
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
     r = EXIT_SUCCESS;
 

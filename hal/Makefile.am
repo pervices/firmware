@@ -9,6 +9,7 @@ libhal_la_SOURCES = \
 	pllcalc.c \
 	properties_tate.c \
 	properties_tate_8r.c \
+	properties_tate_4r4t.c \
 	properties_vaunt.c \
 	property_manager.c
 libhal_la_CFLAGS = \

@@ -39,7 +39,7 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-#if !(defined(VAUNT) || defined(TATE) || defined(TATE_8R) )
+#if !(defined(VAUNT) || defined(TATE) || defined(TATE_4R4T) || defined(TATE_8R) )
     #error "You must specify either (VAUNT | TATE) when compiling this project."
 #endif
 
@@ -88,6 +88,8 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 
 static void change_group_permissions_for_all(void) {
 #if defined(TATE)
+    system("chgrp dev-grp0 -R /var/cyan");
+#elif defined(TATE_4R4T)
     system("chgrp dev-grp0 -R /var/cyan");
 #elif defined(TATE_8R)
     system("chgrp dev-grp0 -R /var/cyan");
@@ -159,6 +161,8 @@ static void make_prop(prop_t *prop) {
         snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
 #elif defined(TATE_8R)
         snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
+#elif defined(TATE_4R4T)
+        snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
 #elif defined(VAUNT)
         snprintf(cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path);
 #else
@@ -168,6 +172,9 @@ static void make_prop(prop_t *prop) {
 
         // TODO: replace with symlinkat(2)
 #if defined(TATE)
+        snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
+                 prop->symlink_target, prop->path);
+#elif defined(TATE_4R4T)
         snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
                  prop->symlink_target, prop->path);
 #elif defined(TATE_8R)
@@ -284,18 +291,29 @@ int init_property(uint8_t options) {
 
 #if defined(TATE)
     static char name[512];
-#define X(ch, io)                                                              \
-    const int chan_##ch = INT(ch);                                             \
-    sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
-    init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
+    #define X(ch, io)                                                              \
+        const int chan_##ch = INT(ch);                                             \
+        sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
+        init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
     CHANNELS
-#undef X
+    #undef X
 #elif defined(TATE_8R)
     static char name[512];
     #define X(ch, io)                                                              \
         const int chan_##ch = INT(ch);                                             \
         sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
         init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
+        CHANNELS
+    #undef X
+#elif defined(TATE_4R4T) 
+    static char name[512];
+    #define X(ch, io, crx, ctx)                                                              \
+        const int chan_rx_##ch = INT_RX(ch);                                          \
+        sprintf(name, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);                      \
+        const int chan_tx_##ch = INT_TX(ch);                                          \
+        sprintf(name, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
+        init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);                      
         CHANNELS
     #undef X
 #elif defined(VAUNT)
