@@ -183,45 +183,7 @@ int main(int argc, char *argv[]) {
     
     // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links
-    i = 0;
-    count_bad = 0;
-    while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
-        strcpy(&prop_path,"rx/");
-        tmp_char = i + 'a';
-        strcat(&prop_path,&tmp_char);
-        strcat(&prop_path,"/jesd_status");
-        PRINT(INFO,"PROPERTY: %s\n",prop_path);
-        if (property_good(&prop_path) != 1) {
-            count_bad += 1;
-            i = 0; // restart checking from the beginning
-            PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
-            write_hps_reg("res_rw7", 0x10000000); // reset FPGA JESD IP
-            write_hps_reg("res_rw7", 0); // clear reset bit
-            usleep(200000); // wait 0.2s
-            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1"); // issue sysref pulse
-            usleep(200000); // wait 0.2s
-        } else {
-            i++;
-        }
-    }
-    
-    if (count_bad >= max_attempts) {
-        for (i = 0; i < NUM_CHANNELS; i++) {
-            strcpy(&prop_path,"rx/");
-            tmp_char = i + 'a';
-            strcat(&prop_path,&tmp_char);
-            strcat(&prop_path,"/jesd_status");
-            PRINT(INFO,"PROPERTY: %s\n",prop_path);
-            if (property_good(&prop_path) != 1) {
-                PRINT(ERROR,"Some JESD links failed to establish after %i attempts. Stopping server.\n", max_attempts);
-                write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
-                usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
-                abort();
-            }
-        }
-    }
-    
-    PRINT(INFO,"All JESD links established after %i FPGA IP resets.\n", count_bad);
+    // TODO: add a check for the RX board JESD links
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");
