@@ -1292,9 +1292,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        /* Group every four channels into the same QSFP port */                \
-        /* NOTE: This is strictly for tate */                                  \
-        char channel = (INT_TX(ch)/4)+'a';                                        \
+        /* NOTE: This is strictly for tate 4t*/                                \
+        char channel = CHR(ch);                                                \
         sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2086,7 +2085,9 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        PRINT(INFO, "Property: link/iface: TO DO: FW support for streaming to management port required");\
+        /* NOTE: This is strictly for tate 4r*/                                \
+        char channel = CHR(ch);                                                \
+        sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
