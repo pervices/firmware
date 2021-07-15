@@ -48,23 +48,13 @@
         X(p, tx)
 #elif defined(TATE_8R)
     //Will be only using the populated RF slots
+    //Column 3 is for rx, 4 is for tx
     #define CHANNELS \
-        X(a, rx) \
-        X(b, rx) \
-        X(c, rx) \
-        X(d, rx) \
-        X(e, rx) \
-        X(f, rx) \
-        X(g, rx) \
-        X(h, rx) \
-        X(i, rx) \
-        X(j, rx) \
-        X(k, rx) \
-        X(l, rx) \
-        X(m, rx) \
-        X(n, rx) \
-        X(o, rx) \
-        X(p, rx)
+        X(a, io, a, c) \
+        X(b, io, e, g) \
+        X(c, io, i, k) \
+        X(d, io, m, o)
+
 #elif defined(TATE_4R4T)
     //Will be only using the populated RF slots
     //Column 3 is for rx, 4 is for tx
@@ -92,6 +82,20 @@
 
 //creates channel maps
 #if defined (TATE_4R4T)
+    #define STR_RX(crx) #crx
+    #define STR_TX(ctx) #ctx
+
+    // Converts an expanded char into a runtime integer.
+    #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+    #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
+
+    //hps maps
+    static const char* const channel_names[] = {
+    #define X(ch, io, crx, ctx) STR(ch),
+        CHANNELS
+    #undef X
+    };
+#elif defined (TATE_8R)
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
 
