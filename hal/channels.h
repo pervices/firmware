@@ -96,6 +96,7 @@
     #define STR_TX(ctx) #ctx
 
     // Converts an expanded char into a runtime integer.
+    #define INT(ch) ((int)(CHR(ch) - 'a'))
     #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
     #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
