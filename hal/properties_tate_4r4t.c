@@ -284,7 +284,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
 
 #define X(ch, io, crx, ctx)                                                              \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
-        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT_RX(ch));            \
+        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
     }
 CHANNELS
 #undef X
@@ -2389,7 +2389,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
             continue;
         }
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
         CHANNELS
 #undef X
@@ -2439,7 +2439,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
         }
 
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
 #undef X
@@ -2557,7 +2557,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         }
 
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
 #undef X
@@ -2651,7 +2651,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         }
 
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
         CHANNELS
 #undef X
@@ -4174,7 +4174,7 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42836;
 
-#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT_RX(ch));
+#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
     CHANNELS
 #undef X
 
