@@ -4179,11 +4179,10 @@ void patch_tree(void) {
     CHANNELS
 #undef X
 
-#define X(ch, io, crx, ctx)                                                              \
-    set_default_str("rx/" #ch "/link/ip_dest",                                 \
-                    ((INT_RX(ch) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
-    CHANNELS
-#undef X
+set_default_str("rx/a/link/ip_dest","10.10.10.10");
+set_default_str("rx/b/link/ip_dest","10.10.11.10");
+set_default_str("rx/c/link/ip_dest","10.10.12.10");
+set_default_str("rx/d/link/ip_dest","10.10.13.10");
 
 #define X(ch, io, crx, ctx)                                                                                       \
     set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
