@@ -49,11 +49,15 @@
 #elif defined(TATE_8R)
     //Will be only using the populated RF slots
     //Column 3 is for rx, 4 is for tx
-    #define CHANNELS \
-        X(a, io, a, c) \
-        X(b, io, e, g) \
-        X(c, io, i, k) \
-        X(d, io, m, o)
+    #define CHANNELS   \
+        X(a, rx, a, c) \
+        X(b, rx, e, g) \
+        X(c, rx, i, k) \
+        X(d, rx, m, o) \
+        X(e, rx, b, d) \
+        X(f, rx, f, h) \
+        X(g, rx, j, l) \
+        X(h, rx, n, p)
 
 #elif defined(TATE_4R4T)
     //Will be only using the populated RF slots
@@ -100,7 +104,7 @@
     #define STR_TX(ctx) #ctx
 
     // Converts an expanded char into a runtime integer.
-    #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+    #define INT_RX(ch) ((int)((CHR(crx) - 'a')))
     #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
     //hps maps
