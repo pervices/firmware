@@ -216,7 +216,6 @@ int main(int argc, char *argv[]) {
                 PRINT(ERROR,"Some JESD links failed to establish after %i attempts. Stopping server.\n", max_attempts);
                 write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
                 usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
-                abort();
             }
         }
     }
