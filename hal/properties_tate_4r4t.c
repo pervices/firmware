@@ -1824,7 +1824,7 @@ CHANNELS
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);  \
+        set_lo_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);  \
                                                                                 \
         /* Save the frequency that is being set into the property */            \
         sprintf(ret, "%Lf", outfreq);                                           \
@@ -4609,8 +4609,12 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     
     double freq = pll->vcoFreq / pll->d;
 
+    // Ensure that the LoGen board is powered on
+    strcpy(buf, "lmx -O 0\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
-    strcpy(buf, "lmx -k \r");
+    strcpy(buf, "lmx -k\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
     
     // Send Reference in MHz to MCU
