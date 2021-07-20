@@ -62,10 +62,10 @@
 // Increasing both will lead to better frequency accuracy on the radio side,
 // but at the cost of accuracy.
 
-#define _PLL_OUT_MAX_DEVIATION 100000000
+#define _PLL_OUT_MAX_DEVIATION 10000000
 
 // Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
+#define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
 
 // PLL IDs
 #define PLL_ID_ADF5355 5355
