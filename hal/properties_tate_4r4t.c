@@ -1803,7 +1803,7 @@ CHANNELS
         /* if freq = 0, mute PLL */                                             \
         if (freq == 0) {                                                        \
             strcpy(buf, "lmx -k\r");                                            \
-            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                   \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));          \
             sprintf(ret, "%Lf", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
@@ -1811,7 +1811,7 @@ CHANNELS
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
             strcpy(buf, "lmx -k\r");                                            \
-            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                   \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));          \
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
             sprintf(ret, "%Lf", 0);                                             \
             return RETURN_ERROR;                                                \
