@@ -1853,26 +1853,88 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        /*LMH6401 Gain Range: -6dB to 26dB*/\
-        int gain;\
-        int atten;\
+        char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
+        int gain;                                                              \
+        int atten;                                                             \
+        int band;                                                              \
+        char band_read[3];                                                     \
+                                                                               \
         sscanf(data, "%i", &gain);                                             \
+        get_property(&fullpath,&band_read,3);                                  \
+        sscanf(band_read, "%i", &band);                                        \
                                                                                \
-        if (gain > 26)                                                        \
-            gain = 26;                                                        \
-        else if (gain < -6)                                                     \
-            gain = -6;                                                          \
+        if (band == 0) {                                                       \
+            /*LMH6401 Gain Range: -6dB to 26dB*/                               \
+            if (gain > 26) {                                                   \
+                gain = 26;                                                     \
+            } else if (gain < -6) {                                            \
+                gain = -6;                                                     \
+            }                                                                  \
+            atten = 26 - gain;                                                 \
+            strcpy(buf, "vga -a ");                                            \
+            sprintf(buf + strlen(buf), "%i", atten);                           \
+            strcat(buf, "\r");                                                 \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));         \
+        } else if (band == 1) {                                                \
+            /*AM1081 Gain Range: 0dB or 17dB */                                \
+            /*LTC5586 Gain Range: 8dB to 15dB)*/                               \
+            if (gain > (17+15)) {                                              \
+                gain = 17+15;                                                  \
+            } else if (gain < 8) {                                             \
+                gain = 8;                                                      \
+            } else if ((gain > 15) && (gain < 8+17)) {                         \
+                gain = 15;                                                     \
+            }                                                                  \
+            if (gain <= 15) {                                                  \
+                /* set AM1081 to 0, set LTC5586 to gain*/                      \
+                strcpy(buf, "rf -l 1\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", gain);                        \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            } else {                                                           \
+                /* set AM1081 to 17, set LTC5586 to gain-17*/                  \
+                strcpy(buf, "rf -l 0\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", (gain-17));                   \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            }                                                                  \
+        } else if (band == 2) {                                                \
+            /*AM1075 Gain Range: 0dB or 18dB */                                \
+            /*LTC5586 Gain Range: 8dB to 15dB)*/                               \
+            if (gain > (18+15)) {                                              \
+                gain = 18+15;                                                  \
+            } else if (gain < 8) {                                             \
+                gain = 8;                                                      \
+            } else if ((gain > 15) && (gain < 8+18)) {                         \
+                gain = 15;                                                     \
+            }                                                                  \
+            if (gain <= 15) {                                                  \
+                /* set AM1075 to 0, set LTC5586 to gain*/                      \
+                strcpy(buf, "rf -l 1\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", gain);                        \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            } else {                                                           \
+                /* set AM1075 to 18, set LTC5586 to gain-18*/                  \
+                strcpy(buf, "rf -l 0\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", (gain-18));                   \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            }                                                                  \
+        } else {                                                               \
+            PRINT(ERROR,"band unexpected value while setting gain\n");         \
+            return RETURN_ERROR_GET_PROP;                                      \
+        }                                                                      \
                                                                                \
-        if (gain % 2)                                                          \
-            gain++; /* Odd Number */                                           \
-        atten = 26 - gain;\
-                                                                               \
-        /* -6 -> 26 gain */                                                    \
-        strcpy(buf, "vga -a ");                                 \
-        sprintf(buf + strlen(buf), "%i", atten);                          \
-        strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
+        sprintf(ret, "%i", gain);                                              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
