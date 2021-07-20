@@ -1877,18 +1877,21 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_atten_val(const char *data, char *ret) {      \
+        /*LTC5586 Atten Range: 0dB to 31dB*/                                   \
         int atten;                                                             \
         sscanf(data, "%i", &atten);                                            \
                                                                                \
-        if (atten > 127)                                                       \
-            atten = 127;                                                       \
+        if (atten > 31)                                                        \
+            atten = 31;                                                        \
         else if (atten < 0)                                                    \
             atten = 0;                                                         \
                                                                                \
-        strcpy(buf, "rf -a ");                                  \
+        strcpy(buf, "rf -a ");                                                 \
         sprintf(buf + strlen(buf), "%i", atten);                               \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));             \
+                                                                               \
+        sprintf(ret, "%i", atten);                                             \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3892,7 +3895,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127")       \
+    DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31")        \
     DEFINE_FILE_PROP("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0")         \
