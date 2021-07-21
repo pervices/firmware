@@ -2146,7 +2146,7 @@ CHANNELS
                 rx_stream[INT_RX(ch)] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
-                sprintf(ret, "%u", 0); /* Alert File Tree */                   \
+                /*sprintf(ret, "%u", 0);*/ /* Alert File Tree */                   \
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
@@ -2219,7 +2219,7 @@ CHANNELS
             /*system(pwr_cmd);*/                                                   \
                                                                                \
             rx_power[INT_RX(ch)] = PWR_OFF;                                       \
-            /*rx_stream[INT_RX(ch)] = STREAM_OFF;*/                                   \
+            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
