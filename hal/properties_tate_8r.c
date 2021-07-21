@@ -284,7 +284,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
 
 #define X(ch, rx, crx ,ctx)                                                              \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
-        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT_RX(ch));            \
+        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT_RX(crx));            \
     }
 CHANNELS
 #undef X
@@ -1836,7 +1836,7 @@ CHANNELS
         strcpy(buf, "rf -l ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1844,7 +1844,7 @@ CHANNELS
         strcpy(buf, "rf -b ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
@@ -1871,7 +1871,7 @@ CHANNELS
         strcpy(buf, "vga -a ");                                 \
         sprintf(buf + strlen(buf), "%i", atten);                          \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1888,7 +1888,7 @@ CHANNELS
         strcpy(buf, "rf -a ");                                  \
         sprintf(buf + strlen(buf), "%i", atten);                               \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1899,17 +1899,17 @@ CHANNELS
                                                                                \
         /* ADC */                                                              \
         strcpy(buf, "dump -a\r");                               \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);             \
                                                                                \
         /* GPIOX */                                                            \
         strcpy(buf, "dump -g\r");                               \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
                                                                                \
         /* ADC Driver */                                                       \
         strcpy(buf, "dump -v\r");                               \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1928,7 +1928,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
         strcpy(buf, "status -l\r");                             \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1944,7 +1944,7 @@ CHANNELS
         strcpy(buf, "board -l\r");                                             \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1981,7 +1981,7 @@ CHANNELS
         memset(ret, 0, MAX_PROP_LEN);                                          \
         int gain_factor;                                                       \
                                                                                \
-        int channel = INT_RX(ch);                                                 \
+        int channel = INT_RX(crx);                                                 \
         char reg = 'a' + (channel/4)*4;                                        \
         int shift = (channel%4)*8;                                             \
         char reg_name[5];                                                      \
@@ -2124,25 +2124,25 @@ CHANNELS
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
         if (stream > 1) {                                                      \
-            sprintf(ret, "%u", rx_stream[INT_RX(ch)]); /* Alert File Tree */      \
+            sprintf(ret, "%u", rx_stream[INT_RX(crx)]); /* Alert File Tree */      \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
         /* Stream is already ON or OFF then return */                          \
-        if (stream == rx_stream[INT_RX(ch)])                                      \
+        if (stream == rx_stream[INT_RX(crx)])                                      \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
-            if (rx_power[INT_RX(ch)] == PWR_ON) {                                 \
-                read_hps_reg(reg4[INT_RX(ch)], &old_val);                         \
-                write_hps_reg(reg4[INT_RX(ch)], old_val | 0x100);                 \
+            if (rx_power[INT(ch)] == PWR_ON) {                                 \
+                read_hps_reg(reg4[INT_RX(crx)], &old_val);                         \
+                write_hps_reg(reg4[INT_RX(crx)], old_val | 0x100);                 \
                                                                                \
-                read_hps_reg(reg4[INT_RX(ch)], &old_val);                         \
-                write_hps_reg(reg4[INT_RX(ch)], old_val | 0x2);                   \
-                write_hps_reg(reg4[INT_RX(ch)], old_val &(~0x2));                 \
+                read_hps_reg(reg4[INT_RX(crx)], &old_val);                         \
+                write_hps_reg(reg4[INT_RX(crx)], old_val | 0x2);                   \
+                write_hps_reg(reg4[INT_RX(crx)], old_val &(~0x2));                 \
                                                                                \
-                rx_stream[INT_RX(ch)] = STREAM_ON;                                \
+                rx_stream[INT_RX(crx)] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
@@ -2156,7 +2156,7 @@ CHANNELS
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
             write_hps_reg("rx" STR(ch) "4", old_val &(~0x100));                \
                                                                                \
-            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
+            rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2169,14 +2169,14 @@ CHANNELS
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                    \
+        if (power >= PWR_ON && rx_power[INT(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(crx));                    \
             system(pwr_cmd);                                                   \
-            rx_power[INT_RX(ch)] = PWR_ON;                                        \
+            rx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
             /* board command */                                                \
             usleep(200000);                                                    \
@@ -2192,15 +2192,6 @@ CHANNELS
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    write_hps_reg(reg4[i + 16], old_val | 0x100);              \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 16], old_val | 0x2);                \
-                    write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
-                }                                                              \
                 if (rx_stream[i] == STREAM_ON) {                               \
                     read_hps_reg(reg4[i], &old_val);                           \
                     write_hps_reg(reg4[i], old_val | 0x100);                   \
@@ -2213,15 +2204,15 @@ CHANNELS
             /* power off & stream off */                                       \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
+            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(crx));                   \
             system(pwr_cmd);                                                   \
                                                                                \
-            rx_power[INT_RX(ch)] = PWR_OFF;                                       \
-            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
+            rx_power[INT(ch)] = PWR_OFF;                                       \
+            rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
+            ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));            \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
@@ -2240,7 +2231,7 @@ CHANNELS
                                                                                \
         if (reboot == 1) {                                                     \
             strcpy(buf, "board -r\r");                                         \
-            ping_write_only(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)); \
+            ping_write_only(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)); \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2248,7 +2239,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2256,7 +2247,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcudevid(const char *data, char *ret) {    \
         strcpy(buf, "status -d\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2264,7 +2255,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcurev(const char *data, char *ret) {      \
         strcpy(buf, "status -v\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2272,7 +2263,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcufuses(const char *data, char *ret) {    \
         strcpy(buf, "status -f\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2280,7 +2271,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2372,7 +2363,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
             continue;
         }
 #define X(ch, rx, crx ,ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT_RX(crx))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
         CHANNELS
 #undef X
@@ -2422,7 +2413,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
         }
 
 #define X(ch, rx, crx ,ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT_RX(crx))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
 #undef X
@@ -2540,7 +2531,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         }
 
 #define X(ch, rx, crx ,ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT_RX(crx))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
 #undef X
@@ -2634,7 +2625,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         }
 
 #define X(ch, rx, crx ,ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT_RX(crx))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
         CHANNELS
 #undef X
@@ -3138,7 +3129,7 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 1\r");
 #define X(ch, rx, crx ,ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
 
@@ -3155,7 +3146,7 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 2\r");
 #define X(ch, rx, crx ,ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
 
@@ -3233,7 +3224,7 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
 
     strcpy(buf, "board -r\r");
 #define X(ch, rx, crx ,ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)), usleep(50000);
     CHANNELS
 #undef X
 
@@ -4154,13 +4145,13 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42820;
 
-#define X(ch, rx, crx ,ctx) set_default_int("rx/" #ch "/link/port", base_port + INT_RX(ch));
+#define X(ch, rx, crx ,ctx) set_default_int("rx/" #ch "/link/port", base_port + INT_RX(crx));
     CHANNELS
 #undef X
 
 #define X(ch, rx, crx ,ctx)                                                              \
     set_default_str("rx/" #ch "/link/ip_dest",                                 \
-                    ((INT_RX(ch) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
+                    ((INT_RX(crx) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
     CHANNELS
 //#undef X
 

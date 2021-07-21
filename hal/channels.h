@@ -83,6 +83,8 @@
 
 // Converts an expanded string into a runtime char.
 #define CHR(ch) #ch[0]
+        
+#define INT(ch) ((int)(CHR(ch) - 'a'))
 
 //creates channel maps
 #if defined (TATE_4R4T)
@@ -102,10 +104,11 @@
 #elif defined (TATE_8R)
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
+    #define CHR_RX(crx) #crx[0]
 
     // Converts an expanded char into a runtime integer.
-    #define INT_RX(ch) ((int)((CHR(crx) - 'a')))
-    #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
+    #define INT_RX(crx) ((int)((CHR_RX(crx) - 'a')))
+    #define INT_TX(ch) ((int)(4*(CHR_RX(ch) - 'a')) + 2)
 
     //hps maps
     static const char* const channel_names[] = {
