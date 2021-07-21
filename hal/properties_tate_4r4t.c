@@ -2218,8 +2218,8 @@ CHANNELS
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[INT_RX(ch)] = PWR_OFF;                                       \
-            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
+            /*rx_power[INT_RX(ch)] = PWR_OFF;*/                                       \
+            /*rx_stream[INT_RX(ch)] = STREAM_OFF;*/                                   \
                                                                                \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
