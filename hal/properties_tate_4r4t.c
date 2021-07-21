@@ -1695,13 +1695,13 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                     write_hps_reg(reg4[i + 16], old_val | 0x2);                \
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
-                /*if (rx_power[i] == PWR_ON) {                                   \
+                if (rx_power[i] == PWR_ON) {                                   \
                     read_hps_reg(reg4[i], &old_val);                           \
                     write_hps_reg(reg4[i], old_val | 0x100);                   \
                     read_hps_reg(reg4[i], &old_val);                           \
                     write_hps_reg(reg4[i], old_val | 0x2);                     \
                     write_hps_reg(reg4[i], old_val &(~0x2));                   \
-                } */                                                             \
+                }                                                              \
             }                                                                  \
                                                                                \
             /* power off */                                                    \
