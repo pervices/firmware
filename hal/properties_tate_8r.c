@@ -2275,7 +2275,21 @@ CHANNELS
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
-    }
+    }\
+    static int hdlr_rx_##ch##_jesd_status(const char *data, char *ret) {       \
+        /* res_ro11 holds link data with bit 0 high indicating rx board 0 */   \
+        /* link is up, bit 1 high indicating that rx board link 1 is up, etc */\
+        uint32_t reg_val = 0;                                                  \
+        read_hps_reg("res_ro11", &reg_val);                                    \
+        uint8_t shift = (int)(CHR(ch) - 'a');                                  \
+        uint32_t anded = reg_val & (1 << shift);                               \
+        if (anded > 0){                                                        \
+            strcpy(ret, "good");                                               \
+        } else {                                                               \
+            strcpy(ret, "bad");                                                \
+        }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+     }
 CHANNELS
 #undef X
 
@@ -3888,7 +3902,9 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa")      \
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")
+    DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")
+ 
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         
 /*    DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
