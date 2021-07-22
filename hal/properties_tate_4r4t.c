@@ -2147,7 +2147,7 @@ CHANNELS
                 rx_stream[INT_RX(ch)] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
-                /*sprintf(ret, "%u", 0);*/ /* Alert File Tree */                   \
+                sprintf(ret, "%u", 0); /* Alert File Tree */                   \
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
