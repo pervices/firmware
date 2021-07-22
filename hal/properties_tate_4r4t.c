@@ -107,7 +107,7 @@ uint8_t *_save_profile;
 uint8_t *_load_profile;
 char *_save_profile_path;
 char *_load_profile_path;
-bool debug_pwr_cyc = false;
+
 
 static const uint8_t ipver[] = {
     IPVER_IPV4,
@@ -2163,17 +2163,17 @@ CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-    \
                                                                                \
+
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
-        sscanf(data, "%" SCNd8 "", &power);\
-        PRINT(INFO, "power: %u, rx_power: %u", power, rx_power[INT_RX(ch)]);\
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                   \
+        if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
@@ -2181,37 +2181,24 @@ CHANNELS
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
-            if(debug_pwr_cyc) {\
-            PRINT(INFO, "Sent rfe command");\
-            }\
+
             rx_power[INT_RX(ch)] = PWR_ON;                                        \
                                                                                \
             /* board command */           \
-            usleep(20000000);/*This was part of it, keep this delay*/                                                    \
-            if(debug_pwr_cyc) {\
-            PRINT(INFO, "Disabling dsp channels");\
-            }\
-            \
+            usleep(200000);                                                    \
+
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
                 read_hps_reg(reg4[i], &old_val);                               \
                 write_hps_reg(reg4[i], old_val & ~0x100);                      \
             }                                                                  \
-            \
-            if(debug_pwr_cyc) {\
-            PRINT(INFO, "Disabled dsp channels"); \
-            usleep(10000000);\
-            PRINT(INFO, "Sending sync pulse");                                                                    \
-            }\
+                                                                               \
+
             /* send sync pulse */                                              \
             sync_channels(15);                                                 \
-                                \
-            if(debug_pwr_cyc) { \
-            PRINT(INFO, "Sent sync pulse"); \
-            usleep(10000000);\
-            PRINT(INFO, "Enabling dsp channels sync pulse"); \
-            }\
+                                                                               \
+
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 if (tx_power[i] == PWR_ON) {                                   \
@@ -2231,15 +2218,11 @@ CHANNELS
                     write_hps_reg(reg4[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
-            if(debug_pwr_cyc) {\
-            PRINT(INFO, "Enabled dsp channels sync pulse"); \
-            usleep(10000000);\
-            PRINT(INFO, "Finishing power function"); \
-            }\
+
                                                                                \
             /* power off & stream off */                                       \
         } else if (false) {\
-            debug_pwr_cyc = true;\
+
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
