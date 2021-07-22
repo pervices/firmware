@@ -2164,7 +2164,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-
+\
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
