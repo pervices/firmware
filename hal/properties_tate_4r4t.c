@@ -2210,7 +2210,7 @@ CHANNELS
                     write_hps_reg(reg4[i + 16], old_val | 0x2);                \
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
-                if (rx_stream[i] == STREAM_ON) {                               \
+                if (rx_stream[i] == PWR_ON) {                               \
                     read_hps_reg(reg4[i], &old_val);                           \
                     write_hps_reg(reg4[i], old_val | 0x100);                   \
                     read_hps_reg(reg4[i], &old_val);                           \
