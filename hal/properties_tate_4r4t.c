@@ -4172,7 +4172,7 @@ void dump_tree(void) {
 }
 
 void patch_tree(void) {
-    const int base_port = 42820;
+    const int base_port = 42836;
 
 #define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT_RX(ch));
     CHANNELS
