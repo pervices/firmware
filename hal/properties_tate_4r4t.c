@@ -1704,7 +1704,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                     write_hps_reg(reg4[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
-            debug_pwr_cyc = false;\
                                                                                \
             /* power off */                                                    \
         } else {                                                               \
