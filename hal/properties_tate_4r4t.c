@@ -2239,7 +2239,7 @@ CHANNELS
             }\
                                                                                \
             /* power off & stream off */                                       \
-        } else {\
+        } else if (false) {\
             debug_pwr_cyc = true;\
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
