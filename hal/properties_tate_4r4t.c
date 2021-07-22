@@ -2170,7 +2170,7 @@ CHANNELS
         uint8_t power;                                                         \
         uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
-
+\
                                                                                \
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                    \
@@ -2181,12 +2181,12 @@ CHANNELS
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
-
+\
             rx_power[INT_RX(ch)] = PWR_ON;                                        \
                                                                                \
             /* board command */           \
             usleep(200000);                                                    \
-
+\
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
@@ -2194,11 +2194,11 @@ CHANNELS
                 write_hps_reg(reg4[i], old_val & ~0x100);                      \
             }                                                                  \
                                                                                \
-
+\
             /* send sync pulse */                                              \
             sync_channels(15);                                                 \
                                                                                \
-
+\
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 if (tx_power[i] == PWR_ON) {                                   \
@@ -2218,11 +2218,11 @@ CHANNELS
                     write_hps_reg(reg4[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
-
+\
                                                                                \
             /* power off & stream off */                                       \
-        } else if (false) {\
-
+        } else {\
+\
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
