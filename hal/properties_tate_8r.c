@@ -2154,8 +2154,23 @@ CHANNELS
         /* TODO: FW support for streaming to management port required */       \
         /* NOTE: This is strictly for tate 8r*/                                \
         char channel = CHR(ch);                                                \
-        if (channel > 'd') {                                                   \
-            channel = channel - 4;                                             \
+        char port = 'a';                                                       \
+        if (channel == 'a') {                                                  \
+            port = 'a';                                                        \
+        } else if (channel == 'b') {                                           \
+            port = 'a';                                                        \
+        } else if (channel == 'c') {                                           \
+            port = 'b';                                                        \
+        } else if (channel == 'd') {                                           \
+            port = 'b';                                                        \
+        } else if (channel == 'e') {                                           \
+            port = 'c';                                                        \
+        } else if (channel == 'f') {                                           \
+            port = 'c';                                                        \
+        } else if (channel == 'g') {                                           \
+            port = 'd';                                                        \
+        } else if (channel == 'h') {                                           \
+            port = 'd';                                                        \
         }                                                                      \
         sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
@@ -4249,21 +4264,21 @@ void patch_tree(void) {
 #undef X
 
 set_default_str("rx/a/link/ip_dest","10.10.10.10");
-set_default_str("rx/b/link/ip_dest","10.10.11.10");
-set_default_str("rx/c/link/ip_dest","10.10.12.10");
-set_default_str("rx/d/link/ip_dest","10.10.13.10");
-set_default_str("rx/e/link/ip_dest","10.10.10.10");
-set_default_str("rx/f/link/ip_dest","10.10.11.10");
-set_default_str("rx/g/link/ip_dest","10.10.12.10");
+set_default_str("rx/b/link/ip_dest","10.10.10.10");
+set_default_str("rx/c/link/ip_dest","10.10.11.10");
+set_default_str("rx/d/link/ip_dest","10.10.11.10");
+set_default_str("rx/e/link/ip_dest","10.10.12.10");
+set_default_str("rx/f/link/ip_dest","10.10.12.10");
+set_default_str("rx/g/link/ip_dest","10.10.13.10");
 set_default_str("rx/h/link/ip_dest","10.10.13.10");
 
 set_default_int("rx/a/link/jesd_num",0);
-set_default_int("rx/b/link/jesd_num",0);
+set_default_int("rx/b/link/jesd_num",1);
 set_default_int("rx/c/link/jesd_num",0);
-set_default_int("rx/d/link/jesd_num",0);
-set_default_int("rx/e/link/jesd_num",1);
+set_default_int("rx/d/link/jesd_num",1);
+set_default_int("rx/e/link/jesd_num",0);
 set_default_int("rx/f/link/jesd_num",1);
-set_default_int("rx/g/link/jesd_num",1);
+set_default_int("rx/g/link/jesd_num",0);
 set_default_int("rx/h/link/jesd_num",1);
 
 
