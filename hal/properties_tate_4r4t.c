@@ -4455,7 +4455,7 @@ void sync_channels(uint8_t chan_mask) {
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
-        if (reg_val == jesd_good_code) {
+        if ((reg_val & 0xff) == jesd_good_code) {
             PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
             jesd_good = true;
         }
