@@ -2161,7 +2161,7 @@ CHANNELS
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("rx" STR_RX(crx) "8", port);                                 \
+        write_hps_reg("rx" STR(ch) "8", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2169,7 +2169,7 @@ CHANNELS
         uint8_t ip[4];                                                         \
         sscanf(data, "%" SCNd8 ".%" SCNd8 ".%" SCNd8 ".%" SCNd8 "", ip,        \
                ip + 1, ip + 2, ip + 3);                                        \
-        write_hps_reg("rx" STR_RX(crx) "5",                                        \
+        write_hps_reg("rx" STR(ch) "5",                                        \
                       (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3])); \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \

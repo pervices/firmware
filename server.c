@@ -168,18 +168,18 @@ int main(int argc, char *argv[]) {
      * 1. Set time board to pulsed mode.
      * 2. Ensure that time board is locked. I think that we are not permitted to reset the tim eboard anymore because that would mess up the TX JESD part of the FPGA, so it would be bad id the time board is not locked. Double check this.
      * 3. Ensure TX boards and RX board JESD links are good. This has to be a single step, because the process for fixing any bad JESD links (for either type of board) involves resetting JESD part of FPGA, which might cause other boards to lose JESD link.
-     */
-    
+      */
+
     // 1. set the time board back to pulsed sysref mode
     set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
-    
-    // 2. check that time board plls are locked
+     
+// 2. check that time board plls are locked
     if (property_good("time/status/status_good") != 1) {
         PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
         usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
         abort();
-    }
+    } 
     
     // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
             i++;
         }
     }
-    
+     
     if (count_bad >= max_attempts) {
         for (i = 0; i < NUM_CHANNELS; i++) {
             strcpy(&prop_path,"rx/");
