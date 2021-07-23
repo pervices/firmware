@@ -2172,7 +2172,7 @@ CHANNELS
         } else if (channel == 'h') {                                           \
             port = 'd';                                                        \
         }                                                                      \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
+        sprintf(ret, "%s%c", "sfp", port);                                     \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
