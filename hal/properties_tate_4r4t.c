@@ -76,6 +76,7 @@ static int uart_synth_fd = 0;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
+int jesd_good_code = 0xf;
 
 static uint8_t rx_power[] = {
 #define X(ch, io, crx, ctx) PWR_OFF,
@@ -4454,7 +4455,7 @@ void sync_channels(uint8_t chan_mask) {
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
-        if (reg_val == 0x1) {
+        if (reg_val == jesd_good_code) {
             PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
             jesd_good = true;
         }
