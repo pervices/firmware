@@ -2207,7 +2207,7 @@ CHANNELS
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(crx));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[INT(ch)] = PWR_OFF;                                       \
+            rx_power[INT_RX(ch)] = PWR_OFF;                                       \
             rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
