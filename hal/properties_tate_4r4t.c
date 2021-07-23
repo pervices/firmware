@@ -2288,8 +2288,8 @@ CHANNELS
             rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
-            strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
+            /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
+            /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
