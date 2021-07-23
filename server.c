@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     char prop_path[32];
     char tmp_char;
     int count_bad = 0;
-    int max_attempts = 1;
+    int max_attempts = 50;
 
     const int port_nums[] = {
         /* UDP management port */
@@ -213,15 +213,15 @@ int main(int argc, char *argv[]) {
             strcat(&prop_path,"/jesd_status");
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
             if (property_good(&prop_path) != 1) {
-                PRINT(ERROR,"Some JESD links failed to establish after %i attempts.\n", max_attempts);
-                /*write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
+                PRINT(ERROR,"Some JESD links failed to establish after %i attempts. Stopping server.\n", max_attempts);
+                write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
                 usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
-                abort();*/
+                abort();
             }
         }
     }
     
-    /*PRINT(INFO,"All JESD links established after %i FPGA IP resets.\n", count_bad);*/
+    PRINT(INFO,"All JESD links established after %i FPGA IP resets.\n", count_bad);
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");
