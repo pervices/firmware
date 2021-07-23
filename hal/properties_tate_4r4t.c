@@ -75,6 +75,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
+int max_attempts = 10;
 
 static uint8_t rx_power[] = {
 #define X(ch, io, crx, ctx) PWR_OFF,
@@ -4405,6 +4406,9 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 // This also needs to be extended to convert the chan_mask to a specific RFE
 // for tate.
 void sync_channels(uint8_t chan_mask) {
+    uint32_t reg_val;
+    int i_reset = 0;
+    bool jesd_good = false;
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
     // usleep(300000); // Some wait time for the reset to be ready
@@ -4432,18 +4436,31 @@ void sync_channels(uint8_t chan_mask) {
      * Issue JESD, then read to see if
      * bad
      **********************************/
-    // Put FPGA JESD core in reset
+    // FPGA SFP IP reset
     write_hps_reg("res_rw7", 0x20000000);
     write_hps_reg("res_rw7", 0);
 
-    /* Trigger a SYSREF pulse */
-    // JESD core out of reset
-    write_hps_reg("res_rw7", 0);
-
-    usleep(100000); // Some wait time for MCUs to be ready
-    strcpy(buf, "clk -y\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
+    
+    while ((i_reset < max_attempts) && (jesd_good == false)) {
+        i_reset++;
+        // FPGA JESD IP reset
+        write_hps_reg("res_rw7",0x10000000);
+        write_hps_reg("res_rw7", 0);
+        usleep(100000); // Some wait time for MCUs to be ready
+        /* Trigger a SYSREF pulse */
+        strcpy(buf, "clk -y\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(200000); // Some wait time for MCUs to be ready
+        read_hps_reg("res_ro11", &reg_val);
+        if (reg_val == 0x1) {
+            PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
+            jesd_good = true;
+        }
+    }
+    if (jesd_good != true) {
+        PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
+    }
+    return;
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
