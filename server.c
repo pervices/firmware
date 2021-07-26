@@ -107,15 +107,11 @@ int main(int argc, char *argv[]) {
             #else
                 #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
             #endif
-            
 
             uint32_t ver39_32, ver31_0;
-            uint64_t fpgaver;
             read_hps_reg("sys3", &ver39_32);
             read_hps_reg("sys4", &ver31_0);
-            fpgaver = (((uint64_t)ver39_32 & 0xff) << 32) |
-                      (((uint64_t)ver31_0 & 0xffffffff) << 0);
-            printf("FPGA: %llx\n", fpgaver);
+            printf("FPGA: %01x%08x\n", (ver39_32 & 0xf), (ver31_0 & 0xffffffff));
 
             return 0;
         }
