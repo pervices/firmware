@@ -96,6 +96,18 @@ int main(int argc, char *argv[]) {
             printf("Branch: %s\n", VERSIONGITBRANCH);
             printf("Revision: %s\n", VERSIONGITREVISION);
             printf("Date: %s UTC\n", VERSIONDATE);
+            #if defined(TATE)
+                printf("Product: TATE\n");
+            #elif defined(TATE_4R4T)
+                printf("Product: TATE_4R4T\n");
+            #elif defined(TATE_8R)
+                printf("Product: TATE_8R\n");
+            #elif defined(VAUNT)
+                printf("Product: VAUNT\n");
+            #else
+                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
+            #endif
+            
 
             uint32_t ver39_32, ver31_0;
             uint64_t fpgaver;
