@@ -48,6 +48,8 @@ which is available on yaourt.
 
     make -j9
 
+    OR use "sh autotate.sh <TATE_VERSION>" to run those 4 commands automatically
+
 2. Specifying Build Variant Target
 
 To specify whether to build a Cyan ("Tate") or Crimson ("Vaunt") server variant
