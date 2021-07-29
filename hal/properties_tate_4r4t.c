@@ -75,6 +75,8 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
+int max_attempts = 10;
+int jesd_good_code = 0xf;
 
 static uint8_t rx_power[] = {
 #define X(ch, io, crx, ctx) PWR_OFF,
@@ -285,7 +287,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
 
 #define X(ch, io, crx, ctx)                                                              \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
-        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT_RX(ch));            \
+        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
     }
 CHANNELS
 #undef X
@@ -1293,9 +1295,9 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        /* Group every four channels into the same QSFP port */                \
-        /* NOTE: This is strictly for tate */                                  \
-        char channel = (INT_TX(ch)/4)+'a';                                        \
+        /* NOTE: This is strictly for tate 4t*/                                \
+        char channel = CHR(ch);                                                \
+
         sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1855,42 +1857,109 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        /*LMH6401 Gain Range: -6dB to 26dB*/\
-        int gain;\
-        int atten;\
+        char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
+        int gain;                                                              \
+        int atten;                                                             \
+        int band;                                                              \
+        char band_read[3];                                                     \
+                                                                               \
         sscanf(data, "%i", &gain);                                             \
+        get_property(&fullpath,&band_read,3);                                  \
+        sscanf(band_read, "%i", &band);                                        \
                                                                                \
-        if (gain > 26)                                                        \
-            gain = 26;                                                        \
-        else if (gain < -6)                                                     \
-            gain = -6;                                                          \
+        if (band == 0) {                                                       \
+            /*LMH6401 Gain Range: -6dB to 26dB*/                               \
+            if (gain > 26) {                                                   \
+                gain = 26;                                                     \
+            } else if (gain < -6) {                                            \
+                gain = -6;                                                     \
+            }                                                                  \
+
+            atten = 26 - gain;                                                 \
+
+            strcpy(buf, "vga -a ");                                            \
+            sprintf(buf + strlen(buf), "%i", atten);                           \
+            strcat(buf, "\r");                                                 \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));         \
+        } else if (band == 1) {                                                \
+            /*AM1081 Gain Range: 0dB or 17dB */                                \
+            /*LTC5586 Gain Range: 8dB to 15dB)*/                               \
+            if (gain > (17+15)) {                                              \
+                gain = 17+15;                                                  \
+            } else if (gain < 8) {                                             \
+                gain = 8;                                                      \
+            } else if ((gain > 15) && (gain < 8+17)) {                         \
+                gain = 15;                                                     \
+            }                                                                  \
+            if (gain <= 15) {                                                  \
+                /* set AM1081 to 0, set LTC5586 to gain*/                      \
+                strcpy(buf, "rf -l 1\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", gain);                        \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            } else {                                                           \
+                /* set AM1081 to 17, set LTC5586 to gain-17*/                  \
+                strcpy(buf, "rf -l 0\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", (gain-17));                   \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            }                                                                  \
+        } else if (band == 2) {                                                \
+            /*AM1075 Gain Range: 0dB or 18dB */                                \
+            /*LTC5586 Gain Range: 8dB to 15dB)*/                               \
+            if (gain > (18+15)) {                                              \
+                gain = 18+15;                                                  \
+            } else if (gain < 8) {                                             \
+                gain = 8;                                                      \
+            } else if ((gain > 15) && (gain < 8+18)) {                         \
+                gain = 15;                                                     \
+            }                                                                  \
+            if (gain <= 15) {                                                  \
+                /* set AM1075 to 0, set LTC5586 to gain*/                      \
+                strcpy(buf, "rf -l 1\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", gain);                        \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            } else {                                                           \
+                /* set AM1075 to 18, set LTC5586 to gain-18*/                  \
+                strcpy(buf, "rf -l 0\r");                                      \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+                strcpy(buf, "rf -g ");                                         \
+                sprintf(buf + strlen(buf), "%i", (gain-18));                   \
+                strcat(buf, "\r");                                             \
+                ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            }                                                                  \
+        } else {                                                               \
+            PRINT(ERROR,"band unexpected value while setting gain\n");         \
+            return RETURN_ERROR_GET_PROP;                                      \
+        }                                                                      \
                                                                                \
-        if (gain % 2)                                                          \
-            gain++; /* Odd Number */                                           \
-        atten = 26 - gain;\
-                                                                               \
-        /* -6 -> 26 gain */                                                    \
-        strcpy(buf, "vga -a ");                                 \
-        sprintf(buf + strlen(buf), "%i", atten);                          \
-        strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
+        sprintf(ret, "%i", gain);                                              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_atten_val(const char *data, char *ret) {      \
+        /*LTC5586 Atten Range: 0dB to 31dB*/                                   \
         int atten;                                                             \
         sscanf(data, "%i", &atten);                                            \
                                                                                \
-        if (atten > 127)                                                       \
-            atten = 127;                                                       \
+        if (atten > 31)                                                        \
+            atten = 31;                                                        \
         else if (atten < 0)                                                    \
             atten = 0;                                                         \
                                                                                \
-        strcpy(buf, "rf -a ");                                  \
+        strcpy(buf, "rf -a ");                                                 \
         sprintf(buf + strlen(buf), "%i", atten);                               \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));             \
+                                                                               \
+        sprintf(ret, "%i", atten);                                             \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2087,14 +2156,16 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        PRINT(INFO, "Property: link/iface: TO DO: FW support for streaming to management port required");\
+        /* NOTE: This is strictly for tate 4r*/                                \
+        char channel = CHR(ch);                                                \
+        sprintf(ret, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("rx" STR_RX(crx) "8", port);                                 \
+        write_hps_reg("rx" STR(ch) "8", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2102,7 +2173,7 @@ CHANNELS
         uint8_t ip[4];                                                         \
         sscanf(data, "%" SCNd8 ".%" SCNd8 ".%" SCNd8 ".%" SCNd8 "", ip,        \
                ip + 1, ip + 2, ip + 3);                                        \
-        write_hps_reg("rx" STR_RX(crx) "5",                                        \
+        write_hps_reg("rx" STR(ch) "5",                                        \
                       (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3])); \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2231,8 +2302,8 @@ CHANNELS
             rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
-            strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
+            /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
+            /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
@@ -2398,7 +2469,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
             continue;
         }
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
         CHANNELS
 #undef X
@@ -2448,7 +2519,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
         }
 
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
 #undef X
@@ -2566,7 +2637,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         }
 
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         CHANNELS
 #undef X
@@ -2660,7 +2731,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         }
 
 #define X(ch, io, crx, ctx)                                                              \
-    if (i == INT_RX(ch))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
         CHANNELS
 #undef X
@@ -3900,7 +3971,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127")       \
+    DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31")        \
     DEFINE_FILE_PROP("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0")         \
@@ -3926,7 +3997,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd_num"                 , hdlr_invalid,                                   RO, "1")\
+    DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0")\
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
@@ -4182,17 +4253,17 @@ void dump_tree(void) {
 }
 
 void patch_tree(void) {
-    const int base_port = 42820;
+    const int base_port = 42836;
 
-#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT_RX(ch));
+#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
     CHANNELS
 #undef X
 
-#define X(ch, io, crx, ctx)                                                              \
-    set_default_str("rx/" #ch "/link/ip_dest",                                 \
-                    ((INT_RX(ch) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
-    CHANNELS
-#undef X
+set_default_str("rx/a/link/ip_dest","10.10.10.10");
+set_default_str("rx/b/link/ip_dest","10.10.11.10");
+set_default_str("rx/c/link/ip_dest","10.10.12.10");
+set_default_str("rx/d/link/ip_dest","10.10.13.10");
+
 
 #define X(ch, io, crx, ctx)                                                                                       \
     set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
@@ -4350,6 +4421,9 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 // This also needs to be extended to convert the chan_mask to a specific RFE
 // for tate.
 void sync_channels(uint8_t chan_mask) {
+    uint32_t reg_val;
+    int i_reset = 0;
+    bool jesd_good = false;
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
     // usleep(300000); // Some wait time for the reset to be ready
@@ -4377,18 +4451,33 @@ void sync_channels(uint8_t chan_mask) {
      * Issue JESD, then read to see if
      * bad
      **********************************/
-    // Put FPGA JESD core in reset
+    // FPGA SFP IP reset
     write_hps_reg("res_rw7", 0x20000000);
     write_hps_reg("res_rw7", 0);
 
-    /* Trigger a SYSREF pulse */
-    // JESD core out of reset
-    write_hps_reg("res_rw7", 0);
+    usleep(2000000); // Wait 2 seconds to allow jesd link to go down
 
-    usleep(100000); // Some wait time for MCUs to be ready
-    strcpy(buf, "clk -y\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
+    
+    while ((i_reset < max_attempts) && (jesd_good == false)) {
+        i_reset++;
+        // FPGA JESD IP reset
+        write_hps_reg("res_rw7",0x10000000);
+        write_hps_reg("res_rw7", 0);
+        usleep(100000); // Some wait time for MCUs to be ready
+        /* Trigger a SYSREF pulse */
+        strcpy(buf, "clk -y\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(200000); // Some wait time for MCUs to be ready
+        read_hps_reg("res_ro11", &reg_val);
+        if ((reg_val & 0xff) == jesd_good_code) {
+            PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
+            jesd_good = true;
+        }
+    }
+    if (jesd_good != true) {
+        PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
+    }
+    return;
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
