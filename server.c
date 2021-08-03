@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
         PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
         usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
-        abort();
+        //abort();
     } 
     
     // 3. check that the RF board JESD links are up
