@@ -45,6 +45,15 @@
 #define DSP_NCO_CONST \
     ((double)4.2949672960)
 
+#define MIN_DAC_GAIN \
+    ((double)-13)
+#define MAX_DAC_GAIN \
+    ((double)17)
+#define MIN_DAC_ATTEN \
+    ((double)0)
+#define MAX_DAC_ATTEN \
+    ((double)30)
+
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
@@ -900,7 +909,15 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_gain(const char *data, char *ret) {          \
-        /*TODO: set the value of attenuation based off of the requested gain*/ \
+        double gain;\
+        sscanf(data, "%lf", &gain);\
+        double atten = (((gain)-MIN_DAC_GAIN)/(MAX_DAC_GAIN-MIN_DAC_GAIN)) * (MIN_DAC_ATTEN - MAX_DAC_ATTEN) + MAX_DAC_ATTEN;\
+        char s_atten[25];\
+        \
+        printf("Gain: %f, atten: %f", gain, atten);\
+        snprintf(s_atten, 25, "%f", atten);\
+        printf(s_atten);\
+        set_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", s_atten);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2782,7 +2799,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 
 static int hdlr_wait_15_secs (const char *data, char *ret){
     usleep(15000000);
-    
+
     return RETURN_SUCCESS;
 }
 
@@ -3945,8 +3962,8 @@ GPIO_PINS
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
     DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")             
-    
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")
+
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
@@ -4115,7 +4132,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001")       \
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)\
-    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")       
+    DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")
     //DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
 
 
@@ -4449,7 +4466,7 @@ void sync_channels(uint8_t chan_mask) {
     write_hps_reg("res_rw7", 0);
 
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
-    
+
     while ((i_reset < max_attempts) && (jesd_good == false)) {
         i_reset++;
         // FPGA JESD IP reset
@@ -4697,17 +4714,17 @@ out:
 
 void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
-    
+
     double freq = pll->vcoFreq / pll->d;
 
     // Ensure that the LoGen board is powered on
     strcpy(buf, "lmx -O 0\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
-    
+
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
-    
+
     // Send Reference in MHz to MCU
     strcpy(buf, "lmx -o ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
