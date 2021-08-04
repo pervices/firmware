@@ -911,6 +911,12 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_tx_##ch##_dac_gain(const char *data, char *ret) {          \
         double gain;\
         sscanf(data, "%lf", &gain);\
+        if(gain>MAX_DAC_GAIN) {\
+            gain = MAX_DAC_GAIN;\
+        }\
+        else if (gain<MIN_DAC_GAIN) {\
+            gain = MIN_DAC_GAIN;\
+        }\
         double atten = (((gain)-MIN_DAC_GAIN)/(MAX_DAC_GAIN-MIN_DAC_GAIN)) * (MIN_DAC_ATTEN - MAX_DAC_ATTEN) + MAX_DAC_ATTEN;\
         char s_atten[25];\
         \
