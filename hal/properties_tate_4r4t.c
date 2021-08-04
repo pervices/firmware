@@ -45,13 +45,13 @@
 #define DSP_NCO_CONST \
     ((double)4.2949672960)
 
-#define MIN_DAC_GAIN \
+#define MIN_RF_GAIN \
     ((double)-13)
-#define MAX_DAC_GAIN \
+#define MAX_RF_GAIN \
     ((double)17)
-#define MIN_DAC_ATTEN \
+#define MIN_RF_ATTEN \
     ((double)0)
-#define MAX_DAC_ATTEN \
+#define MAX_RF_ATTEN \
     ((double)30)
 
 #define IPVER_IPV4 0
@@ -908,24 +908,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_dac_gain(const char *data, char *ret) {          \
-        double gain;\
-        sscanf(data, "%lf", &gain);\
-        if(gain>MAX_DAC_GAIN) {\
-            gain = MAX_DAC_GAIN;\
-        }\
-        else if (gain<MIN_DAC_GAIN) {\
-            gain = MIN_DAC_GAIN;\
-        }\
-        double atten = (((gain)-MIN_DAC_GAIN)/(MAX_DAC_GAIN-MIN_DAC_GAIN)) * (MIN_DAC_ATTEN - MAX_DAC_ATTEN) + MAX_DAC_ATTEN;\
-        char s_atten[25];\
-        \
-        printf("Gain: %f, atten: %f", gain, atten);\
-        snprintf(s_atten, 25, "%f", atten);\
-        printf(s_atten);\
-        set_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", s_atten);\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_dac_temp(const char *data, char *ret) {       \
         strcpy(buf, "board -c " STR(ch) " -t\r");                              \
@@ -1010,22 +992,21 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        int gain;                                                              \
-        sscanf(data, "%i", &gain);                                             \
-                                                                               \
-        /*   0 -> 126 attenuation only */                                      \
-        /* 127    0dB */                                                       \
-                                                                               \
-        if (gain > 127)                                                        \
-            gain = 127;                                                        \
-        else if (gain < 0)                                                     \
-            gain = 0;                                                          \
-                                                                               \
-        strcpy(buf, "rf -c " STR(ch) " -a ");                                  \
-        sprintf(buf + strlen(buf), "%i", 127 - gain);                          \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
+        double gain;\
+        sscanf(data, "%lf", &gain);\
+        if(gain>MAX_RF_GAIN) {\
+            gain = MAX_RF_GAIN;\
+        }\
+        else if (gain<MIN_RF_GAIN) {\
+            gain = MIN_RF_GAIN;\
+        }\
+        double atten = (((gain)-MIN_RF_GAIN)/(MAX_RF_GAIN-MIN_RF_GAIN)) * (MIN_RF_ATTEN - MAX_RF_ATTEN) + MAX_RF_ATTEN;\
+        char s_atten[25];\
+        \
+        printf("Gain: %f, atten: %f", gain, atten);\
+        snprintf(s_atten, 25, "%f", atten);\
+        printf(s_atten);\
+        set_property("tx/" STR(ch) "/rf/atten", s_atten);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
 										\
@@ -4069,9 +4050,9 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch3atten"     , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch4atten"     , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch5atten"     , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/val"          , hdlr_tx_##_c##_dac_gain,                RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
     DEFINE_FILE_PROP("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31")        \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
@@ -4085,7 +4066,6 @@ GPIO_PINS
 //     DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
