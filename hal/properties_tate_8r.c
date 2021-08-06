@@ -2206,7 +2206,8 @@ CHANNELS
     \
     static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        write_hps_reg("rxa4", 0x2100);\
+        if(data=='0') {write_hps_reg("rxa4", 0x2100);}\
+        else {write_hps_reg("rxa4", 0x2100);}\
         return RETURN_SUCCESS;                                                 \
     } \
                                                                                \
