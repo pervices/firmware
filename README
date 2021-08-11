@@ -29,6 +29,8 @@ which is available on yaourt.
 
    make
 
+   OR use sh autovaunt.sh
+
 1.a.ii Cyan Optimized Compile Commands
 
    sh autogen.sh
