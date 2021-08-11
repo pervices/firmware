@@ -957,7 +957,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
+        set_pll_frequency(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, \
                           &pll, true, INT_TX(ch));                                \
                                                                                \
         sprintf(ret, "%Lf", outfreq);                                          \
@@ -1826,7 +1826,7 @@ CHANNELS
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency(uart_rx_fd[INT_RX(crx)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);  \
+        set_lo_frequency(uart_rx_fd[INT_RX(crx)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
                                                                                 \
         /* Save the frequency that is being set into the property */            \
         sprintf(ret, "%Lf", outfreq);                                           \

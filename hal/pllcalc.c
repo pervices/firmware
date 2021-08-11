@@ -28,7 +28,7 @@
 // PLL Constructors
 
 //default ADF5355 constructor
-pllparam_t pll_def = {      PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
+pllparam_t pll_def = {      PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
                             PLL1_R_FIXED,           PLL1_N_DEFAULT,
                             PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
                             PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
@@ -39,7 +39,7 @@ pllparam_t pll_def = {      PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
                             PLL1_R_MAX,             PLL1_R_MIN
 };
 //ADF5355 constructor for r divider = 5
-pllparam_t pll_def_r_5 = {  PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
+pllparam_t pll_def_r_5 = {  PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
                             PLL1_R_FIXED_5,         PLL1_N_DEFAULT,
                             PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
                             PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
@@ -50,7 +50,7 @@ pllparam_t pll_def_r_5 = {  PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
                             PLL1_R_MAX,             PLL1_R_MIN
 };
 // default LMX2595 constructor
-pllparam_t pll_def_lmx2595 = {  PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ,
+pllparam_t pll_def_lmx2595 = {  PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ_LMX2595,
                                 PLL1_R_FIXED,           PLL1_N_DEFAULT,
                                 PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
                                 PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
@@ -68,10 +68,12 @@ pllparam_t pll_def_lmx2595 = {  PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ,
 int main(void) {
     uint64_t reqFreq = 250e6;
     pllparam_t pll;
+    //changes these to _LMX2595 when testing cyan
     pll.id = PLL_ID_ADF5355;
+    const uint64_t core_ref_freq = PLL_CORE_REF_FREQ_HZ_ADF5355
 
     // Debug parameters;
-    double max_diff = PLL_CORE_REF_FREQ_HZ / PLL1_R_FIXED;
+    double max_diff = core_ref_freq / PLL1_R_FIXED;
     double max_N = PLL1_N_MAX;
     double max_R = PLL1_R_MAX;
     int printdebug = 0;
@@ -84,7 +86,7 @@ int main(void) {
         // This is the main function, everything after is for statistics
         setFreq(&reqFreq, &pll);
 
-        double actual_reference = (double)(uint64_t)PLL_CORE_REF_FREQ_HZ;
+        double actual_reference = (double)(uint64_t)core_ref_freq;
         double actual_output = (double)pll.vcoFreq / (double)pll.d;
 
         // if (pll.x2en)	actual_output *= 2.0;

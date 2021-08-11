@@ -724,7 +724,7 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
+        set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_ADF5355, \
                           &pll, true, INT(ch));                                \
                                                                                \
         sprintf(ret, "%Lf", outfreq);                                          \
@@ -1179,7 +1179,7 @@ CHANNELS
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
+        set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_ADF5355, \
                           &pll, false, INT(ch));                               \
                                                                                \
         sprintf(ret, "%Lf", outfreq);                                          \

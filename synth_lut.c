@@ -100,7 +100,7 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 //#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
 #define FREQ_BOTTOM 125000000
 
-#define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ
+#define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ_ADF5355
 static struct synth_lut_ctx synth_lut_rx_ctx[] = {
     DEF_RX_CTX(A),
     DEF_RX_CTX(B),
