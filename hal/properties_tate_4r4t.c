@@ -45,13 +45,13 @@
 #define DSP_NCO_CONST \
     ((double)8.589934592)
 
-#define MIN_RF_GAIN \
+#define MIN_RF_GAIN_TX \
     ((double)-13)
-#define MAX_RF_GAIN \
+#define MAX_RF_GAIN_TX \
     ((double)17)
-#define MIN_RF_ATTEN \
+#define MIN_RF_ATTEN_TX \
     ((double)0)
-#define MAX_RF_ATTEN \
+#define MAX_RF_ATTEN_TX \
     ((double)30)
 
 #define IPVER_IPV4 0
@@ -994,13 +994,13 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         double gain;\
         sscanf(data, "%lf", &gain);\
-        if(gain>MAX_RF_GAIN) {\
-            gain = MAX_RF_GAIN;\
+        if(gain>MAX_RF_GAIN_TX) {\
+            gain = MAX_RF_GAIN_TX;\
         }\
-        else if (gain<MIN_RF_GAIN) {\
-            gain = MIN_RF_GAIN;\
+        else if (gain<MIN_RF_GAIN_TX) {\
+            gain = MIN_RF_GAIN_TX;\
         }\
-        double atten = (((gain)-MIN_RF_GAIN)/(MAX_RF_GAIN-MIN_RF_GAIN)) * (MIN_RF_ATTEN - MAX_RF_ATTEN) + MAX_RF_ATTEN;\
+        double atten = (((gain)-MIN_RF_GAIN_TX)/(MAX_RF_GAIN_TX-MIN_RF_GAIN_TX)) * (MIN_RF_ATTEN_TX - MAX_RF_ATTEN_TX) + MAX_RF_ATTEN_TX;\
         char s_atten[25];\
         \
         printf("Gain: %f, atten: %f", gain, atten);\
