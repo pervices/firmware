@@ -2195,6 +2195,12 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
+        /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
+        if(data=='0') {write_hps_reg("rxa4", 0x2100);}\
+        else {write_hps_reg("rxa4", 0x2100);}\
+        return RETURN_SUCCESS;                                                 \
+    } \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
         uint32_t old_val;                                                      \
         uint8_t stream;                                                        \
@@ -3995,6 +4001,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0")\
+    DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
