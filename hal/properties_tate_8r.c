@@ -45,6 +45,19 @@
 #define DSP_NCO_CONST \
     ((double)4.2949672960)
 
+//Compnent properties in rx, used to figure out how to set up game
+//This are likely to change between variants, both thier values and how they are used
+#define AM1081_GAIN 17
+#define AM1075_GAIN 18
+#define LTC5586_MAX_GAIN 15
+#define LTC5586_MIN_GAIN 8
+#define LTC5586_MAX_ATTEN 31
+#define LTC5586_MIN_ATTEN 0
+
+//used in rx gain calculations so that the user specifying a gain of 0 results in minimum gain
+#define RX_MID_GAIN_OFFSET 23
+#define RX_HIGH_GAIN_OFFSET 23
+
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
@@ -1857,6 +1870,7 @@ CHANNELS
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
         int gain;                                                              \
+        int net_gain;                                                          \
         int atten;                                                             \
         int band;                                                              \
         char band_read[3];                                                     \
@@ -1876,67 +1890,108 @@ CHANNELS
             strcpy(buf, "vga -a ");                                            \
             sprintf(buf + strlen(buf), "%i", atten);                           \
             strcat(buf, "\r");                                                 \
-            ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));         \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));         \
+            net_gain = gain;\
         } else if (band == 1) {                                                \
-            /*AM1081 Gain Range: 0dB or 17dB */                                \
-            /*LTC5586 Gain Range: 8dB to 15dB)*/                               \
-            if (gain > (17+15)) {                                              \
-                gain = 17+15;                                                  \
-            } else if (gain < 8) {                                             \
-                gain = 8;                                                      \
-            } else if ((gain > 15) && (gain < 8+17)) {                         \
-                gain = 15;                                                     \
-            }                                                                  \
-            if (gain <= 15) {                                                  \
-                /* set AM1081 to 0, set LTC5586 to gain*/                      \
-                strcpy(buf, "rf -l 1\r");                                      \
-                ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));     \
-                strcpy(buf, "rf -g ");                                         \
+            gain-= RX_MID_GAIN_OFFSET;\
+            /*lna_bypass means bypass the lna (AM1081) */                      \
+            uint8_t lna_bypass;\
+            if (gain <= LTC5586_MIN_GAIN) {\
+                lna_bypass = 1;\
+                atten = LTC5586_MIN_GAIN - gain;\
+                gain = LTC5586_MIN_GAIN;\
+            } else if (gain <= LTC5586_MAX_GAIN) {\
+                lna_bypass = 1;\
+                atten = 0;\
+            } else if (gain <= AM1081_GAIN + LTC5586_MIN_GAIN) {\
+                lna_bypass = 0;\
+                atten = AM1081_GAIN + LTC5586_MIN_GAIN - gain;\
+                gain = AM1081_GAIN + LTC5586_MIN_GAIN;\
+            } else if (gain <= AM1081_GAIN + LTC5586_MAX_GAIN) {\
+                lna_bypass = 0;\
+                atten = 0;\
+            } else {\
+                lna_bypass = 0;\
+                gain = AM1081_GAIN + LTC5586_MAX_GAIN;\
+                atten = 0;\
+            }\
+            \
+            /*Sets the property to enable/disable bypassing the fixed amplifier*/\
+            char s_lna[5];\
+            snprintf(s_lna, 5, "%u", lna_bypass);\
+            printf(s_lna);\
+            set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
+            \
+            /*Sets gain on the rx board*/\
+            strcpy(buf, "rf -g ");                                         \
+            if(lna_bypass == 1) {\
                 sprintf(buf + strlen(buf), "%i", gain);                        \
-                strcat(buf, "\r");                                             \
-                ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));     \
-            } else {                                                           \
-                /* set AM1081 to 17, set LTC5586 to gain-17*/                  \
-                strcpy(buf, "rf -l 0\r");                                      \
-                ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));     \
-                strcpy(buf, "rf -g ");                                         \
-                sprintf(buf + strlen(buf), "%i", (gain-17));                   \
-                strcat(buf, "\r");                                             \
-                ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));     \
-            }                                                                  \
+            } else {\
+                sprintf(buf + strlen(buf), "%i", gain - AM1081_GAIN);                        \
+            }\
+            strcat(buf, "\r");                                             \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            \
+            /*Sets the state tree property to handle the attenuation*/\
+            if(atten < LTC5586_MIN_ATTEN) {\
+                atten = LTC5586_MIN_ATTEN;\
+            } else if(atten > LTC5586_MAX_ATTEN) {\
+                atten = LTC5586_MAX_ATTEN;\
+            }\
+            char s_atten[25];\
+            snprintf(s_atten, 25, "%u", atten);\
+            set_property("rx/" STR(ch) "/rf/atten/val", s_atten);\
+            net_gain = gain + ((1-lna_bypass) * AM1081_GAIN) - atten + RX_MID_GAIN_OFFSET;\
         } else if (band == 2) {                                                \
-            /*AM1075 Gain Range: 0dB or 18dB */                                \
-            /*LTC5586 Gain Range: 8dB to 15dB)*/                               \
-            if (gain > (18+15)) {                                              \
-                gain = 18+15;                                                  \
-            } else if (gain < 8) {                                             \
-                gain = 8;                                                      \
-            } else if ((gain > 15) && (gain < 8+18)) {                         \
-                gain = 15;                                                     \
-            }                                                                  \
-            if (gain <= 15) {                                                  \
-                /* set AM1075 to 0, set LTC5586 to gain*/                      \
-                strcpy(buf, "rf -l 1\r");                                      \
-                ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));     \
-                strcpy(buf, "rf -g ");                                         \
+            gain-= RX_HIGH_GAIN_OFFSET;\
+            uint8_t lna_bypass;\
+            if (gain <= LTC5586_MIN_GAIN) {\
+                gain = LTC5586_MIN_GAIN;\
+                lna_bypass = 1;\
+            } else if (gain <= LTC5586_MAX_GAIN) {\
+                lna_bypass = 1;\
+            } else if (gain <= AM1075_GAIN + LTC5586_MIN_GAIN) {\
+                lna_bypass = 0;\
+                gain = AM1075_GAIN + LTC5586_MIN_GAIN;\
+            } else if (gain <= AM1075_GAIN + LTC5586_MAX_GAIN) {\
+                lna_bypass = 0;\
+            } else {\
+                lna_bypass = 0;\
+                gain = AM1075_GAIN + LTC5586_MAX_GAIN;\
+            }\
+            \
+            /*Sets the property to enable/disable bypassing the fixed amplifier*/\
+            char s_lna[5];\
+            snprintf(s_lna, 5, "%u", lna_bypass);\
+            printf(s_lna);\
+            set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
+            \
+            /*Sets gain on the rx board*/\
+            strcpy(buf, "rf -g ");                                         \
+            if(lna_bypass == 1) {\
                 sprintf(buf + strlen(buf), "%i", gain);                        \
-                strcat(buf, "\r");                                             \
-                ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));     \
-            } else {                                                           \
-                /* set AM1075 to 18, set LTC5586 to gain-18*/                  \
-                strcpy(buf, "rf -l 0\r");                                      \
-                ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));     \
-                strcpy(buf, "rf -g ");                                         \
-                sprintf(buf + strlen(buf), "%i", (gain-18));                   \
-                strcat(buf, "\r");                                             \
-                ping(uart_rx_fd[INT_RX(c)], (uint8_t *)buf, strlen(buf));     \
-            }                                                                  \
+            } else {\
+                sprintf(buf + strlen(buf), "%i", gain - AM1075_GAIN);                        \
+            }\
+            strcat(buf, "\r");                                             \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            /*Sets the state tree property to handle the attenuation*/\
+            if(atten < LTC5586_MIN_ATTEN) {\
+                atten = LTC5586_MIN_ATTEN;\
+            } else if(atten > LTC5586_MAX_ATTEN) {\
+                atten = LTC5586_MAX_ATTEN;\
+            }\
+            char s_atten[25];\
+            snprintf(s_atten, 25, "%u", atten);\
+            set_property("rx/" STR(ch) "/rf/atten/val", s_atten);\
+            net_gain = gain + ((1-lna_bypass) * AM1075_GAIN) - atten + RX_HIGH_GAIN_OFFSET;\
+                                                                            \
         } else {                                                               \
             PRINT(ERROR,"band unexpected value while setting gain\n");         \
             return RETURN_ERROR_GET_PROP;                                      \
         }                                                                      \
                                                                                \
-        sprintf(ret, "%i", gain);                                              \
+        sprintf(ret, "%i", net_gain);                                              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
