@@ -67,6 +67,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+static const char *force_stream_map[8] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
+
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
 // TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -2261,8 +2263,9 @@ CHANNELS
     \
     static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        if(data=='0') {write_hps_reg("rxa4", 0x6002);}\
-        else {write_hps_reg("rxa4", 0x2100);}\
+        char channel = STR(ch)[0] - 'a';\
+        if(data[0]=='0') {write_hps_reg(force_stream_map[channel], 0x6002);}\
+        else {write_hps_reg(force_stream_map[channel], 0x2100);}\
         return RETURN_SUCCESS;                                                 \
     } \
                                                                                \
