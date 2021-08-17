@@ -2133,9 +2133,9 @@ CHANNELS
             write_hps_reg(reg_name, (old_val & ~(0xff << shift)) |             \
                                     (((uint16_t)gain_factor) << shift));       \
         } else {                                                               \
-            write_hps_reg("rx" STR_RX(crx) "1", base_factor);                      \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val & ~(1 << 15));             \
+            write_hps_reg("rx" STR(ch) "1", base_factor);                      \
+            read_hps_reg(force_stream_map[channel], &old_val);             \
+            write_hps_reg(force_stream_map[channel], old_val & ~(1 << 15));\
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
