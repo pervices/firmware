@@ -2157,16 +2157,18 @@ CHANNELS
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("rx" STR_RX(crx) "0", nco_steps);                        \
+        write_hps_reg("rx" STR(ch) "0", nco_steps);                        \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
             sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
+        printf("STR_RX(crx): %s", STR_RX(crx));\
         /* write direction */                                                  \
-        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-        write_hps_reg("rx" STR_RX(crx) "4",                                    \
+        int channel = INT_RX(ch);                                              \
+        read_hps_reg(force_stream_map[channel], &old_val);                          \
+        write_hps_reg(force_stream_map[channel],                                    \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
