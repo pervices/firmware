@@ -76,7 +76,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
-static const char *force_stream_map[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
+//version of rxn4 to use (the register performs many operations
+static const char *reg_4_rx[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -2086,10 +2087,9 @@ CHANNELS
         sscanf(data, "%u", &sign);                                             \
         sign = sign ? 0 : 1;                                                   \
                                                                                \
-        int channel = INT_RX(ch);\
-        read_hps_reg(force_stream_map[channel], &old_val);                              \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                              \
         old_val &= ~(1 << 4);                                                  \
-        write_hps_reg(force_stream_map[channel], old_val | (sign << 4));                \
+        write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | (sign << 4));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2135,8 +2135,8 @@ CHANNELS
                                     (((uint16_t)gain_factor) << shift));       \
         } else {                                                               \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
-            read_hps_reg(force_stream_map[channel], &old_val);             \
-            write_hps_reg(force_stream_map[channel], old_val & ~(1 << 15));\
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);             \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val & ~(1 << 15));\
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
@@ -2175,30 +2175,27 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        int channel = INT_RX(ch);                                              \
-        read_hps_reg(force_stream_map[channel], &old_val);                              \
-        write_hps_reg(force_stream_map[channel],                                        \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                              \
+        write_hps_reg(reg_4_rx[INT_RX(ch)],                                        \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
-        int channel = INT_RX(ch);\
-        read_hps_reg(force_stream_map[channel], &old_val);                          \
-        write_hps_reg(force_stream_map[channel], old_val | 0x2);                    \
-        write_hps_reg(force_stream_map[channel], old_val & ~0x2);                   \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
+        write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x2);                    \
+        write_hps_reg(reg_4_rx[INT_RX(ch)], old_val & ~0x2);                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_loopback(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        int channel = INT_RX(ch);\
-        read_hps_reg(force_stream_map[channel], &old_val);                              \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(force_stream_map[channel], (old_val & ~0x1e00) | 0x400);      \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], (old_val & ~0x1e00) | 0x400);      \
         else                                                                   \
-            write_hps_reg(force_stream_map[channel], (old_val & ~0x1e00) | 0x000);      \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2209,12 +2206,11 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_vita_en(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        int channel = INT_RX(ch);\
-        read_hps_reg(force_stream_map[channel], &old_val);                              \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(force_stream_map[channel], old_val | (1 << 14));              \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | (1 << 14));              \
         else                                                                   \
-            write_hps_reg(force_stream_map[channel], old_val & ~(1 << 14));             \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val & ~(1 << 14));             \
                                                                                \
         /*sync_channels( 15 ); */                                              \
                                                                                \
@@ -2259,9 +2255,8 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        char channel = STR(ch)[0] - 'a';\
-        if(data[0]=='0') {write_hps_reg(force_stream_map[channel], 0x6002);}\
-        else {write_hps_reg(force_stream_map[channel], 0x2100);}\
+        if(data[0]=='0') {write_hps_reg(reg_4_rx[INT_RX(ch)], 0x6002);}\
+        else {write_hps_reg(reg_4_rx[INT_RX(ch)], 0x2100);}\
         return RETURN_SUCCESS;                                                 \
     } \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
@@ -2285,8 +2280,8 @@ CHANNELS
                 read_hps_reg(reg4[INT_RX(ch)], &old_val);                         \
                 write_hps_reg(reg4[INT_RX(ch)], old_val | 0x100);                 \
                                                                                \
-                read_hps_reg(reg4[INT_RX(ch)], &old_val);                         \
-                write_hps_reg(reg4[INT_RX(ch)], old_val | 0x2);                   \
+                read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                         \
+                write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x2);                   \
                 write_hps_reg(reg4[INT_RX(ch)], old_val &(~0x2));                 \
                                                                                \
                 rx_stream[INT_RX(ch)] = STREAM_ON;                                \
@@ -2296,12 +2291,12 @@ CHANNELS
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));                \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val &(~0x100));                \
                                                                                \
             rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
         }                                                                      \
