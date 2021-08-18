@@ -2086,9 +2086,10 @@ CHANNELS
         sscanf(data, "%u", &sign);                                             \
         sign = sign ? 0 : 1;                                                   \
                                                                                \
-        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                              \
+        int channel = INT_RX(ch);\
+        read_hps_reg(force_stream_map[channel], &old_val);                              \
         old_val &= ~(1 << 4);                                                  \
-        write_hps_reg("rx" STR_RX(crx) "4", old_val | (sign << 4));                \
+        write_hps_reg(force_stream_map[channel], old_val | (sign << 4));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
