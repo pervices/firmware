@@ -2078,9 +2078,9 @@ CHANNELS
         sign = sign ? 0 : 1;                                                   \
         \
         char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(reg_4_rx[channel], &old_val);                          \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
         old_val &= ~(1 << 4);                                                  \
-        write_hps_reg(reg_4_rx[channel], old_val | (sign << 4));            \
+        write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | (sign << 4));            \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2114,9 +2114,9 @@ CHANNELS
                                                                                \
         /*if (resamp_err < base_err) {*/                                       \
         if(false) {/* resamp currently unsupported */                           \
-            write_hps_reg("rx" STR_RX(crx) "1", resamp_factor);                \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                      \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val | (1 << 15));          \
+            write_hps_reg("rx" STR_RX(ch) "1", resamp_factor);                \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                      \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | (1 << 15));          \
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /*Set gain adjustment */                                           \
@@ -2125,9 +2125,9 @@ CHANNELS
             write_hps_reg(reg_name, (old_val & ~(0xff << shift)) |             \
                                     (((uint16_t)gain_factor) << shift));       \
         } else {                                                               \
-            write_hps_reg("rx" STR(ch) "1", base_factor);                  \
-            read_hps_reg(reg_4_rx[channel], &old_val);                      \
-            write_hps_reg(reg_4_rx[channel], old_val & ~(1 << 15));         \
+            write_hps_reg("rx" STR_RX(ch) "1", base_factor);                  \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                      \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val & ~(1 << 15));         \
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
@@ -2165,32 +2165,28 @@ CHANNELS
             sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
-        printf("STR_RX(crx): %s", STR_RX(crx));\
         /* write direction */                                                  \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(reg_4_rx[channel], &old_val);                          \
-        write_hps_reg(reg_4_rx[channel],                                    \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
+        write_hps_reg(reg_4_rx[INT_RX(ch)],                                    \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(reg_4_rx[channel], &old_val);                          \
-        write_hps_reg(reg_4_rx[channel], old_val | 0x2);                    \
-        write_hps_reg(reg_4_rx[channel], old_val & ~0x2);                   \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
+        write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x2);                    \
+        write_hps_reg(reg_4_rx[INT_RX(ch)], old_val & ~0x2);                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_loopback(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(reg_4_rx[channel], &old_val);                          \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(reg_4_rx[channel], (old_val & ~0x1e00) | 0x400);  \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], (old_val & ~0x1e00) | 0x400);  \
         else                                                                   \
-            write_hps_reg(reg_4_rx[channel], (old_val & ~0x1e00) | 0x000);  \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], (old_val & ~0x1e00) | 0x000);  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2201,12 +2197,11 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_vita_en(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(reg_4_rx[channel], &old_val);                          \
+        read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(reg_4_rx[channel], old_val | (1 << 14));          \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | (1 << 14));          \
         else                                                                   \
-            write_hps_reg(reg_4_rx[channel], old_val & ~(1 << 14));         \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val & ~(1 << 14));         \
                                                                                \
         /*sync_channels( 15 ); */                                              \
                                                                                \
@@ -2269,9 +2264,8 @@ CHANNELS
     \
     static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        char channel = STR(ch)[0] - 'a';\
-        if(data[0]=='0') {write_hps_reg(reg_4_rx[channel], 0x6002);}\
-        else {write_hps_reg(reg_4_rx[channel], 0x2100);}\
+        if(data[0]=='0') {write_hps_reg(reg_4_rx[INT_RX(ch)], 0x6002);}\
+        else {write_hps_reg(reg_4_rx[INT_RX(ch)], 0x2100);}\
         return RETURN_SUCCESS;                                                 \
     } \
                                                                                \
@@ -2293,28 +2287,28 @@ CHANNELS
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
             if (rx_power[INT(ch)] == PWR_ON) {                                 \
-                read_hps_reg(reg4[INT_RX(crx)], &old_val);                         \
-                write_hps_reg(reg4[INT_RX(crx)], old_val | 0x100);                 \
+                read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                         \
+                write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x100);                 \
                                                                                \
-                read_hps_reg(reg4[INT_RX(crx)], &old_val);                         \
-                write_hps_reg(reg4[INT_RX(crx)], old_val | 0x2);                   \
-                write_hps_reg(reg4[INT_RX(crx)], old_val &(~0x2));                 \
+                read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                         \
+                write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x2);                   \
+                write_hps_reg(reg_4_rx[INT_RX(ch)], old_val &(~0x2));                 \
                                                                                \
-                rx_stream[INT_RX(crx)] = STREAM_ON;                                \
+                rx_stream[INT_RX(ch)] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                      \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                      \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x2);                \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                      \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));            \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                      \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val &(~0x100));            \
                                                                                \
-            rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
+            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2341,9 +2335,9 @@ CHANNELS
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i], &old_val);                               \
-                write_hps_reg(reg4[i], old_val & ~0x100);                      \
+            for (i = 0; i < (NUM_CHANNELS); i++) {                         \
+                read_hps_reg(reg_4_rx[i], &old_val);                               \
+                write_hps_reg(reg4_rx[i], old_val & ~0x100);                      \
             }                                                                  \
                                                                                \
             /* send sync pulse */                                              \
@@ -2361,11 +2355,11 @@ CHANNELS
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
                 if (rx_stream[i] == PWR_ON) {                               \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x100);                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x2);                     \
-                    write_hps_reg(reg4[i], old_val &(~0x2));                   \
+                    read_hps_reg(reg4_rx[i], &old_val);                           \
+                    write_hps_reg(reg4_rx[i], old_val | 0x100);                   \
+                    read_hps_reg(reg4_rx[i], &old_val);                           \
+                    write_hps_reg(reg4_rx[i], old_val | 0x2);                     \
+                    write_hps_reg(reg4_rx[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
                                                                                \
@@ -2375,20 +2369,20 @@ CHANNELS
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(crx));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[INT_RX(crx)] = PWR_OFF;                                       \
-            rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
+            rx_power[INT_RX(ch)] = PWR_OFF;                                       \
+            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
             /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
             /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));                \
+            read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);                          \
+            write_hps_reg(reg_4_rx[INT_RX(ch)], old_val &(~0x100));                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
