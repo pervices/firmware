@@ -2134,7 +2134,7 @@ CHANNELS
             write_hps_reg(reg_name, (old_val & ~(0xff << shift)) |             \
                                     (((uint16_t)gain_factor) << shift));       \
         } else {                                                               \
-            write_hps_reg("rx" STR(ch) "1", base_factor);                      \
+            write_hps_reg("rx" STR_RX(ch) "1", base_factor);                      \
             read_hps_reg(reg_4_rx[INT_RX(ch)], &old_val);             \
             write_hps_reg(reg_4_rx[INT_RX(ch)], old_val & ~(1 << 15));\
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
@@ -2167,7 +2167,7 @@ CHANNELS
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
+        write_hps_reg("rx" STR_RX(ch) "0", nco_steps);                            \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -2228,7 +2228,7 @@ CHANNELS
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("rx" STR(ch) "8", port);                                 \
+        write_hps_reg("rx" STR_RX(ch) "8", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2236,7 +2236,7 @@ CHANNELS
         uint8_t ip[4];                                                         \
         sscanf(data, "%" SCNd8 ".%" SCNd8 ".%" SCNd8 ".%" SCNd8 "", ip,        \
                ip + 1, ip + 2, ip + 3);                                        \
-        write_hps_reg("rx" STR(ch) "5",                                        \
+        write_hps_reg("rx" STR_RX(ch) "5",                                        \
                       (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3])); \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2247,8 +2247,8 @@ CHANNELS
                "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8           \
                ":%" SCNx8 "",                                                  \
                mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);              \
-        write_hps_reg("rx" STR_RX(crx) "6", (mac[0] << 8) | (mac[1]));             \
-        write_hps_reg("rx" STR_RX(crx) "7", (mac[2] << 24) | (mac[3] << 16) |      \
+        write_hps_reg("rx" STR_RX(ch) "6", (mac[0] << 8) | (mac[1]));             \
+        write_hps_reg("rx" STR_RX(ch) "7", (mac[2] << 24) | (mac[3] << 16) |      \
                                             (mac[4] << 8) | mac[5]);           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \

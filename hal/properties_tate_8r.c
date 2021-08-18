@@ -2158,7 +2158,7 @@ CHANNELS
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("rx" STR(ch) "0", nco_steps);                        \
+        write_hps_reg("rx" STR_RX(ch) "0", nco_steps);                        \
         if (direction > 0) {                                                   \
             sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
@@ -2237,7 +2237,7 @@ CHANNELS
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("rx" STR(ch) "8", port);                                 \
+        write_hps_reg("rx" STR_RX(ch) "8", port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2245,7 +2245,7 @@ CHANNELS
         uint8_t ip[4];                                                         \
         sscanf(data, "%" SCNd8 ".%" SCNd8 ".%" SCNd8 ".%" SCNd8 "", ip,        \
                ip + 1, ip + 2, ip + 3);                                        \
-        write_hps_reg("rx" STR(ch) "5",                                        \
+        write_hps_reg("rx" STR_RX(ch) "5",                                        \
                       (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3])); \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2256,8 +2256,8 @@ CHANNELS
                "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8           \
                ":%" SCNx8 "",                                                  \
                mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);              \
-        write_hps_reg("rx" STR_RX(crx) "6", (mac[0] << 8) | (mac[1]));         \
-        write_hps_reg("rx" STR_RX(crx) "7", (mac[2] << 24) | (mac[3] << 16) |  \
+        write_hps_reg("rx" STR_RX(ch) "6", (mac[0] << 8) | (mac[1]));         \
+        write_hps_reg("rx" STR_RX(ch) "7", (mac[2] << 24) | (mac[3] << 16) |  \
                                             (mac[4] << 8) | mac[5]);           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2337,7 +2337,7 @@ CHANNELS
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
                 read_hps_reg(reg_4_rx[i], &old_val);                               \
-                write_hps_reg(reg4_rx[i], old_val & ~0x100);                      \
+                write_hps_reg(reg_4_rx[i], old_val & ~0x100);                      \
             }                                                                  \
                                                                                \
             /* send sync pulse */                                              \
@@ -2355,11 +2355,11 @@ CHANNELS
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
                 if (rx_stream[i] == PWR_ON) {                               \
-                    read_hps_reg(reg4_rx[i], &old_val);                           \
-                    write_hps_reg(reg4_rx[i], old_val | 0x100);                   \
-                    read_hps_reg(reg4_rx[i], &old_val);                           \
-                    write_hps_reg(reg4_rx[i], old_val | 0x2);                     \
-                    write_hps_reg(reg4_rx[i], old_val &(~0x2));                   \
+                    read_hps_reg(reg_4_rx[i], &old_val);                           \
+                    write_hps_reg(reg_4_rx[i], old_val | 0x100);                   \
+                    read_hps_reg(reg_4_rx[i], &old_val);                           \
+                    write_hps_reg(reg_4_rx[i], old_val | 0x2);                     \
+                    write_hps_reg(reg_4_rx[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
                                                                                \
