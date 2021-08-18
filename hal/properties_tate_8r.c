@@ -2105,7 +2105,7 @@ CHANNELS
         memset(ret, 0, MAX_PROP_LEN);                                          \
         int gain_factor;                                                       \
                                                                                \
-        int channel = INT_RX(ch);                                                 \
+        char channel = STR(ch)[0] - 'a';\
         char reg = 'a' + (channel/4)*4;                                        \
         int shift = (channel%4)*8;                                             \
         char reg_name[5];                                                      \
@@ -2166,7 +2166,7 @@ CHANNELS
                                                                                \
         printf("STR_RX(crx): %s", STR_RX(crx));\
         /* write direction */                                                  \
-        int channel = INT_RX(ch);                                              \
+        char channel = STR(ch)[0] - 'a';\
         read_hps_reg(force_stream_map[channel], &old_val);                          \
         write_hps_reg(force_stream_map[channel],                                    \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
