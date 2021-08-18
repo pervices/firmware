@@ -2332,7 +2332,12 @@ CHANNELS
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
+            for (i = 0; i < (NUM_CHANNELS); i++) {                         \
+                read_hps_reg(force_stream_map[i], &old_val);                               \
+                write_hps_reg(force_stream_map[i], old_val & ~0x100);                      \
+            }                                                                  \
+            /*temporary disables tx dsp channels*/\
+            for (i = NUM_CHANNELS; i < (NUM_CHANNELS * 2); i++) {                         \
                 read_hps_reg(reg4[i], &old_val);                               \
                 write_hps_reg(reg4[i], old_val & ~0x100);                      \
             }                                                                  \
@@ -2352,11 +2357,11 @@ CHANNELS
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
                 if (rx_stream[i] == PWR_ON) {                               \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x100);                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x2);                     \
-                    write_hps_reg(reg4[i], old_val &(~0x2));                   \
+                    read_hps_reg(force_stream_map[i], &old_val);                           \
+                    write_hps_reg(force_stream_map[i], old_val | 0x100);                   \
+                    read_hps_reg(force_stream_map[i], &old_val);                           \
+                    write_hps_reg(force_stream_map[i], old_val | 0x2);                     \
+                    write_hps_reg(force_stream_map[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
                                                                                \
@@ -2374,12 +2379,12 @@ CHANNELS
             /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
+            read_hps_reg(force_stream_map[i], &old_val);                          \
+            write_hps_reg(force_stream_map[i], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));                \
+            read_hps_reg(force_stream_map[i], &old_val);                          \
+            write_hps_reg(force_stream_map[i], old_val &(~0x100));                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
