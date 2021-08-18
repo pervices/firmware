@@ -2176,9 +2176,10 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
-        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
-        write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                    \
-        write_hps_reg("rx" STR_RX(crx) "4", old_val & ~0x2);                   \
+        char channel = STR(ch)[0] - 'a';\
+        read_hps_reg(force_stream_map[channel], &old_val);                              \
+        write_hps_reg(force_stream_map[channel], old_val | 0x2);                        \
+        write_hps_reg(force_stream_map[channel], old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
