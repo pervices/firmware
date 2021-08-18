@@ -2251,7 +2251,7 @@ CHANNELS
                "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8           \
                ":%" SCNx8 "",                                                  \
                mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);              \
-        write_hps_reg("rx" STR_RX(crx) "6", (mac[0] << 8) | (mac[1]));             \
+        write_hps_reg("rx" STR(ch) "6", (mac[0] << 8) | (mac[1]));             \
         write_hps_reg("rx" STR_RX(crx) "7", (mac[2] << 24) | (mac[3] << 16) |      \
                                             (mac[4] << 8) | mac[5]);           \
         return RETURN_SUCCESS;                                                 \
@@ -2311,6 +2311,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
+        char channel = STR(ch)[0] - 'a';\
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
