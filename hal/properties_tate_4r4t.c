@@ -2193,11 +2193,12 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_dsp_loopback(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        read_hps_reg("rx" STR_RX(crx) "4", &old_val);                              \
+        char channel = STR(ch)[0] - 'a';\
+        read_hps_reg(force_stream_map[channel], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg("rx" STR_RX(crx) "4", (old_val & ~0x1e00) | 0x400);      \
+            write_hps_reg(force_stream_map[channel], (old_val & ~0x1e00) | 0x400);      \
         else                                                                   \
-            write_hps_reg("rx" STR_RX(crx) "4", (old_val & ~0x1e00) | 0x000);      \
+            write_hps_reg(force_stream_map[channel], (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
