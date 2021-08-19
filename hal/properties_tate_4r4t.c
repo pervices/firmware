@@ -102,11 +102,7 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
 int jesd_good_code = 0xf;
 
-static uint8_t rx_power[] = {
-#define X(ch, io, crx, ctx) PWR_OFF,
-    CHANNELS
-#undef X
-};
+static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
 static uint8_t tx_power[] = {
 #define X(ch, io, crx, ctx) PWR_OFF,
@@ -114,11 +110,7 @@ static uint8_t tx_power[] = {
 #undef X
 };
 
-static uint8_t rx_stream[] = {
-#define X(ch, io, crx, ctx) STREAM_OFF,
-    CHANNELS
-#undef X
-};
+static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
 static const char *reg4[] = {
 #define X(ch, io, crx, ctx) "rx"STR(ch)"4",
@@ -2272,17 +2264,17 @@ CHANNELS
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
         if (stream > 1) {                                                      \
-            sprintf(ret, "%u", rx_stream[INT_RX(ch)]); /* Alert File Tree */      \
+            sprintf(ret, "%u", rx_stream[channel]); /* Alert File Tree */      \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
         /* Stream is already ON or OFF then return */                          \
-        if (stream == rx_stream[INT_RX(ch)])                                      \
+        if (stream == rx_stream[channel])                                      \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
-            if (rx_power[INT_RX(ch)] == PWR_ON) {                                 \
+            if (rx_power[channel] == PWR_ON) {                                 \
                 read_hps_reg(force_stream_map[channel], &old_val);                         \
                 write_hps_reg(force_stream_map[channel], old_val | 0x100);                 \
                                                                                \
@@ -2290,7 +2282,7 @@ CHANNELS
                 write_hps_reg(force_stream_map[channel], old_val | 0x2);                   \
                 write_hps_reg(force_stream_map[channel], old_val &(~0x2));                 \
                                                                                \
-                rx_stream[INT_RX(ch)] = STREAM_ON;                                \
+                rx_stream[channel] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
@@ -2304,7 +2296,7 @@ CHANNELS
             read_hps_reg(force_stream_map[channel], &old_val);                          \
             write_hps_reg(force_stream_map[channel], old_val &(~0x100));                \
                                                                                \
-            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
+            rx_stream[channel] = STREAM_OFF;                                   \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2315,9 +2307,10 @@ CHANNELS
         uint8_t power;                                                         \
         uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        char channel = STR(ch)[0] - 'a';\
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                    \
+        if (power >= PWR_ON && rx_power[channel] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
@@ -2325,7 +2318,7 @@ CHANNELS
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
-            rx_power[INT_RX(ch)] = PWR_ON;                                        \
+            rx_power[channel] = PWR_ON;                                        \
                                                                                \
             /* board command */           \
             usleep(200000);                                                    \
@@ -2370,8 +2363,8 @@ CHANNELS
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[INT_RX(ch)] = PWR_OFF;                                       \
-            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
+            rx_power[channel] = PWR_OFF;                                       \
+            rx_stream[channel] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
             /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
