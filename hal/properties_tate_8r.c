@@ -2279,7 +2279,6 @@ CHANNELS
         uint32_t old_val;                                                      \
         uint8_t stream;                                                        \
         sscanf(data, "%" SCNd8 "", &stream);                                   \
-        char channel = STR(ch)[0] - 'a';\
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
         if (stream > 1) {                                                      \
@@ -2294,12 +2293,12 @@ CHANNELS
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
             if (rx_power[INT(ch)] == PWR_ON) {                                 \
-                read_hps_reg(force_stream_map[channel], &old_val);                         \
-                write_hps_reg(force_stream_map[channel], old_val | 0x100);                 \
+                read_hps_reg(reg4[INT_RX(crx)], &old_val);                         \
+                write_hps_reg(reg4[INT_RX(crx)], old_val | 0x100);                 \
                                                                                \
-                read_hps_reg(force_stream_map[channel], &old_val);                         \
-                write_hps_reg(force_stream_map[channel], old_val | 0x2);                   \
-                write_hps_reg(force_stream_map[channel], old_val &(~0x2));                 \
+                read_hps_reg(reg4[INT_RX(crx)], &old_val);                         \
+                write_hps_reg(reg4[INT_RX(crx)], old_val | 0x2);                   \
+                write_hps_reg(reg4[INT_RX(crx)], old_val &(~0x2));                 \
                                                                                \
                 rx_stream[INT_RX(crx)] = STREAM_ON;                                \
             } else {                                                           \
@@ -2308,12 +2307,12 @@ CHANNELS
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
-            read_hps_reg(force_stream_map[channel], &old_val);                      \
-            write_hps_reg(force_stream_map[channel], old_val | 0x2);                \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                      \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val | 0x2);                \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(force_stream_map[channel], &old_val);                      \
-            write_hps_reg(force_stream_map[channel], old_val &(~0x100));            \
+            read_hps_reg("rx" STR_RX(crx) "4", &old_val);                      \
+            write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));            \
                                                                                \
             rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
         }                                                                      \
