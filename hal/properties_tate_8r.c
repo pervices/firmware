@@ -2279,20 +2279,22 @@ CHANNELS
         uint32_t old_val;                                                      \
         uint8_t stream;                                                        \
         sscanf(data, "%" SCNd8 "", &stream);                                   \
+        char channel = STR(ch)[0] - 'a';\
+        \
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
         if (stream > 1) {                                                      \
-            sprintf(ret, "%u", rx_stream[INT_RX(crx)]); /* Alert File Tree */      \
+            sprintf(ret, "%u", rx_stream[channel]); /* Alert File Tree */      \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
         /* Stream is already ON or OFF then return */                          \
-        if (stream == rx_stream[INT_RX(crx)])                                      \
+        if (stream == rx_stream[channel])                                      \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
-            if (rx_power[INT(ch)] == PWR_ON) {                                 \
+            if (rx_power[channel] == PWR_ON) {                                 \
                 read_hps_reg(reg4[INT_RX(crx)], &old_val);                         \
                 write_hps_reg(reg4[INT_RX(crx)], old_val | 0x100);                 \
                                                                                \
@@ -2300,7 +2302,7 @@ CHANNELS
                 write_hps_reg(reg4[INT_RX(crx)], old_val | 0x2);                   \
                 write_hps_reg(reg4[INT_RX(crx)], old_val &(~0x2));                 \
                                                                                \
-                rx_stream[INT_RX(crx)] = STREAM_ON;                                \
+                rx_stream[channel] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
@@ -2314,7 +2316,7 @@ CHANNELS
             read_hps_reg("rx" STR_RX(crx) "4", &old_val);                      \
             write_hps_reg("rx" STR_RX(crx) "4", old_val &(~0x100));            \
                                                                                \
-            rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
+            rx_stream[channel] = STREAM_OFF;                                   \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2387,7 +2389,7 @@ CHANNELS
                                                                                \
             /* kill the channel */                                             \
             /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
-            /*ping(uart_rx_fd[channel], (uint8_t *)buf, strlen(buf));  */          \
+            /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg("rx" STR_RX(crx) "4", &old_val);                          \
