@@ -102,7 +102,11 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
 int jesd_good_code = 0xf;
 
-static uint8_t rx_power[NUM_CHANNELS];
+static uint8_t rx_power[] = {
+#define X(ch, io, crx, ctx) PWR_OFF,
+    CHANNELS
+#undef X
+};
 
 static uint8_t tx_power[] = {
 #define X(ch, io, crx, ctx) PWR_OFF,
@@ -110,7 +114,11 @@ static uint8_t tx_power[] = {
 #undef X
 };
 
-static uint8_t rx_stream[NUM_CHANNELS];
+static uint8_t rx_stream[] = {
+#define X(ch, io, crx, ctx) STREAM_OFF,
+    CHANNELS
+#undef X
+};
 
 static const char *reg4[] = {
 #define X(ch, io, crx, ctx) "rx"STR(ch)"4",
