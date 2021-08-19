@@ -2314,10 +2314,9 @@ CHANNELS
         uint8_t power;                                                         \
         uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
-        char channel = STR(ch)[0] - 'a';\
-        \
+                                                                               \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[channel] == PWR_ON)                    \
+        if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
@@ -2325,7 +2324,7 @@ CHANNELS
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
-            rx_power[channel] = PWR_ON;                                        \
+            rx_power[INT_RX(ch)] = PWR_ON;                                        \
                                                                                \
             /* board command */           \
             usleep(200000);                                                    \
@@ -2370,12 +2369,12 @@ CHANNELS
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[channel] = PWR_OFF;                                       \
-            rx_stream[channel] = STREAM_OFF;                                   \
+            rx_power[INT_RX(ch)] = PWR_OFF;                                       \
+            rx_stream[INT_RX(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
             /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
-            /*ping(uart_rx_fd[channel], (uint8_t *)buf, strlen(buf));  */          \
+            /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg(force_stream_map[i], &old_val);                          \
