@@ -2270,8 +2270,14 @@ CHANNELS
     static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
         char channel = STR(ch)[0] - 'a';\
-        if(data[0]=='0') {write_hps_reg(force_stream_map[channel], 0x6002);}\
-        else {write_hps_reg(force_stream_map[channel], 0x2100);}\
+        if(data[0]=='0') {\
+            write_hps_reg(force_stream_map[channel], 0x6002);\
+            rx_stream[INT_RX(ch)] = STREAM_OFF;\
+        }\
+        else {\
+            write_hps_reg(force_stream_map[channel], 0x2100);\
+            rx_stream[INT_RX(ch)] = STREAM_ON;\
+        }\
         return RETURN_SUCCESS;                                                 \
     } \
                                                                                \
