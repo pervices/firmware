@@ -2314,7 +2314,6 @@ CHANNELS
         sscanf(data, "%" SCNd8 "", &power);                                    \
         char channel = STR(ch)[0] - 'a';\
                                                                                \
-        printf("NUM_CHANNELS: %i", NUM_CHANNELS);\
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && rx_power[channel] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
@@ -2343,8 +2342,10 @@ CHANNELS
             /* send sync pulse */                                              \
             sync_channels(15);                                                 \
                                                                                \
+            printf("NUM_CHANNELS: %i\n", NUM_CHANNELS);\
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
+                printf("T1\n");\
                 if (tx_power[i] == PWR_ON) {                                   \
                     read_hps_reg(reg4[i + 16], &old_val);                      \
                     write_hps_reg(reg4[i + 16], old_val | 0x100);              \
@@ -2354,14 +2355,19 @@ CHANNELS
                     write_hps_reg(reg4[i + 16], old_val | 0x2);                \
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }                                                              \
+                printf("T1.5\n");\
                 printf("rx_stream[%i]: %i\n", i, rx_stream[i]);\
+                printf("T1.75\n");\
                 if (rx_stream[i] == PWR_ON) {                               \
+                    printf("T2\n");\
                     read_hps_reg(force_stream_map[i], &old_val);                           \
                     write_hps_reg(force_stream_map[i], old_val | 0x100);                   \
                     read_hps_reg(force_stream_map[i], &old_val);                           \
                     write_hps_reg(force_stream_map[i], old_val | 0x2);                     \
                     write_hps_reg(force_stream_map[i], old_val &(~0x2));                   \
+                    printf("T3\n");\
                 }                                                              \
+                printf("T4\n");\
             }                                                                  \
                                                                                \
             /* power off & stream off */                                       \
