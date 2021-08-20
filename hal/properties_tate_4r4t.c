@@ -2322,6 +2322,7 @@ CHANNELS
         sscanf(data, "%" SCNd8 "", &power);                                    \
         char channel = STR(ch)[0] - 'a';\
                                                                                \
+        printf("NUM_CHANNELS: %i", NUM_CHANNELS);\
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && rx_power[channel] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
