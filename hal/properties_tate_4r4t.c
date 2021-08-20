@@ -2315,6 +2315,7 @@ CHANNELS
         uint8_t power;                                                         \
         uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        char channel = STR(ch)[0] - 'a';\
                                                                                \
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                    \
@@ -2378,12 +2379,12 @@ CHANNELS
             /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
-            read_hps_reg(force_stream_map[i], &old_val);                          \
-            write_hps_reg(force_stream_map[i], old_val | 0x2);                    \
+            read_hps_reg(force_stream_map[channel], &old_val);                          \
+            write_hps_reg(force_stream_map[channel], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(force_stream_map[i], &old_val);                          \
-            write_hps_reg(force_stream_map[i], old_val &(~0x100));                \
+            read_hps_reg(force_stream_map[channel], &old_val);                          \
+            write_hps_reg(force_stream_map[channel], old_val &(~0x100));                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
