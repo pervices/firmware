@@ -102,7 +102,7 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
 int jesd_good_code = 0xf;
 
-static uint8_t rx_power[NUM_CHANNELS] = {0,0,0,0};
+static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
 static uint8_t tx_power[] = {
 #define X(ch, io, crx, ctx) PWR_OFF,

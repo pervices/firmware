@@ -93,11 +93,7 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
 int jesd_good_code = 0xff;
 
-static uint8_t rx_power[] = {
-#define X(ch, rx, crx, ctx) PWR_OFF,
-    CHANNELS
-#undef X
-};
+static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
 static uint8_t tx_power[] = {
 #define X(ch, rx, crx, ctx) PWR_OFF,
@@ -105,17 +101,13 @@ static uint8_t tx_power[] = {
 #undef X
 };
 
-static uint8_t rx_stream[] = {
-#define X(ch, rx, crx, ctx) STREAM_OFF,
-    CHANNELS
-#undef X
-};
+static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
 static const char *reg4[] = {
-#define X(ch, rx, crx, ctx) "rx"STR_RX(crx)"4",
+#define X(ch, rx, crx, ctx) "rx"STR(ch)"4",
     CHANNELS
 #undef X
-#define X(ch, rx, crx, ctx) "tx"STR_TX(ctx)"4",
+#define X(ch, rx, crx, ctx) "tx"STR(ch)"4",
     CHANNELS
 #undef X
 };
@@ -457,63 +449,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
 }
 
 #define X(ch, rx, crx, ctx)                                                              \
-    static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(true, true, #ch, val);                            \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
-                                                   char *ret) {                \
-        uint32_t val;                                                          \
-        int r;                                                                 \
-        r = valid_edge_backoff(data, &val) ||                                  \
-            set_edge_backoff(true, #ch, val);                                  \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
-                                                      char *ret) {             \
-        uint64_t val;                                                          \
-        int r;                                                                 \
-        r = valid_edge_sample_num(data, &val) ||                               \
-            set_edge_sample_num(true, #ch, val);                               \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        uint32_t val;                                                          \
-        int r;                                                                 \
-        r = valid_trigger_sel(data, &val) || set_trigger_sel(true, #ch, val);  \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_dir(data, &val) ||                                   \
-            set_trigger_ufl_dir(true, #ch, val);                               \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_ufl_mode(const char *data, char *ret) {  \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(false, true, #ch, val);                           \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_pol(data, &val) ||                                   \
-            set_trigger_ufl_pol(true, #ch, val);                               \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
+\
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val;                                                              \
@@ -521,7 +457,6 @@ static int valid_gating_mode(const char *data, bool *dsp) {
             set_trigger_mode(true, false, #ch, val);                           \
         return r;                                                              \
     }                                                                          \
-                                                                               \
     static int hdlr_rx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
         uint32_t val;                                                          \
@@ -586,1229 +521,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     send_uart_comm(fd, buf, len);
 }
 /* -------------------------------------------------------------------------- */
-/* --------------------------------- TX ------------------------------------- */
-/* -------------------------------------------------------------------------- */
-
-#define X(ch, rx, crx, ctx)                                                              \
-    static int hdlr_tx_##ch##_dac_nco_dac0freq(const char *data, char *ret) {  \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t d -n 0 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_nco_dac1freq(const char *data, char *ret) {  \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t d -n 1 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {   \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t c -n 0 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {   \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t c -n 1 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {   \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t c -n 2 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {   \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t c -n 3 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {   \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t c -n 4 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {   \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t c -n 5 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_gain_ch0atten(const char *data, char *ret) { \
-        double atten;                                                          \
-        sscanf(data, "%lf", &atten);                                           \
-        uint32_t gaincode = 0;                                                 \
-                                                                               \
-        /* limit min atten (max gain) */                                       \
-        if (atten < -6.018 ) {                                                 \
-            atten = -6.018;                                                    \
-        }                                                                      \
-                                                                               \
-        /* convert from atten (dB) to gain code (dac register) */              \
-        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
-                                                                               \
-        /* send uart command */                                                \
-        strcpy(buf, "dac -c 0 -g ");                                           \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_gain_ch1atten(const char *data, char *ret) { \
-        double atten;                                                          \
-        sscanf(data, "%lf", &atten);                                           \
-        uint32_t gaincode = 0;                                                 \
-                                                                               \
-        /* limit min atten (max gain) */                                       \
-        if (atten < -6.018 ) {                                                 \
-            atten = -6.018;                                                    \
-        }                                                                      \
-                                                                               \
-        /* convert from atten (dB) to gain code (dac register) */              \
-        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
-                                                                               \
-        /* send uart command */                                                \
-        strcpy(buf, "dac -c 1 -g ");                                           \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_gain_ch2atten(const char *data, char *ret) { \
-        double atten;                                                          \
-        sscanf(data, "%lf", &atten);                                           \
-        uint32_t gaincode = 0;                                                 \
-                                                                               \
-        /* limit min atten (max gain) */                                       \
-        if (atten < -6.018 ) {                                                 \
-            atten = -6.018;                                                    \
-        }                                                                      \
-                                                                               \
-        /* convert from atten (dB) to gain code (dac register) */              \
-        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
-                                                                               \
-        /* send uart command */                                                \
-        strcpy(buf, "dac -c 2 -g ");                                           \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_gain_ch3atten(const char *data, char *ret) { \
-        double atten;                                                          \
-        sscanf(data, "%lf", &atten);                                           \
-        uint32_t gaincode = 0;                                                 \
-                                                                               \
-        /* limit min atten (max gain) */                                       \
-        if (atten < -6.018 ) {                                                 \
-            atten = -6.018;                                                    \
-        }                                                                      \
-                                                                               \
-        /* convert from atten (dB) to gain code (dac register) */              \
-        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
-                                                                               \
-        /* send uart command */                                                \
-        strcpy(buf, "dac -c 3 -g ");                                           \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_gain_ch4atten(const char *data, char *ret) { \
-        double atten;                                                          \
-        sscanf(data, "%lf", &atten);                                           \
-        uint32_t gaincode = 0;                                                 \
-                                                                               \
-        /* limit min atten (max gain) */                                       \
-        if (atten < -6.018 ) {                                                 \
-            atten = -6.018;                                                    \
-        }                                                                      \
-                                                                               \
-        /* convert from atten (dB) to gain code (dac register) */              \
-        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
-                                                                               \
-        /* send uart command */                                                \
-        strcpy(buf, "dac -c 4 -g ");                                           \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dac_gain_ch5atten(const char *data, char *ret) { \
-        double atten;                                                          \
-        sscanf(data, "%lf", &atten);                                           \
-        uint32_t gaincode = 0;                                                 \
-                                                                               \
-        /* limit min atten (max gain) */                                       \
-        if (atten < -6.018 ) {                                                 \
-            atten = -6.018;                                                    \
-        }                                                                      \
-                                                                               \
-        /* convert from atten (dB) to gain code (dac register) */              \
-        gaincode = (uint32_t)( 2048 * pow( 10, (atten/-20) ));                 \
-                                                                               \
-        /* send uart command */                                                \
-        strcpy(buf, "dac -c 5 -g ");                                           \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_dac_temp(const char *data, char *ret) {       \
-        strcpy(buf, "board -c " STR(ch) " -t\r");                              \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
-        uint64_t freq = 0;                                                     \
-        sscanf(data, "%" SCNd64 "", &freq);                                    \
-                                                                               \
-        /* if freq = 0, do nothing */                                          \
-        if (freq == 0) {                                                       \
-          /* Don't mute channel as FPGA/DAC-CP/DAC-MDP tuning might be used*/  \
-          /* strcpy(buf, "rf -c " STR(ch) " -z\r");                        */  \
-          /* ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));       */  \
-                                                                               \
-            return RETURN_SUCCESS;                                             \
-        }                                                                      \
-                                                                               \
-        /* if freq out of bounds, kill channel*/                               \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
-            strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));            \
-                                                                               \
-            /* Turn OFF TX on HPS */                                           \
-            uint32_t old_val;                                                  \
-                                                                               \
-            /* disable DSP cores */                                            \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
-                  toupper(CHR(ch)));                                           \
-            write_hps_reg("tx" STR_RX(crx) "4", old_val | 0x2);                    \
-                                                                               \
-            /* disable channel */                                              \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
-                                                                               \
-            tx_power[INT_TX(ch)] = PWR_OFF;                                       \
-                                                                               \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
-                         "Shutting Down TX" STR(ch) ".\n");                    \
-                                                                               \
-            return RETURN_ERROR;                                               \
-        }                                                                      \
-                                                                               \
-        /* run the pll calc algorithm */                                       \
-        pllparam_t pll;                                                        \
-        long double outfreq = 0;                                               \
-        outfreq = setFreq(&freq, &pll);                                        \
-                                                                               \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
-                                                                               \
-        /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, \
-                          &pll, true, INT_TX(ch));                                \
-                                                                               \
-        sprintf(ret, "%Lf", outfreq);                                          \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_band(const char *data, char *ret) {           \
-        /* if the setting is a valid band, send to tx board*/                  \
-        int band;                                                              \
-        sscanf(data, "%i", &band);                                             \
-        if ((band == 0) || (band == 1) || (band == 9)) {                       \
-            strcpy(buf, "rf -b ");                                             \
-            sprintf(buf + strlen(buf),"%i", band);                             \
-            strcat(buf, "\r");                                                 \
-        }                                                                      \
-        else {  /* otherwise mute the tx board */                              \
-            strcpy(buf, "rf -z\r");                                            \
-        }                                                                      \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        int gain;                                                              \
-        sscanf(data, "%i", &gain);                                             \
-                                                                               \
-        /*   0 -> 126 attenuation only */                                      \
-        /* 127    0dB */                                                       \
-                                                                               \
-        if (gain > 127)                                                        \
-            gain = 127;                                                        \
-        else if (gain < 0)                                                     \
-            gain = 0;                                                          \
-                                                                               \
-        strcpy(buf, "rf -c " STR(ch) " -a ");                                  \
-        sprintf(buf + strlen(buf), "%i", 127 - gain);                          \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-										\
-    static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
-	    uint16_t atten;							\
-	    sscanf(data, "%u", &atten);						\
-	    strcpy(buf, "rf -a ");						\
-	    sprintf(buf + strlen(buf),"%u", atten);				\
-	    strcat(buf, "\r");							\
-	    ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));		\
-										\
-	    return RETURN_SUCCESS;						\
-    }										\
-                                                                               \
-    static int hdlr_tx_##ch##_rf_board_dump(const char *data, char *ret) {     \
-        /* send the uart commands and read back the output and write to file   \
-         */                                                                    \
-                                                                               \
-        /* DAC */                                                              \
-        strcpy(buf, "dump -c " STR(ch) " -d\r");                               \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);             \
-                                                                               \
-        /* GPIOX */                                                            \
-        strcpy(buf, "dump -c " STR(ch) " -g\r");                               \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_board_test(const char *data, char *ret) {     \
-        /* TODO: MCU code cleanup */                                           \
-        PRINT(INFO, "board/clean: MCU code cleanup");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        strcpy(buf, "board -c " STR(ch) " -t\r");                              \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
-        strcpy(buf, "status -c " STR(ch) " -l\r");                             \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_status_dacld(const char *data, char *ret) {      \
-        strcpy(buf, "status -c " STR(ch) " -p\r");                             \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_board_led(const char *data, char *ret) {      \
-        strcpy(buf, "board -l\r");                                             \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_gain(const char *data, char *ret) {          \
-        /* TODO: FW code */                                                    \
-        PRINT(INFO,"Dsp gain; FW code");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val;                                                      \
-        uint16_t base_factor, resamp_factor;                                   \
-        double base_err = 0.0, resamp_err = 0.0;                               \
-        double rate;                                                           \
-        sscanf(data, "%lf", &rate);                                            \
-                                                                               \
-        /* get the error for base rate */                                      \
-        base_factor =                                                          \
-            get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);          \
-        resamp_factor =                                                        \
-            get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);      \
-                                                                               \
-        /* set the appropriate sample rate */                                  \
-        memset(ret, 0, MAX_PROP_LEN);                                          \
-                                                                               \
-        int channel = INT_TX(ch);                                                 \
-        char reg = 'a' + (channel/4)*4;                                        \
-        int shift = (channel%4)*8;                                             \
-        char reg_name[5];                                                      \
-        sprintf(reg_name, "txg%c", reg);                                       \
-      /* Disable resampler configuration by setting following to false */      \
-      /*  if (resamp_err < base_err) {                                  */     \
-        if ( false ) {                                                         \
-            write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val | (1 << 15));              \
-            sprintf(ret, "%lf",                                                \
-                    RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
-            /* Set gain adjustment */                                          \
-            read_hps_reg(reg_name, &old_val);                                  \
-            write_hps_reg(reg_name,                                            \
-                          (old_val & ~(0xff << shift)) |                       \
-                              (interp_gain_lut[(resamp_factor)] << shift));    \
-        } else {                                                               \
-            write_hps_reg("tx" STR(ch) "1", base_factor);                      \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));             \
-            sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
-            /* Set gain adjustment */                                          \
-            read_hps_reg(reg_name, &old_val);                                  \
-            write_hps_reg(reg_name,                                            \
-                          (old_val & ~(0xff << shift)) |                       \
-                              (interp_gain_lut[(base_factor)] << shift));      \
-        }                                                                      \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_ch0fpga_nco(const char *data, char *ret) {   \
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
-        uint8_t direction;                                                     \
-                                                                               \
-        /* check for a minus or plus sign at the front */                      \
-        if (data[0] == '-') {                                                  \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 1;                                                     \
-        } else if (data[0] == '+') {                                           \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 0;                                                     \
-        } else {                                                               \
-            sscanf(data, "%lf", &freq);                                        \
-            direction = 0;                                                     \
-        }                                                                      \
-                                                                               \
-        /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "10", nco_steps);                           \
-        if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
-        } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
-        }                                                                      \
-                                                                               \
-        /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
-                      (old_val & ~(0x1 << 0)) | (direction << 0));             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_ch1fpga_nco(const char *data, char *ret) {   \
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
-        uint8_t direction;                                                     \
-                                                                               \
-        /* check for a minus or plus sign at the front */                      \
-        if (data[0] == '-') {                                                  \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 1;                                                     \
-        } else if (data[0] == '+') {                                           \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 0;                                                     \
-        } else {                                                               \
-            sscanf(data, "%lf", &freq);                                        \
-            direction = 0;                                                     \
-        }                                                                      \
-                                                                               \
-        /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "11", nco_steps);                           \
-        if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
-        } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
-        }                                                                      \
-                                                                               \
-        /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
-                      (old_val & ~(0x1 << 1)) | (direction << 1));             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_ch2fpga_nco(const char *data, char *ret) {   \
-        /* CH2 CURRENTLY UNSUPPORTED */                                        \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_ch3fpga_nco(const char *data, char *ret) {   \
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
-        uint8_t direction;                                                     \
-                                                                               \
-        /* check for a minus or plus sign at the front */                      \
-        if (data[0] == '-') {                                                  \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 1;                                                     \
-        } else if (data[0] == '+') {                                           \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 0;                                                     \
-        } else {                                                               \
-            sscanf(data, "%lf", &freq);                                        \
-            direction = 0;                                                     \
-        }                                                                      \
-                                                                               \
-        /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "12", nco_steps);                           \
-        if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
-        } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
-        }                                                                      \
-                                                                               \
-        /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
-                      (old_val & ~(0x1 << 2)) | (direction << 2));             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_ch4fpga_nco(const char *data, char *ret) {   \
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
-        uint8_t direction;                                                     \
-                                                                               \
-        /* check for a minus or plus sign at the front */                      \
-        if (data[0] == '-') {                                                  \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 1;                                                     \
-        } else if (data[0] == '+') {                                           \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 0;                                                     \
-        } else {                                                               \
-            sscanf(data, "%lf", &freq);                                        \
-            direction = 0;                                                     \
-        }                                                                      \
-                                                                               \
-        /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
-        write_hps_reg("tx" STR(ch) "13", nco_steps);                           \
-        if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
-        } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
-        }                                                                      \
-                                                                               \
-        /* write direction */                                                  \
-        read_hps_reg("tx" STR(ch) "14", &old_val);                             \
-        write_hps_reg("tx" STR(ch) "14",                                       \
-                      (old_val & ~(0x1 << 3)) | (direction << 3));             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_ch5fpga_nco(const char *data, char *ret) {   \
-        /* CH5 CURRENTLY UNSUPPORTED */                                        \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
-        uint32_t old_val;                                                      \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
-        PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__, toupper(CHR(ch)));    \
-        write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                        \
-        write_hps_reg("tx" STR(ch) "4", old_val & ~0x2);                       \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_about_id(const char *data, char *ret) {          \
-        /* don't need to do anything, save the ID in the file system */        \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
-        if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg("tx" STR(ch) "4", old_val | (1 << 14));              \
-        else                                                                   \
-            write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 14));             \
-                                                                               \
-        /* sync_channels( 15 ); */                                             \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
-        /* TODO: FW support for streaming to management port required */       \
-        /* Group every four channels into the same QSFP port */                \
-        /* NOTE: This is strictly for tate */                                  \
-        char channel = (INT_TX(ch)/4)+'a';                                        \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "15", port);                                 \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "16", port);                                 \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch2port(const char *data, char *ret) {      \
-        /* CH2 CURRENTLY UNSUPPORTED */                                        \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "17", port);                                 \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "18", port);                                 \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch5port(const char *data, char *ret) {      \
-        /* CH5 CURRENTLY UNSUPPORTED */                                         \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {       \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_ch1fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_ch2fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_ch3fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_ch4fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_ch5fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_ch0oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_ch1oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_ch2oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_ch3oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_ch4oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_ch5oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_ch0uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_ch1uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_ch2uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_ch3uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_ch4uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_ch5uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    /* In the new context, pwr means resetting the DSP channel and */          \
-    /* pwr_board function will actually turn the RFE boards on or off */       \
-    static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {               \
-        uint32_t old_val;                                                      \
-        uint8_t power;                                                         \
-        sscanf(data, "%" SCNd8 "", &power);                                    \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
-        write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                        \
-        if (power == PWR_ON) {                                                 \
-            write_hps_reg("tx" STR(ch) "4", old_val & ~0x2);                   \
-        }                                                                      \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-                                                                               \
-    static int hdlr_tx_##ch##_pwr_board(const char *data, char *ret) {         \
-        uint32_t old_val;                                                      \
-        uint8_t power;                                                         \
-        uint8_t i;                                                             \
-        sscanf(data, "%" SCNd8 "", &power);                                    \
-                                                                               \
-        /* check if power is already enabled */                                \
-        if (power >= PWR_ON && tx_power[INT_TX(ch)] == PWR_ON)                    \
-            return RETURN_SUCCESS;                                             \
-                                                                               \
-        /* power on */                                                         \
-        if (power >= PWR_ON) {                                                 \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on", INT_TX(ch));                    \
-            system(pwr_cmd);                                                   \
-            tx_power[INT_TX(ch)] = PWR_ON;                                        \
-                                                                               \
-            /* board commands */                                               \
-            /* strcpy(buf, "board -c " STR(ch) " -d\r");               */      \
-            /* ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)); */      \
-            /* usleep(200000);                                         */      \
-                                                                               \
-            /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i], &old_val);                               \
-                write_hps_reg(reg4[i], old_val & ~0x100);                      \
-            }                                                                  \
-                                                                               \
-            /* send sync pulse */                                              \
-            sync_channels(15);                                                 \
-                                                                               \
-            /* enable active dsp channels, and reset the DSP */                \
-            for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    write_hps_reg(reg4[i + 16], old_val | 0x100);              \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 16], old_val | 0x2);                \
-                    write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
-                }                                                              \
-                if (rx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x100);                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x2);                     \
-                    write_hps_reg(reg4[i], old_val &(~0x2));                   \
-                }                                                              \
-            }                                                                  \
-                                                                               \
-            /* power off */                                                    \
-        } else {                                                               \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off", INT_TX(ch));                   \
-            system(pwr_cmd);                                                   \
-            /* kill the channel */                                             \
-            strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));            \
-                                                                               \
-            /* disable DSP cores */                                            \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
-                  toupper(CHR(ch)));                                           \
-            write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                    \
-                                                                               \
-            /* disable channel */                                              \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
-                                                                               \
-            tx_power[INT_TX(ch)] = PWR_OFF;                                       \
-        }                                                                      \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_reboot(const char *data, char *ret) {            \
-        int reboot;                                                            \
-        sscanf(data, "%i", &reboot);                                           \
-                                                                               \
-        if (reboot == 1) {                                                     \
-            strcpy(buf, "board -r\r");                                         \
-            ping_write_only(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)); \
-        }                                                                      \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
-        strcpy(buf, "status -g\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_about_serial(const char *data, char *ret) {      \
-        strcpy(buf, "status -s\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_about_mcudevid(const char *data, char *ret) {    \
-        strcpy(buf, "status -d\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_about_mcurev(const char *data, char *ret) {      \
-        strcpy(buf, "status -v\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_about_mcufuses(const char *data, char *ret) {    \
-        strcpy(buf, "status -f\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_about_fw_ver(const char *data, char *ret) {      \
-        strcpy(buf, "board -v\r");                                             \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }
-CHANNELS
-#undef X
-
-/* -------------------------------------------------------------------------- */
 /* --------------------------------- RX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
@@ -1820,7 +532,7 @@ CHANNELS
         /* if freq = 0, mute PLL */                                             \
         if (freq == 0) {                                                        \
             strcpy(buf, "lmx -k\r");                                            \
-            ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));          \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));          \
             sprintf(ret, "%Lf", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
@@ -1828,7 +540,7 @@ CHANNELS
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
             strcpy(buf, "lmx -k\r");                                            \
-            ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));          \
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));          \
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
             sprintf(ret, "%Lf", 0);                                             \
             return RETURN_ERROR;                                                \
@@ -1841,7 +553,7 @@ CHANNELS
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency(uart_rx_fd[INT_RX(crx)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
+        set_lo_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
                                                                                 \
         /* Save the frequency that is being set into the property */            \
         sprintf(ret, "%Lf", outfreq);                                           \
@@ -1853,7 +565,7 @@ CHANNELS
         strcpy(buf, "rf -l ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1861,7 +573,7 @@ CHANNELS
         strcpy(buf, "rf -b ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
@@ -2010,7 +722,7 @@ CHANNELS
         strcpy(buf, "rf -a ");                                                 \
         sprintf(buf + strlen(buf), "%i", atten);                               \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));            \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));            \
                                                                                \
         sprintf(ret, "%i", atten);                                             \
                                                                                \
@@ -2023,17 +735,17 @@ CHANNELS
                                                                                \
         /* ADC */                                                              \
         strcpy(buf, "dump -a\r");                               \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);             \
                                                                                \
         /* GPIOX */                                                            \
         strcpy(buf, "dump -g\r");                               \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
                                                                                \
         /* ADC Driver */                                                       \
         strcpy(buf, "dump -v\r");                               \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2052,7 +764,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
         strcpy(buf, "status -l\r");                             \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2068,7 +780,7 @@ CHANNELS
         strcpy(buf, "board -l\r");                                             \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2165,7 +877,6 @@ CHANNELS
             sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
-        printf("STR_RX(crx): %s", STR_RX(crx));\
         /* write direction */                                                  \
         char channel = STR(ch)[0] - 'a';\
         read_hps_reg(force_stream_map[channel], &old_val);                          \
@@ -2272,11 +983,11 @@ CHANNELS
         char channel = STR(ch)[0] - 'a';\
         if(data[0]=='0') {\
             write_hps_reg(force_stream_map[channel], 0x6002);\
-            rx_stream[INT_RX(ch)] = STREAM_OFF;\
+            rx_stream[channel] = STREAM_OFF;\
         }\
         else {\
             write_hps_reg(force_stream_map[channel], 0x2100);\
-            rx_stream[INT_RX(ch)] = STREAM_ON;\
+            rx_stream[channel] = STREAM_ON;\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
@@ -2289,17 +1000,17 @@ CHANNELS
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
         if (stream > 1) {                                                      \
-            sprintf(ret, "%u", rx_stream[INT_RX(crx)]); /* Alert File Tree */      \
+            sprintf(ret, "%u", rx_stream[channel]); /* Alert File Tree */      \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
         /* Stream is already ON or OFF then return */                          \
-        if (stream == rx_stream[INT_RX(crx)])                                      \
+        if (stream == rx_stream[channel])                                      \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
-            if (rx_power[INT(ch)] == PWR_ON) {                                 \
+            if (rx_power[channel] == PWR_ON) {                                 \
                 read_hps_reg(force_stream_map[channel], &old_val);                         \
                 write_hps_reg(force_stream_map[channel], old_val | 0x100);                 \
                                                                                \
@@ -2307,7 +1018,7 @@ CHANNELS
                 write_hps_reg(force_stream_map[channel], old_val | 0x2);                   \
                 write_hps_reg(force_stream_map[channel], old_val &(~0x2));                 \
                                                                                \
-                rx_stream[INT_RX(crx)] = STREAM_ON;                                \
+                rx_stream[channel] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
@@ -2321,7 +1032,7 @@ CHANNELS
             read_hps_reg(force_stream_map[channel], &old_val);                      \
             write_hps_reg(force_stream_map[channel], old_val &(~0x100));            \
                                                                                \
-            rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
+            rx_stream[channel] = STREAM_OFF;                                   \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2335,15 +1046,15 @@ CHANNELS
         char channel = STR(ch)[0] - 'a';\
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[INT_RX(ch)] == PWR_ON)                    \
+        if (power >= PWR_ON && rx_power[channel] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(crx));                    \
+            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
-            rx_power[INT_RX(ch)] = PWR_ON;                                        \
+            rx_power[channel] = PWR_ON;                                        \
                                                                                \
             /* board command */           \
             usleep(200000);                                                    \
@@ -2353,26 +1064,11 @@ CHANNELS
                 read_hps_reg(force_stream_map[i], &old_val);                               \
                 write_hps_reg(force_stream_map[i], old_val & ~0x100);                      \
             }                                                                  \
-            /*temporary disables tx dsp channels*/\
-            for (i = NUM_CHANNELS; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i], &old_val);                               \
-                write_hps_reg(reg4[i], old_val & ~0x100);                      \
-            }                                                                  \
-                                                                               \
             /* send sync pulse */                                              \
             sync_channels(15);                                                 \
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    write_hps_reg(reg4[i + 16], old_val | 0x100);              \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 16], old_val | 0x2);                \
-                    write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
-                }                                                              \
                 if (rx_stream[i] == PWR_ON) {                               \
                     read_hps_reg(force_stream_map[i], &old_val);                           \
                     write_hps_reg(force_stream_map[i], old_val | 0x100);                   \
@@ -2385,23 +1081,23 @@ CHANNELS
             /* power off & stream off */                                       \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(crx));                   \
+            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[INT_RX(crx)] = PWR_OFF;                                       \
-            rx_stream[INT_RX(crx)] = STREAM_OFF;                                   \
+            rx_power[channel] = PWR_OFF;                                       \
+            rx_stream[channel] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
             /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
             /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
-            read_hps_reg(channel, &old_val);                          \
-            write_hps_reg(channel, old_val | 0x2);                    \
+            read_hps_reg(force_stream_map[channel], &old_val);                          \
+            write_hps_reg(force_stream_map[channel], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(channel, &old_val);                          \
-            write_hps_reg(channel, old_val &(~0x100));                \
+            read_hps_reg(force_stream_map[channel], &old_val);                          \
+            write_hps_reg(force_stream_map[channel], old_val &(~0x100));                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2412,7 +1108,7 @@ CHANNELS
                                                                                \
         if (reboot == 1) {                                                     \
             strcpy(buf, "board -r\r");                                         \
-            ping_write_only(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)); \
+            ping_write_only(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)); \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2420,7 +1116,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2428,7 +1124,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcudevid(const char *data, char *ret) {    \
         strcpy(buf, "status -d\r");                                            \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2436,7 +1132,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcurev(const char *data, char *ret) {      \
         strcpy(buf, "status -v\r");                                            \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2444,7 +1140,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcufuses(const char *data, char *ret) {    \
         strcpy(buf, "status -f\r");                                            \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2452,7 +1148,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
-        ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2558,7 +1254,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
             continue;
         }
 #define X(ch, rx, crx, ctx)                                                              \
-    if (i == INT_RX(crx))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
         CHANNELS
 #undef X
@@ -2608,58 +1304,8 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
         }
 
 #define X(ch, rx, crx, ctx)                                                              \
-    if (i == INT_RX(crx))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
-        CHANNELS
-#undef X
-
-        // call the handler directly
-        r = hdlr(inbuf, outbuf);
-        if (RETURN_SUCCESS != r) {
-            return r;
-        }
-
-        // disable inotify, write the value back to the file, re-enable inotify
-        prop = get_prop_from_hdlr(hdlr);
-        wd_backup = prop->wd;
-        prop->wd = -1;
-        set_property(prop->path, inbuf);
-        prop->wd = wd_backup;
-    }
-
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
-    int r;
-
-    char inbuf[256];
-    char outbuf[256];
-
-    uint32_t mask_tx;
-
-    int wd_backup;
-    prop_t *prop;
-    int (*hdlr)(const char *, char *) = NULL;
-    int i;
-
-    double gain = 0;
-
-    mask_tx = cm_chanmask_get("/var/cyan/state/cm/chanmask-tx");
-
-    sscanf(data, "%lf", &gain);
-
-    sprintf(inbuf, "%lf", gain);
-
-    for (i = 0; i < NUM_CHANNELS; i++) {
-
-        if (0 == (mask_tx & (1 << i))) {
-            continue;
-        }
-
-#define X(ch, rx, crx, ctx)                                                              \
-    if (i == INT_TX(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_rf_gain_val;
         CHANNELS
 #undef X
 
@@ -2690,7 +1336,6 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     uint32_t sync_mask;
 
     uint32_t mask_rx;
-    uint32_t mask_tx;
 
     int wd_backup;
     prop_t *prop;
@@ -2703,9 +1348,8 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     read_hps_reg("sync_mask", &sync_mask);
 
     mask_rx = cm_chanmask_get("/var/cyan/state/cm/chanmask-rx");
-    mask_tx = cm_chanmask_get("/var/cyan/state/cm/chanmask-tx");
 
-    sync_mask = (mask_tx << 16) | mask_rx;
+    sync_mask = mask_rx;
     if (0 == sync_mask) {
         return RETURN_SUCCESS;
     }
@@ -2726,34 +1370,8 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         }
 
 #define X(ch, rx, crx, ctx)                                                              \
-    if (i == INT_RX(crx))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
-        CHANNELS
-#undef X
-
-        // call the handler directly
-        r = hdlr(inbuf, outbuf);
-        if (RETURN_SUCCESS != r) {
-            return r;
-        }
-
-        // disable inotify, write the value back to the file, re-enable inotify
-        prop = get_prop_from_hdlr(hdlr);
-        wd_backup = prop->wd;
-        prop->wd = -1;
-        set_property(prop->path, inbuf);
-        prop->wd = wd_backup;
-    }
-
-    for (i = 0; i < NUM_CHANNELS; i++) {
-
-        if (0 == (mask_tx & (1 << i))) {
-            continue;
-        }
-
-#define X(ch, rx, crx, ctx)                                                              \
-    if (i == INT_TX(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_rf_lo_freq;
         CHANNELS
 #undef X
 
@@ -2784,7 +1402,6 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
     uint32_t sync_mask;
 
     uint32_t mask_rx;
-    uint32_t mask_tx;
 
     int wd_backup;
     prop_t *prop;
@@ -2797,9 +1414,8 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
     read_hps_reg("sync_mask", &sync_mask);
 
     mask_rx = cm_chanmask_get("/var/cyan/state/cm/chanmask-rx");
-    mask_tx = cm_chanmask_get("/var/cyan/state/cm/chanmask-tx");
 
-    sync_mask = (mask_tx << 16) | mask_rx;
+    sync_mask = mask_rx;
     if (0 == sync_mask) {
         return RETURN_SUCCESS;
     }
@@ -2820,38 +1436,8 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         }
 
 #define X(ch, rx, crx, ctx)                                                              \
-    if (i == INT_RX(crx))                                                          \
+    if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
-        CHANNELS
-#undef X
-
-        // call the handler directly
-        r = hdlr(inbuf, outbuf);
-        if (RETURN_SUCCESS != r) {
-            return r;
-        }
-
-        // disable inotify, write the value back to the file, re-enable inotify
-        prop = get_prop_from_hdlr(hdlr);
-        wd_backup = prop->wd;
-        prop->wd = -1;
-        set_property(prop->path, inbuf);
-        prop->wd = wd_backup;
-    }
-
-    for (i = 0; i < NUM_CHANNELS; i++) {
-
-        if (0 == (mask_tx & (1 << i))) {
-            continue;
-        }
-#define X(ch, rx, crx, ctx)                                                              \
-    if (i == INT_TX(ch))                                                          \
-        hdlr = hdlr_tx_##ch##_dsp_ch0fpga_nco;                                 \
-        hdlr = hdlr_tx_##ch##_dsp_ch1fpga_nco;                                 \
-        hdlr = hdlr_tx_##ch##_dsp_ch2fpga_nco;                                 \
-        hdlr = hdlr_tx_##ch##_dsp_ch3fpga_nco;                                 \
-        hdlr = hdlr_tx_##ch##_dsp_ch4fpga_nco;                                 \
-        hdlr = hdlr_tx_##ch##_dsp_ch5fpga_nco;                                 \
         CHANNELS
 #undef X
 
@@ -3300,9 +1886,6 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 
 // Dumps all of the board logs for TX, RX, and TIME
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
-#define X(ch, rx, crx, ctx) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
-    CHANNELS
-#undef X
 #define X(ch, rx, crx, ctx) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
     CHANNELS
 #undef X
@@ -3324,7 +1907,7 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 1\r");
 #define X(ch, rx, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
 
@@ -3341,7 +1924,7 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 2\r");
 #define X(ch, rx, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
         CHANNELS
 #undef X
 
@@ -3419,7 +2002,7 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
 
     strcpy(buf, "board -r\r");
 #define X(ch, rx, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(crx)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
     CHANNELS
 #undef X
 
@@ -4087,95 +2670,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                           RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
- 
-
-#define DEFINE_TX_CHANNEL(_c)                                                                                         
-/*    DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
-    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_sample_num"  , hdlr_tx_##_c##_trigger_edge_sample_num, RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/ufl_dir"          , hdlr_tx_##_c##_trigger_ufl_dir,         RW, "out")       \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/ufl_mode"         , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level")     \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "negative")  \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output")    \
-    DEFINE_FILE_PROP("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa")      \
-    DEFINE_FILE_PROP("tx/" #_c "/link/ch0port"             , hdlr_tx_##_c##_link_ch0port,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch4fifo_lvl"           , hdlr_tx_##_c##_qa_ch4fifo_lvl,          RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch0oflow"              , hdlr_tx_##_c##_qa_ch0oflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch1oflow"              , hdlr_tx_##_c##_qa_ch1oflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch3oflow"              , hdlr_tx_##_c##_qa_ch3oflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch4oflow"              , hdlr_tx_##_c##_qa_ch4oflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch0uflow"              , hdlr_tx_##_c##_qa_ch0uflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch1uflow"              , hdlr_tx_##_c##_qa_ch1uflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch3uflow"              , hdlr_tx_##_c##_qa_ch3uflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/ch4uflow"              , hdlr_tx_##_c##_qa_ch4uflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch0fpga_nco"          , hdlr_tx_##_c##_dsp_ch0fpga_nco,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch1fpga_nco"          , hdlr_tx_##_c##_dsp_ch1fpga_nco,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch3fpga_nco"          , hdlr_tx_##_c##_dsp_ch3fpga_nco,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch4fpga_nco"          , hdlr_tx_##_c##_dsp_ch4fpga_nco,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac0freq"      , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac1freq"      , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch0freq"       , hdlr_tx_##_c##_dac_nco_ch0freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch1freq"       , hdlr_tx_##_c##_dac_nco_ch1freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch2freq"       , hdlr_tx_##_c##_dac_nco_ch2freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch3freq"       , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch4freq"       , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch5freq"       , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch0atten"     , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch1atten"     , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch2atten"     , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch3atten"     , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch4atten"     , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch5atten"     , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31")        \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
-    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION) */
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
-//     DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
-//     DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
-//    DEFINE_FILE_PROP("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5fifo_lvl"           , hdlr_tx_##_c##_qa_ch5fifo_lvl,          RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2oflow"              , hdlr_tx_##_c##_qa_ch2oflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5oflow"              , hdlr_tx_##_c##_qa_ch5oflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2uflow"              , hdlr_tx_##_c##_qa_ch2uflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5uflow"              , hdlr_tx_##_c##_qa_ch5uflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch2fpga_nco"          , hdlr_tx_##_c##_dsp_ch2fpga_nco,         RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch5fpga_nco"          , hdlr_tx_##_c##_dsp_ch5fpga_nco,         RW, "0")         \
-    //DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
-    //DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
-    //DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/reboot"                         , hdlr_time_reboot,                       RW, "0")         \
@@ -4273,10 +2767,8 @@ GPIO_PINS
 
 #define DEFINE_CM()                                                    \
     DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
-    DEFINE_FILE_PROP("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0") \
     DEFINE_FILE_PROP("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0") \
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
-    DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")
 
@@ -4366,15 +2858,6 @@ set_default_int("rx/f/link/jesd_num",1);
 set_default_int("rx/g/link/jesd_num",0);
 set_default_int("rx/h/link/jesd_num",1);
 
-
-//#define X(ch, rx, crx, ctx)                                                                                       \
-//    set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
-//    set_default_int("tx/" #ch "/link/ch1port", base_port + INT_TX(ch)*4 + 1 + NUM_CHANNELS);               \
-//    set_default_int("tx/" #ch "/link/ch3port", base_port + INT_TX(ch)*4 + 2 + NUM_CHANNELS);               \
-//    set_default_int("tx/" #ch "/link/ch4port", base_port + INT_TX(ch)*4 + 3 + NUM_CHANNELS);
-
-//    CHANNELS
-// #undef X
 }
 
 size_t get_num_prop(void) { return num_properties; }
@@ -4753,25 +3236,21 @@ int set_freq_internal(const bool tx, const unsigned channel,
 #undef X
     };
 
-    static const fp_t tx_fp[] = {
-#define X(ch, rx, crx, ctx) hdlr_tx_##ch##_rf_lo_freq,
-        CHANNELS
-#undef X
-    };
-
     int r;
 
     char req_buf[MAX_PROP_LEN];
     char rsp_buf[MAX_PROP_LEN];
 
-    if (channel > (tx ? ARRAY_SIZE(tx_fp) : ARRAY_SIZE(rx_fp))) {
+    if(tx) PRINT(ERROR, "Tx board selected but there is are notx boards in this unit\n");
+
+    if (channel > ARRAY_SIZE(rx_fp)) {
         r = E2BIG;
         PRINT(ERROR, "channel %u is invalid (%d,%s)\n", channel, r,
               strerror(r));
         goto out;
     }
 
-    const fp_t *fp = tx ? tx_fp : rx_fp;
+    const fp_t *fp = rx_fp;
 
     memset(req_buf, '\0', sizeof(req_buf));
     memset(rsp_buf, '\0', sizeof(rsp_buf));
@@ -4796,7 +3275,7 @@ int set_freq_internal(const bool tx, const unsigned channel,
         goto out;
     }
 
-    flush_uart_comm(tx ? uart_tx_fd[channel] : uart_rx_fd[channel]);
+    flush_uart_comm(uart_rx_fd[channel]);
 
     r = EXIT_SUCCESS;
 
