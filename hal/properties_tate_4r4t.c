@@ -1010,9 +1010,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         double atten = (((gain)-MIN_RF_GAIN_TX)/(MAX_RF_GAIN_TX-MIN_RF_GAIN_TX)) * (MIN_RF_ATTEN_TX - MAX_RF_ATTEN_TX) + MAX_RF_ATTEN_TX;\
         char s_atten[25];\
         \
-        printf("Gain: %f, atten: %f", gain, atten);\
         snprintf(s_atten, 25, "%f", atten);\
-        printf(s_atten);\
         set_property("tx/" STR(ch) "/rf/atten", s_atten);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2342,10 +2340,8 @@ CHANNELS
             /* send sync pulse */                                              \
             sync_channels(15);                                                 \
                                                                                \
-            printf("NUM_CHANNELS: %i\n", NUM_CHANNELS);\
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                printf("T1\n");\
                 /*temporarily disabled because its causeing issue with getting rx working*/\
                 /*if (tx_power[i] == PWR_ON) {                                   \
                     read_hps_reg(reg4[i + 16], &old_val);                      \
@@ -2356,19 +2352,13 @@ CHANNELS
                     write_hps_reg(reg4[i + 16], old_val | 0x2);                \
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
                 }*/                                                              \
-                printf("T1.5\n");\
-                printf("rx_stream[%i]: %i\n", i, rx_stream[i]);\
-                printf("T1.75\n");\
                 if (rx_stream[i] == PWR_ON) {                               \
-                    printf("T2\n");\
                     read_hps_reg(force_stream_map[i], &old_val);                           \
                     write_hps_reg(force_stream_map[i], old_val | 0x100);                   \
                     read_hps_reg(force_stream_map[i], &old_val);                           \
                     write_hps_reg(force_stream_map[i], old_val | 0x2);                     \
                     write_hps_reg(force_stream_map[i], old_val &(~0x2));                   \
-                    printf("T3\n");\
                 }                                                              \
-                printf("T4\n");\
             }                                                                  \
                                                                                \
             /* power off & stream off */                                       \
