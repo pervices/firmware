@@ -2346,7 +2346,8 @@ CHANNELS
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 printf("T1\n");\
-                if (tx_power[i] == PWR_ON) {                                   \
+                /*temporarily disabled because its causeing issue with getting rx working*/\
+                /*if (tx_power[i] == PWR_ON) {                                   \
                     read_hps_reg(reg4[i + 16], &old_val);                      \
                     write_hps_reg(reg4[i + 16], old_val | 0x100);              \
                     read_hps_reg(reg4[i + 16], &old_val);                      \
@@ -2354,7 +2355,7 @@ CHANNELS
                           toupper(CHR(ch)));                                   \
                     write_hps_reg(reg4[i + 16], old_val | 0x2);                \
                     write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
-                }                                                              \
+                }*/                                                              \
                 printf("T1.5\n");\
                 printf("rx_stream[%i]: %i\n", i, rx_stream[i]);\
                 printf("T1.75\n");\
