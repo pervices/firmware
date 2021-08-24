@@ -108,7 +108,7 @@
     #define CHR_RX(crx) #crx[0]
 
     // Converts an expanded char into a runtime integer.
-    #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(2*(INT(ch)/4)))
+    #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
     #define INT_TX(ch) ((int)(4*(CHR_RX(ch) - 'a')) + 2)
 
     //hps maps
