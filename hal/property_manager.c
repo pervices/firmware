@@ -651,7 +651,7 @@ int property_good(char *path) {
     // then read from the property
     get_property(&fullpath,property_read,5);
     
-    if(strcmp(&property_read,"good") != 0){
+    if(strstr(&property_read,"good") == NULL){
         //return 5;
         
         //THIS IS A HACK so that I don't have to flush the uart buffers
@@ -662,7 +662,7 @@ int property_good(char *path) {
         usleep(400000);
         // then read from the property
         get_property(&fullpath,property_read,5);
-        if(strcmp(&property_read,"good") != 0){
+        if(strstr(&property_read,"good") == 0){
             return 5;
         }
     }
