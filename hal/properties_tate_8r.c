@@ -1588,6 +1588,8 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -k\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1597,6 +1599,8 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -q\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1606,6 +1610,8 @@ static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -j\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1615,6 +1621,8 @@ static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -p\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1624,6 +1632,8 @@ static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_all(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -r\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -3043,6 +3053,10 @@ void sync_channels(uint8_t chan_mask) {
     write_hps_reg("res_rw7", 0x20000000);
     write_hps_reg("res_rw7", 0);
 
+    // Set time board to continuous mode.
+    strcpy(buf, "debug -l 7 -r 139 -w 3\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
     
     while ((i_reset < max_attempts) && (jesd_good == false)) {
@@ -3050,11 +3064,11 @@ void sync_channels(uint8_t chan_mask) {
         // FPGA JESD IP reset
         write_hps_reg("res_rw7",0x10000000);
         write_hps_reg("res_rw7", 0);
-        usleep(100000); // Some wait time for MCUs to be ready
+        usleep(400000); // Some wait time for MCUs to be ready
         /* Trigger a SYSREF pulse */
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        usleep(200000); // Some wait time for MCUs to be ready
+        // strcpy(buf, "sync -k\r");
+        // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
         if ((reg_val  & 0xff)== jesd_good_code) {
             PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
@@ -3064,6 +3078,11 @@ void sync_channels(uint8_t chan_mask) {
     if (jesd_good != true) {
         PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
     }
+
+    //Return to pulsed Sysref Mode
+    strcpy(buf, "debug -l 7 -r 139 -w 2\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     return;
 }
 
