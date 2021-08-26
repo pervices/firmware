@@ -67,6 +67,9 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+//contains the registers used for rx_4 for each channel
+//most registers follow the pattern rxa0 for ch a, rxb0 for ch b
+//Unlike most channels rx_4 uses a different patttern
 static const char *force_stream_map[8] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
 
 // A typical VAUNT file descriptor layout may look something like this:
@@ -103,6 +106,7 @@ static uint8_t tx_power[] = {
 
 static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
+//old method of mapping rx_4
 static const char *reg4[] = {
 #define X(ch, rx, crx, ctx) "rx"STR(ch)"4",
     CHANNELS
@@ -581,6 +585,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /*sets variable amplifiers, variable attentuators, bypassable amplifiers to achieve desired gain*/\
+    /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
         int gain;                                                              \

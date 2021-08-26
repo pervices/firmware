@@ -81,9 +81,10 @@
 // Converts an expanded channel to a compile time string.
 #define STR(ch) #ch
 
-// Converts an expanded string into a runtime char.
+//channel character, this system only works with 26 or fewer channels
 #define CHR(ch) #ch[0]
-        
+
+//channel number
 #define INT(ch) ((int)(CHR(ch) - 'a'))
 
 //creates channel maps
@@ -107,7 +108,7 @@
     #define STR_TX(ctx) #ctx
     #define CHR_RX(crx) #crx[0]
 
-    // Converts an expanded char into a runtime integer.
+    //rfe port mapping
     #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
     #define INT_TX(ch) ((int)(4*(CHR_RX(ch) - 'a')) + 2)
 
