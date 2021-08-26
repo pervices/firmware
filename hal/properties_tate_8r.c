@@ -70,7 +70,7 @@
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
-static const char *force_stream_map[8] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
+static const char *rx_reg4_map[8] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -794,11 +794,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         uint32_t old_val, sign;                                                \
         sscanf(data, "%u", &sign);                                             \
         sign = sign ? 0 : 1;                                                   \
-        char channel = STR(ch)[0] - 'a';\
                                                                                \
-        read_hps_reg(force_stream_map[channel], &old_val);                          \
+        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
         old_val &= ~(1 << 4);                                                  \
-        write_hps_reg(force_stream_map[channel], old_val | (sign << 4));            \
+        write_hps_reg(rx_reg4_map[INT(ch)], old_val | (sign << 4));            \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -824,7 +823,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         memset(ret, 0, MAX_PROP_LEN);                                          \
         int gain_factor;                                                       \
                                                                                \
-        char channel = STR(ch)[0] - 'a';\
         char reg = 'a' + (channel/4)*4;                                        \
         int shift = (channel%4)*8;                                             \
         char reg_name[5];                                                      \
@@ -833,8 +831,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /*if (resamp_err < base_err) {*/                                       \
         if(false) {/* resamp currently unsupported */                           \
             write_hps_reg("rx" STR(ch) "1", resamp_factor);                \
-            read_hps_reg(force_stream_map[channel], &old_val);                      \
-            write_hps_reg(force_stream_map[channel], old_val | (1 << 15));          \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                      \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 15));          \
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /*Set gain adjustment */                                           \
@@ -844,8 +842,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                     (((uint16_t)gain_factor) << shift));       \
         } else {                                                               \
             write_hps_reg("rx" STR(ch) "1", base_factor);                  \
-            read_hps_reg(force_stream_map[channel], &old_val);                      \
-            write_hps_reg(force_stream_map[channel], old_val & ~(1 << 15));         \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                      \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));         \
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
@@ -884,30 +882,27 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(force_stream_map[channel], &old_val);                          \
-        write_hps_reg(force_stream_map[channel],                                    \
+        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
+        write_hps_reg(rx_reg4_map[INT(ch)],                                    \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(force_stream_map[channel], &old_val);                              \
-        write_hps_reg(force_stream_map[channel], old_val | 0x2);                        \
-        write_hps_reg(force_stream_map[channel], old_val & ~0x2);                       \
+        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
+        write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                        \
+        write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_loopback(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(force_stream_map[channel], &old_val);                              \
+        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(force_stream_map[channel], (old_val & ~0x1e00) | 0x400);      \
+            write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x400);      \
         else                                                                   \
-            write_hps_reg(force_stream_map[channel], (old_val & ~0x1e00) | 0x000);      \
+            write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -918,12 +913,11 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_rx_##ch##_link_vita_en(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
-        char channel = STR(ch)[0] - 'a';\
-        read_hps_reg(force_stream_map[channel], &old_val);                              \
+        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(force_stream_map[channel], old_val | (1 << 14));              \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 14));              \
         else                                                                   \
-            write_hps_reg(force_stream_map[channel], old_val & ~(1 << 14));             \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
                                                                                \
         /*sync_channels( 15 ); */                                              \
                                                                                \
@@ -986,14 +980,13 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     \
     static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        char channel = STR(ch)[0] - 'a';\
         if(data[0]=='0') {\
-            write_hps_reg(force_stream_map[channel], 0x6002);\
-            rx_stream[channel] = STREAM_OFF;\
+            write_hps_reg(rx_reg4_map[INT(ch)], 0x6002);\
+            rx_stream[INT(ch)] = STREAM_OFF;\
         }\
         else {\
-            write_hps_reg(force_stream_map[channel], 0x2100);\
-            rx_stream[channel] = STREAM_ON;\
+            write_hps_reg(rx_reg4_map[INT(ch)], 0x2100);\
+            rx_stream[INT(ch)] = STREAM_ON;\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
@@ -1002,31 +995,30 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         uint32_t old_val;                                                      \
         uint8_t stream;                                                        \
         sscanf(data, "%" SCNd8 "", &stream);                                   \
-        char channel = STR(ch)[0] - 'a';\
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
         if (stream > 1) {                                                      \
-            sprintf(ret, "%u", rx_stream[channel]); /* Alert File Tree */      \
+            sprintf(ret, "%u", rx_stream[INT(ch)]); /* Alert File Tree */      \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
         printf("T3\n");\
         /* Stream is already ON or OFF then return */                          \
-        if (stream == rx_stream[channel])                                      \
+        if (stream == rx_stream[INT(ch)])                                      \
             return RETURN_SUCCESS;                                             \
                                                                                \
         printf("T5\n");\
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
-            if (rx_power[channel] == PWR_ON) {                                 \
-                read_hps_reg(force_stream_map[channel], &old_val);                         \
-                write_hps_reg(force_stream_map[channel], old_val | 0x100);                 \
+            if (rx_power[INT(ch)] == PWR_ON) {                                 \
+                read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                         \
+                write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x100);                 \
                                                                                \
-                read_hps_reg(force_stream_map[channel], &old_val);                         \
-                write_hps_reg(force_stream_map[channel], old_val | 0x2);                   \
-                write_hps_reg(force_stream_map[channel], old_val &(~0x2));                 \
+                read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                         \
+                write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                   \
+                write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                 \
                                                                                \
-                rx_stream[channel] = STREAM_ON;                                \
+                rx_stream[INT(ch)] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
@@ -1034,14 +1026,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
-            read_hps_reg(force_stream_map[channel], &old_val);                      \
-            write_hps_reg(force_stream_map[channel], old_val | 0x2);                \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                      \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(force_stream_map[channel], &old_val);                      \
-            write_hps_reg(force_stream_map[channel], old_val &(~0x100));            \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                      \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));            \
                                                                                \
-            rx_stream[channel] = STREAM_OFF;                                   \
+            rx_stream[INT(ch)] = STREAM_OFF;                                   \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1052,10 +1044,9 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         uint8_t power;                                                         \
         uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
-        char channel = STR(ch)[0] - 'a';\
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[channel] == PWR_ON)                    \
+        if (power >= PWR_ON && rx_power[INT(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
@@ -1063,15 +1054,15 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
-            rx_power[channel] = PWR_ON;                                        \
+            rx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
             /* board command */           \
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
-                read_hps_reg(force_stream_map[i], &old_val);                               \
-                write_hps_reg(force_stream_map[i], old_val & ~0x100);                      \
+                read_hps_reg(rx_reg4_map[i], &old_val);                               \
+                write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
             /* send sync pulse */                                              \
             sync_channels(15);                                                 \
@@ -1079,11 +1070,11 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 if (rx_stream[i] == PWR_ON) {                               \
-                    read_hps_reg(force_stream_map[i], &old_val);                           \
-                    write_hps_reg(force_stream_map[i], old_val | 0x100);                   \
-                    read_hps_reg(force_stream_map[i], &old_val);                           \
-                    write_hps_reg(force_stream_map[i], old_val | 0x2);                     \
-                    write_hps_reg(force_stream_map[i], old_val &(~0x2));                   \
+                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
+                    write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
+                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
+                    write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
+                    write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
                                                                                \
@@ -1093,20 +1084,20 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[channel] = PWR_OFF;                                       \
-            rx_stream[channel] = STREAM_OFF;                                   \
+            rx_power[INT(ch)] = PWR_OFF;                                       \
+            rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
             /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
             /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
                                                                                \
             /* disable DSP core */                                             \
-            read_hps_reg(force_stream_map[channel], &old_val);                          \
-            write_hps_reg(force_stream_map[channel], old_val | 0x2);                    \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(force_stream_map[channel], &old_val);                          \
-            write_hps_reg(force_stream_map[channel], old_val &(~0x100));                \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
