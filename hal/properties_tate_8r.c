@@ -1002,12 +1002,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
-        printf("T3\n");\
         /* Stream is already ON or OFF then return */                          \
         if (stream == rx_stream[INT(ch)])                                      \
             return RETURN_SUCCESS;                                             \
                                                                                \
-        printf("T5\n");\
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
             if (rx_power[INT(ch)] == PWR_ON) {                                 \
@@ -1022,7 +1020,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
-            printf("T8\n");\
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
