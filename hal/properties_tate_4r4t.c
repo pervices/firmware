@@ -1950,18 +1950,23 @@ CHANNELS
             gain-= RX_HIGH_GAIN_OFFSET;\
             uint8_t lna_bypass;\
             if (gain <= LTC5586_MIN_GAIN) {\
-                gain = LTC5586_MIN_GAIN;\
                 lna_bypass = 1;\
+                atten = LTC5586_MIN_GAIN - gain;\
+                gain = LTC5586_MIN_GAIN;\
             } else if (gain <= LTC5586_MAX_GAIN) {\
                 lna_bypass = 1;\
+                atten = 0;\
             } else if (gain <= AM1075_GAIN + LTC5586_MIN_GAIN) {\
                 lna_bypass = 0;\
+                atten = AM1075_GAIN + LTC5586_MIN_GAIN - gain;\
                 gain = AM1075_GAIN + LTC5586_MIN_GAIN;\
             } else if (gain <= AM1075_GAIN + LTC5586_MAX_GAIN) {\
                 lna_bypass = 0;\
+                atten = 0;\
             } else {\
                 lna_bypass = 0;\
                 gain = AM1075_GAIN + LTC5586_MAX_GAIN;\
+                atten = 0;\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
