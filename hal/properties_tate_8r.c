@@ -55,6 +55,7 @@
 #define LTC5586_MIN_ATTEN 0
 
 //used in rx gain calculations so that the user specifying a gain of 0 results in minimum gain
+#define RX_LOW_GAIN_OFFSET 6
 #define RX_MID_GAIN_OFFSET 23
 #define RX_HIGH_GAIN_OFFSET 23
 
@@ -594,6 +595,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
+            gain-= RX_LOW_GAIN_OFFSET;\
             /*LMH6401 Gain Range: -6dB to 26dB*/                               \
             if (gain > 26) {                                                   \
                 gain = 26;                                                     \
@@ -605,7 +607,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             sprintf(buf + strlen(buf), "%i", atten);                           \
             strcat(buf, "\r");                                                 \
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));         \
-            net_gain = gain;\
+            net_gain = gain + RX_LOW_GAIN_OFFSET;\
         } else if (band == 1) {                                                \
             gain-= RX_MID_GAIN_OFFSET;\
             /*lna_bypass means bypass the lna (AM1081) */                      \
@@ -620,13 +622,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else if (gain <= AM1081_GAIN + LTC5586_MIN_GAIN) {\
                 lna_bypass = 0;\
                 atten = AM1081_GAIN + LTC5586_MIN_GAIN - gain;\
-                gain = AM1081_GAIN + LTC5586_MIN_GAIN;\
+                gain = LTC5586_MIN_GAIN;\
             } else if (gain <= AM1081_GAIN + LTC5586_MAX_GAIN) {\
                 lna_bypass = 0;\
                 atten = 0;\
+                gain = gain - AM1081_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = AM1081_GAIN + LTC5586_MAX_GAIN;\
+                gain = LTC5586_MAX_GAIN;\
                 atten = 0;\
             }\
             \
@@ -638,11 +641,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             \
             /*Sets gain on the rx board*/\
             strcpy(buf, "rf -g ");                                         \
-            if(lna_bypass == 1) {\
-                sprintf(buf + strlen(buf), "%i", gain);                        \
-            } else {\
-                sprintf(buf + strlen(buf), "%i", gain - AM1081_GAIN);                        \
-            }\
+            sprintf(buf + strlen(buf), "%i", gain);                        \
             strcat(buf, "\r");                                             \
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
             \
@@ -660,18 +659,24 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             gain-= RX_HIGH_GAIN_OFFSET;\
             uint8_t lna_bypass;\
             if (gain <= LTC5586_MIN_GAIN) {\
-                gain = LTC5586_MIN_GAIN;\
                 lna_bypass = 1;\
+                atten = LTC5586_MIN_GAIN - gain;\
+                gain = LTC5586_MIN_GAIN;\
             } else if (gain <= LTC5586_MAX_GAIN) {\
                 lna_bypass = 1;\
+                atten = 0;\
             } else if (gain <= AM1075_GAIN + LTC5586_MIN_GAIN) {\
                 lna_bypass = 0;\
-                gain = AM1075_GAIN + LTC5586_MIN_GAIN;\
+                atten = AM1075_GAIN + LTC5586_MIN_GAIN - gain;\
+                gain = LTC5586_MIN_GAIN;\
             } else if (gain <= AM1075_GAIN + LTC5586_MAX_GAIN) {\
                 lna_bypass = 0;\
+                atten = 0;\
+                gain = gain - AM1075_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = AM1075_GAIN + LTC5586_MAX_GAIN;\
+                gain = LTC5586_MAX_GAIN;\
+                atten = 0;\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -682,11 +687,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             \
             /*Sets gain on the rx board*/\
             strcpy(buf, "rf -g ");                                         \
-            if(lna_bypass == 1) {\
-                sprintf(buf + strlen(buf), "%i", gain);                        \
-            } else {\
-                sprintf(buf + strlen(buf), "%i", gain - AM1075_GAIN);                        \
-            }\
+            sprintf(buf + strlen(buf), "%i", gain);                        \
             strcat(buf, "\r");                                             \
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
             /*Sets the state tree property to handle the attenuation*/\
@@ -1004,10 +1005,12 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
+        printf("T3\n");\
         /* Stream is already ON or OFF then return */                          \
         if (stream == rx_stream[channel])                                      \
             return RETURN_SUCCESS;                                             \
                                                                                \
+        printf("T5\n");\
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
             if (rx_power[channel] == PWR_ON) {                                 \
@@ -1022,6 +1025,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
                 sprintf(ret, "%u", 0); /* Alert File Tree */                   \
+            printf("T8\n");\
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
@@ -1585,6 +1589,8 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -k\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1594,6 +1600,8 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -q\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1603,6 +1611,8 @@ static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -j\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1612,6 +1622,8 @@ static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -p\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -1621,6 +1633,8 @@ static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_all(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -r\r");
+    } else {
+        strcpy(buf, "\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -3040,6 +3054,10 @@ void sync_channels(uint8_t chan_mask) {
     write_hps_reg("res_rw7", 0x20000000);
     write_hps_reg("res_rw7", 0);
 
+    // Set time board to continuous mode.
+    strcpy(buf, "debug -l 7 -r 139 -w 3\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
     
     while ((i_reset < max_attempts) && (jesd_good == false)) {
@@ -3047,11 +3065,11 @@ void sync_channels(uint8_t chan_mask) {
         // FPGA JESD IP reset
         write_hps_reg("res_rw7",0x10000000);
         write_hps_reg("res_rw7", 0);
-        usleep(100000); // Some wait time for MCUs to be ready
+        usleep(400000); // Some wait time for MCUs to be ready
         /* Trigger a SYSREF pulse */
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        usleep(200000); // Some wait time for MCUs to be ready
+        // strcpy(buf, "sync -k\r");
+        // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
         if ((reg_val  & 0xff)== jesd_good_code) {
             PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
@@ -3061,6 +3079,11 @@ void sync_channels(uint8_t chan_mask) {
     if (jesd_good != true) {
         PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
     }
+
+    //Return to pulsed Sysref Mode
+    strcpy(buf, "debug -l 7 -r 139 -w 2\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     return;
 }
 

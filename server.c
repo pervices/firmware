@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
       */
 
     // 1. set the time board back to pulsed sysref mode
-    set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
+    set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
      
 // 2. check that time board plls are locked
     if (property_good("time/status/status_good") != 1) {
@@ -205,13 +205,13 @@ int main(int argc, char *argv[]) {
             PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
             write_hps_reg("res_rw7", 0x10000000); // reset FPGA JESD IP
             write_hps_reg("res_rw7", 0); // clear reset bit
-            usleep(200000); // wait 0.2s
-            set_property("/var/cyan/state/time/sync/lmk_sync_tgl_jesd","1"); // issue sysref pulse
-            usleep(200000); // wait 0.2s
+            usleep(300000); // wait 0.3s
         } else {
             i++;
         }
     }
+
+    set_property("/var/cyan/state/time/sync/sysref_mode","pulsed"); // go back to pulsed mode
      
     if (count_bad >= max_attempts) {
         for (i = 0; i < NUM_CHANNELS; i++) {
