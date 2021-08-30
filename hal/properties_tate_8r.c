@@ -55,6 +55,7 @@
 #define LTC5586_MIN_ATTEN 0
 
 //used in rx gain calculations so that the user specifying a gain of 0 results in minimum gain
+#define RX_LOW_GAIN_OFFSET 6
 #define RX_MID_GAIN_OFFSET 23
 #define RX_HIGH_GAIN_OFFSET 23
 
@@ -594,6 +595,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
+            gain-= RX_LOW_GAIN_OFFSET;\
             /*LMH6401 Gain Range: -6dB to 26dB*/                               \
             if (gain > 26) {                                                   \
                 gain = 26;                                                     \
@@ -605,7 +607,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             sprintf(buf + strlen(buf), "%i", atten);                           \
             strcat(buf, "\r");                                                 \
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));         \
-            net_gain = gain;\
+            net_gain = gain + RX_LOW_GAIN_OFFSET;\
         } else if (band == 1) {                                                \
             gain-= RX_MID_GAIN_OFFSET;\
             /*lna_bypass means bypass the lna (AM1081) */                      \
