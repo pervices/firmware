@@ -55,6 +55,7 @@
 #define LTC5586_MIN_ATTEN 0
 
 //used in rx gain calculations so that the user specifying a gain of 0 results in minimum gain
+#define RX_LOW_GAIN_OFFSET 6
 #define RX_MID_GAIN_OFFSET 23
 #define RX_HIGH_GAIN_OFFSET 23
 
@@ -600,6 +601,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
+            gain-= RX_LOW_GAIN_OFFSET;\
             /*LMH6401 Gain Range: -6dB to 26dB*/                               \
             if (gain > 26) {                                                   \
                 gain = 26;                                                     \
@@ -611,7 +613,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             sprintf(buf + strlen(buf), "%i", atten);                           \
             strcat(buf, "\r");                                                 \
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));         \
-            net_gain = gain;\
+            net_gain = gain + RX_LOW_GAIN_OFFSET;\
         } else if (band == 1) {                                                \
             gain-= RX_MID_GAIN_OFFSET;\
             /*lna_bypass means bypass the lna (AM1081) */                      \
@@ -626,13 +628,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else if (gain <= AM1081_GAIN + LTC5586_MIN_GAIN) {\
                 lna_bypass = 0;\
                 atten = AM1081_GAIN + LTC5586_MIN_GAIN - gain;\
-                gain = AM1081_GAIN + LTC5586_MIN_GAIN;\
+                gain = LTC5586_MIN_GAIN;\
             } else if (gain <= AM1081_GAIN + LTC5586_MAX_GAIN) {\
                 lna_bypass = 0;\
                 atten = 0;\
+                gain = gain - AM1081_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = AM1081_GAIN + LTC5586_MAX_GAIN;\
+                gain = LTC5586_MAX_GAIN;\
                 atten = 0;\
             }\
             \
@@ -644,11 +647,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             \
             /*Sets gain on the rx board*/\
             strcpy(buf, "rf -g ");                                         \
-            if(lna_bypass == 1) {\
-                sprintf(buf + strlen(buf), "%i", gain);                        \
-            } else {\
-                sprintf(buf + strlen(buf), "%i", gain - AM1081_GAIN);                        \
-            }\
+            sprintf(buf + strlen(buf), "%i", gain);                        \
             strcat(buf, "\r");                                             \
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
             \
@@ -666,18 +665,24 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             gain-= RX_HIGH_GAIN_OFFSET;\
             uint8_t lna_bypass;\
             if (gain <= LTC5586_MIN_GAIN) {\
-                gain = LTC5586_MIN_GAIN;\
                 lna_bypass = 1;\
+                atten = LTC5586_MIN_GAIN - gain;\
+                gain = LTC5586_MIN_GAIN;\
             } else if (gain <= LTC5586_MAX_GAIN) {\
                 lna_bypass = 1;\
+                atten = 0;\
             } else if (gain <= AM1075_GAIN + LTC5586_MIN_GAIN) {\
                 lna_bypass = 0;\
-                gain = AM1075_GAIN + LTC5586_MIN_GAIN;\
+                atten = AM1075_GAIN + LTC5586_MIN_GAIN - gain;\
+                gain = LTC5586_MIN_GAIN;\
             } else if (gain <= AM1075_GAIN + LTC5586_MAX_GAIN) {\
                 lna_bypass = 0;\
+                atten = 0;\
+                gain = gain - AM1075_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = AM1075_GAIN + LTC5586_MAX_GAIN;\
+                gain = LTC5586_MAX_GAIN;\
+                atten = 0;\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -688,11 +693,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             \
             /*Sets gain on the rx board*/\
             strcpy(buf, "rf -g ");                                         \
-            if(lna_bypass == 1) {\
-                sprintf(buf + strlen(buf), "%i", gain);                        \
-            } else {\
-                sprintf(buf + strlen(buf), "%i", gain - AM1075_GAIN);                        \
-            }\
+            sprintf(buf + strlen(buf), "%i", gain);                        \
             strcat(buf, "\r");                                             \
             ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
             /*Sets the state tree property to handle the attenuation*/\

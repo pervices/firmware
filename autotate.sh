@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# For 4R4T use TATE_4R4T
+# For 8R use TATE_8R
+
 ./autogen.sh clean
 ./autogen.sh
 
