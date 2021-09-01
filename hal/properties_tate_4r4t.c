@@ -114,16 +114,6 @@ static uint8_t tx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
 static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
-//old method of mapping rx_4
-static const char *reg4[] = {
-#define X(ch, io, crx, ctx) "rx"STR(ch)"4",
-    CHANNELS
-#undef X
-#define X(ch, io, crx, ctx) "tx"STR(ch)"4",
-    CHANNELS
-#undef X
-};
-
 uint8_t *_save_profile;
 uint8_t *_load_profile;
 char *_save_profile_path;
@@ -949,14 +939,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             uint32_t old_val;                                                  \
                                                                                \
             /* disable DSP cores */                                            \
-            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
             PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
                   toupper(CHR(ch)));                                           \
-            write_hps_reg("tx" STR_TX(ctx) "4", old_val | 0x2);                    \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
-            write_hps_reg("tx" STR_TX(ctx) "4", old_val &(~0x100));                \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x100));                \
                                                                                \
             tx_power[INT_TX(ch)] = PWR_OFF;                                       \
                                                                                \
@@ -2338,9 +2328,9 @@ CHANNELS
                 write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
             /*temporary disables tx dsp channels*/\
-            for (i = NUM_CHANNELS; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i], &old_val);                               \
-                write_hps_reg(reg4[i], old_val & ~0x100);                      \
+            for (i = 0; i < (NUM_CHANNELS); i++) {                         \
+                read_hps_reg(tx_reg4_map[i], &old_val);                               \
+                write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
                                                                                \
             /* send sync pulse */                                              \
@@ -2350,13 +2340,13 @@ CHANNELS
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 /*temporarily disabled because its causeing issue with getting rx working*/\
                 /*if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    write_hps_reg(reg4[i + 16], old_val | 0x100);              \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
+                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
+                    write_hps_reg(tx_reg4_map[i], old_val | 0x100);              \
+                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
                     PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
                           toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 16], old_val | 0x2);                \
-                    write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
+                    write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
+                    write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
                 }*/                                                              \
                 if (rx_stream[i] == PWR_ON) {                               \
                     read_hps_reg(rx_reg4_map[i], &old_val);                           \
