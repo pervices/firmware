@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     char prop_path[32];
     char tmp_char;
     int count_bad = 0;
-    int max_attempts = 1;
+    int max_attempts = 0;
 
     const int port_nums[] = {
         /* UDP management port */
