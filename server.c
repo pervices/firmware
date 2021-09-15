@@ -210,15 +210,22 @@ int main(int argc, char *argv[]) {
             if(jesd_s[m] !=1) {
                 //reset jesd
                 //reads current register value
+                uint32_t value;
+                //TODO: change this be easier to port, currently only works with 8r
                 //clear csr_link_reinit
+                read_jesd_reg(m, 0x54, &value);
+                value = value & ~0x1;
+                write_jesd_reg(m, 0x54, value);
                 //set csr_link_reinit and csr_sysref_singledet
-                //gets the new jesd status
+                value = value | 5;
+                write_jesd_reg(m, 0x54, value);
                 //TODO parallelize getting the new jesd status
                 strcpy(&prop_path,"rx/");
                 tmp_char = m + 'a';
                 strcat(&prop_path,&tmp_char);
                 strcat(&prop_path,"/jesd_status");
                 jesd_s[m] = property_good(&prop_path);
+                //TODO: add check to send sysref pulse if not in continuous
 
             }
         }
