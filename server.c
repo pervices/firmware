@@ -205,6 +205,27 @@ int main(int argc, char *argv[]) {
     }
 
     //TODO run jesd reset stuff through properties
+    for(int n = 0; n < max_attempts; n++) {
+        for(int m = 0; m < NUM_CHANNELS; m++) {
+            //property_good uses 1 to inidcate good, 5 to indicate bad
+            if(jesd_s[m] !=1) {
+                strcpy(&prop_path,"rx/");
+                tmp_char = m + 'a';
+                strcat(&prop_path,&tmp_char);
+                strcat(&prop_path,"/jesd/reset");
+                set_property(&prop_path,"continuous");
+
+                //TODO parallelize getting the new jesd status
+                strcpy(&prop_path,"rx/");
+                tmp_char = m + 'a';
+                strcat(&prop_path,&tmp_char);
+                strcat(&prop_path,"/jesd_status");
+                jesd_s[m] = property_good(&prop_path);
+                //TODO: add check to send sysref pulse if not in continuous
+
+            }
+        }
+    }
 
     set_property("/var/cyan/state/time/sync/sysref_mode","pulsed"); // go back to pulsed mode
      
