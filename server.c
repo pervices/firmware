@@ -209,13 +209,26 @@ int main(int argc, char *argv[]) {
             //property_good uses 1 to inidcate good, 5 to indicate bad
             if(jesd_s[m] !=1) {
                 //reset jesd
-                //reads current register value
+                //this will only work on 8R
+                //TODO: move this to the properties file
+                uint32_t individual_reset_bit = 1 << (m + 8);
+                printf("channel %i\n", m);
+                printf("individual_reset_bit: %x\n", individual_reset_bit);
+                write_hps_reg("res_rw7",  individual_reset_bit);
+                //this wait is needed
+                usleep(300000);
+                write_hps_reg("res_rw7", 0);
+                //this wait is need
+                usleep(150000);
+                //reads current jesd register value
                 uint32_t value;
                 //TODO: change this be easier to port, currently only works with 8r
                 //clear csr_link_reinit
                 read_jesd_reg(m, 0x54, &value);
                 value = value & ~0x1;
                 write_jesd_reg(m, 0x54, value);
+                //this wait is needed
+                usleep(150000);
                 //set csr_link_reinit and csr_sysref_singledet
                 value = value | 5;
                 write_jesd_reg(m, 0x54, value);
@@ -228,24 +241,6 @@ int main(int argc, char *argv[]) {
                 //TODO: add check to send sysref pulse if not in continuous
 
             }
-        }
-    }
-
-    while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
-        strcpy(&prop_path,"rx/");
-        tmp_char = i + 'a';
-        strcat(&prop_path,&tmp_char);
-        strcat(&prop_path,"/jesd_status");
-        PRINT(INFO,"PROPERTY: %s\n",prop_path);
-        if (property_good(&prop_path) != 1) {
-            count_bad += 1;
-            i = 0; // restart checking from the beginning
-            PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
-            write_hps_reg("res_rw7", 0x10000000); // reset FPGA JESD IP
-            write_hps_reg("res_rw7", 0); // clear reset bit
-            usleep(300000); // wait 0.3s
-        } else {
-            i++;
         }
     }
 
