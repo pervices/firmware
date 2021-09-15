@@ -43,7 +43,6 @@
 #include "channels.h"
 
 int main(int argc, char *argv[]) {
-
     int ret = 0;
     int i = 0;
     cmd_t cmd = {0};
@@ -120,6 +119,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+
     PRINT(INFO, "Starting Cyan server\n");
 
     server_init_led();
@@ -193,6 +193,37 @@ int main(int argc, char *argv[]) {
     // TODO: add a check for the TX board JESD links
     i = 0;
     count_bad = 0;
+    uint8_t jesd_s[NUM_CHANNELS];
+
+    //a value of 5 here will either indicate that the link is down or hasn't been check yet (same value as used by propery_good function)
+    for(int n = 0; n < NUM_CHANNELS; n++) {
+        strcpy(&prop_path,"rx/");
+        tmp_char = n + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/jesd_status");
+        jesd_s[n] = property_good(&prop_path);
+    }
+
+    for(int n = 0; n < max_attempts; n++) {
+        for(int m = 0; m < NUM_CHANNELS; m++) {
+            //property_good uses 1 to inidcate good, 5 to indicate bad
+            if(jesd_s[m] !=1) {
+                //reset jesd
+                //reads current register value
+                //clear csr_link_reinit
+                //set csr_link_reinit and csr_sysref_singledet
+                //gets the new jesd status
+                //TODO parallelize getting the new jesd status
+                strcpy(&prop_path,"rx/");
+                tmp_char = m + 'a';
+                strcat(&prop_path,&tmp_char);
+                strcat(&prop_path,"/jesd_status");
+                jesd_s[m] = property_good(&prop_path);
+
+            }
+        }
+    }
+
     while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
         strcpy(&prop_path,"rx/");
         tmp_char = i + 'a';
