@@ -204,45 +204,7 @@ int main(int argc, char *argv[]) {
         jesd_s[n] = property_good(&prop_path);
     }
 
-    for(int n = 0; n < max_attempts; n++) {
-        for(int m = 0; m < NUM_CHANNELS; m++) {
-            //property_good uses 1 to inidcate good, 5 to indicate bad
-            if(jesd_s[m] !=1) {
-                //reset jesd
-                //this will only work on 8R
-                //TODO: move this to the properties file
-                uint32_t individual_reset_bit = 1 << (m + 8);
-                printf("channel %i\n", m);
-                printf("individual_reset_bit: %x\n", individual_reset_bit);
-                write_hps_reg("res_rw7",  individual_reset_bit);
-                //this wait is needed
-                usleep(300000);
-                write_hps_reg("res_rw7", 0);
-                //this wait is need
-                usleep(150000);
-                //reads current jesd register value
-                uint32_t value;
-                //TODO: change this be easier to port, currently only works with 8r
-                //clear csr_link_reinit
-                read_jesd_reg(m, 0x54, &value);
-                value = value & ~0x1;
-                write_jesd_reg(m, 0x54, value);
-                //this wait is needed
-                usleep(150000);
-                //set csr_link_reinit and csr_sysref_singledet
-                value = value | 5;
-                write_jesd_reg(m, 0x54, value);
-                //TODO parallelize getting the new jesd status
-                strcpy(&prop_path,"rx/");
-                tmp_char = m + 'a';
-                strcat(&prop_path,&tmp_char);
-                strcat(&prop_path,"/jesd_status");
-                jesd_s[m] = property_good(&prop_path);
-                //TODO: add check to send sysref pulse if not in continuous
-
-            }
-        }
-    }
+    //TODO run jesd reset stuff through properties
 
     set_property("/var/cyan/state/time/sync/sysref_mode","pulsed"); // go back to pulsed mode
      

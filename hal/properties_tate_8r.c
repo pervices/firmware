@@ -1164,6 +1164,28 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             strcpy(ret, "bad");                                                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
+     }\
+     /*This function will need to be changed to most ports*/\
+     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
+        uint32_t individual_reset_bit = 1 << (INT(ch) + 8);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        /*reads current jesd register value*/\
+        uint32_t value;\
+        /*clear csr_link_reinit*/\
+        read_jesd_reg(INT_RX(ch), 0x54, &value);\
+        value = value & ~0x1;\
+        write_jesd_reg(INT_RX(ch), 0x54, value);\
+        usleep(300000);\
+        /*set csr_link_reinit and csr_sysref_singledet*/\
+        value = value | 5;\
+        write_jesd_reg(INT_RX(ch), 0x54, value);\
+        /*TODO: add check to send sysref pulse if not in continuous*/\
+        return RETURN_SUCCESS;                                                 \
      }
 CHANNELS
 #undef X
@@ -2676,6 +2698,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "bad")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                           RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
