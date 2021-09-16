@@ -193,22 +193,30 @@ int main(int argc, char *argv[]) {
     // TODO: add a check for the TX board JESD links
     i = 0;
     count_bad = 0;
-    uint8_t jesd_s[NUM_CHANNELS];
+    uint8_t jesd_s_rx[NUM_RX_CHANNELS];
+    uint8_t jesd_s_tx[NUM_TX_CHANNELS];
 
     //a value of 5 here will either indicate that the link is down or hasn't been check yet (same value as used by propery_good function)
-    for(int n = 0; n < NUM_CHANNELS; n++) {
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         strcpy(&prop_path,"rx/");
         tmp_char = n + 'a';
         strcat(&prop_path,&tmp_char);
         strcat(&prop_path,"/jesd_status");
-        jesd_s[n] = property_good(&prop_path);
+        jesd_s_rx[n] = property_good(&prop_path);
+    }
+    for(int n = 0; n < NUM_TX_CHANNELS; n++) {
+        strcpy(&prop_path,"tx/");
+        tmp_char = n + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/jesd_status");
+        jesd_s_tx[n] = property_good(&prop_path);
     }
 
     //TODO run jesd reset stuff through properties
     for(int n = 0; n < max_attempts; n++) {
         for(int m = 0; m < NUM_RX_CHANNELS; m++) {
             //property_good uses 1 to inidcate good, 5 to indicate bad
-            if(jesd_s[m] !=1) {
+            if(jesd_s_rx[m] !=1) {
                 strcpy(&prop_path,"rx/");
                 tmp_char = m + 'a';
                 strcat(&prop_path,&tmp_char);
@@ -220,15 +228,13 @@ int main(int argc, char *argv[]) {
                 tmp_char = m + 'a';
                 strcat(&prop_path,&tmp_char);
                 strcat(&prop_path,"/jesd_status");
-                jesd_s[m] = property_good(&prop_path);
-                //TODO: add check to send sysref pulse if not in continuous
-
+                jesd_s_rx[m] = property_good(&prop_path);
             }
         }
         for(int m = 0; m < NUM_TX_CHANNELS; m++) {
             //property_good uses 1 to inidcate good, 5 to indicate bad
-            if(jesd_s[m] !=1) {
-                strcpy(&prop_path,"rx/");
+            if(jesd_s_tx[m] !=1) {
+                strcpy(&prop_path,"tx/");
                 tmp_char = m + 'a';
                 strcat(&prop_path,&tmp_char);
                 strcat(&prop_path,"/jesd/reset");
@@ -239,9 +245,7 @@ int main(int argc, char *argv[]) {
                 tmp_char = m + 'a';
                 strcat(&prop_path,&tmp_char);
                 strcat(&prop_path,"/jesd_status");
-                jesd_s[m] = property_good(&prop_path);
-                //TODO: add check to send sysref pulse if not in continuous
-
+                jesd_s_tx[m] = property_good(&prop_path);
             }
         }
     }
