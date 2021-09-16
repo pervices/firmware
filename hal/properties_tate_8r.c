@@ -1176,16 +1176,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         write_hps_reg("res_rw7", 0);\
         /*this wait is need*/\
         usleep(300000);\
-        /*reads current jesd register value*/\
-        uint32_t value;\
-        /*clear csr_link_reinit*/\
-        read_jesd_reg(INT_RX(ch), 0x54, &value);\
-        value = value & ~0x1;\
-        write_jesd_reg(INT_RX(ch), 0x54, value);\
-        usleep(300000);\
-        /*set csr_link_reinit and csr_sysref_singledet*/\
-        value = value | 5;\
-        write_jesd_reg(INT_RX(ch), 0x54, value);\
         /*TODO: add check to send sysref pulse if not in continuous*/\
         return RETURN_SUCCESS;                                                 \
      }
