@@ -1053,6 +1053,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         if (power >= PWR_ON) {                                                 \
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            set_property("time/sync/sysref_mode", "continuous");\
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
@@ -1105,6 +1106,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
         int reboot;                                                            \
         sscanf(data, "%i", &reboot);                                           \
+        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         if (reboot == 1) {                                                     \
             strcpy(buf, "board -r\r");                                         \
@@ -2646,7 +2648,7 @@ GPIO_PINS
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
     DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")             
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")
     
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
