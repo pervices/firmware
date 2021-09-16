@@ -153,6 +153,35 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in sa;
     socklen_t sa_len;
 
+    int32_t child_pid_rx[NUM_RX_CHANNELS];
+    int32_t child_pid_tx[NUM_TX_CHANNELS];
+
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        child_pid_rx[n] = fork();
+        if(child_pid_rx[n]==0) {
+            char pwr_cmd [40];
+            //TODO: make this easier to port
+            sprintf(pwr_cmd, "rfe_control %d on", ((int)((n%4)*4)+(1*(n/4))));
+            printf("rx pwr_cmd: %s", pwr_cmd);
+            system(pwr_cmd);
+            _Exit(0);
+        }
+    }
+    for(int n = 0; n < NUM_TX_CHANNELS; n++) {
+        child_pid_tx[n] = fork();
+        if(child_pid_tx[n]==0) {
+            char pwr_cmd [40];
+            //TODO: make this easier to port
+            sprintf(pwr_cmd, "rfe_control %d on", ((int)(4*(CHR_RX(ch) - 'a')) + 2));
+            printf("tx pwr_cmd: %s", pwr_cmd);
+            system(pwr_cmd);
+            _Exit(0);
+        }
+    }
+
+    usleep(20000000);
+    exit(0);
+
     // Initialize the properties, which is implemented as a Linux file structure
     const int t0 = time_it();
     init_property(options);
