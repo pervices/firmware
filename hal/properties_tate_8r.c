@@ -68,6 +68,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+#define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -1167,7 +1169,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
      }\
      /*This function will need to be changed to most ports*/\
      static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
-        uint32_t individual_reset_bit = 1 << (INT(ch) + 8);\
+        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
