@@ -42,7 +42,6 @@
 #include "time_it.h"
 #include "channels.h"
 #include <sys/signal.h>
-#include <errno.h>
 #include <sys/wait.h>
 
 int main(int argc, char *argv[]) {
@@ -156,10 +155,52 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in sa;
     socklen_t sa_len;
 
-    pid_t child_pid_rx[NUM_RX_CHANNELS];
-    uint8_t completed_pid_rx[NUM_RX_CHANNELS];
+    // Initialize the properties, which is implemented as a Linux file structure
+    const int t0 = time_it();
+    init_property(options);
+    const int t1 = time_it();
 
+    printf("boot time %d\n", t1 - t0);
+
+    inotify_fd = get_inotify_fd();
+
+    // Perform autocalibration of the frequency synthesizers
+    // N.B. this must be done after init_property() because uart init is mixed
+    // in with it for some reason
+    //atexit(synth_lut_disable_all);
+    //synth_lut_enable_all_if_calibrated();
+
+    // Pass the profile pointers down to properties.c
+    pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
+                              save_profile_path);
+    
+    /* Final checks
+     * 1. Set time board to pulsed mode.
+     * 2. Ensure that time board is locked. I think that we are not permitted to reset the tim eboard anymore because that would mess up the TX JESD part of the FPGA, so it would be bad id the time board is not locked. Double check this.
+     * 3. Ensure TX boards and RX board JESD links are good. This has to be a single step, because the process for fixing any bad JESD links (for either type of board) involves resetting JESD part of FPGA, which might cause other boards to lose JESD link.
+      */
+
+    // 1. set the time board back to pulsed sysref mode
+    set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
+     
+// 2. check that time board plls are locked
+    if (property_good("time/status/status_good") != 1) {
+        PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
+        write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
+        usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
+        //abort();
+    } 
+
+        pid_t child_pid_rx[NUM_RX_CHANNELS];
+    uint8_t completed_pid_rx[NUM_RX_CHANNELS];
     char rx_slot_s[NUM_RX_CHANNELS][10];
+
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        char pwr_cmd [40];
+        uint8_t rfe_slot = ((int)((n%4)*4)+(1*(n/4)));
+        sprintf(pwr_cmd, "rfe_control %d off", rfe_slot);
+        system(pwr_cmd);
+    }
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         child_pid_rx[n] = fork();
         if(child_pid_rx[n]==0) {
@@ -202,42 +243,6 @@ int main(int argc, char *argv[]) {
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         PRINT(INFO, "rx_board_present: %i\n", rx_board_present[n]);
     }
-
-    // Initialize the properties, which is implemented as a Linux file structure
-    const int t0 = time_it();
-    init_property(options);
-    const int t1 = time_it();
-
-    printf("boot time %d\n", t1 - t0);
-
-    inotify_fd = get_inotify_fd();
-
-    // Perform autocalibration of the frequency synthesizers
-    // N.B. this must be done after init_property() because uart init is mixed
-    // in with it for some reason
-    //atexit(synth_lut_disable_all);
-    //synth_lut_enable_all_if_calibrated();
-
-    // Pass the profile pointers down to properties.c
-    pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
-                              save_profile_path);
-    
-    /* Final checks
-     * 1. Set time board to pulsed mode.
-     * 2. Ensure that time board is locked. I think that we are not permitted to reset the tim eboard anymore because that would mess up the TX JESD part of the FPGA, so it would be bad id the time board is not locked. Double check this.
-     * 3. Ensure TX boards and RX board JESD links are good. This has to be a single step, because the process for fixing any bad JESD links (for either type of board) involves resetting JESD part of FPGA, which might cause other boards to lose JESD link.
-      */
-
-    // 1. set the time board back to pulsed sysref mode
-    set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
-     
-// 2. check that time board plls are locked
-    if (property_good("time/status/status_good") != 1) {
-        PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
-        write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
-        usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
-        //abort();
-    } 
     
     // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links

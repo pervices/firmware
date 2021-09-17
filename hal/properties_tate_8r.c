@@ -1044,6 +1044,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         uint8_t power;                                                         \
         uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        \
+        if(rx_board_present[INT(ch)] == NOT_BOARD_EXISTS) return RETURN_ERROR;\
                                                                                \
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && rx_power[INT(ch)] == PWR_ON)                    \
