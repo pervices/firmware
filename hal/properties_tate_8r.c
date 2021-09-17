@@ -1050,7 +1050,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
@@ -1079,7 +1079,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             /* power off & stream off */                                       \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
+            sprintf(pwr_cmd, "rfe_control %d off n", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
             rx_power[INT(ch)] = PWR_OFF;                                       \
