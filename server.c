@@ -192,8 +192,10 @@ int main(int argc, char *argv[]) {
         PRINT(INFO, "errno: %i\n", errno);
         if (finished == 0) {
             kill(child_pid_rx[n], SIGTERM);
+            PRINT(INFO,"Board %i failed to boot, assuming it is unused\n", n);
             rx_board_present[n] = NOT_BOARD_EXISTS;
         } else {
+            PRINT(INFO,"Board %i succesfully booted\n", n);
             rx_board_present[n] = BOARD_EXISTS;
         }
     }
