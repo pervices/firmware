@@ -41,6 +41,9 @@
 #include "led.h"
 #include "time_it.h"
 #include "channels.h"
+#include <sys/signal.h>
+#include <errno.h>
+#include <sys/wait.h>
 
 int main(int argc, char *argv[]) {
     int ret = 0;
@@ -153,8 +156,8 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in sa;
     socklen_t sa_len;
 
-    int32_t child_pid_rx[NUM_RX_CHANNELS];
-    int32_t child_pid_tx[NUM_TX_CHANNELS];
+    pid_t child_pid_rx[NUM_RX_CHANNELS];
+    uint8_t completed_pid_rx[NUM_RX_CHANNELS];
 
     char rx_slot_s[NUM_RX_CHANNELS][10];
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
@@ -162,31 +165,46 @@ int main(int argc, char *argv[]) {
         if(child_pid_rx[n]==0) {
             char pwr_cmd [40];
             //TODO: make this easier to port
-            PRINT(INFO, "Starting rfe_control T1: %i\n", n);
             uint8_t rfe_slot = ((int)((n%4)*4)+(1*(n/4)));
-            PRINT(INFO, "Starting rfe_control T2: %i\n", n);
             sprintf(rx_slot_s[n], "%i", rfe_slot);
-            PRINT(INFO, "Starting rfe_control slot: %s\n", rx_slot_s[n]);
-            char* args[] = {"rfe_control", rx_slot_s[n], "off", NULL};
-            PRINT(INFO, "Starting rfe_control T4: %i\n", n);
-            execl("rfe_control", "rfe_control", rx_slot_s[n], "off", NULL);
-            PRINT(INFO, "Starting rfe_control failed: %i\n", n);
+            execl("rfe_control", "rfe_control", rx_slot_s[n], "on", NULL);
+
             exit(10);
         }
     }
-//     for(int n = 0; n < NUM_TX_CHANNELS; n++) {
-//         child_pid_tx[n] = fork();
-//         if(child_pid_tx[n]==0) {
-//             char pwr_cmd [40];
-//             //TODO: make this easier to port
-//             sprintf(pwr_cmd, "rfe_control %d off", ((int)(4*(CHR_RX(ch) - 'a')) + 2));
-//             //system(pwr_cmd);
-//             PRINT(INFO, "Starting rfe_control failed: %i\n", n);
-//             exit(10);
-//         }
-//     }
 
+    usleep(5000000);
+
+    time_t timeout_start;
+    time(&timeout_start);
+    time_t current_time;
+    int timeout = 20;
+    for (int n = 0; n < NUM_RX_CHANNELS; n++) {
+        time(&current_time);
+        int8_t finished = -1;
+        int status = 0;
+        //must run check at least once to see if the process finished, even if a previous one timed out
+        do {
+            time(&current_time);
+            finished = waitpid(child_pid_rx[n], &status, WNOHANG);
+        } while(current_time < timeout + timeout_start && finished == 0);
+        //by default, the pwr_cmd script will never finish until it detects a board
+        PRINT(INFO,"Finished: %i, n: %i, PID: %i, status: %i\n", finished, n, child_pid_rx[n], status);
+        PRINT(INFO, "current_time: %i, timeout: %i, timeout_start: %i\n", current_time, timeout, timeout_start);
+        PRINT(INFO, "errno: %i\n", errno);
+        if (finished == 0) {
+            kill(child_pid_rx[n], SIGTERM);
+            rx_board_present[n] = NOT_BOARD_EXISTS;
+        } else {
+            rx_board_present[n] = BOARD_EXISTS;
+        }
+    }
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        PRINT(INFO, "rx_board_present: %i\n", rx_board_present[n]);
+    }
+    PRINT(INFO,"Exiting in 20s\n");
     usleep(20000000);
+    PRINT(INFO,"Exiting\n");
     exit(0);
 
     // Initialize the properties, which is implemented as a Linux file structure

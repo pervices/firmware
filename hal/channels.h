@@ -28,6 +28,9 @@
 // channels specified. Channel operations will be done in the order of this
 // specification.
 
+#define BOARD_EXISTS 1
+#define NOT_BOARD_EXISTS 0
+
 #if defined(TATE)
     #define CHANNELS \
         X(a, tx) \
@@ -111,6 +114,9 @@
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
     #define CHR_RX(crx) #crx[0]
+
+    static uint8_t rx_board_present[NUM_RX_CHANNELS];
+    static uint8_t tx_board_present[NUM_TX_CHANNELS];
 
     //rfe port mapping
     #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
