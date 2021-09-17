@@ -188,6 +188,17 @@ int main(int argc, char *argv[]) {
         usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
         //abort();
     } 
+
+    //a value of 5 here will either indicate that the link is down or hasn't been check yet (same value as used by propery_good function)
+    for(int n = 0; n < NUM_CHANNELS; n++) {
+        strcpy(&prop_path,"rx/");
+        tmp_char = n + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/reboot");
+        set_property(&prop_path, "1");
+    }
+
+    usleep(15000000); // wait 15s
     
     // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links
