@@ -1036,6 +1036,18 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
+        uint32_t old_val;                                                      \
+        uint8_t power;                                                         \
+        uint8_t i;                                                             \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+                                                                               \
+        char pwr_cmd [40];                                                 \
+        sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+        system(pwr_cmd);                                                   \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         uint32_t old_val;                                                      \
@@ -2631,11 +2643,12 @@ GPIO_PINS
     DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")             
+    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "1")   \
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")
     
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
