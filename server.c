@@ -162,9 +162,10 @@ int main(int argc, char *argv[]) {
             char pwr_cmd [40];
             //TODO: make this easier to port
             sprintf(pwr_cmd, "rfe_control %d on", ((int)((n%4)*4)+(1*(n/4))));
-            printf("rx pwr_cmd: %s", pwr_cmd);
-            system(pwr_cmd);
-            _Exit(0);
+            PRINT(INFO, "Starting rfe_control: %i\n", n);
+            execle(pwr_cmd, NULL);
+            PRINT(INFO, "Starting rfe_control failed: %i\n", n);
+            exit(10);
         }
     }
     for(int n = 0; n < NUM_TX_CHANNELS; n++) {
@@ -173,9 +174,9 @@ int main(int argc, char *argv[]) {
             char pwr_cmd [40];
             //TODO: make this easier to port
             sprintf(pwr_cmd, "rfe_control %d on", ((int)(4*(CHR_RX(ch) - 'a')) + 2));
-            printf("tx pwr_cmd: %s", pwr_cmd);
-            system(pwr_cmd);
-            _Exit(0);
+            //system(pwr_cmd);
+            PRINT(INFO, "Starting rfe_control failed: %i\n", n);
+            exit(10);
         }
     }
 
