@@ -173,8 +173,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    usleep(5000000);
-
     time_t timeout_start;
     time(&timeout_start);
     time_t current_time;
@@ -202,10 +200,6 @@ int main(int argc, char *argv[]) {
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         PRINT(INFO, "rx_board_present: %i\n", rx_board_present[n]);
     }
-    PRINT(INFO,"Exiting in 20s\n");
-    usleep(20000000);
-    PRINT(INFO,"Exiting\n");
-    exit(0);
 
     // Initialize the properties, which is implemented as a Linux file structure
     const int t0 = time_it();
