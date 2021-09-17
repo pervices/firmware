@@ -253,10 +253,12 @@ int main(int argc, char *argv[]) {
         tmp_char = n + 'a';
         strcat(&prop_path,&tmp_char);
         strcat(&prop_path,"/pwr");
-        set_property(&prop_path,"0");
+        set_property(&prop_path,"1");
     }
-    
-    // 3. check that the RF board JESD links are up
+
+    write_hps_reg("res_rw7", 0x10000000); // reset FPGA JESD IP
+    write_hps_reg("res_rw7", 0); // clear reset bit
+    usleep(300000); // wait 0.3s
     // TODO: add a check for the TX board JESD links
     i = 0;
     count_bad = 0;
