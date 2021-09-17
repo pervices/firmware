@@ -156,6 +156,7 @@ int main(int argc, char *argv[]) {
     int32_t child_pid_rx[NUM_RX_CHANNELS];
     int32_t child_pid_tx[NUM_TX_CHANNELS];
 
+    char rx_slot_s[NUM_RX_CHANNELS][10];
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         child_pid_rx[n] = fork();
         if(child_pid_rx[n]==0) {
@@ -163,28 +164,27 @@ int main(int argc, char *argv[]) {
             //TODO: make this easier to port
             PRINT(INFO, "Starting rfe_control T1: %i\n", n);
             uint8_t rfe_slot = ((int)((n%4)*4)+(1*(n/4)));
-            char slot_s[10];
             PRINT(INFO, "Starting rfe_control T2: %i\n", n);
-            sprintf(slot_s, "%i", rfe_slot);
-            PRINT(INFO, "Starting rfe_control T3: %i\n", n);
-            char* args[] = {"rfe_control", "off", NULL};
+            sprintf(rx_slot_s[n], "%i", rfe_slot);
+            PRINT(INFO, "Starting rfe_control slot: %s\n", rx_slot_s[n]);
+            char* args[] = {"rfe_control", rx_slot_s[n], "off", NULL};
             PRINT(INFO, "Starting rfe_control T4: %i\n", n);
-            execl("rfe_control", NULL);
+            execl("rfe_control", "rfe_control", rx_slot_s[n], "off", NULL);
             PRINT(INFO, "Starting rfe_control failed: %i\n", n);
             exit(10);
         }
     }
-    for(int n = 0; n < NUM_TX_CHANNELS; n++) {
-        child_pid_tx[n] = fork();
-        if(child_pid_tx[n]==0) {
-            char pwr_cmd [40];
-            //TODO: make this easier to port
-            sprintf(pwr_cmd, "rfe_control %d off", ((int)(4*(CHR_RX(ch) - 'a')) + 2));
-            //system(pwr_cmd);
-            PRINT(INFO, "Starting rfe_control failed: %i\n", n);
-            exit(10);
-        }
-    }
+//     for(int n = 0; n < NUM_TX_CHANNELS; n++) {
+//         child_pid_tx[n] = fork();
+//         if(child_pid_tx[n]==0) {
+//             char pwr_cmd [40];
+//             //TODO: make this easier to port
+//             sprintf(pwr_cmd, "rfe_control %d off", ((int)(4*(CHR_RX(ch) - 'a')) + 2));
+//             //system(pwr_cmd);
+//             PRINT(INFO, "Starting rfe_control failed: %i\n", n);
+//             exit(10);
+//         }
+//     }
 
     usleep(20000000);
     exit(0);
