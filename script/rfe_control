@@ -5,7 +5,9 @@ source /usr/bin/gpio_control
 #####################
 # Variables         #
 #####################
-set ::MAX_BOARDS 16
+#16 boards indexed from 0
+set ::MAX_BOARD 15
+set ::MAX_TIMEOUT 60
 
 #####################
 # Helper Functions  #
@@ -14,23 +16,45 @@ set ::MAX_BOARDS 16
 proc print_help { } { 
     puts "Enable and disable Radio Front-End boards"
     puts "Arguments:"
-    puts "    rfe_control <board_number> <on|off|check> < |n(oconfirm)>"
+    puts "    rfe_control <board_number> <on|off|check> < |n(oconfirm)|timeout>"
     puts ""
-    puts "    <board_number>: 0..15"
+    puts "    <board_number>: 0..$::MAX_BOARD"
     puts "        This is the board number in the digital board."
-    puts "    <on/off>:"
-    puts "        Turn the RFE on or off"
+    puts "    <on/off/check>:"
+    puts "        Turn the RFE on or off, or check it's state without changing state."
+    puts "    < |n(oconfirm)|timeout>:"
+    puts "        Leave blank for no timeout (infinite wait)."
+    puts "        n or noconfirm to avoid checking board state."
+    puts "        0..$::MAX_TIMEOUT to specify timeout in seconds."
     puts ""
 }
 
-proc check_inputs { board_number board_state } {
-    if { $board_number < 0 || $board_number >= $::MAX_BOARDS } {
+proc check_2inputs { board_number board_state } {
+    if { $board_number < 0 || $board_number > $::MAX_BOARD } {
         puts "Unsupported board number."
         print_help
         exit
     }
     if { ![string equal $board_state "on"] && ![string equal $board_state "off"]  && ![string equal $board_state "check"] } {
         puts "Unsupported board state."
+        print_help
+        exit
+    }
+}
+
+proc check_3inputs { board_number board_state timeout} {
+    if { $board_number < 0 || $board_number > $::MAX_BOARD } {
+        puts "Unsupported board number."
+        print_help
+        exit
+    }
+    if { ![string equal $board_state "on"] && ![string equal $board_state "off"]  && ![string equal $board_state "check"] } {
+        puts "Unsupported board state."
+        print_help
+        exit
+    }
+    if { $timeout < 0 || $timeout > $::MAX_TIMEOUT } {
+        puts "Unsupported timeout."
         print_help
         exit
     }
@@ -48,23 +72,31 @@ if {$::argv0 eq [info script]} {
         set board_number [lindex $::argv 0]
         set board_state [lindex $::argv 1]
         set confirm 1
+        set timeout -1
     
         # Check validity of inputs
-        check_inputs $board_number $board_state
+        check_2inputs $board_number $board_state
     } elseif { $::argc == 3 } {
         set board_number [lindex $::argv 0]
         set board_state [lindex $::argv 1]
         set arg3 [lindex $::argv 2]
 
         if { ![string equal $arg3 "n"] && ![string equal $arg3 "noconfirm"] } {
-            puts "Unsupported 3rd argument"
-            print_help
-            exit
+            if { [string is integer -strict $arg3] } {
+                set confirm 1
+                set timeout $arg3
+            } else {
+                puts "Unsupported 3rd argument"
+                print_help
+                exit
+            }
+        } else {
+            set confirm 0
+            set timeout 0
         }
-        set confirm 0
 
         # Check validity of inputs
-        check_inputs $board_number $board_state
+        check_3inputs $board_number $board_state $timeout
     } else {
         puts "Invalid Arguments"
         print_help
@@ -95,12 +127,12 @@ if {$::argv0 eq [info script]} {
 
     if { [string equal $board_state "check"] } {
         set board_good [gpio_in $bg_gpio_file]
-    if { $board_good == 1} {
-            puts "Board $board_number is on"
-        } else {
-            puts "Board $board_number is off"
-        }
-    exit
+        if { $board_good == 1} {
+                puts "Board $board_number is on"
+            } else {
+                puts "Board $board_number is off"
+            }
+        exit
     }
 
     if { [string equal $board_state "on"] } {
@@ -111,6 +143,9 @@ if {$::argv0 eq [info script]} {
     }
 
     if { $confirm } {
+        if { $timeout >= 0 } {
+            set starttime [clock seconds]
+        }
         after 10
         set board_good [gpio_in $bg_gpio_file]
 
@@ -118,12 +153,28 @@ if {$::argv0 eq [info script]} {
             while { $board_good == 1 } {
             after 10
                 set board_good [gpio_in $bg_gpio_file]
+                if { $timeout >= 0 } {
+                    set curtime [clock seconds]
+                    set duration [expr $curtime - $starttime]
+                    if { $duration >= $timeout } {
+                        puts "ERROR: Board $board_number is still powered on"
+                        exit
+                    }
+                }
             }
             puts "Board $board_number successfully powered off"
         } elseif { [string equal $board_state "on"] } {
             while { $board_good == 0 } {
                 after 10
                 set board_good [gpio_in $bg_gpio_file]
+                if { $timeout >= 0 } {
+                    set curtime [clock seconds]
+                    set duration [expr $curtime - $starttime]
+                    if { $duration >= $timeout } {
+                        puts "ERROR: Board $board_number is still powered off"
+                        exit
+                    }
+                }
             }
             puts "Board $board_number successfully powered on"
         }
