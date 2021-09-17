@@ -197,6 +197,11 @@ int main(int argc, char *argv[]) {
 
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         char pwr_cmd [40];
+        strcpy(&prop_path,"rx/");
+        tmp_char = n + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/pwr");
+        set_property(&prop_path,"0");
         uint8_t rfe_slot = ((int)((n%4)*4)+(1*(n/4)));
         sprintf(pwr_cmd, "rfe_control %d off", rfe_slot);
         system(pwr_cmd);
@@ -241,7 +246,14 @@ int main(int argc, char *argv[]) {
         }
     }
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        //lets user know which boards are populated
         PRINT(INFO, "rx_board_present: %i\n", rx_board_present[n]);
+        //runs board power on function (performs tasks other than simply turning the board on)
+        strcpy(&prop_path,"rx/");
+        tmp_char = n + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/pwr");
+        set_property(&prop_path,"0");
     }
     
     // 3. check that the RF board JESD links are up
