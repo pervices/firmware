@@ -98,7 +98,15 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
 int jesd_good_code = 0xff;
 
-static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+//Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
+//indicates that no board is present
+#define PWR_NO_BOARD 1
+//indicates that either the board if off, if no board is present it will default to this value until the fact that the baord is missing is detected
+#define PWR_OFF 0
+//indicates that the board is on, but the rest of the startup sequence has not been doner
+#define PWR_HALF_ON 3
+#define PWR_ON 1
+static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF};
 
 static uint8_t tx_power[] = {
 #define X(ch, rx, crx, ctx) PWR_OFF,
@@ -113,12 +121,6 @@ static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
 //timeout is in seconds
 #define timeout 15
 static time_t rx_async_start_time[NUM_CHANNELS] = {0};
-
-#define BOARD_PRESENT_UNKNOWN 0
-#define NO_BOARD_PRESENT 1
-#define BOARD_PRESENT_ON 2
-#define BOARD_PRESENT_OFF 2
-static uint8_t rx_board_present[NUM_CHANNELS] = {0};
 
 //old method of mapping rx_4
 static const char *reg4[] = {
@@ -1110,10 +1112,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         if (finished == 0) {\
             kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
             PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
-            rx_board_present[INT(ch)] = NO_BOARD_PRESENT;\
+            rx_power[INT(ch)] = PWR_NO_BOARD;\
             strcpy(ret, "0");\
         } else {\
-            rx_board_present[INT(ch)] = BOARD_PRESENT_ON;\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
             PRINT(INFO,"Board %i powered on", INT(ch));\
             strcpy(ret, "1");\
         }\
@@ -1122,7 +1124,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
-        if(rx_board_present[INT(ch)] == NO_BOARD_PRESENT) {\
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -1137,13 +1139,16 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
-            system(pwr_cmd);                                                   \
-            rx_power[INT(ch)] = PWR_ON;                                        \
+            /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
+            if(rx_power[INT(ch)] == PWR_OFF) {\
+                /*TODO: change this to use async pwr and timeout*/\
+                char pwr_cmd [40];                                                 \
+                sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+                system(pwr_cmd);                                                   \
                                                                                \
-            /* board command */           \
-            usleep(200000);                                                    \
+                /* board command */           \
+                usleep(200000);                                                    \
+            }\
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
@@ -1163,7 +1168,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                     write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
-                                                                               \
+            rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
