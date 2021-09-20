@@ -188,6 +188,17 @@ int main(int argc, char *argv[]) {
         usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
         //abort();
     } 
+
+    int8_t rx_present[NUM_CHANNELS] = {0};
+    for(int n = n; n < NUM_CHANNELS; n++) {
+        strcpy(&prop_path,"rx/");
+        tmp_char = n + 'a';
+        strcat(&prop_path,&tmp_char);
+        strcat(&prop_path,"/wait_pwr_board");
+        char read[3];
+        get_property(&prop_path,&read,3);
+        sscanf(read, "%i", &rx_present[n]);
+    }
     
     // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links
@@ -199,7 +210,8 @@ int main(int argc, char *argv[]) {
         strcat(&prop_path,&tmp_char);
         strcat(&prop_path,"/jesd_status");
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
-        if (property_good(&prop_path) != 1) {
+        //2 is used in wait_pwr_board to indicate that the attempt to turn on timed out, and an empty slot is assumed
+        if (property_good(&prop_path) != 1 && rx_present[i] !=2) {
             count_bad += 1;
             i = 0; // restart checking from the beginning
             PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
