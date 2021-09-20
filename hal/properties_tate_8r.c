@@ -35,6 +35,7 @@
     #include <math.h>
 #endif
 
+#include <signal.h>
 #include "channels.h"
 #include "gpio_pins.h"
 
@@ -106,6 +107,18 @@ static uint8_t tx_power[] = {
 };
 
 static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+
+static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
+//the time async_pwr started running, used when calculating if it timed out
+//timeout is in seconds
+#define timeout 15
+static time_t rx_async_start_time[NUM_CHANNELS] = {0};
+
+#define BOARD_PRESENT_UNKNOWN 0
+#define NO_BOARD_PRESENT 1
+#define BOARD_PRESENT_ON 2
+#define BOARD_PRESENT_OFF 2
+static uint8_t rx_board_present[NUM_CHANNELS] = {0};
 
 //old method of mapping rx_4
 static const char *reg4[] = {
@@ -1076,11 +1089,43 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
         } else {\
             sprintf(ret, "%i", pid);\
+            time(&rx_async_start_time[INT(ch)]);\
+            rx_async_pwr_pid[INT(ch)]=pid;\
         }\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    /*waits for async_pwr_board to finished*/\
+    static int hdlr_rx_##ch##_wait_pwr_board(const char *data, char *ret) {               \
+        time_t current_time;\
+        int8_t finished = -1;\
+        int status = 0;\
+        if(rx_async_pwr_pid[INT(ch)] <=0) {\
+            PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
+            return RETURN_ERROR;\
+        }\
+        do {\
+            time(&current_time);\
+            finished = waitpid(rx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
+        } while(current_time < timeout + rx_async_start_time[INT(ch)] && finished == 0);\
+        if (finished == 0) {\
+            kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
+            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
+            rx_board_present[INT(ch)] = NO_BOARD_PRESENT;\
+            strcpy(ret, "0");\
+        } else {\
+            rx_board_present[INT(ch)] = BOARD_PRESENT_ON;\
+            PRINT(INFO,"Board %i powered on", INT(ch));\
+            strcpy(ret, "1");\
+        }\
+        rx_async_pwr_pid[INT(ch)] = 0;\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
+        if(rx_board_present[INT(ch)] == NO_BOARD_PRESENT) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
@@ -1496,16 +1541,6 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
-    return RETURN_SUCCESS;
-}
-
-/* -------------------------------------------------------------------------- */
-/* --------------------------------- WAIT ----------------------------------- */
-/* -------------------------------------------------------------------------- */
-
-static int hdlr_wait_15_secs (const char *data, char *ret){
-    usleep(15000000);
-    
     return RETURN_SUCCESS;
 }
 
@@ -2670,8 +2705,8 @@ GPIO_PINS
         .symlink_target = t,         \
     },
 
-#define DEFINE_WAIT_15 \
-    DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
+#define DEFINE_RX_WAIT_PWR(_c) \
+    DEFINE_FILE_PROP("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0")
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
     DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "0")   \
@@ -2832,14 +2867,13 @@ static prop_t property_table[] = {
 #define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
-    DEFINE_WAIT_15
-//Wait 15 seconds for all RX to boot/reboot
-//#undef DEFINE_WAIT_15
+
+#define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
+    CHANNELS
+#undef X
+
 #define X(ch, rx, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
-//#undef X
-//#define X(ch, rx, crx, ctx) DEFINE_TX_CHANNEL(ch)
-//    CHANNELS
 #undef X
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
