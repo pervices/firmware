@@ -1037,6 +1037,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
@@ -1044,11 +1046,37 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
-            sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
         } else {\
-            sprintf(pwr_cmd, "rfe_control %d off n", INT_RX(ch));                    \
+            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
         }\
         system(pwr_cmd);                                                   \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
+    /*returns the pid of the powr on process*/\
+    static int hdlr_rx_##ch##_async_pwr_board(const char *data, char *ret) {               \
+        uint32_t old_val;                                                      \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+                                                                               \
+        pid_t pid = fork();\
+        if(pid==0) {\
+            char rfe_slot[10];                                                 \
+            sprintf(rfe_slot, "%i", INT_RX(ch));                    \
+            char str_pwr[10];\
+            if(power>=PWR_ON) {\
+                strcpy(str_pwr, "on");\
+            } else {\
+                strcpy(str_pwr, "off");\
+            }\
+            execl("rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
+        } else {\
+            sprintf(ret, "%i", pid);\
+        }\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2646,7 +2674,9 @@ GPIO_PINS
     DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "1")   \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "0")   \
+    /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
+    DEFINE_FILE_PROP("rx/" #_c "/async_pwr_board"                      , hdlr_rx_##_c##_async_pwr_board,                     RW, "1")   \
     DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")
     
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
