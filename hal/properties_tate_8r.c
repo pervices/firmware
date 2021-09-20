@@ -1040,11 +1040,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
-        uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         char pwr_cmd [40];                                                 \
-        sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+        if(power>=PWR_ON) {\
+            sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+        } else {\
+            sprintf(pwr_cmd, "rfe_control %d off n", INT_RX(ch));                    \
+        }\
         system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
