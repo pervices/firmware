@@ -35,6 +35,7 @@
     #include <math.h>
 #endif
 
+#include <signal.h>
 #include "channels.h"
 #include "gpio_pins.h"
 
@@ -71,9 +72,6 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
-#define PWR_ON  1
-#define PWR_OFF 0
-
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
@@ -108,11 +106,25 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
 int jesd_good_code = 0xf;
 
-static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+//Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
+//indicates that no board is present
+#define PWR_NO_BOARD 2
+//indicates that either the board if off, if no board is present it will default to this value until the fact that the baord is missing is detected
+#define PWR_OFF 0
+//indicates that the board is on, but the rest of the startup sequence has not been doner
+#define PWR_HALF_ON 3
+#define PWR_ON 1
+static uint8_t rx_power[NUM_CHANNELS] = {0};
 
-static uint8_t tx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+static uint8_t tx_power[NUM_CHANNELS] = {0};
 
-static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+static uint8_t rx_stream[NUM_CHANNELS] = {0};
+
+static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
+//the time async_pwr started running, used when calculating if it timed out
+//timeout is in seconds
+#define timeout 15
+static time_t rx_async_start_time[NUM_CHANNELS] = {0};
 
 //old method of mapping rx_4
 static const char *reg4[] = {
@@ -2267,6 +2279,7 @@ CHANNELS
         }\
         return RETURN_SUCCESS;                                                 \
     } \
+    \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
         uint32_t old_val;                                                      \
         uint8_t stream;                                                        \
@@ -2312,7 +2325,79 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
+    static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+                                                                               \
+        char pwr_cmd [40];                                                 \
+        if(power>=PWR_ON) {\
+            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+        } else {\
+            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+        }\
+        system(pwr_cmd);                                                   \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
+    /*returns the pid of the powr on process*/\
+    static int hdlr_rx_##ch##_async_pwr_board(const char *data, char *ret) {               \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+                                                                               \
+        pid_t pid = fork();\
+        if(pid==0) {\
+            char rfe_slot[10];                                                 \
+            sprintf(rfe_slot, "%i", INT_RX(ch));                    \
+            char str_pwr[10];\
+            if(power>=PWR_ON) {\
+                strcpy(str_pwr, "on");\
+            } else {\
+                strcpy(str_pwr, "off");\
+            }\
+            execl("rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
+        } else {\
+            sprintf(ret, "%i", pid);\
+            time(&rx_async_start_time[INT(ch)]);\
+            rx_async_pwr_pid[INT(ch)]=pid;\
+        }\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    /*waits for async_pwr_board to finished*/\
+    static int hdlr_rx_##ch##_wait_pwr_board(const char *data, char *ret) {               \
+        time_t current_time;\
+        int8_t finished = -1;\
+        int status = 0;\
+        if(rx_async_pwr_pid[INT(ch)] <=0) {\
+            PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
+            return RETURN_ERROR;\
+        }\
+        do {\
+            time(&current_time);\
+            finished = waitpid(rx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
+        } while(current_time < timeout + rx_async_start_time[INT(ch)] && finished == 0);\
+        if (finished == 0) {\
+            kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
+            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
+            rx_power[INT(ch)] = PWR_NO_BOARD;\
+            strcpy(ret, "0");\
+        } else {\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
+            PRINT(INFO,"Board %i powered on\n", INT(ch));\
+            strcpy(ret, "1");\
+        }\
+        rx_async_pwr_pid[INT(ch)] = 0;\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
@@ -2324,13 +2409,16 @@ CHANNELS
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
-            system(pwr_cmd);                                                   \
-            rx_power[INT(ch)] = PWR_ON;                                        \
+            /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
+            if(rx_power[INT(ch)] == PWR_OFF) {\
+                /*TODO: change this to use async pwr and timeout*/\
+                char pwr_cmd [40];                                                 \
+                sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+                system(pwr_cmd);                                                   \
                                                                                \
-            /* board command */           \
-            usleep(200000);                                                    \
+                /* board command */           \
+                usleep(200000);                                                    \
+            }\
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
@@ -2366,7 +2454,7 @@ CHANNELS
                     write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
-                                                                               \
+            rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
@@ -4022,16 +4110,19 @@ GPIO_PINS
         .symlink_target = t,         \
     },
 
-#define DEFINE_WAIT_15 \
-    DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
+#define DEFINE_RX_WAIT_PWR(_c) \
+    DEFINE_FILE_PROP("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0")
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")
+    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "0")   \
+    /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
+    DEFINE_FILE_PROP("rx/" #_c "/async_pwr_board"                      , hdlr_rx_##_c##_async_pwr_board,                     RW, "1")   \
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -4273,9 +4364,10 @@ static prop_t property_table[] = {
 #define X(ch, io, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
-    DEFINE_WAIT_15
-//Wait 15 seconds for all RX to boot/reboot
-//#undef DEFINE_WAIT_15
+
+#define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
+    CHANNELS
+#undef X
 #define X(ch, io, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
