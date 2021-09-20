@@ -108,12 +108,6 @@ int jesd_good_code = 0xff;
 #define PWR_ON 1
 static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF};
 
-static uint8_t tx_power[] = {
-#define X(ch, rx, crx, ctx) PWR_OFF,
-    CHANNELS
-#undef X
-};
-
 static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
 static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
@@ -121,16 +115,6 @@ static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
 //timeout is in seconds
 #define timeout 15
 static time_t rx_async_start_time[NUM_CHANNELS] = {0};
-
-//old method of mapping rx_4
-static const char *reg4[] = {
-#define X(ch, rx, crx, ctx) "rx"STR(ch)"4",
-    CHANNELS
-#undef X
-#define X(ch, rx, crx, ctx) "tx"STR(ch)"4",
-    CHANNELS
-#undef X
-};
 
 uint8_t *_save_profile;
 uint8_t *_load_profile;
@@ -260,17 +244,6 @@ static int hdlr_rx_sync(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_sync(const char *data, char *ret) {
-    uint32_t old_val;
-
-    // toggle the bit sys0[6]
-    read_hps_reg("sys0", &old_val);
-    write_hps_reg("sys0", old_val | 0x40);
-    write_hps_reg("sys0", old_val & (~0x40));
-
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_save_config(const char *data, char *ret) {
     *_save_profile = 1;
     strcpy(_save_profile_path, data);
@@ -321,12 +294,6 @@ CHANNELS
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- GATE ------------------------------------ */
 /* -------------------------------------------------------------------------- */
-
-static int set_gating_mode(const char *chan, bool dsp) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
-    return set_reg_bits(reg_name, 12, 1, dsp);
-}
 
 static int valid_trigger_mode(const char *data, bool *edge) {
 
@@ -454,18 +421,6 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
         PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
-}
-
-static int valid_gating_mode(const char *data, bool *dsp) {
-    if (false) {
-    } else if (0 == strncmp("dsp", data, strlen("dsp"))) {
-        *dsp = true;
-    } else if (0 == strncmp("output", data, strlen("output"))) {
-        *dsp = false;
-    } else {
-        return RETURN_ERROR_PARAM;
-    }
-    return RETURN_SUCCESS;
 }
 
 #define X(ch, rx, crx, ctx)                                                              \
@@ -1070,7 +1025,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
-        uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -1088,7 +1042,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     /*pwr must be used to complete the power on process*/\
     /*returns the pid of the powr on process*/\
     static int hdlr_rx_##ch##_async_pwr_board(const char *data, char *ret) {               \
-        uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -1276,16 +1229,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
 CHANNELS
 #undef X
 
-#define X(ch, rx, crx, ctx)                                                              \
-    static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_gating_mode(data, &val) || set_gating_mode(#ch, val);        \
-        return r;                                                              \
-    }
-CHANNELS
-#undef X
-
 /* -------------------------------------------------------------------------- */
 /* ------------------------------ CHANNEL MASK ------------------------------ */
 /* -------------------------------------------------------------------------- */
@@ -1308,19 +1251,6 @@ static uint16_t cm_chanmask_get(const char *path) {
 }
 
 static int hdlr_cm_chanmask_rx(const char *data, char *ret) {
-    uint32_t mask;
-
-    if (1 != sscanf(data, "%x", &mask)) {
-        return RETURN_ERROR_PARAM;
-    }
-
-    mask &= 0xffff;
-    sprintf(ret, "%x", mask);
-
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     uint32_t mask;
 
     if (1 != sscanf(data, "%x", &mask)) {
@@ -1645,22 +1575,6 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-// External Source Buffer Select
-static int hdlr_time_source_extsine(const char *data, char *ret) {
-    if (strcmp(data, "sine") == 0) {
-        strcpy(buf, "HMC -h 1 -b 1\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    } else if (strcmp(data, "LVPECL") == 0) {
-        strcpy(buf, "HMC -h 1 -b 0\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    } else {
-        strcpy(buf, "HMC -h 1 -B\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        strcpy(ret, (char *)uart_ret_buf);
-    }
-    return RETURN_SUCCESS;
-}
-
 // choose pulsed or continuous SYSREF
 static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
     if ( (strcmp(data, "pulsed") == 0) || (strcmp(data, "0") == 0) ) {
@@ -1688,32 +1602,10 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-// Toggle SPI Sync
-static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
-    if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -q\r");
-    } else {
-        strcpy(buf, "\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-
 // Resync output edges with Ref
 static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -j\r");
-    } else {
-        strcpy(buf, "\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-
-// Resync output edges with Ref
-static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
-    if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -p\r");
     } else {
         strcpy(buf, "\r");
     }
@@ -1807,34 +1699,6 @@ static int hdlr_time_status_ld_jesd2_pll2(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_pll0_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -l 41\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll0_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -l 42\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll1_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -l 51\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll1_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -l 52\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_time_status_lol(const char *data, char *ret) {
     // strcpy(buf, "status -o\r");
     // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -1879,34 +1743,6 @@ static int hdlr_time_status_lol_jesd2_pll1(const char *data, char *ret) {
 
 static int hdlr_time_status_lol_jesd2_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 32\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll0_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -o 41\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll0_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -o 42\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll1_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -o 51\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll1_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -o 52\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
