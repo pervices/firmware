@@ -1189,7 +1189,7 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
     int uart_fd;
 
     bool tx = ctx->tx;
-    size_t chan_i = ctx->channel(ctx);
+    uint32_t chan_i = ctx->channel(ctx);
 
     extern int* uart_tx_comm_fd;
     extern int* uart_rx_comm_fd;
@@ -1197,7 +1197,7 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
     uart_fd = tx ? uart_tx_comm_fd[chan_i] : uart_rx_comm_fd[chan_i];
 
     // read the value back
-    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %c -p", 'a' + chan_i);
+    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %lc -p", 'a' + chan_i);
     r = synth_lut_uart_cmd(uart_fd, cmd_buf, resp_buf, sizeof(resp_buf));
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "synth_lut_uart_cmd() failed (%d,%s)\n", r, strerror(r));

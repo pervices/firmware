@@ -191,12 +191,12 @@ int main(int argc, char *argv[]) {
 
     int8_t rx_present[NUM_CHANNELS] = {0};
     for(int n = n; n < NUM_CHANNELS; n++) {
-        strcpy(&prop_path,"rx/");
+        strcpy(&prop_path[0],"rx/");
         tmp_char = n + 'a';
-        strcat(&prop_path,&tmp_char);
-        strcat(&prop_path,"/wait_pwr_board");
-        char read[3];
-        get_property(&prop_path,&read,3);
+        strcat(&prop_path[0],&tmp_char);
+        strcat(&prop_path[0],"/wait_pwr_board");
+        const char read[3];
+        get_property(&prop_path[0],&read[0],3);
         sscanf(read, "%hhi", &rx_present[n]);
     }
     
@@ -205,10 +205,10 @@ int main(int argc, char *argv[]) {
     i = 0;
     count_bad = 0;
     while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
-        strcpy(&prop_path,"rx/");
+        strcpy(&prop_path[0],"rx/");
         tmp_char = i + 'a';
-        strcat(&prop_path,&tmp_char);
-        strcat(&prop_path,"/jesd_status");
+        strcat(&prop_path[0],&tmp_char);
+        strcat(&prop_path[0],"/jesd_status");
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
         //2 is used in wait_pwr_board to indicate that the attempt to turn on timed out, and an empty slot is assumed
         if (property_good(&prop_path) != 1 && rx_present[i] !=2) {
@@ -227,10 +227,10 @@ int main(int argc, char *argv[]) {
      
     if (count_bad >= max_attempts) {
         for (i = 0; i < NUM_CHANNELS; i++) {
-            strcpy(&prop_path,"rx/");
+            strcpy(&prop_path[0],"rx/");
             tmp_char = i + 'a';
-            strcat(&prop_path,&tmp_char);
-            strcat(&prop_path,"/jesd_status");
+            strcat(&prop_path[0],&tmp_char);
+            strcat(&prop_path[0],"/jesd_status");
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
             if (property_good(&prop_path) != 1) {
                 PRINT(ERROR,"Some JESD links failed to establish after %i attempts.\n", max_attempts);

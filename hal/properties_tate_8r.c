@@ -574,7 +574,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     /*sets variable amplifiers, variable attentuators, bypassable amplifiers to achieve desired gain*/\
     /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
+        const char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
         int gain;                                                              \
         int net_gain;                                                          \
         int atten;                                                             \
@@ -582,7 +582,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         char band_read[3];                                                     \
                                                                                \
         sscanf(data, "%i", &gain);                                             \
-        get_property(&fullpath,&band_read,3);                                  \
+        get_property(&fullpath[0],&band_read[0],3);                                  \
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
