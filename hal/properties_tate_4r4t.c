@@ -80,7 +80,7 @@
 //Unlike most channels rx_4 uses a different patttern
 static const char *rx_reg4_map[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
 
-static const char *tx_reg4_map[4] = { "txa4", "txb4", "txc4", "txd4" };
+static const char *tx_reg4_map[4] = { "txa4", "txe4", "txi4", "txm4" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
