@@ -3019,16 +3019,6 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* --------------------------------- WAIT ----------------------------------- */
-/* -------------------------------------------------------------------------- */
-
-static int hdlr_wait_15_secs (const char *data, char *ret){
-    usleep(15000000);
-
-    return RETURN_SUCCESS;
-}
-
-/* -------------------------------------------------------------------------- */
 /* --------------------------------- TIME ----------------------------------- */
 /* -------------------------------------------------------------------------- */
 
@@ -3150,28 +3140,10 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-// Toggle SPI Sync
-static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
-    if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -q\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-
 // Resync output edges with Ref
 static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -j\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-
-// Resync output edges with Ref
-static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
-    if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -p\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -3261,34 +3233,6 @@ static int hdlr_time_status_ld_jesd2_pll2(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_pll0_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -l 41\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll0_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -l 42\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll1_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -l 51\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll1_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -l 52\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_time_status_lol(const char *data, char *ret) {
     // strcpy(buf, "status -o\r");
     // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -3333,34 +3277,6 @@ static int hdlr_time_status_lol_jesd2_pll1(const char *data, char *ret) {
 
 static int hdlr_time_status_lol_jesd2_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 32\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll0_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -o 41\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll0_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -o 42\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll1_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -o 51\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll1_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -o 52\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
