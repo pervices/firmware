@@ -606,13 +606,13 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     }
 }
 static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(rx_power[ch] != PWR_NO_BOARD) {
+    if(tx_power[ch] != PWR_NO_BOARD) {
         send_uart_comm(fd, buf, len);
         read_uart(fd);
     }
 }
 static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(rx_power[ch] != PWR_NO_BOARD) {
+    if(tx_power[ch] != PWR_NO_BOARD) {
         send_uart_comm(fd, buf, len);
     }
 }
@@ -1761,7 +1761,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
     \
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+        if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -1815,7 +1815,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                 }                                                              \
             }                                                                  \
                                                                                \
-            rx_power[INT(ch)] = PWR_ON;\
+            tx_power[INT(ch)] = PWR_ON;\
             /* power off */                                                    \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
