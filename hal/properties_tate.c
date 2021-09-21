@@ -4338,7 +4338,7 @@ void sync_channels(uint8_t chan_mask) {
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
-                       bool tx, size_t channel) {
+                       bool tx, uint32_t channel) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )

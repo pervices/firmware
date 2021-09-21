@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
         strcat(&prop_path,"/wait_pwr_board");
         char read[3];
         get_property(&prop_path,&read,3);
-        sscanf(read, "%i", &rx_present[n]);
+        sscanf(read, "%hhi", &rx_present[n]);
     }
     
     // 3. check that the RF board JESD links are up

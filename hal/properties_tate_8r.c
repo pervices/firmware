@@ -156,7 +156,7 @@ static int read_uart(int uartfd) {
     }
     const long t1 = time_it();
 
-    printf("read uart %d : %s\n", t1 - t0, buf);
+    printf("read uart %ld : %s\n", t1 - t0, buf);
     strncpy((char *)uart_ret_buf, buf, MAX_UART_RET_LEN - 1);
     return RETURN_SUCCESS;
 }
@@ -267,7 +267,7 @@ static int set_sma_pol(bool positive) {
 /* -------------------------------------------------------------------------- */
 
 static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
-                                    const size_t channel) {
+                                    const uint32_t channel) {
     int r = RETURN_SUCCESS;
 
     bool en = '0' != data[0];
@@ -523,7 +523,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         if (freq == 0) {                                                        \
             strcpy(buf, "lmx -k\r");                                            \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
-            sprintf(ret, "%Lf", 0);                                             \
+            sprintf(ret, "%i", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
                                                                                 \
@@ -532,7 +532,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             strcpy(buf, "lmx -k\r");                                            \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
-            sprintf(ret, "%Lf", 0);                                             \
+            sprintf(ret, "%i", 0);                                             \
             return RETURN_ERROR;                                                \
         }                                                                       \
                                                                                 \
@@ -2439,7 +2439,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     int reset_type = 0;
     uint32_t tmp_reg = 0;
 
-    sscanf(data, "%lf", &reset_type);
+    sscanf(data, "%i", &reset_type);
 
     read_hps_reg("res_rw7", &tmp_reg);
 
@@ -3018,7 +3018,7 @@ void sync_channels(uint8_t chan_mask) {
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
-                       bool tx, size_t channel) {
+                       bool tx, uint32_t channel) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )
@@ -3072,14 +3072,14 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                   "Setting %s %c @ %u MHz with parameters { %u, %u, %u}\n",
                   tx ? "TX" : "RX", 'A' + channel, (unsigned)(freq / 1000000),
                   rec.core, rec.band, rec.bias);
-            snprintf(buf, sizeof(buf), "rf -c %c -A 0 -C %u -B %u -I %u\r",
+            snprintf(buf, sizeof(buf), "rf -c %lc -A 0 -C %u -B %u -I %u\r",
                      'a' + channel, rec.core, rec.band, rec.bias);
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
         }
     } else {
         // If synth lut is disabled, set autocal flat to enable fall-back
         // behaviour.
-        snprintf(buf, sizeof(buf), "rf -c %c -A 1\r", 'a' + channel);
+        snprintf(buf, sizeof(buf), "rf -c %lc -A 1\r", 'a' + channel);
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
     }
 

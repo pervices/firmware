@@ -56,7 +56,7 @@ struct synth_lut_ctx {
     bool enabled;
     pthread_mutex_t lock;
 
-    size_t (*channel)(struct synth_lut_ctx *ctx);
+    uint32_t (*channel)(struct synth_lut_ctx *ctx);
     void (*disable)(struct synth_lut_ctx *ctx);
     int (*enable)(struct synth_lut_ctx *ctx);
     void (*erase)(struct synth_lut_ctx *ctx);
@@ -68,7 +68,7 @@ struct synth_lut_ctx {
     int (*autocal_values)(struct synth_lut_ctx *ctx, synth_rec_t *rec);
 };
 
-static size_t _synth_lut_channel(struct synth_lut_ctx *ctx);
+static uint32_t _synth_lut_channel(struct synth_lut_ctx *ctx);
 static void _synth_lut_disable(struct synth_lut_ctx *ctx);
 static int _synth_lut_enable(struct synth_lut_ctx *ctx);
 static void _synth_lut_erase(struct synth_lut_ctx *ctx);
@@ -328,7 +328,7 @@ out:
 }
 
 static struct synth_lut_ctx *synth_lut_find(const bool tx,
-                                            const size_t channel) {
+                                            const uint32_t channel) {
 
     struct synth_lut_ctx *it = NULL;
 
@@ -573,7 +573,7 @@ out:
     return r;
 }
 
-static size_t _synth_lut_channel(struct synth_lut_ctx *ctx) {
+static uint32_t _synth_lut_channel(struct synth_lut_ctx *ctx) {
 
     size_t r;
 
@@ -633,8 +633,8 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_8R)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
+             "echo 0 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + (uint32_t)ctx->channel(ctx));
 #elif defined(VAUNT)
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
@@ -648,7 +648,7 @@ out:
     pthread_mutex_unlock(&ctx->lock);
 }
 
-void synth_lut_disable(const bool tx, const size_t channel) {
+void synth_lut_disable(const bool tx, const uint32_t channel) {
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
 
@@ -683,7 +683,7 @@ static void _synth_lut_erase(struct synth_lut_ctx *ctx) {
     pthread_mutex_unlock(&ctx->lock);
 }
 
-void synth_lut_erase(const bool tx, const size_t channel) {
+void synth_lut_erase(const bool tx, const uint32_t channel) {
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
@@ -782,19 +782,19 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
 
 #if defined(TATE)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             "echo 1 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_4R4T)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             "echo 1 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_8R)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             "echo 1 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(VAUNT)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
+             "echo 1 > /var/crimson/state/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #else
     #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
@@ -815,7 +815,7 @@ out:
     return r;
 }
 
-int synth_lut_enable(const bool tx, const size_t channel) {
+int synth_lut_enable(const bool tx, const uint32_t channel) {
     int r;
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
@@ -842,7 +842,7 @@ static int _synth_lut_get(struct synth_lut_ctx *ctx, const double freq,
     double integral;
     double fractional;
     size_t k;
-    size_t channel;
+    uint32_t channel;
 
     pthread_mutex_lock(&ctx->lock);
 
@@ -1017,7 +1017,7 @@ void synth_lut_disable_all() {
     FOR_EACH(it, synth_lut_tx_ctx) { it->disable(it); }
 }
 
-bool synth_lut_is_enabled(const bool tx, const size_t channel) {
+bool synth_lut_is_enabled(const bool tx, const uint32_t channel) {
     bool r;
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
@@ -1069,7 +1069,7 @@ out:
     return r;
 }
 
-bool synth_lut_is_calibrated(const bool tx, const size_t channel) {
+bool synth_lut_is_calibrated(const bool tx, const uint32_t channel) {
     bool r;
     int rr;
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
@@ -1153,7 +1153,7 @@ static int _synth_lut_autocal_enable(struct synth_lut_ctx *ctx, const bool en) {
 
     int uart_fd;
 
-    size_t chan_i;
+    uint32_t chan_i;
 
     extern int* uart_tx_comm_fd;
     extern int* uart_rx_comm_fd;
@@ -1162,7 +1162,7 @@ static int _synth_lut_autocal_enable(struct synth_lut_ctx *ctx, const bool en) {
     uart_fd = ctx->tx ? uart_tx_comm_fd[chan_i] : uart_rx_comm_fd[chan_i];
 
     // tell the mcu to use autocal
-    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %c -A %c", 'a' + chan_i,
+    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %lc -A %c", 'a' + chan_i,
              en ? '1' : '0');
     r = synth_lut_uart_cmd(uart_fd, cmd_buf, resp_buf, sizeof(resp_buf));
     if (EXIT_SUCCESS != r) {
