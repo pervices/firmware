@@ -642,7 +642,7 @@ void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
 
 int property_good(char *path) {
     char property_read[5];
-    const char fullpath[200] = "/var/cyan/state/";
+    char fullpath[200] = "/var/cyan/state/";
     
     strcat(&fullpath[0], path);
     // need to write to the property to force an update

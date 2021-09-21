@@ -985,7 +985,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
             write_hps_reg("tx" STR_TX(ctx) "4", old_val &(~0x100));                \
                                                                                \
-            tx_power[INT_TX(ch)] = PWR_OFF;                                       \
+            tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
             PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
                          "Shutting Down TX" STR(ch) ".\n");                    \
@@ -1047,7 +1047,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
 										\
     static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
 	    uint16_t atten;							\
-	    sscanf(data, "%u", &atten);						\
+	    sscanf(data, "%hu", &atten);						\
 	    strcpy(buf, "rf -a ");						\
 	    sprintf(buf + strlen(buf),"%u", atten);				\
 	    strcat(buf, "\r");							\
@@ -1915,7 +1915,7 @@ CHANNELS
         if (freq == 0) {                                                        \
             strcpy(buf, "lmx -k\r");                                            \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
-            sprintf(ret, "%Lf", 0);                                             \
+            sprintf(ret, "%i", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
                                                                                 \
@@ -1924,7 +1924,7 @@ CHANNELS
             strcpy(buf, "lmx -k\r");                                            \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
-            sprintf(ret, "%Lf", 0);                                             \
+            sprintf(ret, "%i", 0);                                             \
             return RETURN_ERROR;                                                \
         }                                                                       \
                                                                                 \
@@ -1967,7 +1967,7 @@ CHANNELS
     /*sets variable amplifiers, variable attentuators, bypassable amplifiers to achieve desired gain*/\
     /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
+        const char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
         int gain;                                                              \
         int net_gain;                                                          \
         int atten;                                                             \
@@ -1975,7 +1975,7 @@ CHANNELS
         char band_read[3];                                                     \
                                                                                \
         sscanf(data, "%i", &gain);                                             \
-        get_property(&fullpath,&band_read,3);                                  \
+        get_property(&fullpath[0],&band_read[0],3);                                  \
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
@@ -3976,7 +3976,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     int reset_type = 0;
     uint32_t tmp_reg = 0;
 
-    sscanf(data, "%lf", &reset_type);
+    sscanf(data, "%i", &reset_type);
 
     read_hps_reg("res_rw7", &tmp_reg);
 

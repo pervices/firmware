@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
         tmp_char = n + 'a';
         strcat(&prop_path[0],&tmp_char);
         strcat(&prop_path[0],"/wait_pwr_board");
-        const char read[3];
+        char read[3];
         get_property(&prop_path[0],&read[0],3);
         sscanf(read, "%hhi", &rx_present[n]);
     }
