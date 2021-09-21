@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -211,7 +212,7 @@ int main(int argc, char *argv[]) {
         strcat(&prop_path[0],"/jesd_status");
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
         //2 is used in wait_pwr_board to indicate that the attempt to turn on timed out, and an empty slot is assumed
-        if (property_good(&prop_path) != 1 && rx_present[i] !=2) {
+        if (property_good(&prop_path[0]) != 1 && rx_present[i] !=2) {
             count_bad += 1;
             i = 0; // restart checking from the beginning
             PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
@@ -232,7 +233,7 @@ int main(int argc, char *argv[]) {
             strcat(&prop_path[0],&tmp_char);
             strcat(&prop_path[0],"/jesd_status");
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
-            if (property_good(&prop_path) != 1) {
+            if (property_good(&prop_path[0]) != 1) {
                 PRINT(ERROR,"Some JESD links failed to establish after %i attempts.\n", max_attempts);
                 /*write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
                 usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled

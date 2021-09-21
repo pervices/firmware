@@ -38,6 +38,8 @@
 #include <signal.h>
 #include "channels.h"
 #include "gpio_pins.h"
+#include <sys/types.h>
+#include <sys/wait.h>
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   500000000.0  //After base rate
@@ -126,6 +128,7 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll);
 /* clang-format on */
 
 // Also known as strchr (maybe we should replace this someday).
