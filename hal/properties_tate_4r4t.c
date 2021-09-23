@@ -1826,6 +1826,9 @@ CHANNELS
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
+        char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";     \
+        int band;                                                               \
+        char band_read[3];                                                      \
                                                                                 \
         /* if freq = 0, mute PLL */                                             \
         if (freq == 0) {                                                        \
@@ -1842,6 +1845,13 @@ CHANNELS
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
             sprintf(ret, "%Lf", 0);                                             \
             return RETURN_ERROR;                                                \
+        }                                                                       \
+                                                                                \
+        /* check band: if HB, subtract 1.8GHz to account for cascaded mixers*/  \
+        get_property(&fullpath,&band_read,3);                                   \
+        sscanf(band_read, "%i", &band);                                         \
+        if (band == 2) {                                                        \
+            freq -= 1800000000;                                                 \
         }                                                                       \
                                                                                 \
         /* run the pll calc algorithm */                                        \
