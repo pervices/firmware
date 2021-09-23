@@ -157,6 +157,42 @@ typedef struct {
     uint16_t r_min;         // limit for reference divider r
 } pllparam_t;
 
+// PLL Constructors
+
+//default ADF5355 constructor
+static pllparam_t pll_def_adf5355 = {   PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
+                                        PLL1_R_FIXED,           PLL1_N_DEFAULT,
+                                        PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+                                        PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+                                        PLL1_RFOUT_MAX_HZ,      PLL1_RFOUT_MIN_HZ,
+                                        PLL1_VCO_MAX_HZ,        PLL1_VCO_MIN_HZ,
+                                        PLL1_DIV_MAX,           PLL1_DIV_MIN,
+                                        PLL1_N_MAX,             PLL1_N_MIN,
+                                        PLL1_R_MAX,             PLL1_R_MIN
+};
+//ADF5355 constructor for r divider = 5
+static pllparam_t pll_def_adf5355_r_5 = {   PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
+                                            PLL1_R_FIXED_5,         PLL1_N_DEFAULT,
+                                            PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+                                            PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+                                            PLL1_RFOUT_MAX_HZ,      PLL1_RFOUT_MIN_HZ,
+                                            PLL1_VCO_MAX_HZ,        PLL1_VCO_MIN_HZ,
+                                            PLL1_DIV_MAX,           PLL1_DIV_MIN,
+                                            PLL1_N_MAX,             PLL1_N_MIN,
+                                            PLL1_R_MAX,             PLL1_R_MIN
+};
+// default LMX2595 constructor
+static pllparam_t pll_def_lmx2595 = {   PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ_LMX2595,
+                                        PLL1_R_FIXED,           PLL1_N_DEFAULT,
+                                        PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+                                        PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+                                        LMX2595_RFOUT_MAX_HZ,   LMX2595_RFOUT_MIN_HZ,
+                                        LMX2595_VCO_MAX1_HZ,    LMX2595_VCO_MIN_HZ,
+                                        LMX2595_DIV_MAX,        LMX2595_DIV_MIN,
+                                        LMX2595_N_MAX,          LMX2595_N_MIN,
+                                        LMX2595_R_MAX,          LMX2595_R_MIN
+};
+
 // Set Output Frequency
 double setFreq(uint64_t *reqFreq,
                pllparam_t *pll1); // Returns the actual frequency set.

@@ -25,55 +25,18 @@
 
 #include "pllcalc.h"
 
-// PLL Constructors
-
-//default ADF5355 constructor
-pllparam_t pll_def = {      PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
-                            PLL1_R_FIXED,           PLL1_N_DEFAULT,
-                            PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
-                            PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
-                            PLL1_RFOUT_MAX_HZ,      PLL1_RFOUT_MIN_HZ,
-                            PLL1_VCO_MAX_HZ,        PLL1_VCO_MIN_HZ,
-                            PLL1_DIV_MAX,           PLL1_DIV_MIN,
-                            PLL1_N_MAX,             PLL1_N_MIN,
-                            PLL1_R_MAX,             PLL1_R_MIN
-};
-//ADF5355 constructor for r divider = 5
-pllparam_t pll_def_r_5 = {  PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
-                            PLL1_R_FIXED_5,         PLL1_N_DEFAULT,
-                            PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
-                            PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
-                            PLL1_RFOUT_MAX_HZ,      PLL1_RFOUT_MIN_HZ,
-                            PLL1_VCO_MAX_HZ,        PLL1_VCO_MIN_HZ,
-                            PLL1_DIV_MAX,           PLL1_DIV_MIN,
-                            PLL1_N_MAX,             PLL1_N_MIN,
-                            PLL1_R_MAX,             PLL1_R_MIN
-};
-// default LMX2595 constructor
-pllparam_t pll_def_lmx2595 = {  PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ_LMX2595,
-                                PLL1_R_FIXED,           PLL1_N_DEFAULT,
-                                PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
-                                PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
-                                LMX2595_RFOUT_MAX_HZ,   LMX2595_RFOUT_MIN_HZ,
-                                LMX2595_VCO_MAX1_HZ,    LMX2595_VCO_MIN_HZ,
-                                LMX2595_DIV_MAX,        LMX2595_DIV_MIN,
-                                LMX2595_N_MAX,          LMX2595_N_MIN,
-                                LMX2595_R_MAX,          LMX2595_R_MIN
-};
-
 #ifdef _PLL_DEBUG_STANDALONE
 // ==========================
 // Main
 // ==========================
 int main(void) {
     uint64_t reqFreq = 250e6;
-    pllparam_t pll;
-    //changes these to _LMX2595 when testing cyan
-    pll.id = PLL_ID_ADF5355;
-    const uint64_t core_ref_freq = PLL_CORE_REF_FREQ_HZ_ADF5355
+    pllparam_t pll = pll_def_adf5355;
+//     pllparam_t pll = pll_def_lmx2595;
+    const uint64_t core_ref_freq = pll.ref_freq;
 
     // Debug parameters;
-    double max_diff = core_ref_freq / PLL1_R_FIXED;
+    double max_diff = core_ref_freq / pll.R;
     double max_N = PLL1_N_MAX;
     double max_R = PLL1_R_MAX;
     int printdebug = 0;
@@ -191,15 +154,6 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     //  - Assumes a single PLL design, and therefore fixed reference.
     //
 
-    // set default values depending on which PLL
-    if (pll->id == PLL_ID_LMX2595) {
-        *pll = pll_def_lmx2595;
-     } else { //if no PLL ID provided, assume ADF5355 so that old code continues to work
-        *pll = pll_def;
-        if (*reqFreq < (pll->ref_freq * PLL_ADF5355_MAX_N)) // divide input if it's too high to reach req_fred
-            *pll = pll_def_r_5;                             // otherwise leave R = 1 for best phase noise
-    }
-
     uint64_t temp = *reqFreq;
 
     // round the required Frequency to the nearest 5MHz
@@ -256,7 +210,7 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
                 includedDivide = 4;
             }
         }
-        N1 = (double)pll->vcoFreq / (double)pd_freq / includedDivide;
+        N1 = (double)pll->vcoFreq / (double)pd_freq / (double)includedDivide;
         pll->N = (uint32_t)N1;
         // set VCO to actual value based on N
         pll->vcoFreq = (long double)pd_freq * (uint64_t)pll->N * includedDivide;

@@ -1858,10 +1858,14 @@ CHANNELS
         }                                                                       \
                                                                                 \
         /* run the pll calc algorithm */                                        \
-        pllparam_t pll;                                                         \
-        pll.id = PLL_ID_LMX2595;                                                \
+        pllparam_t pll = pll_def_lmx2595;                                       \
         long double outfreq = 0;                                                \
         outfreq = setFreq(&freq, &pll);                                         \
+                                                                                \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                    \
+            pll.R = pll.R + 1;                                                  \
+            outfreq = setFreq(&freq, &pll);                                     \
+        }                                                                       \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
         set_lo_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
