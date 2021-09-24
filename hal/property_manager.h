@@ -57,5 +57,6 @@ void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
 // Example property: "tx_a/rf/dac/freq"
 int get_property(const char *prop, char *data, size_t max_len);
 int set_property(const char *prop, const char *data);
+int property_good(char *path);
 
 #endif

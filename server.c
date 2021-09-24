@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -186,20 +187,32 @@ int main(int argc, char *argv[]) {
         PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
         usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
-        //abort();
+        abort();
     } 
+
+    int8_t rx_present[NUM_CHANNELS] = {0};
+    for(int n = n; n < NUM_CHANNELS; n++) {
+        strcpy(&prop_path[0],"rx/");
+        tmp_char = n + 'a';
+        strcat(&prop_path[0],&tmp_char);
+        strcat(&prop_path[0],"/wait_pwr_board");
+        char read[3];
+        get_property(&prop_path[0],&read[0],3);
+        sscanf(read, "%hhi", &rx_present[n]);
+    }
     
     // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links
     i = 0;
     count_bad = 0;
     while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
-        strcpy(&prop_path,"rx/");
+        strcpy(&prop_path[0],"rx/");
         tmp_char = i + 'a';
-        strcat(&prop_path,&tmp_char);
-        strcat(&prop_path,"/jesd_status");
+        strcat(&prop_path[0],&tmp_char);
+        strcat(&prop_path[0],"/jesd_status");
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
-        if (property_good(&prop_path) != 1) {
+        //2 is used in wait_pwr_board to indicate that the attempt to turn on timed out, and an empty slot is assumed
+        if (property_good(&prop_path[0]) != 1 && rx_present[i] !=2) {
             count_bad += 1;
             i = 0; // restart checking from the beginning
             PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
@@ -215,12 +228,12 @@ int main(int argc, char *argv[]) {
      
     if (count_bad >= max_attempts) {
         for (i = 0; i < NUM_CHANNELS; i++) {
-            strcpy(&prop_path,"rx/");
+            strcpy(&prop_path[0],"rx/");
             tmp_char = i + 'a';
-            strcat(&prop_path,&tmp_char);
-            strcat(&prop_path,"/jesd_status");
+            strcat(&prop_path[0],&tmp_char);
+            strcat(&prop_path[0],"/jesd_status");
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
-            if (property_good(&prop_path) != 1) {
+            if (property_good(&prop_path[0]) != 1) {
                 PRINT(ERROR,"Some JESD links failed to establish after %i attempts.\n", max_attempts);
                 /*write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
                 usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled

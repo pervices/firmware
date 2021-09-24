@@ -395,7 +395,7 @@ void check_property_inotifies(void) {
 
     ssize_t i = 0;
     while (i < len) {
-        printf("%d / %d \n", i, len);
+        printf("%ld / %ld \n", i, len);
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
@@ -644,25 +644,25 @@ int property_good(char *path) {
     char property_read[5];
     char fullpath[200] = "/var/cyan/state/";
     
-    strcat(&fullpath, path);
+    strcat(&fullpath[0], path);
     // need to write to the property to force an update
-    set_property(&fullpath,"0");
+    set_property(&fullpath[0],"0");
     usleep(500000);
     // then read from the property
-    get_property(&fullpath,property_read,5);
+    get_property(&fullpath[0],property_read,5);
     
-    if(strstr(&property_read,"good") == NULL){
+    if(strstr(&property_read[0],"good") == NULL){
         //return 5;
         
         //THIS IS A HACK so that I don't have to flush the uart buffers
         //TODO remove this and put a good uart flush in server.c
         //double check that it is bad by trying to read it again
         usleep(600000);
-        set_property(&fullpath,"0");
+        set_property(&fullpath[0],"0");
         usleep(400000);
         // then read from the property
-        get_property(&fullpath,property_read,5);
-        if(strstr(&property_read,"good") == 0){
+        get_property(&fullpath[0],property_read,5);
+        if(strstr(&property_read[0],"good") == 0){
             return 5;
         }
     }

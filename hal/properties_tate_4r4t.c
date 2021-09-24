@@ -35,6 +35,7 @@
     #include <math.h>
 #endif
 
+#include <signal.h>
 #include "channels.h"
 #include "gpio_pins.h"
 
@@ -74,9 +75,6 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
-#define PWR_ON  1
-#define PWR_OFF 0
-
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
@@ -85,7 +83,7 @@
 //Unlike most channels rx_4 uses a different patttern
 static const char *rx_reg4_map[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
 
-static const char *tx_reg4_map[4] = { "txa4", "txb4", "txc4", "txd4" };
+static const char *tx_reg4_map[4] = { "txa4", "txe4", "txi4", "txm4" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -111,21 +109,27 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 int max_attempts = 10;
 int jesd_good_code = 0xf;
 
-static uint8_t rx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+//Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
+//indicates that no board is present
+#define PWR_NO_BOARD 2
+//indicates that either the board if off, if no board is present it will default to this value until the fact that the baord is missing is detected
+#define PWR_OFF 0
+//indicates that the board is on, but the rest of the startup sequence has not been doner
+#define PWR_HALF_ON 3
+#define PWR_ON 1
+static uint8_t rx_power[NUM_CHANNELS] = {0};
 
-static uint8_t tx_power[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+static uint8_t tx_power[NUM_CHANNELS] = {0};
 
-static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
+static uint8_t rx_stream[NUM_CHANNELS] = {0};
 
-//old method of mapping rx_4
-static const char *reg4[] = {
-#define X(ch, io, crx, ctx) "rx"STR(ch)"4",
-    CHANNELS
-#undef X
-#define X(ch, io, crx, ctx) "tx"STR(ch)"4",
-    CHANNELS
-#undef X
-};
+static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
+static pid_t tx_async_pwr_pid[NUM_CHANNELS] = {0};
+//the time async_pwr started running, used when calculating if it timed out
+//timeout is in seconds
+#define timeout 15
+static time_t rx_async_start_time[NUM_CHANNELS] = {0};
+static time_t tx_async_start_time[NUM_CHANNELS] = {0};
 
 uint8_t *_save_profile;
 uint8_t *_load_profile;
@@ -588,9 +592,32 @@ static void ping(const int fd, uint8_t *buf, const size_t len) {
     send_uart_comm(fd, buf, len);
     read_uart(fd);
 }
-
 static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     send_uart_comm(fd, buf, len);
+}
+//ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
+//ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
+static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
+    if(rx_power[ch] != PWR_NO_BOARD) {
+        send_uart_comm(fd, buf, len);
+        read_uart(fd);
+    }
+}
+static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
+    if(rx_power[ch] != PWR_NO_BOARD) {
+        send_uart_comm(fd, buf, len);
+    }
+}
+static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
+    if(tx_power[ch] != PWR_NO_BOARD) {
+        send_uart_comm(fd, buf, len);
+        read_uart(fd);
+    }
+}
+static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
+    if(tx_power[ch] != PWR_NO_BOARD) {
+        send_uart_comm(fd, buf, len);
+    }
 }
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
@@ -616,7 +643,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -640,7 +667,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -664,7 +691,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -688,7 +715,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -712,7 +739,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -736,7 +763,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -760,7 +787,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -784,7 +811,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -806,7 +833,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 0 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -828,7 +855,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 1 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -850,7 +877,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 2 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -872,7 +899,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 3 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -894,7 +921,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 4 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -916,7 +943,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "dac -c 5 -g ");                                           \
         sprintf(buf + strlen(buf),"%" PRIu32 "", gaincode);                    \
         strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -924,7 +951,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_rf_dac_temp(const char *data, char *ret) {       \
         strcpy(buf, "board -c " STR(ch) " -t\r");                              \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -938,7 +965,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         if (freq == 0) {                                                       \
           /* Don't mute channel as FPGA/DAC-CP/DAC-MDP tuning might be used*/  \
           /* strcpy(buf, "rf -c " STR(ch) " -z\r");                        */  \
-          /* ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));       */  \
+          /* ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));       */  \
                                                                                \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
@@ -946,7 +973,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /* if freq out of bounds, kill channel*/                               \
         if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));            \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                                                                                \
             /* Turn OFF TX on HPS */                                           \
             uint32_t old_val;                                                  \
@@ -961,7 +988,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
             write_hps_reg("tx" STR_TX(ctx) "4", old_val &(~0x100));                \
                                                                                \
-            tx_power[INT_TX(ch)] = PWR_OFF;                                       \
+            tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
             PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
                          "Shutting Down TX" STR(ch) ".\n");                    \
@@ -975,7 +1002,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
@@ -1000,7 +1027,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         else {  /* otherwise mute the tx board */                              \
             strcpy(buf, "rf -z\r");                                            \
         }                                                                      \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1023,11 +1050,11 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 										\
     static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
 	    uint16_t atten;							\
-	    sscanf(data, "%u", &atten);						\
+	    sscanf(data, "%hu", &atten);						\
 	    strcpy(buf, "rf -a ");						\
 	    sprintf(buf + strlen(buf),"%u", atten);				\
 	    strcat(buf, "\r");							\
-	    ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));		\
+	    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));		\
 										\
 	    return RETURN_SUCCESS;						\
     }										\
@@ -1038,12 +1065,12 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* DAC */                                                              \
         strcpy(buf, "dump -c " STR(ch) " -d\r");                               \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);             \
                                                                                \
         /* GPIOX */                                                            \
         strcpy(buf, "dump -c " STR(ch) " -g\r");                               \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1057,7 +1084,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_rf_board_temp(const char *data, char *ret) {     \
         strcpy(buf, "board -c " STR(ch) " -t\r");                              \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1065,7 +1092,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
         strcpy(buf, "status -c " STR(ch) " -l\r");                             \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1073,7 +1100,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_status_dacld(const char *data, char *ret) {      \
         strcpy(buf, "status -c " STR(ch) " -p\r");                             \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1083,7 +1110,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "board -l\r");                                             \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1666,22 +1693,84 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* In the new context, pwr means resetting the DSP channel and */          \
-    /* pwr_board function will actually turn the RFE boards on or off */       \
-    static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {               \
-        uint32_t old_val;                                                      \
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
+    static int hdlr_tx_##ch##_pwr_board(const char *data, char *ret) {               \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
-        read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
-        write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                        \
-        if (power == PWR_ON) {                                                 \
-            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x2);                   \
-        }                                                                      \
+                                                                               \
+        char pwr_cmd [40];                                                 \
+        if(power>=PWR_ON) {\
+            sprintf(pwr_cmd, "rfe_control %d on", INT_TX(ch));                    \
+        } else {\
+            sprintf(pwr_cmd, "rfe_control %d off", INT_TX(ch));                    \
+        }\
+        system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+        /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
+    /*returns the pid of the powr on process*/\
+    static int hdlr_tx_##ch##_async_pwr_board(const char *data, char *ret) {               \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
-                                                                               \
-    static int hdlr_tx_##ch##_pwr_board(const char *data, char *ret) {         \
+        pid_t pid = fork();\
+        if(pid==0) {\
+            char rfe_slot[10];                                                 \
+            sprintf(rfe_slot, "%i", INT_TX(ch));                    \
+            char str_pwr[10];\
+            if(power>=PWR_ON) {\
+                strcpy(str_pwr, "on");\
+            } else {\
+                strcpy(str_pwr, "off");\
+            }\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i", INT(ch));\
+            _Exit(EXIT_ERROR_RFE_CONTROL);\
+        } else {\
+            sprintf(ret, "%i", pid);\
+            time(&tx_async_start_time[INT(ch)]);\
+            tx_async_pwr_pid[INT(ch)]=pid;\
+        }\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /*waits for async_pwr_board to finished*/\
+    static int hdlr_tx_##ch##_wait_pwr_board(const char *data, char *ret) {               \
+        time_t current_time;\
+        int8_t finished = -1;\
+        int status = 0;\
+        if(tx_async_pwr_pid[INT(ch)] <=0) {\
+            PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
+            return RETURN_ERROR;\
+        }\
+        do {\
+            time(&current_time);\
+            finished = waitpid(tx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
+        } while(current_time < timeout + tx_async_start_time[INT(ch)] && finished == 0);\
+        if (finished == 0) {\
+            kill(tx_async_pwr_pid[INT(ch)], SIGTERM);\
+            /*collects the stalled pwr_on process*/\
+            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
+            waitpid(tx_async_pwr_pid[INT(ch)], &status, 0);\
+            tx_power[INT(ch)] = PWR_NO_BOARD;\
+            strcpy(ret, "0");\
+        } else {\
+            tx_power[INT(ch)] = PWR_HALF_ON;\
+            PRINT(INFO,"Board %i powered on\n", INT(ch));\
+            strcpy(ret, "1");\
+        }\
+        tx_async_pwr_pid[INT(ch)] = 0;\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
+        if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
@@ -1693,15 +1782,15 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on", INT_TX(ch));                    \
-            system(pwr_cmd);                                                   \
-            tx_power[INT(ch)] = PWR_ON;                                        \
+            if(tx_power[INT(ch)] == PWR_OFF) {\
+                /*TODO: change this to use async pwr and timeout*/\
+                char pwr_cmd [40];                                                 \
+                sprintf(pwr_cmd, "rfe_control %d on n", INT_TX(ch));                    \
+                system(pwr_cmd);                                                   \
                                                                                \
-            /* board commands */                                               \
-            /* strcpy(buf, "board -c " STR(ch) " -d\r");               */      \
-            /* ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)); */      \
-            /* usleep(200000);                                         */      \
+                /* board command */           \
+                usleep(200000);                                                    \
+            }\
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
@@ -1720,8 +1809,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                     read_hps_reg(tx_reg4_map[i], &old_val);                      \
                     write_hps_reg(tx_reg4_map[i], old_val | 0x100);              \
                     read_hps_reg(tx_reg4_map[i], &old_val);                      \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
                     write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
                     write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
                 }                                                              \
@@ -1734,26 +1821,26 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                 }                                                              \
             }                                                                  \
                                                                                \
+            tx_power[INT(ch)] = PWR_ON;\
             /* power off */                                                    \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
             sprintf(pwr_cmd, "rfe_control %d off", INT_TX(ch));                   \
             system(pwr_cmd);                                                   \
+            \
+            tx_power[INT(ch)] = PWR_OFF;                                       \
+            \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));            \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                                                                                \
             /* disable DSP cores */                                            \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
-                  toupper(CHR(ch)));                                           \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));                \
-                                                                               \
-            tx_power[INT(ch)] = PWR_OFF;                                       \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1765,7 +1852,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
         if (reboot == 1) {                                                     \
             strcpy(buf, "board -r\r");                                         \
-            ping_write_only(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)); \
+            ping_write_only_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1773,7 +1860,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
         strcpy(buf, "status -g\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1781,7 +1868,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1789,7 +1876,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_about_mcudevid(const char *data, char *ret) {    \
         strcpy(buf, "status -d\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1797,7 +1884,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_about_mcurev(const char *data, char *ret) {      \
         strcpy(buf, "status -v\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1805,7 +1892,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_about_mcufuses(const char *data, char *ret) {    \
         strcpy(buf, "status -f\r");                                            \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1813,7 +1900,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_tx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
-        ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1836,17 +1923,17 @@ CHANNELS
         /* if freq = 0, mute PLL */                                             \
         if (freq == 0) {                                                        \
             strcpy(buf, "lmx -k\r");                                            \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));          \
-            sprintf(ret, "%Lf", 0);                                             \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
+            sprintf(ret, "%i", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
                                                                                 \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
             strcpy(buf, "lmx -k\r");                                            \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));          \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
-            sprintf(ret, "%Lf", 0);                                             \
+            sprintf(ret, "%i", 0);                                             \
             return RETURN_ERROR;                                                \
         }                                                                       \
                                                                                 \
@@ -1885,7 +1972,7 @@ CHANNELS
         strcpy(buf, "rf -l ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1893,7 +1980,7 @@ CHANNELS
         strcpy(buf, "rf -b ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
@@ -1904,7 +1991,7 @@ CHANNELS
     /*sets variable amplifiers, variable attentuators, bypassable amplifiers to achieve desired gain*/\
     /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
+        const char fullpath[200] = "/var/cyan/state/rx/" STR(ch) "/rf/freq/band";    \
         int gain;                                                              \
         int net_gain;                                                          \
         int atten;                                                             \
@@ -1912,7 +1999,7 @@ CHANNELS
         char band_read[3];                                                     \
                                                                                \
         sscanf(data, "%i", &gain);                                             \
-        get_property(&fullpath,&band_read,3);                                  \
+        get_property(&fullpath[0],&band_read[0],3);                                  \
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
@@ -1927,7 +2014,7 @@ CHANNELS
             strcpy(buf, "vga -a ");                                            \
             sprintf(buf + strlen(buf), "%i", atten);                           \
             strcat(buf, "\r");                                                 \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
             net_gain = gain;\
             net_gain = gain + RX_LOW_GAIN_OFFSET;\
         } else if (band == 1) {                                                \
@@ -1965,7 +2052,7 @@ CHANNELS
             strcpy(buf, "rf -g ");                                         \
             sprintf(buf + strlen(buf), "%i", gain);                        \
             strcat(buf, "\r");                                             \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
             \
             /*Sets the state tree property to handle the attenuation*/\
             if(atten < LTC5586_MIN_ATTEN) {\
@@ -2011,7 +2098,7 @@ CHANNELS
             strcpy(buf, "rf -g ");                                         \
             sprintf(buf + strlen(buf), "%i", gain);                        \
             strcat(buf, "\r");                                             \
-            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));     \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
             /*Sets the state tree property to handle the attenuation*/\
             if(atten < LTC5586_MIN_ATTEN) {\
                 atten = LTC5586_MIN_ATTEN;\
@@ -2045,7 +2132,7 @@ CHANNELS
         strcpy(buf, "rf -a ");                                                 \
         sprintf(buf + strlen(buf), "%i", atten);                               \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));             \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));             \
                                                                                \
         sprintf(ret, "%i", atten);                                             \
                                                                                \
@@ -2058,17 +2145,17 @@ CHANNELS
                                                                                \
         /* ADC */                                                              \
         strcpy(buf, "dump -a\r");                               \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);             \
                                                                                \
         /* GPIOX */                                                            \
         strcpy(buf, "dump -g\r");                               \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
                                                                                \
         /* ADC Driver */                                                       \
         strcpy(buf, "dump -v\r");                               \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2087,7 +2174,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
         strcpy(buf, "status -l\r");                             \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2103,7 +2190,7 @@ CHANNELS
         strcpy(buf, "board -l\r");                                             \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2288,6 +2375,7 @@ CHANNELS
         }\
         return RETURN_SUCCESS;                                                 \
     } \
+    \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
         uint32_t old_val;                                                      \
         uint8_t stream;                                                        \
@@ -2333,7 +2421,82 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
+    static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+                                                                               \
+        char pwr_cmd [40];                                                 \
+        if(power>=PWR_ON) {\
+            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+        } else {\
+            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+        }\
+        system(pwr_cmd);                                                   \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*pwr must be used to complete the power on process*/\
+    /*returns the pid of the powr on process*/\
+    static int hdlr_rx_##ch##_async_pwr_board(const char *data, char *ret) {               \
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+                                                                               \
+        pid_t pid = fork();\
+        if(pid==0) {\
+            char rfe_slot[10];                                                 \
+            sprintf(rfe_slot, "%i", INT_RX(ch));                    \
+            char str_pwr[10];\
+            if(power>=PWR_ON) {\
+                strcpy(str_pwr, "on");\
+            } else {\
+                strcpy(str_pwr, "off");\
+            }\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
+            _Exit(EXIT_ERROR_RFE_CONTROL);\
+        } else {\
+            sprintf(ret, "%i", pid);\
+            time(&rx_async_start_time[INT(ch)]);\
+            rx_async_pwr_pid[INT(ch)]=pid;\
+        }\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    /*waits for async_pwr_board to finished*/\
+    static int hdlr_rx_##ch##_wait_pwr_board(const char *data, char *ret) {               \
+        time_t current_time;\
+        int8_t finished = -1;\
+        int status = 0;\
+        if(rx_async_pwr_pid[INT(ch)] <=0) {\
+            PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
+            return RETURN_ERROR;\
+        }\
+        do {\
+            time(&current_time);\
+            finished = waitpid(rx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
+        } while(current_time < timeout + rx_async_start_time[INT(ch)] && finished == 0);\
+        if (finished == 0) {\
+            kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
+            /*collects the stalled pwr_on process*/\
+            waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
+            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
+            rx_power[INT(ch)] = PWR_NO_BOARD;\
+            strcpy(ret, "0");\
+        } else {\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
+            PRINT(INFO,"Board %i powered on\n", INT(ch));\
+            strcpy(ret, "1");\
+        }\
+        rx_async_pwr_pid[INT(ch)] = 0;\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
         uint8_t i;                                                             \
@@ -2345,23 +2508,26 @@ CHANNELS
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
-            system(pwr_cmd);                                                   \
-            rx_power[INT(ch)] = PWR_ON;                                        \
+            /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
+            if(rx_power[INT(ch)] == PWR_OFF) {\
+                /*TODO: change this to use async pwr and timeout*/\
+                char pwr_cmd [40];                                                 \
+                sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+                system(pwr_cmd);                                                   \
                                                                                \
-            /* board command */           \
-            usleep(200000);                                                    \
+                /* board command */           \
+                usleep(200000);                                                    \
+            }\
                                                                                \
             /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS); i++) {                         \
+            for (i = 0; i < NUM_CHANNELS; i++) {                         \
                 read_hps_reg(rx_reg4_map[i], &old_val);                               \
                 write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
             /*temporary disables tx dsp channels*/\
-            for (i = NUM_CHANNELS; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i], &old_val);                               \
-                write_hps_reg(reg4[i], old_val & ~0x100);                      \
+            for (i = 0; i < NUM_CHANNELS; i++) {                         \
+                read_hps_reg(tx_reg4_map[i], &old_val);                               \
+                write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
                                                                                \
             /* send sync pulse */                                              \
@@ -2371,13 +2537,13 @@ CHANNELS
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 /*temporarily disabled because its causeing issue with getting rx working*/\
                 /*if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
-                    write_hps_reg(reg4[i + 16], old_val | 0x100);              \
-                    read_hps_reg(reg4[i + 16], &old_val);                      \
+                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
+                    write_hps_reg(tx_reg4_map[i], old_val | 0x100);              \
+                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
                     PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
                           toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 16], old_val | 0x2);                \
-                    write_hps_reg(reg4[i + 16], old_val &(~0x2));              \
+                    write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
+                    write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
                 }*/                                                              \
                 if (rx_stream[i] == PWR_ON) {                               \
                     read_hps_reg(rx_reg4_map[i], &old_val);                           \
@@ -2387,7 +2553,7 @@ CHANNELS
                     write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
-                                                                               \
+            rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
             char pwr_cmd [40];                                                 \
@@ -2399,7 +2565,7 @@ CHANNELS
                                                                                \
             /* kill the channel */                                             \
             /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
-            /*ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));  */          \
+            /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  */          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
@@ -2418,7 +2584,7 @@ CHANNELS
                                                                                \
         if (reboot == 1) {                                                     \
             strcpy(buf, "board -r\r");                                         \
-            ping_write_only(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)); \
+            ping_write_only_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2426,7 +2592,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2434,7 +2600,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcudevid(const char *data, char *ret) {    \
         strcpy(buf, "status -d\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2442,7 +2608,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcurev(const char *data, char *ret) {      \
         strcpy(buf, "status -v\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2450,7 +2616,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_mcufuses(const char *data, char *ret) {    \
         strcpy(buf, "status -f\r");                                            \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2458,7 +2624,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
-        ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2880,16 +3046,6 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* --------------------------------- WAIT ----------------------------------- */
-/* -------------------------------------------------------------------------- */
-
-static int hdlr_wait_15_secs (const char *data, char *ret){
-    usleep(15000000);
-
-    return RETURN_SUCCESS;
-}
-
-/* -------------------------------------------------------------------------- */
 /* --------------------------------- TIME ----------------------------------- */
 /* -------------------------------------------------------------------------- */
 
@@ -3011,28 +3167,10 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-// Toggle SPI Sync
-static int hdlr_time_sync_lmk_sync_tgl_pll(const char *data, char *ret) {
-    if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -q\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-
 // Resync output edges with Ref
 static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -j\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-
-// Resync output edges with Ref
-static int hdlr_time_sync_lmk_resync_pll(const char *data, char *ret) {
-    if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -p\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -3122,34 +3260,6 @@ static int hdlr_time_status_ld_jesd2_pll2(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_status_ld_pll0_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -l 41\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll0_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -l 42\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll1_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -l 51\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_ld_pll1_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -l 52\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_time_status_lol(const char *data, char *ret) {
     // strcpy(buf, "status -o\r");
     // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -3194,34 +3304,6 @@ static int hdlr_time_status_lol_jesd2_pll1(const char *data, char *ret) {
 
 static int hdlr_time_status_lol_jesd2_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 32\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll0_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -o 41\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll0_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -o 42\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll1_pll1(const char *data, char *ret) {
-    strcpy(buf, "status -o 51\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_status_lol_pll1_pll2(const char *data, char *ret) {
-    strcpy(buf, "status -o 52\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
@@ -3921,7 +4003,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     int reset_type = 0;
     uint32_t tmp_reg = 0;
 
-    sscanf(data, "%lf", &reset_type);
+    sscanf(data, "%i", &reset_type);
 
     read_hps_reg("res_rw7", &tmp_reg);
 
@@ -4043,16 +4125,19 @@ GPIO_PINS
         .symlink_target = t,         \
     },
 
-#define DEFINE_WAIT_15 \
-    DEFINE_FILE_PROP("wait", hdlr_wait_15_secs, RW, "15000000")
+#define DEFINE_RX_WAIT_PWR(_c) \
+    DEFINE_FILE_PROP("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0")
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "1")
+    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "0")   \
+    /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
+    DEFINE_FILE_PROP("rx/" #_c "/async_pwr_board"                      , hdlr_rx_##_c##_async_pwr_board,                     RW, "1")   \
+    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
+    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -4096,10 +4181,18 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
+#define DEFINE_TX_WAIT_PWR(_c) \
+    DEFINE_FILE_PROP("tx/" #_c "/wait_pwr_board", hdlr_tx_##_c##_wait_pwr_board, RW, "0")
+
+#define DEFINE_TX_PWR_REBOOT(_c)    \
+    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                      , hdlr_tx_##_c##_pwr_board,                     RW, "0")   \
+    /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
+    DEFINE_FILE_PROP("tx/" #_c "/async_pwr_board"                      , hdlr_tx_##_c##_async_pwr_board,                     RW, "1")   \
+    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")
+
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                , hdlr_tx_##_c##_pwr_board,               RW, "1")         \
+    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "1")         \
     DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
@@ -4290,13 +4383,22 @@ GPIO_PINS
 
 static prop_t property_table[] = {
     DEFINE_TIME()
-    //power on then reboot rx boards
+    //power off then on reboot rx/tx boards, but don't wait for them to finish booting
 #define X(ch, io, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
-    DEFINE_WAIT_15
-//Wait 15 seconds for all RX to boot/reboot
-//#undef DEFINE_WAIT_15
+#define X(ch, io, crx, ctx) DEFINE_TX_PWR_REBOOT(ch)
+    CHANNELS
+#undef X
+
+//waits for boards to finish booting
+#define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
+    CHANNELS
+#undef X
+#define X(ch, rx, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
+    CHANNELS
+#undef X
+
 #define X(ch, io, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
@@ -4551,6 +4653,10 @@ void sync_channels(uint8_t chan_mask) {
     write_hps_reg("res_rw7", 0x20000000);
     write_hps_reg("res_rw7", 0);
 
+    // Set time board to continuous mode.
+    strcpy(buf, "debug -l 7 -r 139 -w 3\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
 
     while ((i_reset < max_attempts) && (jesd_good == false)) {
@@ -4558,13 +4664,13 @@ void sync_channels(uint8_t chan_mask) {
         // FPGA JESD IP reset
         write_hps_reg("res_rw7",0x10000000);
         write_hps_reg("res_rw7", 0);
-        usleep(100000); // Some wait time for MCUs to be ready
+        usleep(400000); // Some wait time for MCUs to be ready
         /* Trigger a SYSREF pulse */
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        usleep(200000); // Some wait time for MCUs to be ready
+        // strcpy(buf, "sync -k\r");
+        // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
-        if ((reg_val & 0xff) == jesd_good_code) {
+        if ((reg_val  & 0xff)== jesd_good_code) {
             PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
             jesd_good = true;
         }
@@ -4572,11 +4678,16 @@ void sync_channels(uint8_t chan_mask) {
     if (jesd_good != true) {
         PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
     }
+
+    //Return to pulsed Sysref Mode
+    strcpy(buf, "debug -l 7 -r 139 -w 2\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     return;
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
-                       bool tx, size_t channel) {
+                       bool tx, uint32_t channel) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )
