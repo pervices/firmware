@@ -711,7 +711,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         }                                                                      \
                                                                                \
         /* run the pll calc algorithm */                                       \
-        pllparam_t pll;                                                        \
+        pllparam_t pll = pll_def_adf5355;                                      \
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
@@ -1185,7 +1185,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* run the pll calc algorithm */                                       \
-        pllparam_t pll;                                                        \
+        pllparam_t pll = pll_def_adf5355;                                      \
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
@@ -2115,8 +2115,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     }
     
     /* run the pll calc algorithm */
-    pllparam_t pll;
-    pll.id = PLL_ID_LMX2595;
+    pllparam_t pll = pll_def_lmx2595;
     long double outfreq = 0;
     outfreq = setFreq(&freq, &pll);
     
