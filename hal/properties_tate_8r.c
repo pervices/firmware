@@ -1083,6 +1083,8 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         } while(current_time < timeout + rx_async_start_time[INT(ch)] && finished == 0);\
         if (finished == 0) {\
             kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
+            /*collects the stalled pwr_on process*/\
+            waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
             PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
             rx_power[INT(ch)] = PWR_NO_BOARD;\
             strcpy(ret, "0");\
