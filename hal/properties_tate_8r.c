@@ -59,6 +59,9 @@
 #define RX_MID_GAIN_OFFSET 23
 #define RX_HIGH_GAIN_OFFSET 23
 
+//used for rf freq val calc when in high band
+#define HB_STAGE2_MIXER_FREQ 1800000000
+
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
@@ -554,11 +557,11 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             return RETURN_ERROR;                                                \
         }                                                                       \
                                                                                 \
-        /* check band: if HB, subtract 1.8GHz to account for cascaded mixers*/  \
+        /* check band: if HB, subtract freq to account for cascaded mixers*/    \
         get_property(&fullpath,&band_read,3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
-            freq -= 1800000000;                                                 \
+            freq -= HB_STAGE2_MIXER_FREQ;                                       \
         }                                                                       \
                                                                                 \
         /* run the pll calc algorithm */                                        \
@@ -570,6 +573,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /* Send Parameters over to the MCU */                                   \
         set_lo_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
                                                                                 \
+        /* if HB add back in freq before printing value to state tree */        \
+        if (band == 2) {                                                        \
+            outfreq += HB_STAGE2_MIXER_FREQ;                                    \
+        }                                                                       \
         /* Save the frequency that is being set into the property */            \
         sprintf(ret, "%Lf", outfreq);                                           \
                                                                                 \
