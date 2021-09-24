@@ -1723,8 +1723,9 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i", INT(ch));\
+            _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
             sprintf(ret, "%i", pid);\
             time(&tx_async_start_time[INT(ch)]);\
@@ -2430,8 +2431,9 @@ CHANNELS
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
+            _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
             sprintf(ret, "%i", pid);\
             time(&rx_async_start_time[INT(ch)]);\

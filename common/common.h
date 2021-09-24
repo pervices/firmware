@@ -46,6 +46,8 @@
 #define RETURN_ERROR_INSUFFICIENT_RESOURCES -99
 #define RETURN_ERROR_UART_FLUSH -14
 
+#define EXIT_ERROR_RFE_CONTROL 43
+
 // server options
 #define SERVER_DEBUG_OPT (1 << 0)
 #define SERVER_RESVD_OPT (1 << 1)
