@@ -3083,6 +3083,14 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
+    double freq;
+    sscanf(data, "%Lf", &freq);
+    sprintf(buf, "board -c %Lf\r", freq);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_clk_cmd(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -4286,6 +4294,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "3000")\
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
@@ -4316,7 +4325,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)\
     DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")
-    //DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
+    //DEFINE_FILE_PROP("time/board/temp"                   , hdlr_time_board_temp,                   RW, "20")        \
 
 
 #define DEFINE_FPGA()                                                                                                         \
