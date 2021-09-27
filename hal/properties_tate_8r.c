@@ -3007,9 +3007,6 @@ void sync_channels(uint8_t chan_mask) {
      * Issue JESD, then read to see if
      * bad
      **********************************/
-    // FPGA SFP IP reset
-    write_hps_reg("res_rw7", 0x20000000);
-    write_hps_reg("res_rw7", 0);
 
     // Set time board to continuous mode.
     strcpy(buf, "debug -l 7 -r 139 -w 3\r");
