@@ -68,6 +68,15 @@
         X(c, io, i, k) \
         X(d, io, m, o)
 
+#elif defined(TATE_4R4T_3G)
+    //Will be only using the populated RF slots
+    //Column 3 is for rx, 4 is for tx
+    #define CHANNELS \
+        X(a, io, a, c) \
+        X(b, io, e, g) \
+        X(c, io, i, k) \
+        X(d, io, m, o)
+
 #elif defined(VAUNT)
     #define CHANNELS \
         X(a, io) \
@@ -75,7 +84,7 @@
         X(c, io) \
         X(d, io)
 #else
-    #error "Project name (TATE | TATE_8R | TATE_4R4T | VAUNT) not specified or not recognized."
+    #error "Project name (TATE | TATE_8R | TATE_4R4T | TATE_4R4T_3G | VAUNT) not specified or not recognized."
 #endif
 
 // Converts an expanded channel to a compile time string.
@@ -118,7 +127,23 @@
         CHANNELS
     #undef X
     };
-//old method used by tate 8r, tate, and vaunt
+//creates channel maps
+#elif defined (TATE_4R4T_3G)
+    #define STR_RX(crx) #crx
+    #define STR_TX(ctx) #ctx
+
+    // Converts an expanded char into a runtime integer.
+    #define INT(ch) ((int)(CHR(ch) - 'a'))
+    #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+    #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 3)
+
+    //hps maps
+    static const char* const channel_names[] = {
+    #define X(ch, io, crx, ctx) STR(ch),
+        CHANNELS
+    #undef X
+    };
+//old method used by tate, and vaunt
 #else
     // Converts an expanded char into a runtime integer.
     #define INT(ch) ((int)(CHR(ch) - 'a'))

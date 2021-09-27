@@ -2,6 +2,7 @@
 
 # For 4R4T use TATE_4R4T
 # For 8R use TATE_8R
+# For 3G 4R4T use TATE_4R4T_3G
 
 ./autogen.sh clean
 ./autogen.sh
