@@ -1713,6 +1713,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     /*pwr must be used to complete the power on process*/\
     /*returns the pid of the powr on process*/\
     static int hdlr_tx_##ch##_async_pwr_board(const char *data, char *ret) {               \
+        PRINT(INFO,"Channel %i start of async pwr board\n", INT(ch));\
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -1726,7 +1727,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
@@ -1734,11 +1735,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             time(&tx_async_start_time[INT(ch)]);\
             tx_async_pwr_pid[INT(ch)]=pid;\
         }\
+        PRINT(INFO,"Channel %i end of wait pwr board\n", INT(ch));\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_tx_##ch##_wait_pwr_board(const char *data, char *ret) {               \
+        PRINT(INFO,"Channel %i start of wait pwr board\n", INT(ch));\
         time_t current_time;\
         int8_t finished = -1;\
         int status = 0;\
@@ -1763,6 +1766,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             strcpy(ret, "1");\
         }\
         tx_async_pwr_pid[INT(ch)] = 0;\
+        PRINT(INFO,"Channel %i end of wait pwr board\n", INT(ch));\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -2454,7 +2458,7 @@ CHANNELS
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", str_pwr, "on", NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
