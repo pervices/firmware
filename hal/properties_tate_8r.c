@@ -934,6 +934,17 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
+        uint32_t old_val;                                                      \
+        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
+        if (strcmp(data, "1") == 0)                                            \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 12));          \
+        else                                                                   \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
         /* NOTE: This is strictly for tate 8r*/                                \
@@ -2635,6 +2646,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION)     \
     DEFINE_FILE_PROP("rx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     \
     DEFINE_FILE_PROP("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0")         \
+    DEFINE_FILE_PROP("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa")      \
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
