@@ -170,7 +170,7 @@ int check_hps_reg(void) {
                 return ret;
         }
 
-        data = ~old_val[check_index];
+        data = old_val[check_index];
         ret = reg_write(get_reg_from_index(check_index)->addr, &data);
         old_val[check_index] = data;
         if(ret <0) return ret;
