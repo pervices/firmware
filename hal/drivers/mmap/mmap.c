@@ -144,9 +144,25 @@ int check_hps_reg(void) {
     //check index is the register being checked for side effects, index is ther register being checked for change
     uint32_t data, check_index, index, new_val;
     uint32_t old_val[get_num_regs()];
+    uint8_t exempt_regs[get_num_regs()];
+    for(index = 0; index < get_num_regs(); index++) {
+        if(strstr(get_reg_from_index(index)->name, "sys") != 0) {
+            exempt_regs[index] = 1;
+        } else if(strstr(get_reg_from_index(index)->perm, "RO") != 0) {
+            exempt_regs[index] = 1;
+        } else {
+            exempt_regs[index] = 0;
+        }
+    }
     for(check_index = 0; check_index < get_num_regs(); check_index++) {
+        if(exempt_regs[check_index]) {
+            continue;
+        }
         const reg_t *checked_reg = get_reg_from_index(check_index);
         for (index = 0; index < get_num_regs(); index++) {
+            if(exempt_regs[index]) {
+                continue;
+            }
             const reg_t *temp = get_reg_from_index(index);
             ret = reg_read(temp->addr, &old_val[index]);
             //returns on error
@@ -160,6 +176,9 @@ int check_hps_reg(void) {
         if(ret <0) return ret;
 
         for (index = 0; index < get_num_regs(); index++) {
+            if(exempt_regs[index]) {
+                continue;
+            }
             const reg_t *temp = get_reg_from_index(index);
             ret = reg_read(temp->addr, &new_val);
             //returns on error
