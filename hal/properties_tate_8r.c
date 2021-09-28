@@ -1100,7 +1100,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i, with error number: %i\n", INT(ch), errno);\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\

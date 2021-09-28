@@ -25,6 +25,8 @@
         #define HPS2FPGA_GPR_OFST (0x80000000)
     #elif defined(TATE_4R4T)
         #define HPS2FPGA_GPR_OFST (0x80000000)
+    #elif defined(TATE_4R4T_3G)
+        #define HPS2FPGA_GPR_OFST (0x80000000)
     #elif defined(VAUNT)
         #define HPS2FPGA_GPR_OFST (0xFF200000)
     #else
@@ -137,6 +139,65 @@ int dump_hps_reg(void) {
     return RETURN_SUCCESS;
 }
 
+//compares the before and after values of all registers when writting to a register
+//writes the current values of each register to itself
+int check_hps_reg(void) {
+    int ret;
+    //check index is the register being checked for side effects, index is ther register being checked for change
+    uint32_t data, check_index, index, new_val;
+    uint32_t old_val[get_num_regs()];
+    uint8_t exempt_regs[get_num_regs()];
+    for(index = 0; index < get_num_regs(); index++) {
+        if(strstr(get_reg_from_index(index)->name, "sys") != 0) {
+            exempt_regs[index] = 1;
+        } else if(strstr(get_reg_from_index(index)->perm, "RO") != 0) {
+            exempt_regs[index] = 1;
+        } else {
+            exempt_regs[index] = 0;
+        }
+    }
+    for(check_index = 0; check_index < get_num_regs(); check_index++) {
+        if(exempt_regs[check_index]) {
+            continue;
+        }
+        const reg_t *checked_reg = get_reg_from_index(check_index);
+        for (index = 0; index < get_num_regs(); index++) {
+            if(exempt_regs[index]) {
+                continue;
+            }
+            const reg_t *temp = get_reg_from_index(index);
+            ret = reg_read(temp->addr, &old_val[index]);
+            //returns on error
+            if (ret < 0)
+                return ret;
+        }
+
+        data = old_val[check_index];
+        ret = reg_write(get_reg_from_index(check_index)->addr, &data);
+        old_val[check_index] = data;
+        if(ret <0) return ret;
+
+        for (index = 0; index < get_num_regs(); index++) {
+            if(exempt_regs[index]) {
+                continue;
+            }
+            const reg_t *temp = get_reg_from_index(index);
+            ret = reg_read(temp->addr, &new_val);
+            //returns on error
+            if (ret < 0)
+                return ret;
+            if(new_val!=old_val[index]) {
+                printf("reg = %s caused a change in reg = %s\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
+            }
+        }
+
+    }
+    printf("Register check complete\n");
+    printf("Note the register check just writes the current value to each reg. If for example writting to net5 affected both net4 and net5 but they were already the same value it would not be caught by this.\n");
+    printf("It is recomended to reset the unit between checks to avoid any issues missed due to the aformentioned limitation.\n");
+    return RETURN_SUCCESS;
+}
+
 int mmap_init() {
     int r;
     void *rr;
@@ -154,12 +215,14 @@ int mmap_init() {
     mmap_len = 0x4000;
 #elif defined(TATE_4R4T)
     mmap_len = 0x4000;
+#elif defined(TATE_4R4T_3G)
+    mmap_len = 0x4000;
 #elif defined(TATE_8R)
     mmap_len = 0x4000;
 #elif defined(VAUNT)
     mmap_len = 0x1000;
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
 
     rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,

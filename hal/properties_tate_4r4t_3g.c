@@ -17,7 +17,7 @@
 
 /* clang-format off */
 
-#if defined(TATE_4R4T)
+#if defined(TATE_4R4T_3G)
 
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
@@ -1981,20 +1981,10 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        uint8_t band;                                                          \
-        sscanf(data, "%u", &band);                                             \
-                                                                               \
         strcpy(buf, "rf -b ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-                                                                               \
-        /* if mid or high band swap iq to address RTM3 layout issue */         \
-        if (band == 0) {                                                       \
-            set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
-        } else {                                                               \
-            set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
-        }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
@@ -2338,17 +2328,6 @@ CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
                                                                                \
         /*sync_channels( 15 ); */                                              \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
-        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-        if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 12));          \
-        else                                                                   \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3101,6 +3080,14 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
                   (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
     write_hps_reg("sys13", 1);
     write_hps_reg("sys13", 0);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
+    double freq;
+    sscanf(data, "%Lf", &freq);
+    sprintf(buf, "board -c %Lf\r", freq);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
 
@@ -4175,7 +4162,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31")        \
@@ -4308,6 +4294,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "3000")\
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
@@ -4338,7 +4325,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
     DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)\
     DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")
-    //DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
+    //DEFINE_FILE_PROP("time/board/temp"                   , hdlr_time_board_temp,                   RW, "20")        \
 
 
 #define DEFINE_FPGA()                                                                                                         \
@@ -4675,6 +4662,9 @@ void sync_channels(uint8_t chan_mask) {
      * Issue JESD, then read to see if
      * bad
      **********************************/
+    // FPGA SFP IP reset
+    write_hps_reg("res_rw7", 0x20000000);
+    write_hps_reg("res_rw7", 0);
 
     // Set time board to continuous mode.
     strcpy(buf, "debug -l 7 -r 139 -w 3\r");

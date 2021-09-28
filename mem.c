@@ -9,6 +9,7 @@
 #define ARG_REG_WRITE "rw"
 #define ARG_REG_DUMP "rd"
 #define ARG_REG_LIST "rl"
+#define ARG_REG_CHECK "rc"
 
 int main(int argc, char *argv[]) {
     char *reg;            // register
@@ -87,6 +88,10 @@ int main(int argc, char *argv[]) {
     } else if ((argc == 2) && strcmp(argv[1], ARG_REG_DUMP) == 0) {
         dump_hps_reg();
 
+        // if command is to check registers
+    } else if ((argc == 2) && strcmp(argv[1], ARG_REG_CHECK) == 0) {
+        check_hps_reg();
+
         // if command is register list (execution ends here)
     } else if ((argc == 2 || argc == 3) && strcmp(argv[1], ARG_REG_LIST) == 0) {
         if (argc == 3)
@@ -96,10 +101,10 @@ int main(int argc, char *argv[]) {
 
         // usage menu
     } else {
-        printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] "
+        printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] "
                "[value|length|mask] [mask]\n",
                ARG_MEM_READ, ARG_MEM_WRITE, ARG_MEM_DUMP, ARG_REG_READ,
-               ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST);
+               ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST, ARG_REG_CHECK);
         return 0;
     }
 
