@@ -101,10 +101,10 @@ int main(int argc, char *argv[]) {
 
         // usage menu
     } else {
-        printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] "
+        printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] "
                "[value|length|mask] [mask]\n",
                ARG_MEM_READ, ARG_MEM_WRITE, ARG_MEM_DUMP, ARG_REG_READ,
-               ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST);
+               ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST, ARG_REG_CHECK);
         return 0;
     }
 

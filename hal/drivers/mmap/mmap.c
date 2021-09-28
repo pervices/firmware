@@ -139,6 +139,8 @@ int dump_hps_reg(void) {
     return RETURN_SUCCESS;
 }
 
+//compares the before and after values of all registers when writting to a register
+//writes the current values of each register to itself
 int check_hps_reg(void) {
     int ret;
     //check index is the register being checked for side effects, index is ther register being checked for change
@@ -185,16 +187,14 @@ int check_hps_reg(void) {
             if (ret < 0)
                 return ret;
             if(new_val!=old_val[index]) {
-                if(index != check_index) {
-                    printf("reg = %s caused a change in reg = %s\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
-                } else {
-                    printf("reg = %s value does not match what was written\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
-                }
+                printf("reg = %s caused a change in reg = %s\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
             }
         }
 
     }
     printf("Register check complete\n");
+    printf("Note the register check just writes the current value to each reg. If for example writting to net5 affected both net4 and net5 but they were already the same value it would not be caught by this.\n");
+    printf("It is recomended to reset the unit between checks to avoid any issues missed due to the aformentioned limitation.\n");
     return RETURN_SUCCESS;
 }
 
