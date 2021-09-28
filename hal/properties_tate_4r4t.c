@@ -1987,9 +1987,9 @@ CHANNELS
                                                                                \
         /* if mid or high band swap iq to address RTM3 layout issue */         \
         if (band == 0) {                                                       \
-            set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
-        } else {                                                               \
             set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
+        } else {                                                               \
+            set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
