@@ -139,6 +139,46 @@ int dump_hps_reg(void) {
     return RETURN_SUCCESS;
 }
 
+int check_hps_reg(void) {
+    int ret;
+    //check index is the register being checked for side effects, index is ther register being checked for change
+    uint32_t data, check_index, index, new_val;
+    uint32_t old_val[get_num_regs()];
+    for(check_index = 0; check_index < get_num_regs(); check_index++) {
+        const reg_t *checked_reg = get_reg_from_index(check_index);
+        for (index = 0; index < get_num_regs(); index++) {
+            const reg_t *temp = get_reg_from_index(index);
+            ret = reg_read(temp->addr, &old_val[index]);
+            //returns on error
+            if (ret < 0)
+                return ret;
+        }
+
+        data = ~old_val[check_index];
+        ret = reg_write(get_reg_from_index(check_index)->addr, &data);
+        old_val[check_index] = data;
+        if(ret <0) return ret;
+
+        for (index = 0; index < get_num_regs(); index++) {
+            const reg_t *temp = get_reg_from_index(index);
+            ret = reg_read(temp->addr, &new_val);
+            //returns on error
+            if (ret < 0)
+                return ret;
+            if(new_val!=old_val[index]) {
+                if(index != check_index) {
+                    printf("reg = %s caused a change in reg = %s\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
+                } else {
+                    printf("reg = %s value does not match what was written\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
+                }
+            }
+        }
+
+    }
+    printf("Register check complete\n");
+    return RETURN_SUCCESS;
+}
+
 int mmap_init() {
     int r;
     void *rr;

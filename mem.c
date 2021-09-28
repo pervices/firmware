@@ -9,6 +9,7 @@
 #define ARG_REG_WRITE "rw"
 #define ARG_REG_DUMP "rd"
 #define ARG_REG_LIST "rl"
+#define ARG_REG_CHECK "rc"
 
 int main(int argc, char *argv[]) {
     char *reg;            // register
@@ -86,6 +87,10 @@ int main(int argc, char *argv[]) {
         // if command is register dump
     } else if ((argc == 2) && strcmp(argv[1], ARG_REG_DUMP) == 0) {
         dump_hps_reg();
+
+        // if command is to check registers
+    } else if ((argc == 2) && strcmp(argv[1], ARG_REG_CHECK) == 0) {
+        check_hps_reg();
 
         // if command is register list (execution ends here)
     } else if ((argc == 2 || argc == 3) && strcmp(argv[1], ARG_REG_LIST) == 0) {
