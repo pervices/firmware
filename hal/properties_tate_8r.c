@@ -584,10 +584,20 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
+        uint8_t band;                                                          \
+        sscanf(data, "%u", &band);                                             \
+                                                                               \
         strcpy(buf, "rf -b ");                                  \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+                                                                               \
+        /* if mid or high band swap iq to address RTM3 layout issue */         \
+        if (band == 0) {                                                       \
+            set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
+        } else {                                                               \
+            set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
+        }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
@@ -2623,6 +2633,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1")         \
+    DEFINE_FILE_PROP("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31")       \
@@ -2646,7 +2657,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION)     \
     DEFINE_FILE_PROP("rx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     \
     DEFINE_FILE_PROP("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa")      \
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
