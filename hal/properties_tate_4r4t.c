@@ -2236,6 +2236,7 @@ CHANNELS
         /*Sets the bits used in the reg for this channel's dsp gain*/\
         reg_val = reg_val | gain;\
         write_hps_reg(rxg_map[(int)(INT(ch)/4)], reg_val);            \
+        sprintf(ret, "%i", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2257,7 +2258,6 @@ CHANNELS
         int gain_factor;                                                       \
                                                                                \
         char reg = 'a' + (INT(ch)/4)*4;                                        \
-        char gain_adj[5];\
                                                                                \
         /*if (resamp_err < base_err) {*/\
         if (false){     \
@@ -2266,18 +2266,11 @@ CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 15));              \
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
-            /*Set gain adjustment */                                           \
-            gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;       \
-            sprintf(gain_adj, "%i", (int)gain_factor); \
-            set_property("rx/" STR(ch) "/dsp/gain", gain_adj);\
         } else {                                                               \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);             \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));\
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
-            /*TODO: figure out if the lookup table is needed in the server*/   \
-            /*sprintf(gain_adj, "%i", decim_gain_lut[base_factor]);*/\
-            /*set_property("rx/" STR(ch) "/dsp/gain", gain_adj);\*/\
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
