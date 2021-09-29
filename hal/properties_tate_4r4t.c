@@ -2255,9 +2255,6 @@ CHANNELS
                                                                                \
         /* set the appropriate sample rate */                                  \
         memset(ret, 0, MAX_PROP_LEN);                                          \
-        int gain_factor;                                                       \
-                                                                               \
-        char reg = 'a' + (INT(ch)/4)*4;                                        \
                                                                                \
         /*if (resamp_err < base_err) {*/\
         if (false){     \

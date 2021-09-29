@@ -85,6 +85,9 @@ static const char *rx_reg4_map[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
 
 static const char *tx_reg4_map[4] = { "txa4", "txe4", "txi4", "txm4" };
 
+//used to figure out which register, and where in the register to set dsp gain
+static const char *rxg_map[1] = { "rxga" };
+
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
 // TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -2210,7 +2213,20 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_gain(const char *data, char *ret) {          \
-        /* TODO: FW code */ \
+        uint32_t gain;\
+        uint32_t clear_util = 0xff;\
+        sscanf(data, "%i", &gain);                                            \
+        if(gain > 0xff) gain = 0xff;\
+        gain = gain << (8*INT(ch));\
+        clear_util = clear_util << (8*INT(ch));\
+        uint32_t reg_val;\
+        read_hps_reg(rxg_map[(int)(INT(ch)/4)], &reg_val);                                  \
+        /*Clears the bits used in the reg for this channel's dsp gain*/\
+        reg_val = reg_val & ~clear_util;\
+        /*Sets the bits used in the reg for this channel's dsp gain*/\
+        reg_val = reg_val | gain;\
+        write_hps_reg(rxg_map[(int)(INT(ch)/4)], reg_val);            \
+        sprintf(ret, "%i", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2229,13 +2245,7 @@ CHANNELS
                                                                                \
         /* set the appropriate sample rate */                                  \
         memset(ret, 0, MAX_PROP_LEN);                                          \
-        int gain_factor;                                                       \
-                                                                               \
-        char reg = 'a' + (INT(ch)/4)*4;                                        \
-        int shift = (INT(ch)%4)*8;                                             \
-        char reg_name[5];                                                      \
-        sprintf(reg_name, "rxg%c", reg);                                       \
-                                                                               \
+\
         /*if (resamp_err < base_err) {*/\
         if (false){     \
             write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
@@ -2243,21 +2253,11 @@ CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 15));              \
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
-            /*Set gain adjustment */                                           \
-            gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;       \
-            read_hps_reg(reg_name, &old_val);                                  \
-            write_hps_reg(reg_name, (old_val & ~(0xff << shift)) |             \
-                                    (((uint16_t)gain_factor) << shift));       \
         } else {                                                               \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);             \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));\
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
-            /*Set gain adjustment*/                                            \
-            gain_factor = decim_gain_lut[(base_factor)];                       \
-            read_hps_reg(reg_name, &old_val);                                  \
-            write_hps_reg(reg_name, (old_val & ~(0xff << shift)) |             \
-                                    (((uint16_t)gain_factor) << shift));       \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
