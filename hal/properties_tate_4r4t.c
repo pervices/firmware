@@ -2479,7 +2479,7 @@ CHANNELS
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, "on", NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
