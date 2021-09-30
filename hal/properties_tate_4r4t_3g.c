@@ -3084,9 +3084,9 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 }
 
 static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
-    double freq;
-    sscanf(data, "%Lf", &freq);
-    sprintf(buf, "board -c %Lf\r", freq);
+    uint16_t freq;
+    sscanf(data, "%u", &freq);
+    sprintf(buf, "board -c %u\r", freq);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
