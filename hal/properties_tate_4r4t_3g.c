@@ -1148,8 +1148,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
       /*  if (resamp_err < base_err) {                                  */     \
         if ( false ) {                                                         \
             write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 15));              \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 15));              \
             sprintf(ret, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /* Set gain adjustment */                                          \
@@ -1159,8 +1159,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                               (interp_gain_lut[(resamp_factor)] << shift));    \
         } else {                                                               \
             write_hps_reg("tx" STR(ch) "1", base_factor);                      \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));             \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 15));             \
             sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /* Set gain adjustment */                                          \
             read_hps_reg(reg_name, &old_val);                                  \
