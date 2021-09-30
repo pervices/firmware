@@ -142,11 +142,14 @@ int dump_hps_reg(void) {
 //compares the before and after values of all registers when writting to a register
 //writes the current values of each register to itself
 int check_hps_reg(void) {
+    printf("Begining register check\n");
     int ret;
     //check index is the register being checked for side effects, index is ther register being checked for change
-    uint32_t data, check_index, index, new_val;
-    uint32_t old_val[get_num_regs()];
+    uint32_t check_index, index, new_val;
+    uint32_t dummy_data = 0;
     uint8_t exempt_regs[get_num_regs()];
+    uint32_t old_val[get_num_regs()];
+    //generates the list of registers to exempt from the test
     for(index = 0; index < get_num_regs(); index++) {
         if(strstr(get_reg_from_index(index)->name, "sys") != 0) {
             exempt_regs[index] = 1;
@@ -172,9 +175,17 @@ int check_hps_reg(void) {
                 return ret;
         }
 
-        data = old_val[check_index];
-        ret = reg_write(get_reg_from_index(check_index)->addr, &data);
-        old_val[check_index] = data;
+        //searches for a value to write to the checked register that is not currently in use anywhere
+        dummy_data = 0;
+        for(int n = 0; n < get_num_regs(); n++) {
+            if(dummy_data == old_val[n]) {
+                dummy_data++;
+                n = 0;
+            }
+        }
+
+        ret = reg_write(get_reg_from_index(check_index)->addr, &dummy_data);
+        old_val[check_index] = dummy_data;
         if(ret <0) return ret;
 
         for (index = 0; index < get_num_regs(); index++) {
@@ -193,8 +204,6 @@ int check_hps_reg(void) {
 
     }
     printf("Register check complete\n");
-    printf("Note the register check just writes the current value to each reg. If for example writting to net5 affected both net4 and net5 but they were already the same value it would not be caught by this.\n");
-    printf("It is recomended to reset the unit between checks to avoid any issues missed due to the aformentioned limitation.\n");
     return RETURN_SUCCESS;
 }
 
