@@ -4413,25 +4413,25 @@ GPIO_PINS
 static prop_t property_table[] = {
     DEFINE_TIME()
     //power off then on reboot rx/tx boards, but don't wait for them to finish booting
-#define X(ch, io, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
+#define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) DEFINE_TX_PWR_REBOOT(ch)
+#define X(ch, tx, crx, ctx) DEFINE_TX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
 
 //waits for boards to finish booting
-#define X(ch, io, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
+#define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
     CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
+#define X(ch, tx, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
     CHANNELS
 #undef X
 
-#define X(ch, io, crx, ctx) DEFINE_RX_CHANNEL(ch)
+#define X(ch, rx, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) DEFINE_TX_CHANNEL(ch)
+#define X(ch, tx, crx, ctx) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
     DEFINE_FPGA()
@@ -4556,11 +4556,10 @@ int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
         path[delta] = '\0';
     }
 
-    //	if ( 0 != strcmp( path, prop ) ) {
-    //		PRINT( INFO, "%s(): resolved symbolic link: '%s' =>
-    // '%s'\n",
-    // __func__, prop, path );
-    //	}
+    if ( 0 != strcmp( path, prop ) ) {
+        PRINT( INFO, "%s(): resolved symbolic link: '%s' => '%s'\n",
+        __func__, prop, path );
+    }
 
     return RETURN_SUCCESS;
 }
@@ -4575,9 +4574,9 @@ prop_t *get_prop_from_cmd(const char *cmd) {
     }
 
     for (i = 0; i < num_properties; i++) {
-        if ((strcmp(property_table[i].path, cmd) == 0) &&
-            (strlen(property_table[i].path) == strlen(cmd)))
+        if ((strcmp(property_table[i].path, cmd) == 0) && (strlen(property_table[i].path) == strlen(cmd))) {
             return (property_table + i);
+        }
     }
 
     // no matching prop found

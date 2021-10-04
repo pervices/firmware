@@ -2908,11 +2908,10 @@ int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
         path[delta] = '\0';
     }
 
-    //	if ( 0 != strcmp( path, prop ) ) {
-    //		PRINT( INFO, "%s(): resolved symbolic link: '%s' =>
-    // '%s'\n",
-    // __func__, prop, path );
-    //	}
+    if ( 0 != strcmp( path, prop ) ) {
+        PRINT( INFO, "%s(): resolved symbolic link: '%s' => '%s'\n",
+        __func__, prop, path );
+    }
 
     return RETURN_SUCCESS;
 }
@@ -2927,9 +2926,9 @@ prop_t *get_prop_from_cmd(const char *cmd) {
     }
 
     for (i = 0; i < num_properties; i++) {
-        if ((strcmp(property_table[i].path, cmd) == 0) &&
-            (strlen(property_table[i].path) == strlen(cmd)))
+        if ((strcmp(property_table[i].path, cmd) == 0) && (strlen(property_table[i].path) == strlen(cmd))) {
             return (property_table + i);
+        }
     }
 
     // no matching prop found

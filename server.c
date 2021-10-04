@@ -56,7 +56,6 @@ int main(int argc, char *argv[]) {
 
     char load_profile_path[MAX_PROP_LEN];
     char save_profile_path[MAX_PROP_LEN];
-    
     char prop_path[32];
     char tmp_char;
     int count_bad = 0;
@@ -193,13 +192,12 @@ int main(int argc, char *argv[]) {
     } 
 
     int8_t rx_present[NUM_CHANNELS] = {0};
-    for(int n = n; n < NUM_CHANNELS; n++) {
-        strcpy(&prop_path[0],"rx/");
-        tmp_char = n + 'a';
-        strcat(&prop_path[0],&tmp_char);
-        strcat(&prop_path[0],"/wait_pwr_board");
+    for(int n = 0; n < NUM_CHANNELS; n++) {
+        tmp_char = 'a' + n;
+        sprintf(prop_path, "/var/cyan/state/rx/%c/wait_pwr_board", tmp_char);
         char read[3];
         get_property(&prop_path[0],&read[0],3);
+        PRINT(INFO,"&prop_path_c[%i]: %s\n", n, &prop_path[0]);
         sscanf(read, "%hhi", &rx_present[n]);
     }
     
@@ -210,8 +208,7 @@ int main(int argc, char *argv[]) {
     while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
         strcpy(&prop_path[0],"rx/");
         tmp_char = i + 'a';
-        strcat(&prop_path[0],&tmp_char);
-        strcat(&prop_path[0],"/jesd_status");
+        sprintf(prop_path, "rx/%c/jesd_status", tmp_char);
         PRINT(INFO,"PROPERTY: %s\n",prop_path);
         //2 is used in wait_pwr_board to indicate that the attempt to turn on timed out, and an empty slot is assumed
         if (property_good(&prop_path[0]) != 1 && rx_present[i] !=2) {
@@ -230,10 +227,8 @@ int main(int argc, char *argv[]) {
      
     if (count_bad >= max_attempts) {
         for (i = 0; i < NUM_CHANNELS; i++) {
-            strcpy(&prop_path[0],"rx/");
             tmp_char = i + 'a';
-            strcat(&prop_path[0],&tmp_char);
-            strcat(&prop_path[0],"/jesd_status");
+            sprintf(prop_path, "rx/%c/jesd_status", tmp_char);
             PRINT(INFO,"PROPERTY: %s\n",prop_path);
             if (property_good(&prop_path[0]) != 1) {
                 PRINT(ERROR,"Some JESD links failed to establish after %i attempts.\n", max_attempts);
