@@ -4407,10 +4407,10 @@ static prop_t property_table[] = {
 #undef X
 
 //waits for boards to finish booting
-#define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
+#define X(ch, io, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
     CHANNELS
 #undef X
-#define X(ch, rx, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
+#define X(ch, io, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
     CHANNELS
 #undef X
 
