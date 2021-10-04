@@ -46,14 +46,11 @@
 #define DSP_NCO_CONST \
     ((double)8.589934592)
 
-#define MIN_RF_GAIN_TX \
-    ((double)-13)
-#define MAX_RF_GAIN_TX \
-    ((double)17)
-#define MIN_RF_ATTEN_TX \
-    ((double)0)
-#define MAX_RF_ATTEN_TX \
-    ((double)30)
+#define MIN_RF_ATTEN_TX 0
+#define MAX_RF_ATTEN_TX 30
+#define RF_ATTEN_STEP_TX 2.0
+#define MIN_RF_GAIN_TX MIN_RF_ATTEN_TX
+#define MAX_RF_GAIN_TX MAX_RF_ATTEN_TX
 
 //Compnent properties in rx, used to figure out how to set up game
 //This are likely to change between variants, both thier values and how they are used
@@ -1052,12 +1049,17 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
 										\
     static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
-	    uint16_t atten;							\
-	    sscanf(data, "%hu", &atten);						\
+	    float atten;							\
+	    sscanf(data, "%f", &atten);						\
+	    if(atten > MAX_RF_ATTEN_TX) atten = MAX_RF_ATTEN_TX;\
+        float codef = atten / (float)(RF_ATTEN_STEP_TX);\
+        uint16_t codei = roundf(codef);\
 	    strcpy(buf, "rf -a ");						\
-	    sprintf(buf + strlen(buf),"%u", atten);				\
+	    sprintf(buf + strlen(buf),"%hu", codei);				\
 	    strcat(buf, "\r");							\
 	    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));		\
+	    atten = codei * RF_ATTEN_STEP_TX;\
+	    sprintf(ret, "%f", atten);                                     \
 										\
 	    return RETURN_SUCCESS;						\
     }										\
@@ -4119,7 +4121,7 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "cyan_4r4t_3g"
+#define PROJECT_NAME "cyan_4r4t"
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
