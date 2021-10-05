@@ -4121,7 +4121,7 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "cyan_4r4t"
+#define PROJECT_NAME "cyan_4r4t_3g"
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
