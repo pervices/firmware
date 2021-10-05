@@ -1045,6 +1045,10 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         \
         snprintf(s_atten, 25, "%f", atten);\
         set_property("tx/" STR(ch) "/rf/atten", s_atten);\
+        get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
+        sscanf(s_atten, "%lf", &atten);\
+        gain = (((atten)-MIN_RF_ATTEN_TX)/(MAX_RF_ATTEN_TX-MIN_RF_ATTEN_TX)) * (MIN_RF_GAIN_TX - MAX_RF_GAIN_TX) + MAX_RF_GAIN_TX;\
+        snprintf(ret, 25, "%f", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
 										\
