@@ -4542,11 +4542,11 @@ int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
         path[delta] = '\0';
     }
 
-    //	if ( 0 != strcmp( path, prop ) ) {
-    //		PRINT( INFO, "%s(): resolved symbolic link: '%s' =>
-    // '%s'\n",
-    // __func__, prop, path );
-    //	}
+    if ( 0 != strcmp( path, prop ) ) {
+#ifdef DEBUG
+        PRINT( INFO, "%s(): resolved symbolic link: '%s' => '%s'\n", __func__, prop, path );
+#endif
+    }
 
     return RETURN_SUCCESS;
 }

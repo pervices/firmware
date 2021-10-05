@@ -4557,8 +4557,9 @@ int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
     }
 
     if ( 0 != strcmp( path, prop ) ) {
-        PRINT( INFO, "%s(): resolved symbolic link: '%s' => '%s'\n",
-        __func__, prop, path );
+#ifdef DEBUG
+        PRINT( INFO, "%s(): resolved symbolic link: '%s' => '%s'\n", __func__, prop, path );
+#endif
     }
 
     return RETURN_SUCCESS;
