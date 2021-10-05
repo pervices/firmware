@@ -28,6 +28,9 @@
 // Define used for debugging
 //#define DEBUG
 
+//length for property path buffer
+#define PROP_PATH_LEN
+
 // Global return values
 #define RETURN_SUCCESS 0
 #define RETURN_ERROR -1

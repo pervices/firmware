@@ -571,7 +571,7 @@ int get_property(const char *prop, char *data, size_t max_len) {
 
     read_from_file(get_abs_path(temp, path), data, max_len);
 
-    PRINT(VERBOSE, "get_property( %s ) => %s\n", prop, data);
+    //PRINT(VERBOSE, "get_property( %s ) => %s\n", prop, data);
 
     return RETURN_SUCCESS;
 }
