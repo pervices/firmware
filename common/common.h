@@ -28,9 +28,6 @@
 // Define used for debugging
 //#define DEBUG
 
-//length for property path buffer
-#define PROP_PATH_LEN
-
 // Global return values
 #define RETURN_SUCCESS 0
 #define RETURN_ERROR -1
@@ -60,6 +57,8 @@
 #define MAX_PATH_LEN (4096)
 #define MAX_PROP_LEN (1024)
 #define MAX_UART_LEN (8192)
+//length for property path buffer
+#define PROP_PATH_LEN 50
 
 // macro for string comparison
 #define EQUAL_STR(VAR, STR) (strncmp(VAR, STR, strlen(STR)) == 0)
