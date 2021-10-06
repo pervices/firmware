@@ -11,6 +11,7 @@ libhal_la_SOURCES = \
 	properties_tate_8r.c \
 	properties_tate_4r4t.c \
 	properties_tate_4r4t_3g.c \
+	properties_tate_1bbrx_3g.c \
 	properties_vaunt.c \
 	property_manager.c
 libhal_la_CFLAGS = \

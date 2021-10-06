@@ -17,7 +17,7 @@
 
 /* clang-format off */
 
-#if defined(TATE_4R4T)
+#if defined(TATE_1BBRX_3G)
 
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
@@ -293,30 +293,6 @@ static int set_sma_pol(bool positive) {
 /* -------------------------------- LUTS ------------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
-                                    const size_t channel) {
-    int r = RETURN_SUCCESS;
-
-    bool en = '0' != data[0];
-
-    if (en) {
-        r = synth_lut_enable(tx, channel);
-        if (EXIT_SUCCESS != r) {
-            sprintf(ret, "%c", '0');
-        }
-    } else {
-        synth_lut_disable(tx, channel);
-    }
-
-    return r;
-}
-
-#define X(ch, io, crx, ctx)                                                              \
-    static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
-        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
-    }
-CHANNELS
-#undef X
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- GATE ------------------------------------ */
@@ -1976,33 +1952,7 @@ CHANNELS
                                                                                 \
         return RETURN_SUCCESS;                                                  \
     }                                                                           \
-                                                                                                                                                         \
-                                                                               \
-    static int hdlr_rx_##ch##_rf_freq_lna(const char *data, char *ret) {       \
-        strcpy(buf, "rf -l ");                                  \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        uint8_t band;                                                          \
-        sscanf(data, "%u", &band);                                             \
-                                                                               \
-        strcpy(buf, "rf -b ");                                  \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-                                                                               \
-        /* if mid or high band swap iq to address RTM3 layout issue */         \
-        if (band == 0) {                                                       \
-            set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
-        } else {                                                               \
-            set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
-        }                                                                      \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
+                                                                                                                                                         \                                                                                                                                                         \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
         /*Not Yet Implmented in MCU*/\
         return RETURN_SUCCESS;                                                 \
@@ -2139,25 +2089,6 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_rf_atten_val(const char *data, char *ret) {      \
-        /*LTC5586 Atten Range: 0dB to 31dB*/                                   \
-        int atten;                                                             \
-        sscanf(data, "%i", &atten);                                            \
-                                                                               \
-        if (atten > 31)                                                        \
-            atten = 31;                                                        \
-        else if (atten < 0)                                                    \
-            atten = 0;                                                         \
-                                                                               \
-        strcpy(buf, "rf -a ");                                                 \
-        sprintf(buf + strlen(buf), "%i", atten);                               \
-        strcat(buf, "\r");                                                     \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));             \
-                                                                               \
-        sprintf(ret, "%i", atten);                                             \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_dump(const char *data, char *ret) {     \
         /* send the uart commands and read back the output and write to file   \
@@ -2344,17 +2275,7 @@ CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
-    static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
-        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-        if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 12));          \
-        else                                                                   \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
+                                                                               \                                                                      \
                                                                                \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
@@ -2732,6 +2653,7 @@ static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+/*
 static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
     int r;
 
@@ -2780,6 +2702,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 
     return RETURN_SUCCESS;
 }
+*/
 
 static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
     int r;
@@ -3104,6 +3027,14 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
                   (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
     write_hps_reg("sys13", 1);
     write_hps_reg("sys13", 0);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
+    uint16_t freq;
+    sscanf(data, "%u", &freq);
+    sprintf(buf, "board -c %u\r", freq);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
 
@@ -4176,12 +4107,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1")         \
     DEFINE_FILE_PROP("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31")        \
     DEFINE_FILE_PROP("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0")         \
@@ -4311,6 +4237,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "3000")\
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \

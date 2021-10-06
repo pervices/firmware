@@ -58,6 +58,12 @@
         X(f, rx, f, h) \
         X(g, rx, j, l) \
         X(h, rx, n, p)
+        
+#elif defined(TATE_1BBRX_3G)
+    //Will be only using the populated RF slots
+    //Column 3 is for rx, 4 is for tx
+    #define CHANNELS   \
+        X(a, rx, a, c)
 
 #elif defined(TATE_4R4T)
     //Will be only using the populated RF slots
