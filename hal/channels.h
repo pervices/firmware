@@ -90,7 +90,7 @@
         X(c, io) \
         X(d, io)
 #else
-    #error "Project name (TATE | TATE_8R | TATE_4R4T | TATE_4R4T_3G | VAUNT) not specified or not recognized."
+    #error "Project name (TATE | TATE_8R | TATE_4R4T | TATE_4R4T_3G | TATE_1BBRX_3G | VAUNT) not specified or not recognized."
 #endif
 
 // Converts an expanded channel to a compile time string.
@@ -119,6 +119,21 @@
     #undef X
     };
 #elif defined (TATE_8R)
+    #define STR_RX(crx) #crx
+    #define STR_TX(ctx) #ctx
+    #define CHR_RX(crx) #crx[0]
+
+    //rfe port mapping
+    #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
+    #define INT_TX(ch) ((int)(4*(CHR_RX(ch) - 'a')) + 2)
+
+    //hps maps
+    static const char* const channel_names[] = {
+    #define X(ch, io, crx, ctx) STR(ch),
+        CHANNELS
+    #undef X
+    };
+#elif defined (TATE_1BBRX_3G)
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
     #define CHR_RX(crx) #crx[0]
