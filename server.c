@@ -102,12 +102,14 @@ int main(int argc, char *argv[]) {
                 printf("Product: TATE_4R4T\n");
             #elif defined(TATE_4R4T_3G)
                 printf("Product: TATE_4R4T_3G\n");
+                #elif defined(TATE_BBRX)
+                printf("Product: TATE_BBRX\n");
             #elif defined(TATE_8R)
                 printf("Product: TATE_8R\n");
             #elif defined(VAUNT)
                 printf("Product: VAUNT\n");
             #else
-                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_BBRX, TATE_8R, VAUNT). Confirm spelling and spaces."
             #endif
 
             uint32_t ver39_32, ver31_0;
