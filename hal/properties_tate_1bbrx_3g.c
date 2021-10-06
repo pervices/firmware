@@ -1952,7 +1952,6 @@ CHANNELS
                                                                                 \
         return RETURN_SUCCESS;                                                  \
     }                                                                           \
-                                                                                                                                                         \                                                                                                                                                         \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
         /*Not Yet Implmented in MCU*/\
         return RETURN_SUCCESS;                                                 \
@@ -2275,8 +2274,6 @@ CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \                                                                      \
-                                                                               \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
         /* NOTE: This is strictly for tate 4r*/                                \
@@ -4331,7 +4328,6 @@ GPIO_PINS
 #define DEFINE_CM()                                                    \
     DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
     DEFINE_FILE_PROP("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0") \
-    DEFINE_FILE_PROP("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0") \
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \

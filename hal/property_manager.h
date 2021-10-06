@@ -40,12 +40,15 @@
 #elif defined(TATE_8R)
     #define UART_SYNTH "/dev/ttycyan-time"
     #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
+#elif defined(TATE_1BBRX_3G)
+    #define UART_SYNTH "/dev/ttycyan-time"
+    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
 #elif defined(VAUNT)
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, TATE_1BBRX_3G, VAUNT). Confirm spelling and spaces."
 #endif
 
 int get_inotify_fd();
