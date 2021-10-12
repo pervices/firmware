@@ -996,7 +996,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
-        if ((band == 0) || (band == 1) || (band == 9)) {                       \
+        /* if ((band == 0) || (band == 1) || (band == 9)) {  */                       \
+        if ( band == 0 ) {                       \
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -1913,6 +1914,15 @@ CHANNELS
             sprintf(ret, "%i", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
+        /* Else, Sets LMX to 10GHz (before doubler) */                          \
+        else {                                                                  \
+           strcpy(buf, "lmx -k\r");                                            \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
+            strcpy(buf, "lmx -a 3\r");                                            \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
+            strcpy(buf, "lmx -p 6\r");                                            \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
+        }                                                                       \
                                                                                 \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
@@ -1922,33 +1932,6 @@ CHANNELS
             sprintf(ret, "%i", 0);                                             \
             return RETURN_ERROR;                                                \
         }                                                                       \
-                                                                                \
-        /* check band: if HB, subtract freq to account for cascaded mixers*/    \
-        get_property(&fullpath,&band_read,3);                                   \
-        sscanf(band_read, "%i", &band);                                         \
-        if (band == 2) {                                                        \
-            freq -= HB_STAGE2_MIXER_FREQ;                                       \
-        }                                                                       \
-                                                                                \
-        /* run the pll calc algorithm */                                        \
-        pllparam_t pll = pll_def_lmx2595;                                       \
-        long double outfreq = 0;                                                \
-        outfreq = setFreq(&freq, &pll);                                         \
-                                                                                \
-        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                    \
-            pll.R = pll.R + 1;                                                  \
-            outfreq = setFreq(&freq, &pll);                                     \
-        }                                                                       \
-                                                                                \
-        /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
-                                                                                \
-        /* if HB add back in freq before printing value to state tree */        \
-        if (band == 2) {                                                        \
-            outfreq += HB_STAGE2_MIXER_FREQ;                                    \
-        }                                                                       \
-        /* Save the frequency that is being set into the property */            \
-        sprintf(ret, "%Lf", outfreq);                                           \
                                                                                 \
         return RETURN_SUCCESS;                                                  \
     }                                                                           \
@@ -1986,100 +1969,8 @@ CHANNELS
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
             net_gain = gain;\
             net_gain = gain + RX_LOW_GAIN_OFFSET;\
-        } else if (band == 1) {                                                \
-            gain-= RX_MID_GAIN_OFFSET;\
-            /*lna_bypass means bypass the lna (AM1081) */                      \
-            uint8_t lna_bypass;\
-            if (gain <= LTC5586_MIN_GAIN) {\
-                lna_bypass = 1;\
-                atten = LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= LTC5586_MAX_GAIN) {\
-                lna_bypass = 1;\
-                atten = 0;\
-            } else if (gain <= AM1081_GAIN + LTC5586_MIN_GAIN) {\
-                lna_bypass = 0;\
-                atten = AM1081_GAIN + LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= AM1081_GAIN + LTC5586_MAX_GAIN) {\
-                lna_bypass = 0;\
-                atten = 0;\
-                gain = gain - AM1081_GAIN;\
-            } else {\
-                lna_bypass = 0;\
-                gain = LTC5586_MAX_GAIN;\
-                atten = 0;\
-            }\
-            \
-            /*Sets the property to enable/disable bypassing the fixed amplifier*/\
-            char s_lna[5];\
-            snprintf(s_lna, 5, "%u", lna_bypass);\
-            printf(s_lna);\
-            set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
-            \
-            /*Sets gain on the rx board*/\
-            strcpy(buf, "rf -g ");                                         \
-            sprintf(buf + strlen(buf), "%i", gain);                        \
-            strcat(buf, "\r");                                             \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
-            \
-            /*Sets the state tree property to handle the attenuation*/\
-            if(atten < LTC5586_MIN_ATTEN) {\
-                atten = LTC5586_MIN_ATTEN;\
-            } else if(atten > LTC5586_MAX_ATTEN) {\
-                atten = LTC5586_MAX_ATTEN;\
-            }\
-            char s_atten[25];\
-            snprintf(s_atten, 25, "%u", atten);\
-            set_property("rx/" STR(ch) "/rf/atten/val", s_atten);\
-            net_gain = gain + ((1-lna_bypass) * AM1081_GAIN) - atten + RX_MID_GAIN_OFFSET;\
-        } else if (band == 2) {                                                \
-            gain-= RX_HIGH_GAIN_OFFSET;\
-            uint8_t lna_bypass;\
-            if (gain <= LTC5586_MIN_GAIN) {\
-                lna_bypass = 1;\
-                atten = LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= LTC5586_MAX_GAIN) {\
-                lna_bypass = 1;\
-                atten = 0;\
-            } else if (gain <= AM1075_GAIN + LTC5586_MIN_GAIN) {\
-                lna_bypass = 0;\
-                atten = AM1075_GAIN + LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= AM1075_GAIN + LTC5586_MAX_GAIN) {\
-                lna_bypass = 0;\
-                atten = 0;\
-                gain = gain - AM1075_GAIN;\
-            } else {\
-                lna_bypass = 0;\
-                gain = LTC5586_MAX_GAIN;\
-                atten = 0;\
-            }\
-            \
-            /*Sets the property to enable/disable bypassing the fixed amplifier*/\
-            char s_lna[5];\
-            snprintf(s_lna, 5, "%u", lna_bypass);\
-            printf(s_lna);\
-            set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
-            \
-            /*Sets gain on the rx board*/\
-            strcpy(buf, "rf -g ");                                         \
-            sprintf(buf + strlen(buf), "%i", gain);                        \
-            strcat(buf, "\r");                                             \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
-            /*Sets the state tree property to handle the attenuation*/\
-            if(atten < LTC5586_MIN_ATTEN) {\
-                atten = LTC5586_MIN_ATTEN;\
-            } else if(atten > LTC5586_MAX_ATTEN) {\
-                atten = LTC5586_MAX_ATTEN;\
-            }\
-            char s_atten[25];\
-            snprintf(s_atten, 25, "%u", atten);\
-            set_property("rx/" STR(ch) "/rf/atten/val", s_atten);\
-            net_gain = gain + ((1-lna_bypass) * AM1075_GAIN) - atten + RX_HIGH_GAIN_OFFSET;\
-                                                                            \
-        } else {                                                               \
+        }                                                                       \
+        else {                                                               \
             PRINT(ERROR,"band unexpected value while setting gain\n");         \
             return RETURN_ERROR_GET_PROP;                                      \
         }                                                                      \
@@ -3857,10 +3748,6 @@ static int hdlr_fpga_link_sfpd_pay_len(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-
-
-
-
 static int hdlr_fpga_link_net_dhcp_en(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -4871,6 +4758,7 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     strcpy(buf, "lmx -k\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
+    /*  NOT NEEDED FOR BBRX 
     // Send Reference in MHz to MCU
     strcpy(buf, "lmx -o ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
@@ -4888,6 +4776,7 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    NOT NEEDED FOR BBRX */
 
     // write LMX D
     strcpy(buf, "lmx -d ");
@@ -4902,11 +4791,14 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
+    /* NOT NEEDED FOR BBRX 
     // write LMX Output Frequency in MHz
     strcpy(buf, "lmx -f ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    NOT NEEDED FOR BBRX */ 
+    
     usleep(100000);
 }
 
