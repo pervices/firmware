@@ -95,8 +95,9 @@ int read_hps_reg(const char *reg, uint32_t *data) {
         return RETURN_ERROR_PARAM;
 
     const reg_t *temp = get_reg_from_name(reg);
-    if (temp)
+    if (temp) {
         return reg_read(temp->addr, data);
+    }
     else
         return RETURN_ERROR_INVALID_REGISTER;
 }
@@ -265,3 +266,27 @@ void mmap_fini() {
         mmap_fd = -1;
     }
 }
+
+#if defined TATE_4R4T || defined TATE_8R
+//the jesd_shift in this is the used for the bitshift to select the which jesd's registers to access
+uint32_t read_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t *data) {
+    uint32_t jesd_id = 1 << jesd_shift;
+    int write_code = write_hps_reg("net6", jesd_id);
+    write_hps_reg("net7", address/4);
+    write_hps_reg("net9", 0x1);
+    write_hps_reg("net9", 0x0);
+    uint32_t tmp;
+    read_hps_reg("res_ro30", &tmp);
+    *data = tmp;
+}
+
+//the jesd_shift in this is the one used for the bitshift to select the which jesd's registers to access
+uint32_t write_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t data) {
+    uint32_t jesd_id = 1 << jesd_shift;
+    int write_code = write_hps_reg("net6", jesd_id);
+    write_hps_reg("net7", address/4);
+    write_hps_reg("net8", data);
+    write_hps_reg("net9", 0x2);
+    write_hps_reg("net9", 0x0);
+}
+#endif
