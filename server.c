@@ -221,7 +221,7 @@ int main(int argc, char *argv[]) {
             //property_good uses 1 to inidcate good, 5 to indicate bad
             if(jesd_s_rx[m] !=1) {
                 tmp_char = m + 'a';
-                sprintf(&prop_path, "rx/%c/jesd_reset", tmp_char);
+                sprintf(&prop_path, "rx/%c/jesd/reset", tmp_char);
                 set_property(&prop_path,"1");
 
                 //TODO parallelize getting the new jesd status
