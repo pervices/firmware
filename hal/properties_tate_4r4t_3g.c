@@ -2657,6 +2657,10 @@ CHANNELS
     }\
     /*This function will need to be changed to most ports*/\
     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
