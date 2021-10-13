@@ -74,6 +74,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+#define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -103,7 +105,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 10;
+int max_attempts = 0;
 int jesd_good_code = 0xff;
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
@@ -1161,6 +1163,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
                 /*TODO: change this to use async pwr and timeout*/\
                 char pwr_cmd [40];                                                 \
                 sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+                set_property("time/sync/sysref_mode", "continuous");\
                 system(pwr_cmd);                                                   \
                                                                                \
                 /* board command */           \
@@ -1213,6 +1216,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
         int reboot;                                                            \
         sscanf(data, "%i", &reboot);                                           \
+        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         if (reboot == 1) {                                                     \
             strcpy(buf, "board -r\r");                                         \
@@ -1273,6 +1277,18 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         } else {                                                               \
             strcpy(ret, "bad");                                                \
         }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+     }\
+     /*This function will need to be changed to most ports*/\
+     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
+        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        /*TODO: add check to send sysref pulse if not in continuous*/\
         return RETURN_SUCCESS;                                                 \
      }
 CHANNELS
@@ -2663,6 +2679,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                           RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
