@@ -98,6 +98,8 @@
 
 //creates channel maps
 #if defined (TATE_4R4T)
+    #define NUM_TX_CHANNELS 4
+    #define NUM_RX_CHANNELS 4
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
 
@@ -113,6 +115,8 @@
     #undef X
     };
 #elif defined (TATE_8R)
+    #define NUM_TX_CHANNELS 0
+    #define NUM_RX_CHANNELS 8
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
     #define CHR_RX(crx) #crx[0]
@@ -129,6 +133,8 @@
     };
 //creates channel maps
 #elif defined (TATE_4R4T_3G)
+    #define NUM_TX_CHANNELS 4
+    #define NUM_RX_CHANNELS 4
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
 
