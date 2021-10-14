@@ -941,8 +941,8 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 14));              \
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
-                                                                               \
-        /*sync_channels( 15 ); */                                              \
+        \
+        /*sync_channels( 15 ); */\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1142,6 +1142,24 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /*This function will need to be changed to most ports*/\
+    static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        set_property("time/sync/sysref_mode", "continuous");\
+        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        /*TODO: add check to send sysref pulse if not in continuous*/\
+        return RETURN_SUCCESS;                                                 \
+    }\
+     \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -1176,7 +1194,10 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
                 write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
             /* send sync pulse */                                              \
-            sync_channels(15);                                                 \
+            char tmp_ret[10];\
+            char tmp_data[10];\
+            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
+            hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
@@ -1278,33 +1299,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             strcpy(ret, "bad");                                                \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
-     }\
-     /*This function will need to be changed to most ports*/\
-     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
-            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
-            return RETURN_SUCCESS;\
-        }\
-        set_property("time/sync/sysref_mode", "continuous");\
-        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
-        /*this wait is needed*/\
-        usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
-        /*this wait is need*/\
-        usleep(300000);\
-        /*TODO: add check to send sysref pulse if not in continuous*/\
-        return RETURN_SUCCESS;                                                 \
-     }\
-    static int hdlr_rx_##ch##_sync_channel(const char *data, char *ret) {            \
-        int sync;                                                            \
-        sscanf(data, "%i", &sync);                                           \
-                                                                            \
-        if (sync == 1) {                                                     \
-        }                                                                      \
-                                                                            \
-        return RETURN_SUCCESS;                                                 \
-    }
+     }
 CHANNELS
 #undef X
 
@@ -2693,8 +2688,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"               , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
-    DEFINE_FILE_PROP("rx/" #_c "/sync_channel"             , hdlr_rx_##_c##_sync_channel,             RW, "0")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"               , hdlr_rx_##_c##_jesd_reset,             RW, "1")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                           RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
