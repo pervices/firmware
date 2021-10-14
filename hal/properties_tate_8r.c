@@ -1180,7 +1180,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             if(rx_power[INT(ch)] == PWR_OFF) {\
                 /*TODO: change this to use async pwr and timeout*/\
                 char pwr_cmd [40];                                                 \
-                sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+                sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
                 set_property("time/sync/sysref_mode", "continuous");\
                 system(pwr_cmd);                                                   \
                                                                                \
