@@ -200,9 +200,6 @@ int main(int argc, char *argv[]) {
         sscanf(read, "%hhi", &rx_present[n]);
     }
     
-    write_hps_reg("res_rw7", 0x10000000); // reset FPGA JESD IP
-    write_hps_reg("res_rw7", 0); // clear reset bit
-    usleep(300000); // wait 0.3s
     // TODO: add a check for the TX board JESD links
     i = 0;
     count_bad = 0;

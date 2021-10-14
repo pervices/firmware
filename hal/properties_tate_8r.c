@@ -2729,6 +2729,10 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")
 // DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
 
+//This performs the step that resets the master JESD IP, it must be done before initializing the boards
+#define DEFINE_FPGA_PRE()\
+    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
+
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/reset"                          , hdlr_fpga_reset,                        RW, "0")                 \
@@ -2752,7 +2756,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq_all_dsp"           , hdlr_fpga_board_rstreq_all_dsp,         WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
@@ -2795,6 +2798,7 @@ GPIO_PINS
 
 static prop_t property_table[] = {
     DEFINE_TIME()
+    DEFINE_FPGA_PRE()
     //power on then reboot rx boards
 #define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
