@@ -1285,6 +1285,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
+        set_property("time/sync/sysref_mode", "continuous");\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
