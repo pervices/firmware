@@ -2482,7 +2482,7 @@ CHANNELS
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", str_pwr, "on", NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
@@ -3130,9 +3130,9 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 }
 
 static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
-    double freq;
-    sscanf(data, "%Lf", &freq);
-    sprintf(buf, "board -c %Lf\r", freq);
+    uint16_t freq;
+    sscanf(data, "%u", &freq);
+    sprintf(buf, "board -c %u\r", freq);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
@@ -4165,7 +4165,7 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "cyan_4r4t"
+#define PROJECT_NAME "cyan_4r4t_3g"
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
