@@ -1295,7 +1295,16 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         usleep(300000);\
         /*TODO: add check to send sysref pulse if not in continuous*/\
         return RETURN_SUCCESS;                                                 \
-     }
+     }\
+    static int hdlr_rx_##ch##_sync_channel(const char *data, char *ret) {            \
+        int sync;                                                            \
+        sscanf(data, "%i", &sync);                                           \
+                                                                            \
+        if (sync == 1) {                                                     \
+        }                                                                      \
+                                                                            \
+        return RETURN_SUCCESS;                                                 \
+    }
 CHANNELS
 #undef X
 
@@ -2684,7 +2693,8 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"               , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
+    DEFINE_FILE_PROP("rx/" #_c "/sync_channel"             , hdlr_rx_##_c##_sync_channel,             RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                           RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
@@ -3054,8 +3064,7 @@ void sync_channels(uint8_t chan_mask) {
      **********************************/
 
     // Set time board to continuous mode.
-    strcpy(buf, "debug -l 7 -r 139 -w 3\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "continuous");
 
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
     
@@ -3080,8 +3089,7 @@ void sync_channels(uint8_t chan_mask) {
     }
 
     //Return to pulsed Sysref Mode
-    strcpy(buf, "debug -l 7 -r 139 -w 2\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "pulsed");
 
     return;
 }

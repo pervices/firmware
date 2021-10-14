@@ -4692,8 +4692,7 @@ void sync_channels(uint8_t chan_mask) {
     write_hps_reg("res_rw7", 0);
 
     // Set time board to continuous mode.
-    strcpy(buf, "debug -l 7 -r 139 -w 3\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "continuous");
 
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
 
@@ -4718,8 +4717,7 @@ void sync_channels(uint8_t chan_mask) {
     }
 
     //Return to pulsed Sysref Mode
-    strcpy(buf, "debug -l 7 -r 139 -w 2\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "pulsed");
 
     return;
 }
