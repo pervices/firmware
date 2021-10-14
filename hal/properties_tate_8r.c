@@ -68,11 +68,10 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
-#define PWR_ON  1
-#define PWR_OFF 0
-
 #define STREAM_ON  1
 #define STREAM_OFF 0
+
+#define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
@@ -103,7 +102,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 10;
+int max_attempts = 0;
 int jesd_good_code = 0xff;
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
@@ -939,8 +938,8 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 14));              \
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
-                                                                               \
-        /*sync_channels( 15 ); */                                              \
+        \
+        /*sync_channels( 15 ); */\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1140,6 +1139,23 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        set_property("time/sync/sysref_mode", "continuous");\
+        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        /*TODO: add check to send sysref pulse if not in continuous*/\
+        return RETURN_SUCCESS;                                                 \
+    }\
+     \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -1160,7 +1176,8 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             if(rx_power[INT(ch)] == PWR_OFF) {\
                 /*TODO: change this to use async pwr and timeout*/\
                 char pwr_cmd [40];                                                 \
-                sprintf(pwr_cmd, "rfe_control %d on n", INT_RX(ch));                    \
+                sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+                set_property("time/sync/sysref_mode", "continuous");\
                 system(pwr_cmd);                                                   \
                                                                                \
                 /* board command */           \
@@ -1173,7 +1190,10 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
                 write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
             /* send sync pulse */                                              \
-            sync_channels(15);                                                 \
+            char tmp_ret[10];\
+            char tmp_data[10];\
+            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
+            hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
@@ -1213,6 +1233,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
         int reboot;                                                            \
         sscanf(data, "%i", &reboot);                                           \
+        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         if (reboot == 1) {                                                     \
             strcpy(buf, "board -r\r");                                         \
@@ -2663,6 +2684,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"               , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                           RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
@@ -2703,6 +2725,10 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")
 // DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
 
+//This performs the step that resets the master JESD IP, it must be done before initializing the boards
+#define DEFINE_FPGA_PRE()\
+    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
+
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/reset"                          , hdlr_fpga_reset,                        RW, "0")                 \
@@ -2726,7 +2752,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq_all_dsp"           , hdlr_fpga_board_rstreq_all_dsp,         WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
@@ -2769,6 +2794,7 @@ GPIO_PINS
 
 static prop_t property_table[] = {
     DEFINE_TIME()
+    DEFINE_FPGA_PRE()
     //power on then reboot rx boards
 #define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
@@ -3032,8 +3058,7 @@ void sync_channels(uint8_t chan_mask) {
      **********************************/
 
     // Set time board to continuous mode.
-    strcpy(buf, "debug -l 7 -r 139 -w 3\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "continuous");
 
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
     
@@ -3058,8 +3083,7 @@ void sync_channels(uint8_t chan_mask) {
     }
 
     //Return to pulsed Sysref Mode
-    strcpy(buf, "debug -l 7 -r 139 -w 2\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "pulsed");
 
     return;
 }

@@ -197,29 +197,35 @@ int main(int argc, char *argv[]) {
         sprintf(prop_path, "/var/cyan/state/rx/%c/wait_pwr_board", tmp_char);
         char read[3];
         get_property(&prop_path[0],&read[0],3);
-        PRINT(INFO,"&prop_path_c[%i]: %s\n", n, &prop_path[0]);
         sscanf(read, "%hhi", &rx_present[n]);
     }
     
-    // 3. check that the RF board JESD links are up
     // TODO: add a check for the TX board JESD links
     i = 0;
     count_bad = 0;
-    while ((i < NUM_CHANNELS) && (count_bad < max_attempts)) {
-        strcpy(&prop_path[0],"rx/");
-        tmp_char = i + 'a';
+    uint8_t jesd_s_rx[NUM_RX_CHANNELS];
+
+    //a value of 5 here will either indicate that the link is down or hasn't been check yet (same value as used by propery_good function)
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        tmp_char = n + 'a';
         sprintf(prop_path, "rx/%c/jesd_status", tmp_char);
-        PRINT(INFO,"PROPERTY: %s\n",prop_path);
-        //2 is used in wait_pwr_board to indicate that the attempt to turn on timed out, and an empty slot is assumed
-        if (property_good(&prop_path[0]) != 1 && rx_present[i] !=2) {
-            count_bad += 1;
-            i = 0; // restart checking from the beginning
-            PRINT(ERROR,"JESD link bad for rx %c. Resetting FPGA JESD IP, then issuing Sysref pulse.\n",tmp_char);
-            write_hps_reg("res_rw7", 0x10000000); // reset FPGA JESD IP
-            write_hps_reg("res_rw7", 0); // clear reset bit
-            usleep(300000); // wait 0.3s
-        } else {
-            i++;
+        jesd_s_rx[n] = property_good(&prop_path);
+    }
+
+    //TODO run jesd reset stuff through properties
+    for(int n = 0; n < max_attempts; n++) {
+        for(int m = 0; m < NUM_RX_CHANNELS; m++) {
+            //property_good uses 1 to inidcate good, 5 to indicate bad
+            if(jesd_s_rx[m] !=1) {
+                tmp_char = m + 'a';
+                sprintf(&prop_path, "rx/%c/jesd/reset", tmp_char);
+                set_property(&prop_path,"1");
+
+                //TODO parallelize getting the new jesd status
+                sprintf(&prop_path, "rx/%c/jesd_status", tmp_char);
+                tmp_char = m + 'a';
+                jesd_s_rx[m] = property_good(&prop_path);
+            }
         }
     }
 
