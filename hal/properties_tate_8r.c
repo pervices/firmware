@@ -1072,6 +1072,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
@@ -1080,6 +1081,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
         }\
         system(pwr_cmd);                                                   \
+        set_property("time/sync/sysref_mode", "pulsed");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1089,7 +1091,8 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     static int hdlr_rx_##ch##_async_pwr_board(const char *data, char *ret) {               \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
-                                                                               \
+        set_property("time/sync/sysref_mode", "continuous");\
+        \
         pid_t pid = fork();\
         if(pid==0) {\
             char rfe_slot[10];                                                 \
@@ -1144,15 +1147,15 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        set_property("time/sync/sysref_mode", "continuous");\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
         write_hps_reg("res_rw7", 0);\
-        /*this wait is need*/\
+        /*this wait is needed*/\
         usleep(300000);\
-        /*TODO: add check to send sysref pulse if not in continuous*/\
+        /*Sends a sysref pulse*/\
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
         return RETURN_SUCCESS;                                                 \
     }\
      \
@@ -1174,14 +1177,13 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         if (power >= PWR_ON) {                                                 \
             /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
             if(rx_power[INT(ch)] == PWR_OFF) {\
-                /*TODO: change this to use async pwr and timeout*/\
+                /*TODO: change this to use board_pwr*/\
                 char pwr_cmd [40];                                                 \
                 sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
                 set_property("time/sync/sysref_mode", "continuous");\
                 system(pwr_cmd);                                                   \
+                set_property("time/sync/sysref_mode", "pulsed");\
                                                                                \
-                /* board command */           \
-                usleep(200000);                                                    \
             }\
                                                                                \
             /* disable dsp channels */                                         \

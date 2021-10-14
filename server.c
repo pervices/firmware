@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
       */
 
     // 1. set the time board back to pulsed sysref mode
-    set_property("/var/cyan/state/time/sync/sysref_mode","continuous");
+    set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
      
 // 2. check that time board plls are locked
     if (property_good("time/status/status_good") != 1) {
@@ -228,8 +228,6 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-
-    set_property("/var/cyan/state/time/sync/sysref_mode","pulsed"); // go back to pulsed mode
      
     if (count_bad >= max_attempts) {
         for (i = 0; i < NUM_CHANNELS; i++) {
