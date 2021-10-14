@@ -68,9 +68,6 @@
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
-#define PWR_ON  1
-#define PWR_OFF 0
-
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
@@ -1142,7 +1139,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /*This function will need to be changed to most ports*/\
     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -2688,7 +2684,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"               , hdlr_rx_##_c##_jesd_reset,             RW, "1")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"               , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                           RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 

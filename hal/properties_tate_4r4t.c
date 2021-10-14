@@ -2522,7 +2522,25 @@ CHANNELS
         }\
         rx_async_pwr_pid[INT(ch)] = 0;\
         return RETURN_SUCCESS;                                                 \
+    }\
+    \
+    static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        set_property("time/sync/sysref_mode", "continuous");\
+        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        /*TODO: add check to send sysref pulse if not in continuous*/\
+        return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -2561,9 +2579,11 @@ CHANNELS
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
                 write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
-                                                                               \
             /* send sync pulse */                                              \
-            sync_channels(15);                                                 \
+            char tmp_ret[10];\
+            char tmp_data[10];\
+            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
+            hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
@@ -2674,23 +2694,6 @@ CHANNELS
         } else {                                                               \
             strcpy(ret, "bad");                                                \
         }                                                                      \
-        return RETURN_SUCCESS;                                                 \
-    }\
-    /*This function will need to be changed to most ports*/\
-    static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
-            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
-            return RETURN_SUCCESS;\
-        }\
-        set_property("time/sync/sysref_mode", "continuous");\
-        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
-        /*this wait is needed*/\
-        usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
-        /*this wait is need*/\
-        usleep(300000);\
-        /*TODO: add check to send sysref pulse if not in continuous*/\
         return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
@@ -4365,6 +4368,9 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")
     //DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
 
+//This performs the step that resets the master JESD IP, it must be done before initializing the boards
+#define DEFINE_FPGA_PRE()\
+    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
@@ -4389,7 +4395,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq_all_dsp"           , hdlr_fpga_board_rstreq_all_dsp,         WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
@@ -4434,6 +4439,7 @@ GPIO_PINS
 
 static prop_t property_table[] = {
     DEFINE_TIME()
+    DEFINE_FPGA_PRE()
     //power off then on reboot rx/tx boards, but don't wait for them to finish booting
 #define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
