@@ -1187,26 +1187,22 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             }\
                                                                                \
             /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS); i++) {                         \
-                read_hps_reg(rx_reg4_map[i], &old_val);                               \
-                write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
-            }                                                                  \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
+\
             /* send sync pulse */                                              \
             char tmp_ret[10];\
             char tmp_data[10];\
             /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
             hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
                                                                                \
-            /* Enable active dsp channels, and reset DSP */                    \
-            for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                if (rx_stream[i] == PWR_ON) {                               \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
-                    write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
-                }                                                              \
-            }                                                                  \
+            /* Enable active dsp channel, and reset DSP */                    \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x100);                   \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
+\
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
