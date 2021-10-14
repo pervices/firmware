@@ -76,8 +76,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
-//TODO: confirm this is correct for 4r4t
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
+#define INDIVIDUAL_RESET_BIT_OFFSET_TX 16
 
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
@@ -1779,6 +1779,23 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    static int hdlr_tx_##ch##_jesd_reset(const char *data, char *ret) {       \
+        if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        set_property("time/sync/sysref_mode", "continuous");\
+        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_TX);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        /*TODO: add check to send sysref pulse if not in continuous*/\
+        return RETURN_SUCCESS;                                                 \
+    }\
+    \
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
         if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -1812,9 +1829,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
                 write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
-                                                                               \
             /* send sync pulse */                                              \
-            sync_channels(15);                                                 \
+            char tmp_ret[10];\
+            char tmp_data[10];\
+            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
+            hdlr_tx_##ch##_jesd_reset(tmp_data, tmp_ret);\
                                                                                \
             /* enable active dsp channels, and reset the DSP */                \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
@@ -4249,6 +4268,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "1")         \
     DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
