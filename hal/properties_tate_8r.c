@@ -1072,16 +1072,18 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
-        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
+            set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            set_property("time/sync/sysref_mode", "pulsed");\
+            /*Reseting all is temporary, until issue 8177 is fixed*/\
+            jesd_reset_all();\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
         }\
         system(pwr_cmd);                                                   \
-        set_property("time/sync/sysref_mode", "pulsed");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
