@@ -76,10 +76,10 @@
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
-static const char *rx_reg4_map[8] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
+static const char *rx_reg4_map[] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
 
 //used to figure out which register, and where in the register to set dsp gain
-static const char *rxg_map[1] = { "rxga", "rxge" };
+static const char *rxg_map[] = { "rxga", "rxge" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -2669,7 +2669,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20")        \
     DEFINE_FILE_PROP("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "10")        \
+    DEFINE_FILE_PROP("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "255")        \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850")   \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/nco_adj"             , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000") \
     DEFINE_FILE_PROP("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0")         \
