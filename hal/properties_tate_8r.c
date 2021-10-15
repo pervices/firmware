@@ -3097,7 +3097,9 @@ void jesd_reset_all() {
     int attempts;
     attempts = 0;
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-        if(rx_power[chan]==PWR_NO_BOARD) {
+        //Skips empty boards, off boards, and boards that have not begun initialization
+        //Note: make sure when this is called in pwr that the board being turned on is already set as on
+        if(rx_power[chan]!=PWR_ON) {
             continue;
         }
         sprintf(reset_path, "rx/%c/jesd/reset", chan+'a');
