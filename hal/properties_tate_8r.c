@@ -1210,7 +1210,10 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             sprintf(pwr_cmd, "rfe_control %d off n", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[INT(ch)] = PWR_OFF;                                       \
+            /*rx_power[INT(ch)] = PWR_OFF;*/                                       \
+            /*The half on command state is more representative of the actual state it gets set to*/\
+            /*This also will result in sysref not getting changed to continuous when restarting stuff*/\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
