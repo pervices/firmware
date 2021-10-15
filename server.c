@@ -200,50 +200,8 @@ int main(int argc, char *argv[]) {
         sscanf(read, "%hhi", &rx_present[n]);
     }
     
-    // TODO: add a check for the TX board JESD links
-    i = 0;
-    count_bad = 0;
-    uint8_t jesd_s_rx[NUM_RX_CHANNELS];
-
-    //a value of 5 here will either indicate that the link is down or hasn't been check yet (same value as used by propery_good function)
-    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
-        tmp_char = n + 'a';
-        sprintf(prop_path, "rx/%c/jesd_status", tmp_char);
-        jesd_s_rx[n] = property_good(&prop_path);
-    }
-
-    //TODO run jesd reset stuff through properties
-    for(int n = 0; n < max_attempts; n++) {
-        for(int m = 0; m < NUM_RX_CHANNELS; m++) {
-            //property_good uses 1 to inidcate good, 5 to indicate bad
-            if(jesd_s_rx[m] !=1) {
-                tmp_char = m + 'a';
-                sprintf(&prop_path, "rx/%c/jesd/reset", tmp_char);
-                set_property(&prop_path,"1");
-
-                //TODO parallelize getting the new jesd status
-                sprintf(&prop_path, "rx/%c/jesd_status", tmp_char);
-                tmp_char = m + 'a';
-                jesd_s_rx[m] = property_good(&prop_path);
-            }
-        }
-    }
-     
-    if (count_bad >= max_attempts) {
-        for (i = 0; i < NUM_CHANNELS; i++) {
-            tmp_char = i + 'a';
-            sprintf(prop_path, "rx/%c/jesd_status", tmp_char);
-            PRINT(INFO,"PROPERTY: %s\n",prop_path);
-            if (property_good(&prop_path[0]) != 1) {
-                PRINT(ERROR,"Some JESD links failed to establish after %i attempts.\n", max_attempts);
-                /*write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
-                usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
-                abort();*/
-            }
-        }
-    }
-    
-    /*PRINT(INFO,"All JESD links established after %i FPGA IP resets.\n", count_bad);*/
+    //Resets/brings up all JESDs
+    jesd_reset_all();
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");
