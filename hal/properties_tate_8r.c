@@ -102,7 +102,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 0;
+int max_attempts = 1;
 int jesd_good_code = 0xff;
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
@@ -3070,7 +3070,7 @@ void sync_channels(uint8_t chan_mask) {
         write_hps_reg("res_rw7", 0);
         usleep(400000); // Some wait time for MCUs to be ready
         /* Trigger a SYSREF pulse */
-        // strcpy(buf, "sync -k\r");
+         strcpy(buf, "sync -k\r");
         // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         // usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
@@ -3087,6 +3087,31 @@ void sync_channels(uint8_t chan_mask) {
     set_property("time/sync/sysref_mode", "pulsed");
 
     return;
+}
+
+void jesd_reset_all() {
+    int chan;
+    char chan_lt;
+    char reset_path[PROP_PATH_LEN];
+    char status_path[PROP_PATH_LEN];
+    int attempts;
+    attempts = 0;
+    for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        if(rx_power[chan]==PWR_NO_BOARD) {
+            continue;
+        }
+        sprintf(reset_path, "rx/%c/jesd/reset", chan+'a');
+        sprintf(status_path, "rx/%c/jesd_status", chan+'a');
+        while(property_good(status_path) != 1) {
+            if(attempts >= max_attempts) {
+                PRINT(ERROR, "JESD link for channel %c failed after %i attempts \n", chan+'a', max_attempts);
+                break;
+            }
+            attempts++;
+            set_property(reset_path, "1");
+        }
+
+    }
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
