@@ -3060,9 +3060,6 @@ void sync_channels(uint8_t chan_mask) {
      * bad
      **********************************/
 
-    // Set time board to continuous mode.
-    set_property("time/sync/sysref_mode", "continuous");
-
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
     
     while ((i_reset < max_attempts) && (jesd_good == false)) {
@@ -3073,8 +3070,8 @@ void sync_channels(uint8_t chan_mask) {
         usleep(400000); // Some wait time for MCUs to be ready
         /* Trigger a SYSREF pulse */
          strcpy(buf, "sync -k\r");
-        // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        // usleep(200000); // Some wait time for MCUs to be ready
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
         if ((reg_val  & 0xff)== jesd_good_code) {
             PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
@@ -3084,9 +3081,6 @@ void sync_channels(uint8_t chan_mask) {
     if (jesd_good != true) {
         PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
     }
-
-    //Return to pulsed Sysref Mode
-    set_property("time/sync/sysref_mode", "pulsed");
 
     return;
 }

@@ -110,7 +110,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 0;
+int max_attempts = 1;
 int jesd_good_code = 0xf;
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
@@ -2483,7 +2483,11 @@ CHANNELS
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
+            set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            set_property("time/sync/sysref_mode", "pulsed");\
+            /*Reseting all is temporary, until issue 8177 is fixed*/\
+            jesd_reset_all();\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
         }\
@@ -2497,6 +2501,7 @@ CHANNELS
     static int hdlr_rx_##ch##_async_pwr_board(const char *data, char *ret) {               \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         pid_t pid = fork();\
         if(pid==0) {\
@@ -2552,7 +2557,6 @@ CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        set_property("time/sync/sysref_mode", "continuous");\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
@@ -2560,7 +2564,8 @@ CHANNELS
         write_hps_reg("res_rw7", 0);\
         /*this wait is need*/\
         usleep(300000);\
-        /*TODO: add check to send sysref pulse if not in continuous*/\
+        /*Sends a sysref pulse*/\
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -2582,21 +2587,19 @@ CHANNELS
         if (power >= PWR_ON) {                                                 \
             /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
             if(rx_power[INT(ch)] == PWR_OFF) {\
-                /*TODO: change this to use async pwr and timeout*/\
+                /*TODO: change this to use board_pwr*/\
                 char pwr_cmd [40];                                                 \
                 sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
                 set_property("time/sync/sysref_mode", "continuous");\
                 system(pwr_cmd);                                                   \
+                set_property("time/sync/sysref_mode", "pulsed");\
                                                                                \
-                /* board command */           \
-                usleep(200000);                                                    \
             }\
                                                                                \
-            /* disable dsp channels */                                         \
-            for (i = 0; i < NUM_CHANNELS; i++) {                         \
-                read_hps_reg(rx_reg4_map[i], &old_val);                               \
-                write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
-            }                                                                  \
+            /* disable dsp */                                         \
+            read_hps_reg(rx_reg4_map[i], &old_val);                               \
+            write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
+            \
             /*temporary disables tx dsp channels*/\
             for (i = 0; i < NUM_CHANNELS; i++) {                         \
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
@@ -2609,6 +2612,12 @@ CHANNELS
             hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
+            read_hps_reg(rx_reg4_map[i], &old_val);                           \
+            write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
+            read_hps_reg(rx_reg4_map[i], &old_val);                           \
+            write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
+            write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
+            /* Enable active dsp channels, and reset DSP */                    \
             for (i = 0; i < NUM_CHANNELS; i++) {                               \
                 /*temporarily disabled because its causeing issue with getting rx working*/\
                 /*if (tx_power[i] == PWR_ON) {                                   \
@@ -2620,13 +2629,6 @@ CHANNELS
                     write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
                     write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
                 }*/                                                              \
-                if (rx_stream[i] == PWR_ON) {                               \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
-                    write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
-                }                                                              \
             }                                                                  \
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
@@ -2635,7 +2637,10 @@ CHANNELS
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
             /*system(pwr_cmd);*/                                                   \
                                                                                \
-            rx_power[INT(ch)] = PWR_OFF;                                       \
+            /*rx_power[INT(ch)] = PWR_OFF;*/                                       \
+            /*The half on command state is more representative of the actual state it gets set to*/\
+            /*This also will result in sysref not getting changed to continuous when restarting stuff*/\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
@@ -4731,9 +4736,6 @@ void sync_channels(uint8_t chan_mask) {
      * bad
      **********************************/
 
-    // Set time board to continuous mode.
-    set_property("time/sync/sysref_mode", "continuous");
-
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
 
     while ((i_reset < max_attempts) && (jesd_good == false)) {
@@ -4743,9 +4745,9 @@ void sync_channels(uint8_t chan_mask) {
         write_hps_reg("res_rw7", 0);
         usleep(400000); // Some wait time for MCUs to be ready
         /* Trigger a SYSREF pulse */
-        // strcpy(buf, "sync -k\r");
-        // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        // usleep(200000); // Some wait time for MCUs to be ready
+        strcpy(buf, "sync -k\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(200000); // Some wait time for MCUs to be ready
         read_hps_reg("res_ro11", &reg_val);
         if ((reg_val  & 0xff)== jesd_good_code) {
             PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
@@ -4756,10 +4758,35 @@ void sync_channels(uint8_t chan_mask) {
         PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
     }
 
-    //Return to pulsed Sysref Mode
-    set_property("time/sync/sysref_mode", "pulsed");
-
     return;
+}
+
+//tx not implemented yet
+void jesd_reset_all() {
+    int chan;
+    char chan_lt;
+    char reset_path[PROP_PATH_LEN];
+    char status_path[PROP_PATH_LEN];
+    int attempts;
+    attempts = 0;
+    for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        //Skips empty boards, off boards, and boards that have not begun initialization
+        //Note: make sure when this is called in pwr that the board being turned on is already set as on
+        if(rx_power[chan]!=PWR_ON) {
+            continue;
+        }
+        sprintf(reset_path, "rx/%c/jesd/reset", chan+'a');
+        sprintf(status_path, "rx/%c/jesd_status", chan+'a');
+        while(property_good(status_path) != 1) {
+            if(attempts >= max_attempts) {
+                PRINT(ERROR, "JESD link for channel %c failed after %i attempts \n", chan+'a', max_attempts);
+                break;
+            }
+            attempts++;
+            set_property(reset_path, "1");
+        }
+
+    }
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
