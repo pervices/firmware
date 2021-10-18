@@ -1078,8 +1078,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             set_property("time/sync/sysref_mode", "pulsed");\
-            /*Reseting all is temporary, until issue 8177 is fixed*/\
-            jesd_reset_all();\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
         }\

@@ -2486,8 +2486,6 @@ CHANNELS
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             set_property("time/sync/sysref_mode", "pulsed");\
-            /*Reseting all is temporary, until issue 8177 is fixed*/\
-            jesd_reset_all();\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
         }\
@@ -2557,6 +2555,11 @@ CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
+        \
+        /*enables responding to sysref*/\
+        strcpy(buf, "board -s 1\r");\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
@@ -2564,6 +2567,11 @@ CHANNELS
         write_hps_reg("res_rw7", 0);\
         /*this wait is need*/\
         usleep(300000);\
+        \
+        /*disbale responding to sysref*/\
+        strcpy(buf, "board -s 0\r");\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
         /*Sends a sysref pulse*/\
         set_property("time/sync/lmk_sync_tgl_jesd", "1");\
         return RETURN_SUCCESS;                                                 \
