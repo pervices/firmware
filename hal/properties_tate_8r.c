@@ -1150,12 +1150,22 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             return RETURN_SUCCESS;\
         }\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+        \
+        /*enables responding to sysref*/\
+        strcpy(buf, "board -s 1\r");\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
         write_hps_reg("res_rw7", 0);\
         /*this wait is needed*/\
         usleep(300000);\
+        \
+        /*disbale responding to sysref*/\
+        strcpy(buf, "board -s 0\r");\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
         /*Sends a sysref pulse*/\
         set_property("time/sync/lmk_sync_tgl_jesd", "1");\
         return RETURN_SUCCESS;                                                 \
