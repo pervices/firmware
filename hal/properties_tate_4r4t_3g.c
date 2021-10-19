@@ -2456,6 +2456,10 @@ CHANNELS
     /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -2464,8 +2468,10 @@ CHANNELS
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             set_property("time/sync/sysref_mode", "pulsed");\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            rx_power[INT(ch)] = PWR_OFF;\
         }\
         system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
@@ -2645,13 +2651,20 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         int reboot;                                                            \
         sscanf(data, "%i", &reboot);                                           \
-        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         if (reboot == 1) {                                                     \
-            strcpy(buf, "board -r\r");                                         \
-            ping_write_only_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+            /*This will cause an error if this runs during initialization*/\
+            /*This will wait until the board is done booting*/\
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
+            set_property("rx/" STR(ch) "/pwr_board", "1");\
+            /*Brings up the JESD link after reboot*/\
+            set_property("rx/" STR(ch) "/jesd/reset", "1");\
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \

@@ -2478,6 +2478,10 @@ CHANNELS
     /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -2486,8 +2490,10 @@ CHANNELS
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             set_property("time/sync/sysref_mode", "pulsed");\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            rx_power[INT(ch)] = PWR_OFF;\
         }\
         system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
@@ -2523,30 +2529,24 @@ CHANNELS
     }                                                                          \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_rx_##ch##_wait_pwr_board(const char *data, char *ret) {               \
-        time_t current_time;\
-        int8_t finished = -1;\
-        int status = 0;\
-        if(rx_async_pwr_pid[INT(ch)] <=0) {\
-            PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
-            return RETURN_ERROR;\
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
         }\
-        do {\
-            time(&current_time);\
-            finished = waitpid(rx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
-        } while(current_time < timeout + rx_async_start_time[INT(ch)] && finished == 0);\
-        if (finished == 0) {\
-            kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
-            /*collects the stalled pwr_on process*/\
-            waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
-            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
-            rx_power[INT(ch)] = PWR_NO_BOARD;\
-            strcpy(ret, "0");\
-        } else {\
+        uint8_t power;                                                         \
+        sscanf(data, "%" SCNd8 "", &power);                                    \
+                                                                               \
+        char pwr_cmd [40];                                                 \
+        if(power>=PWR_ON) {\
+            set_property("time/sync/sysref_mode", "continuous");\
+            sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            set_property("time/sync/sysref_mode", "pulsed");\
             rx_power[INT(ch)] = PWR_HALF_ON;\
-            PRINT(INFO,"Board %i powered on\n", INT(ch));\
-            strcpy(ret, "1");\
+        } else {\
+            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            rx_power[INT(ch)] = PWR_OFF;\
         }\
-        rx_async_pwr_pid[INT(ch)] = 0;\
+        system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
     }\
     \
@@ -2666,13 +2666,22 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /*Reboot the board, performing minimal initialization*/\
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         int reboot;                                                            \
         sscanf(data, "%i", &reboot);                                           \
                                                                                \
         if (reboot == 1) {                                                     \
-            strcpy(buf, "board -r\r");                                         \
-            ping_write_only_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+            /*This will cause an error if this runs during initialization*/\
+            /*This will wait until the board is done booting*/\
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
+            set_property("rx/" STR(ch) "/pwr_board", "1");\
+            /*Brings up the JESD link after reboot*/\
+            set_property("rx/" STR(ch) "/jesd/reset", "1");\
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
