@@ -4198,6 +4198,7 @@ GPIO_PINS
         .handler = h,                \
         .permissions = p,            \
         .def_val = v,                \
+        .pwr_en = UP,\
     },
 
 #define DEFINE_SYMLINK_PROP(n, t)    \

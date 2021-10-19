@@ -2807,6 +2807,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
         .handler = h,                \
         .permissions = p,            \
         .def_val = v,                \
+        .pwr_en = UP,\
     },
 
 #define DEFINE_SYMLINK_PROP(n, t)    \

@@ -41,6 +41,16 @@ typedef enum {
     PROP_TYPE_SYMLINK,
 } prop_type_t;
 
+//records stores wether or not to turn on the tx or rx board before performing the task
+//PROP_UNSPECIFIED_PWR means to use the old very clunky way
+//It is being kept so that older stuff doesn't need to be tested with the new methd and should be phased out
+typedef enum {
+    TP, //indicates to set a tx board on
+    RP, //indicates to set an rx board on
+    SP, //indicates not to seta board to on
+    UP = 0, //indicates that is is unspecified whether or not to set a channel power (uses old method)
+} prop_pwr_t;
+
 typedef struct prop {
     prop_type_t type;
     char path[MAX_PROP_LEN];
@@ -49,6 +59,8 @@ typedef struct prop {
     perm_t permissions;
     char def_val[MAX_PROP_LEN]; // default value
     int wd;                     // inotify watch descriptor
+    prop_pwr_t pwr_en; //stores wether or not to make sure a board is on before setting the property
+
 } prop_t;
 
 // Externed functions
