@@ -1193,13 +1193,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         if (power >= PWR_ON) {                                                 \
             /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
             if(rx_power[INT(ch)] == PWR_OFF) {\
-                /*TODO: change this to use board_pwr*/\
-                char pwr_cmd [40];                                                 \
-                sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
-                set_property("time/sync/sysref_mode", "continuous");\
-                system(pwr_cmd);                                                   \
-                set_property("time/sync/sysref_mode", "pulsed");\
-                                                                               \
+                set_property("rx/" STR(ch) "/pwr_board", "1");\
             }\
                                                                                \
             /* disable dsp channels */                                         \
