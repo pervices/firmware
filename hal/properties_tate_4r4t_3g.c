@@ -4201,6 +4201,19 @@ GPIO_PINS
         .pwr_en = UP,\
     },
 
+//defines the file prop using the new (2021-10-19) method of deciding whether or not to turn the board on first
+//everything using DEFINE_FILE_PROP will set rx/pwr or tx/pwr to 1 for anything contianing rx or tx in the path
+//Things using this will only turn on rx or tx if specified in the define
+#define DEFINE_FILE_PROP_P(n, h, p, v, e) \
+    {                                \
+        .type = PROP_TYPE_FILE,      \
+        .path = n,                   \
+        .handler = h,                \
+        .permissions = p,            \
+        .def_val = v,                \
+        .pwr_en = e,\
+    },
+
 #define DEFINE_SYMLINK_PROP(n, t)    \
     {                                \
         .type = PROP_TYPE_SYMLINK,   \
@@ -4209,18 +4222,18 @@ GPIO_PINS
     },
 
 #define DEFINE_RX_WAIT_PWR(_c) \
-    DEFINE_FILE_PROP("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0")
+    DEFINE_FILE_PROP_P("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0", SP)
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "0")   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/pwr_board"             , hdlr_rx_##_c##_pwr_board,                     RW, "0", SP)   \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
-    DEFINE_FILE_PROP("rx/" #_c "/async_pwr_board"                      , hdlr_rx_##_c##_async_pwr_board,                     RW, "1")   \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")
+    DEFINE_FILE_PROP_P("rx/" #_c "/async_pwr_board"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                , hdlr_rx_##_c##_reboot,                  RW, "0", SP)
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)   \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
