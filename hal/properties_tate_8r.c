@@ -1081,13 +1081,14 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         if(power>=PWR_ON) {\
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            system(pwr_cmd);                                                   \
             set_property("time/sync/sysref_mode", "pulsed");\
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_OFF;\
         }\
-        system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
