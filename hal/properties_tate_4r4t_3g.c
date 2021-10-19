@@ -4280,20 +4280,20 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
 #define DEFINE_TX_WAIT_PWR(_c) \
-    DEFINE_FILE_PROP("tx/" #_c "/wait_pwr_board", hdlr_tx_##_c##_wait_pwr_board, RW, "0")
+    DEFINE_FILE_PROP_P("tx/" #_c "/wait_pwr_board", hdlr_tx_##_c##_wait_pwr_board, RW, "0", SP)
 
 #define DEFINE_TX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                      , hdlr_tx_##_c##_pwr_board,                     RW, "0")   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/pwr_board"                      , hdlr_tx_##_c##_pwr_board,          RW, "0", SP)   \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
-    DEFINE_FILE_PROP("tx/" #_c "/async_pwr_board"                      , hdlr_tx_##_c##_async_pwr_board,                     RW, "1")   \
-    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")
+    DEFINE_FILE_PROP_P("tx/" #_c "/async_pwr_board"        , hdlr_tx_##_c##_async_pwr_board,         RW, "1", SP)   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                 , hdlr_tx_##_c##_reboot,                  RW, "0", SP)
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "1")         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP)         \
     DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
+    DEFINE_FILE_PROP("tx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
