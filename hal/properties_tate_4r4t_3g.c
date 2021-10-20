@@ -40,7 +40,7 @@
 #include "gpio_pins.h"
 
 // Sample rates are in samples per second (SPS).
-#define BASE_SAMPLE_RATE   3000000000.0  //After base rate
+#define BASE_SAMPLE_RATE   500000000.0  //After base rate
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
