@@ -1167,12 +1167,13 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         /*this wait is needed*/\
         usleep(300000);\
         \
+        /*Sends a sysref pulse*/\
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
+        \
         /*disbale responding to sysref*/\
         strcpy(buf, "board -s 0\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         \
-        /*Sends a sysref pulse*/\
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
         return RETURN_SUCCESS;                                                 \
     }\
      \

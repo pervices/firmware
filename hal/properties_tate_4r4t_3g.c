@@ -2553,12 +2553,12 @@ CHANNELS
         /*this wait is need*/\
         usleep(300000);\
         \
+        /*Sends a sysref pulse*/\
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
+        \
         /*disbale responding to sysref*/\
         strcpy(buf, "board -s 0\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        \
-        /*Sends a sysref pulse*/\
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
