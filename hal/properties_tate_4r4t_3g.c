@@ -5010,7 +5010,7 @@ out:
 void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
 
-    double freq = pll->vcoFreq / pll->d;
+    double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
 
     // Ensure that the LoGen board is powered on
     strcpy(buf, "lmx -O 0\r");
