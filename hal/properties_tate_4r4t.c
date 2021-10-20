@@ -2649,9 +2649,7 @@ CHANNELS
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
-            /*system(pwr_cmd);*/                                                   \
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
                                                                                \
             /*rx_power[INT(ch)] = PWR_OFF;*/                                       \
             /*The half on command state is more representative of the actual state it gets set to*/\
