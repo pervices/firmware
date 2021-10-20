@@ -2545,6 +2545,7 @@ CHANNELS
         strcpy(buf, "board -s 1\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         \
+        usleep(1000000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
@@ -2556,7 +2557,7 @@ CHANNELS
         \
         /*Sends a sysref pulse*/\
         set_property("time/sync/lmk_sync_tgl_jesd", "1");\
-        usleep(500000);\
+        usleep(100000);\
         \
         /*disbale responding to sysref*/\
         strcpy(buf, "board -s 0\r");\
