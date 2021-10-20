@@ -2556,7 +2556,7 @@ CHANNELS
         \
         /*Sends a sysref pulse*/\
         set_property("time/sync/lmk_sync_tgl_jesd", "1");\
-        usleep(1000000);\
+        usleep(100000);\
         \
         /*disbale responding to sysref*/\
         strcpy(buf, "board -s 0\r");\
