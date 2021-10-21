@@ -2541,6 +2541,8 @@ CHANNELS
             return RETURN_SUCCESS;\
         }\
         \
+        if(property_good("rx/" STR(ch) "/jesd_status") == 1) return RETURN_SUCCESS;\
+        \
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
         \
@@ -2598,11 +2600,8 @@ CHANNELS
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
                 write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
-            /* send sync pulse */                                              \
-            char tmp_ret[10];\
-            char tmp_data[10];\
-            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
-            hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
+            /* reset JESD */                                              \
+            set_property("rx/" STR(ch) "/jesd/reset", "1");\
                                                                                \
             /* Enable dsp, and reset DSP */                    \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
@@ -2657,10 +2656,8 @@ CHANNELS
         if (reboot == 1) {                                                     \
             /*This will cause an error if this runs during initialization*/\
             /*This will wait until the board is done booting*/\
-            set_property("rx/" STR(ch) "/pwr_board", "0");\
-            set_property("rx/" STR(ch) "/pwr_board", "1");\
-            /*Brings up the JESD link after reboot*/\
-            set_property("rx/" STR(ch) "/jesd/reset", "1");\
+            set_property("rx/" STR(ch) "/pwr", "0");\
+            set_property("rx/" STR(ch) "/pwr", "1");\
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -4235,6 +4232,10 @@ GPIO_PINS
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
+    /*jesd reset and status are used by pwr, must be before it*/\
+    /*also because they called by power they cannot call power to enable the board before being run*/\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)   \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
@@ -4275,8 +4276,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
