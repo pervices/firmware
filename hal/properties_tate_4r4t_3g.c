@@ -2541,11 +2541,19 @@ CHANNELS
             return RETURN_SUCCESS;\
         }\
         \
+        /*Using sysref pulses would be better, but the pulses have problems*/\
+        set_property("time/sync/sysref_mode", "continuous");\
+        \
         /*enables responding to sysref*/\
         strcpy(buf, "board -s 1\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         \
-        usleep(1000000);\
+        usleep(100000);\
+        /*disable responding to sysref*/\
+        strcpy(buf, "board -s 0\r");\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
+        /*Resets JESD on FPGA*/\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
@@ -2555,13 +2563,8 @@ CHANNELS
         /*this wait is need*/\
         usleep(300000);\
         \
-        /*Sends a sysref pulse*/\
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
-        usleep(100000);\
+        set_property("time/sync/sysref_mode", "pulsed");\
         \
-        /*disbale responding to sysref*/\
-        strcpy(buf, "board -s 0\r");\
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
