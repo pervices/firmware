@@ -4412,6 +4412,10 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad")
     //DEFINE_FILE_PROP("time/board/temp"                   , hdlr_time_board_temp,                   RW, "20")        \
 
+//This performs the step that resets the master JESD IP, it must be done before initializing the boards
+#define DEFINE_FPGA_PRE()\
+    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
+
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
     DEFINE_FILE_PROP("fpga/reset"                          , hdlr_fpga_reset,                        RW, "0")                 \
@@ -4480,6 +4484,7 @@ GPIO_PINS
 
 static prop_t property_table[] = {
     DEFINE_TIME()
+    DEFINE_FPGA_PRE()
     //power off then on reboot rx/tx boards, but don't wait for them to finish booting
 #define X(ch, io, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
