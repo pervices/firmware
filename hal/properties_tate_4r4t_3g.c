@@ -2734,7 +2734,7 @@ CHANNELS
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
             \
-        } else*/ if (!strstr((char *)uart_ret_buf, "good")) {\
+        } else*/ if (strstr((char *)uart_ret_buf, "good") != NULL) {\
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
         } else {\
