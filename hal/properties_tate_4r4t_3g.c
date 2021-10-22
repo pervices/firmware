@@ -2543,6 +2543,15 @@ CHANNELS
         \
         if(property_good("rx/" STR(ch) "/jesd_status") == 1) return RETURN_SUCCESS;\
         \
+        if(property_good("rx/" STR(ch) "/board/status") != 1) {\
+            /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
+            set_property("rx/" STR(ch) "/pwr_board", "1");\
+            if(property_good("rx/" STR(ch) "/jesd_status") != 1) {\
+                PRINT(ERROR, "Bad register values in rx board");\
+                return RETURN_ERROR;\
+            }\
+        }\
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
         \
@@ -2715,6 +2724,27 @@ CHANNELS
         } else {                                                               \
             strcpy(ret, "bad");                                                \
         }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+    }\
+    \
+    /*Check if the board is in  a bad state, the board will attempt to reinitialize itself if it is*/\
+    /*This is to avoid a wierd issue with the registers in adc32rf45*/\
+    static int hdlr_rx_##ch##_board_status(const char *data, char *ret) {       \
+        strcpy(buf, "status -g\r");                                                 \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        if(!strstr((char *)uart_ret_buf, "good after reset")) {\
+            PRINT(INFO, "Issues with board register, successful attempt to reinitialize them");\
+            strcpy(ret, "good");\
+            return RETURN_SUCCESS;\
+            \
+        } else if (!strstr((char *)uart_ret_buf, "good")) {\
+            strcpy(ret, "good");\
+            return RETURN_SUCCESS;\
+        } else {\
+            strcpy(ret, "bad");\
+            return RETURN_ERROR;\
+        }\
+        \
         return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
@@ -4236,6 +4266,7 @@ GPIO_PINS
     /*also because they called by power they cannot call power to enable the board before being run*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/status"              , hdlr_rx_##_c##_board_status,             RW, "0", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)   \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
