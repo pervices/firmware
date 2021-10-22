@@ -1827,8 +1827,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
-                read_hps_reg(rx_reg4_map[i], &old_val);                               \
-                write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
                 write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
@@ -1846,13 +1844,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                     read_hps_reg(tx_reg4_map[i], &old_val);                      \
                     write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
                     write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
-                }                                                              \
-                if (rx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
-                    write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
                                                                                \
@@ -2733,7 +2724,7 @@ CHANNELS
         strcpy(buf, "status -g\r");                                                 \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         if(!strstr((char *)uart_ret_buf, "good after reset")) {\
-            PRINT(INFO, "Issues with board register, successful attempt to reinitialize them");\
+            PRINT(INFO, "Issues with board register, successful reinitialization\n");\
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
             \
@@ -2741,6 +2732,7 @@ CHANNELS
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
         } else {\
+            PRINT(ERROR, "Issues with board register, unable to solve via reinitialization. Rebooting board.\n");\
             strcpy(ret, "bad");\
             return RETURN_ERROR;\
         }\
