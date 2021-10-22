@@ -2532,8 +2532,6 @@ CHANNELS
             return RETURN_SUCCESS;\
         }\
         \
-        if(property_good("rx/" STR(ch) "/jesd_status") == 1) return RETURN_SUCCESS;\
-        \
         if(property_good("rx/" STR(ch) "/board/status") != 1) {\
             /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
             set_property("rx/" STR(ch) "/pwr_board", "0");\
