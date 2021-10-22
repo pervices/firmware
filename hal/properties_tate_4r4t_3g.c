@@ -2538,7 +2538,7 @@ CHANNELS
             /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
             set_property("rx/" STR(ch) "/pwr_board", "0");\
             set_property("rx/" STR(ch) "/pwr_board", "1");\
-            if(property_good("rx/" STR(ch) "/jesd_status") != 1) {\
+            if(property_good("rx/" STR(ch) "/board/status") != 1) {\
                 PRINT(ERROR, "Bad register values in rx board");\
                 return RETURN_ERROR;\
             }\
