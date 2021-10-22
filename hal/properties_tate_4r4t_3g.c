@@ -2539,7 +2539,7 @@ CHANNELS
         while(property_good("rx/" STR(ch) "/board/status") != 1 && reboot_attempts < max_attempts) {\
             reboot_attempts++;\
             /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
-            PRINT(ERROR, "Rx board is in a bad state, rebooting it\n");\
+            PRINT(ERROR, "Rx board is in a bad state, rebooting attempt %i\n", reboot_attempts);\
             set_property("rx/" STR(ch) "/pwr_board", "0");\
             set_property("rx/" STR(ch) "/pwr_board", "1");\
         }\
@@ -2738,7 +2738,7 @@ CHANNELS
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
         } else {\
-            PRINT(ERROR, "Issues with board register, unable to solve via reinitialization. Rebooting board.\n");\
+            PRINT(ERROR, "Issues with board register, message: %s.\n", (char *)uart_ret_buf);\
             strcpy(ret, "bad");\
             return RETURN_ERROR;\
         }\
