@@ -2540,12 +2540,13 @@ CHANNELS
             set_property("rx/" STR(ch) "/pwr_board", "0");\
             set_property("rx/" STR(ch) "/pwr_board", "1");\
             if(property_good("rx/" STR(ch) "/board/status") != 1) {\
-                PRINT(ERROR, "Bad register values in rx board");\
+                PRINT(ERROR, "Bad register values in rx board\n");\
                 return RETURN_ERROR;\
             }\
         }\
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
+        usleep(100000);\
         \
         /*enables responding to sysref*/\
         strcpy(buf, "board -s 1\r");\
@@ -2724,7 +2725,7 @@ CHANNELS
     static int hdlr_rx_##ch##_board_status(const char *data, char *ret) {       \
         int reset;                                                            \
         sscanf(data, "%i", &reset);                                           \
-        if (!reset) return RETURN_SUCCESS;\
+        if (reset == - 1) return RETURN_SUCCESS;\
         \
         strcpy(buf, "status -g\r");                                                 \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
@@ -4262,7 +4263,7 @@ GPIO_PINS
     /*jesd reset and status are used by pwr, must be before it*/\
     /*also because they called by power they cannot call power to enable the board before being run*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/board/status"              , hdlr_rx_##_c##_board_status,             RW, "0", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/status"              , hdlr_rx_##_c##_board_status,             RW, "-1", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)   \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
