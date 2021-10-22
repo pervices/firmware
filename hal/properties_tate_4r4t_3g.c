@@ -2531,6 +2531,9 @@ CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
+        int reset;                                                            \
+        sscanf(data, "%i", &reset);                                           \
+        if (!reset) return RETURN_SUCCESS;\
         \
         if(property_good("rx/" STR(ch) "/board/status") != 1) {\
             /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
@@ -4255,8 +4258,8 @@ GPIO_PINS
     /*jesd reset and status are used by pwr, must be before it*/\
     /*also because they called by power they cannot call power to enable the board before being run*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/board/status"              , hdlr_rx_##_c##_board_status,             RW, "0", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)   \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
