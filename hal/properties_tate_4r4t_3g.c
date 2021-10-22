@@ -2729,12 +2729,7 @@ CHANNELS
         \
         strcpy(buf, "status -g\r");                                                 \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        /*if(!strstr((char *)uart_ret_buf, "good after reset")) {\
-            PRINT(INFO, "Issues with board register, successful reinitialization\n");\
-            strcpy(ret, "good");\
-            return RETURN_SUCCESS;\
-            \
-        } else*/ if (strstr((char *)uart_ret_buf, "good") != NULL) {\
+        if (uart_ret_buf[0] == 'g') {\
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
         } else {\
