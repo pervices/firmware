@@ -2722,6 +2722,10 @@ CHANNELS
     /*Check if the board is in  a bad state, the board will attempt to reinitialize itself if it is*/\
     /*This is to avoid a wierd issue with the registers in adc32rf45*/\
     static int hdlr_rx_##ch##_board_status(const char *data, char *ret) {       \
+        int reset;                                                            \
+        sscanf(data, "%i", &reset);                                           \
+        if (!reset) return RETURN_SUCCESS;\
+        \
         strcpy(buf, "status -g\r");                                                 \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         if(!strstr((char *)uart_ret_buf, "good after reset")) {\
