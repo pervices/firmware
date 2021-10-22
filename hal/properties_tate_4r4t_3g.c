@@ -109,7 +109,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 1;
+int max_attempts = 5;
 int jesd_good_code = 0xf;
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
@@ -2535,14 +2535,13 @@ CHANNELS
         sscanf(data, "%i", &reset);                                           \
         if (!reset) return RETURN_SUCCESS;\
         \
-        if(property_good("rx/" STR(ch) "/board/status") != 1) {\
+        int reboot_attempts = 0;\
+        while(property_good("rx/" STR(ch) "/board/status") != 1 && reboot_attempts < max_attempts) {\
+            reboot_attempts++;\
             /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
+            PRINT(ERROR, "Rx board is in a bad state, rebooting it\n");\
             set_property("rx/" STR(ch) "/pwr_board", "0");\
             set_property("rx/" STR(ch) "/pwr_board", "1");\
-            if(property_good("rx/" STR(ch) "/board/status") != 1) {\
-                PRINT(ERROR, "Bad register values in rx board\n");\
-                return RETURN_ERROR;\
-            }\
         }\
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
@@ -2730,12 +2729,12 @@ CHANNELS
         \
         strcpy(buf, "status -g\r");                                                 \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        if(!strstr((char *)uart_ret_buf, "good after reset")) {\
+        /*if(!strstr((char *)uart_ret_buf, "good after reset")) {\
             PRINT(INFO, "Issues with board register, successful reinitialization\n");\
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
             \
-        } else if (!strstr((char *)uart_ret_buf, "good")) {\
+        } else*/ if (!strstr((char *)uart_ret_buf, "good")) {\
             strcpy(ret, "good");\
             return RETURN_SUCCESS;\
         } else {\
