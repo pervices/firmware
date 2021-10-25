@@ -1070,6 +1070,10 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -1077,11 +1081,14 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         if(power>=PWR_ON) {\
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            system(pwr_cmd);                                                   \
             set_property("time/sync/sysref_mode", "pulsed");\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            system(pwr_cmd);                                                   \
+            rx_power[INT(ch)] = PWR_OFF;\
         }\
-        system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1160,12 +1167,13 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         /*this wait is needed*/\
         usleep(300000);\
         \
+        /*Sends a sysref pulse*/\
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
+        \
         /*disbale responding to sysref*/\
         strcpy(buf, "board -s 0\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         \
-        /*Sends a sysref pulse*/\
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
         return RETURN_SUCCESS;                                                 \
     }\
      \
@@ -1187,13 +1195,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         if (power >= PWR_ON) {                                                 \
             /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
             if(rx_power[INT(ch)] == PWR_OFF) {\
-                /*TODO: change this to use board_pwr*/\
-                char pwr_cmd [40];                                                 \
-                sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
-                set_property("time/sync/sysref_mode", "continuous");\
-                system(pwr_cmd);                                                   \
-                set_property("time/sync/sysref_mode", "pulsed");\
-                                                                               \
+                set_property("rx/" STR(ch) "/pwr_board", "1");\
             }\
                                                                                \
             /* disable dsp channels */                                         \
@@ -1216,14 +1218,9 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off n", INT_RX(ch));                   \
-            /*system(pwr_cmd);*/                                                   \
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
                                                                                \
-            /*rx_power[INT(ch)] = PWR_OFF;*/                                       \
-            /*The half on command state is more representative of the actual state it gets set to*/\
-            /*This also will result in sysref not getting changed to continuous when restarting stuff*/\
-            rx_power[INT(ch)] = PWR_HALF_ON;\
+            rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
@@ -1242,13 +1239,20 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         int reboot;                                                            \
         sscanf(data, "%i", &reboot);                                           \
-        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         if (reboot == 1) {                                                     \
-            strcpy(buf, "board -r\r");                                         \
-            ping_write_only_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+            /*This will cause an error if this runs during initialization*/\
+            /*This will wait until the board is done booting*/\
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
+            set_property("rx/" STR(ch) "/pwr_board", "1");\
+            /*Brings up the JESD link after reboot*/\
+            set_property("rx/" STR(ch) "/jesd/reset", "1");\
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2633,6 +2637,20 @@ GPIO_PINS
         .handler = h,                \
         .permissions = p,            \
         .def_val = v,                \
+        .pwr_en = UP,\
+    },
+
+//defines the file prop using the new (2021-10-19) method of deciding whether or not to turn the board on first
+//everything using DEFINE_FILE_PROP will set rx/pwr or tx/pwr to 1 for anything contianing rx or tx in the path
+//Things using this will only turn on rx or tx if specified in the define
+#define DEFINE_FILE_PROP_P(n, h, p, v, e) \
+    {                                \
+        .type = PROP_TYPE_FILE,      \
+        .path = n,                   \
+        .handler = h,                \
+        .permissions = p,            \
+        .def_val = v,                \
+        .pwr_en = e,\
     },
 
 #define DEFINE_SYMLINK_PROP(n, t)    \
@@ -2643,17 +2661,17 @@ GPIO_PINS
     },
 
 #define DEFINE_RX_WAIT_PWR(_c) \
-    DEFINE_FILE_PROP("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0")
+    DEFINE_FILE_PROP_P("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0", RP)
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "0")   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/pwr_board"              , hdlr_rx_##_c##_pwr_board,               RW, "0", SP)   \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
-    DEFINE_FILE_PROP("rx/" #_c "/async_pwr_board"                      , hdlr_rx_##_c##_async_pwr_board,                     RW, "1")   \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")
+    DEFINE_FILE_PROP_P("rx/" #_c "/async_pwr_board"        , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP)
     
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -2719,7 +2737,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
-    DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,             RW, "continuous")\
+    DEFINE_FILE_PROP_P("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,             RW, "continuous", SP)\
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0")         \

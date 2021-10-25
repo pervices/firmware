@@ -640,10 +640,18 @@ int set_property(const char *prop, const char *data) {
         return RETURN_ERROR_SET_PROP;
     }
 
-    // enable channel if it has not been enabled yet
-    // (enabling the channel later will erase the current channels, so enable
-    // now)
-    power_on_channel_fixup(temp->path);
+    if(temp->pwr_en == UP) {
+        // enable (turns on and initializes) channel if it has not been enabled yet
+        // (enabling the channel later will erase the current channels, so enable
+        // now)
+        //This is what causes the power to turn on every time anthing with tx or rx in its path is called
+        //This is the old method
+        power_on_channel_fixup(temp->path);
+    } else if(temp->pwr_en == RP) {
+        power_on_channel(0, temp->path);
+    } else if(temp->pwr_en == TP) {
+        power_on_channel(1, temp->path);
+    }
 
     write_to_file(get_abs_path(temp, path), data);
 

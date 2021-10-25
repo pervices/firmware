@@ -18,7 +18,7 @@
 #include "uart.h"
 
 // Maximum before a UART command is considered a fail
-#define TIMEOUT 100000UL // us, 1.0 seconds
+#define TIMEOUT 10000000UL // us, 10 seconds
 
 // Minimum time between UART commands
 #define TIME_INTERVAL 50000 // us, 0.05 seconds

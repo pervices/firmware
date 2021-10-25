@@ -109,7 +109,8 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 1;
+int max_attempts = 0;
+int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
@@ -1827,8 +1828,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
-                read_hps_reg(rx_reg4_map[i], &old_val);                               \
-                write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
                 write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
@@ -1846,13 +1845,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                     read_hps_reg(tx_reg4_map[i], &old_val);                      \
                     write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
                     write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
-                }                                                              \
-                if (rx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
-                    write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
                 }                                                              \
             }                                                                  \
                                                                                \
@@ -2456,6 +2448,10 @@ CHANNELS
     /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -2463,11 +2459,14 @@ CHANNELS
         if(power>=PWR_ON) {\
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
+            system(pwr_cmd);                                                   \
             set_property("time/sync/sysref_mode", "pulsed");\
+            rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            system(pwr_cmd);                                                   \
+            rx_power[INT(ch)] = PWR_OFF;\
         }\
-        system(pwr_cmd);                                                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -2533,12 +2532,29 @@ CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
+        int reset;                                                            \
+        sscanf(data, "%i", &reset);                                           \
+        if (!reset) return RETURN_SUCCESS;\
+        \
+        int reboot_attempts = 0;\
+        while(property_good("rx/" STR(ch) "/board/status") != 1 && reboot_attempts < max_brd_reboot_attempts) {\
+            reboot_attempts++;\
+            /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
+            PRINT(ERROR, "Rx board is in a bad state, rebooting attempt %i\n", reboot_attempts);\
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
+            set_property("rx/" STR(ch) "/pwr_board", "1");\
+        }\
+        /*Using sysref pulses would be better, but the pulses have problems*/\
+        set_property("time/sync/sysref_mode", "continuous");\
+        usleep(100000);\
         \
         /*enables responding to sysref*/\
         strcpy(buf, "board -s 1\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        \
+        /*Resets JESD on FPGA*/\
+        usleep(300000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+        PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
@@ -2546,12 +2562,22 @@ CHANNELS
         /*this wait is need*/\
         usleep(300000);\
         \
-        /*disbale responding to sysref*/\
+        /*disable responding to sysref*/\
         strcpy(buf, "board -s 0\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         \
-        /*Sends a sysref pulse*/\
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
+        usleep(300000);\
+        /*Resets JESD on FPGA*/\
+        PRINT(INFO, "Individual_reset_bit: %i", individual_reset_bit);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        \
+        set_property("time/sync/sysref_mode", "pulsed");\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -2573,13 +2599,7 @@ CHANNELS
         if (power >= PWR_ON) {                                                 \
             /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
             if(rx_power[INT(ch)] == PWR_OFF) {\
-                /*TODO: change this to use board_pwr*/\
-                char pwr_cmd [40];                                                 \
-                sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
-                set_property("time/sync/sysref_mode", "continuous");\
-                system(pwr_cmd);                                                   \
-                set_property("time/sync/sysref_mode", "pulsed");\
-                                                                               \
+                set_property("rx/" STR(ch) "/pwr_board", "1");\
             }\
                                                                                \
             /* disable dsp */                                         \
@@ -2591,11 +2611,8 @@ CHANNELS
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
                 write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
-            /* send sync pulse */                                              \
-            char tmp_ret[10];\
-            char tmp_data[10];\
-            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
-            hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
+            /* reset JESD */                                              \
+            set_property("rx/" STR(ch) "/jesd/reset", "1");\
                                                                                \
             /* Enable dsp, and reset DSP */                    \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
@@ -2619,14 +2636,9 @@ CHANNELS
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                   \
-            /*system(pwr_cmd);*/                                                   \
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
                                                                                \
-            /*rx_power[INT(ch)] = PWR_OFF;*/                                       \
-            /*The half on command state is more representative of the actual state it gets set to*/\
-            /*This also will result in sysref not getting changed to continuous when restarting stuff*/\
-            rx_power[INT(ch)] = PWR_HALF_ON;\
+            rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
@@ -2645,13 +2657,18 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         int reboot;                                                            \
         sscanf(data, "%i", &reboot);                                           \
-        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         if (reboot == 1) {                                                     \
-            strcpy(buf, "board -r\r");                                         \
-            ping_write_only_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+            /*This will cause an error if this runs during initialization*/\
+            /*This will wait until the board is done booting*/\
+            set_property("rx/" STR(ch) "/pwr", "0");\
+            set_property("rx/" STR(ch) "/pwr", "1");\
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2709,6 +2726,27 @@ CHANNELS
         } else {                                                               \
             strcpy(ret, "bad");                                                \
         }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+    }\
+    \
+    /*Check if the board is in  a bad state, the board will attempt to reinitialize itself if it is*/\
+    /*This is to avoid a wierd issue with the registers in adc32rf45*/\
+    static int hdlr_rx_##ch##_board_status(const char *data, char *ret) {       \
+        int reset;                                                            \
+        sscanf(data, "%i", &reset);                                           \
+        if (reset == - 1) return RETURN_SUCCESS;\
+        \
+        strcpy(buf, "status -g\r");                                                 \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        if (uart_ret_buf[0] == 'g') {\
+            strcpy(ret, "good");\
+            return RETURN_SUCCESS;\
+        } else {\
+            PRINT(ERROR, "Issues with board register, message: %s.\n", (char *)uart_ret_buf);\
+            strcpy(ret, "bad");\
+            return RETURN_ERROR;\
+        }\
+        \
         return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
@@ -4191,6 +4229,20 @@ GPIO_PINS
         .handler = h,                \
         .permissions = p,            \
         .def_val = v,                \
+        .pwr_en = UP,\
+    },
+
+//defines the file prop using the new (2021-10-19) method of deciding whether or not to turn the board on first
+//everything using DEFINE_FILE_PROP will set rx/pwr or tx/pwr to 1 for anything contianing rx or tx in the path
+//Things using this will only turn on rx or tx if specified in the define
+#define DEFINE_FILE_PROP_P(n, h, p, v, e) \
+    {                                \
+        .type = PROP_TYPE_FILE,      \
+        .path = n,                   \
+        .handler = h,                \
+        .permissions = p,            \
+        .def_val = v,                \
+        .pwr_en = e,\
     },
 
 #define DEFINE_SYMLINK_PROP(n, t)    \
@@ -4201,18 +4253,23 @@ GPIO_PINS
     },
 
 #define DEFINE_RX_WAIT_PWR(_c) \
-    DEFINE_FILE_PROP("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0")
+    DEFINE_FILE_PROP_P("rx/" #_c "/wait_pwr_board", hdlr_rx_##_c##_wait_pwr_board, RW, "0", SP)
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr_board"                      , hdlr_rx_##_c##_pwr_board,                     RW, "0")   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/pwr_board"             , hdlr_rx_##_c##_pwr_board,                     RW, "0", SP)   \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
-    DEFINE_FILE_PROP("rx/" #_c "/async_pwr_board"                      , hdlr_rx_##_c##_async_pwr_board,                     RW, "1")   \
-    DEFINE_FILE_PROP("rx/" #_c "/reboot"                   , hdlr_rx_##_c##_reboot,                  RW, "0")
+    DEFINE_FILE_PROP_P("rx/" #_c "/async_pwr_board"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                , hdlr_rx_##_c##_reboot,                  RW, "0", SP)
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1")         \
+    /*jesd reset and status are used by pwr, must be before it*/\
+    /*also because they called by power they cannot call power to enable the board before being run*/\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/status"              , hdlr_rx_##_c##_board_status,             RW, "-1", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)   \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -4252,26 +4309,24 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
 #define DEFINE_TX_WAIT_PWR(_c) \
-    DEFINE_FILE_PROP("tx/" #_c "/wait_pwr_board", hdlr_tx_##_c##_wait_pwr_board, RW, "0")
+    DEFINE_FILE_PROP_P("tx/" #_c "/wait_pwr_board", hdlr_tx_##_c##_wait_pwr_board, RW, "0", SP)
 
 #define DEFINE_TX_PWR_REBOOT(_c)    \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr_board"                      , hdlr_tx_##_c##_pwr_board,                     RW, "0")   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/pwr_board"                      , hdlr_tx_##_c##_pwr_board,          RW, "0", SP)   \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
-    DEFINE_FILE_PROP("tx/" #_c "/async_pwr_board"                      , hdlr_tx_##_c##_async_pwr_board,                     RW, "1")   \
-    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")
+    DEFINE_FILE_PROP_P("tx/" #_c "/async_pwr_board"        , hdlr_tx_##_c##_async_pwr_board,         RW, "1", SP)   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                 , hdlr_tx_##_c##_reboot,                  RW, "0", SP)
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "1")         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP)         \
     DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
+    DEFINE_FILE_PROP("tx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -4375,7 +4430,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
-    DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,             RW, "continuous")    \
+    DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP)    \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0")         \
@@ -4419,7 +4474,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq_all_dsp"           , hdlr_fpga_board_rstreq_all_dsp,         WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
