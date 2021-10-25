@@ -1862,12 +1862,12 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                                                                                \
             /* disable DSP cores */                                            \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                    \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));                \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
