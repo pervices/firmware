@@ -2543,15 +2543,6 @@ CHANNELS
             PRINT(ERROR, "Rx board is in a bad state, rebooting attempt %i\n", reboot_attempts);\
             set_property("rx/" STR(ch) "/pwr_board", "0");\
             set_property("rx/" STR(ch) "/pwr_board", "1");\
-            /*Resets JESD on FPGA*/\
-            uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-            PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
-            write_hps_reg("res_rw7",  individual_reset_bit);\
-            /*this wait is needed*/\
-            usleep(300000);\
-            write_hps_reg("res_rw7", 0);\
-            /*this wait is need*/\
-            usleep(300000);\
         }\
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
