@@ -2544,6 +2544,7 @@ CHANNELS
             set_property("rx/" STR(ch) "/pwr_board", "0");\
             set_property("rx/" STR(ch) "/pwr_board", "1");\
             /*Resets JESD on FPGA*/\
+            usleep(300000);\
             uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
             PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
             write_hps_reg("res_rw7",  individual_reset_bit);\
@@ -2566,7 +2567,7 @@ CHANNELS
         strcpy(buf, "board -s 0\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         \
-        usleep(100000);\
+        usleep(300000);\
         /*Resets JESD on FPGA*/\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
