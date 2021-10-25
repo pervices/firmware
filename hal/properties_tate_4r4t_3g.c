@@ -2729,8 +2729,9 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }\
     \
-    /*Check if the board is in  a bad state, the board will attempt to reinitialize itself if it is*/\
+    /*Check if the board is in  a bad state , the board will attempt to reinitialize itself if it is*/\
     /*This is to avoid a wierd issue with the registers in adc32rf45*/\
+    /*2021-10-25: the bad state was caused by the ADC overheating*/\
     static int hdlr_rx_##ch##_board_status(const char *data, char *ret) {       \
         int reset;                                                            \
         sscanf(data, "%i", &reset);                                           \
