@@ -2256,6 +2256,9 @@ CHANNELS
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
+        /*Currently only a sample rat eof 3Gsps is supported*/\
+        rate = 3000000000;\
+        \
                                                                                \
         /* get the error for base rate */                                      \
         base_factor =                                                          \
