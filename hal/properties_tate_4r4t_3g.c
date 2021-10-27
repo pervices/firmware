@@ -2302,6 +2302,10 @@ CHANNELS
             sscanf(data, "%lf", &freq);                                        \
             direction = 0;                                                     \
         }                                                                      \
+        \
+        /*Fixes the nco at 0 at this stage of developement nco is not to be used*/\
+        direction = 0;\
+        freq = 0;\
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
@@ -2316,6 +2320,8 @@ CHANNELS
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
         write_hps_reg(rx_reg4_map[INT(ch)],                                        \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        \
+        sprintf(ret, "%ld", freq);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
