@@ -44,7 +44,7 @@
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
-    ((double)8.589934592)
+    ((double)1.43165576533)
 
 #define MIN_RF_ATTEN_TX 0
 #define MAX_RF_ATTEN_TX 30
