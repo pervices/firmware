@@ -2321,7 +2321,6 @@ CHANNELS
         write_hps_reg(rx_reg4_map[INT(ch)],                                        \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
         \
-        sprintf(ret, "%ld", freq);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
