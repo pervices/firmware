@@ -273,7 +273,7 @@ static void build_tree(void) {
             init_prop_val(prop);
         }
     }
-    exit(0);
+    //sfp become unresponsive after here
 
     PRINT(INFO, "\tXXX: Changing permissions for all\n");
     change_group_permissions_for_all();
@@ -284,6 +284,7 @@ static void build_tree(void) {
 
     PRINT(INFO, "\tXXX: Last wd val: %i\n", get_prop(i - 1)->wd);
     PRINT(INFO, "\tXXX: Done building tree\n");
+    exit(0);
 }
 
 int get_inotify_fd() { return inotify_fd; }
