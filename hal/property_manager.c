@@ -273,6 +273,7 @@ static void build_tree(void) {
             init_prop_val(prop);
         }
     }
+    exit(0);
 
     PRINT(INFO, "\tXXX: Changing permissions for all\n");
     change_group_permissions_for_all();
