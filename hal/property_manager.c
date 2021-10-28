@@ -494,10 +494,11 @@ void sfp_trace_check_property_inotifies(void) {
     //sfp become unresponsive after here
 
     ssize_t i = 0;
-    PRINT(INFO, "len: %i", len);
-    len = len/4;
+    PRINT(INFO, "len: %i\n", len);
+    len = len/3;
     //sfp unresponsive when divided by 2
-    PRINT(INFO, "debug where sfp fils test:: %i", len);
+    //sfp is responsive when divieded by 4
+    PRINT(INFO, "debug where sfp fils test:: %i\n", len);
     while (i < len) {
         printf("%ld / %ld \n", i, len);
         // gets the event structure
