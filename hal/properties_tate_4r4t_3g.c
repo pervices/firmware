@@ -40,11 +40,11 @@
 #include "gpio_pins.h"
 
 // Sample rates are in samples per second (SPS).
-#define BASE_SAMPLE_RATE   500000000.0  //After base rate
+#define BASE_SAMPLE_RATE   3000000000.0  //After base rate
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
-    ((double)8.589934592)
+    ((double)1.43165576533)
 
 #define MIN_RF_ATTEN_TX 0
 #define MAX_RF_ATTEN_TX 30
@@ -1862,12 +1862,12 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                                                                                \
             /* disable DSP cores */                                            \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                    \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));                \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2256,6 +2256,9 @@ CHANNELS
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
+        /*Currently only a sample rat eof 3Gsps is supported*/\
+        rate = 3000000000;\
+        \
                                                                                \
         /* get the error for base rate */                                      \
         base_factor =                                                          \
@@ -2299,6 +2302,10 @@ CHANNELS
             sscanf(data, "%lf", &freq);                                        \
             direction = 0;                                                     \
         }                                                                      \
+        \
+        /*Fixes the nco at 0 at this stage of developement nco is not to be used*/\
+        direction = 0;\
+        freq = 0;\
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
@@ -2313,6 +2320,7 @@ CHANNELS
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
         write_hps_reg(rx_reg4_map[INT(ch)],                                        \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -3190,6 +3198,10 @@ static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
     sscanf(data, "%u", &freq);
     sprintf(buf, "board -c %u\r", freq);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    int32_t ret_freq = -1;
+    sscanf(uart_ret_buf, "%i", &ret_freq);
+    if(ret_freq==freq) strcpy(ret, "good");
+    else sprintf(ret, "%i", ret_freq);
     return RETURN_SUCCESS;
 }
 

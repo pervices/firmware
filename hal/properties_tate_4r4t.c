@@ -110,7 +110,8 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 1;
+int max_attempts = 0;
+int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
@@ -1827,8 +1828,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
             /* disable dsp channels */                                         \
             for (i = 0; i < (NUM_CHANNELS); i++) {                         \
-                read_hps_reg(rx_reg4_map[i], &old_val);                               \
-                write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
                 read_hps_reg(tx_reg4_map[i], &old_val);                               \
                 write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
             }                                                                  \
@@ -1847,13 +1846,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                     write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
                     write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
                 }                                                              \
-                if (rx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
-                    read_hps_reg(rx_reg4_map[i], &old_val);                           \
-                    write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
-                    write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
-                }                                                              \
             }                                                                  \
                                                                                \
             tx_power[INT(ch)] = PWR_ON;\
@@ -1870,12 +1862,12 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                                                                                \
             /* disable DSP cores */                                            \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                    \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                    \
                                                                                \
             /* disable channel */                                              \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));                \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2569,12 +2561,29 @@ CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
+        int reset;                                                            \
+        sscanf(data, "%i", &reset);                                           \
+        if (!reset) return RETURN_SUCCESS;\
+        \
+        int reboot_attempts = 0;\
+        while(property_good("rx/" STR(ch) "/board/status") != 1 && reboot_attempts < max_brd_reboot_attempts) {\
+            reboot_attempts++;\
+            /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
+            PRINT(ERROR, "Rx board is in a bad state, rebooting attempt %i\n", reboot_attempts);\
+            set_property("rx/" STR(ch) "/pwr_board", "0");\
+            set_property("rx/" STR(ch) "/pwr_board", "1");\
+        }\
+        /*Using sysref pulses would be better, but the pulses have problems*/\
+        set_property("time/sync/sysref_mode", "continuous");\
+        usleep(100000);\
         \
         /*enables responding to sysref*/\
         strcpy(buf, "board -s 1\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        \
+        /*Resets JESD on FPGA*/\
+        usleep(300000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+        PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
@@ -2582,12 +2591,22 @@ CHANNELS
         /*this wait is need*/\
         usleep(300000);\
         \
-        /*Sends a sysref pulse*/\
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");\
-        \
-        /*disbale responding to sysref*/\
+        /*disable responding to sysref*/\
         strcpy(buf, "board -s 0\r");\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
+        usleep(300000);\
+        /*Resets JESD on FPGA*/\
+        PRINT(INFO, "Individual_reset_bit: %i", individual_reset_bit);\
+        write_hps_reg("res_rw7",  individual_reset_bit);\
+        /*this wait is needed*/\
+        usleep(300000);\
+        write_hps_reg("res_rw7", 0);\
+        /*this wait is need*/\
+        usleep(300000);\
+        \
+        set_property("time/sync/sysref_mode", "pulsed");\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -2613,48 +2632,25 @@ CHANNELS
             }\
                                                                                \
             /* disable dsp */                                         \
-            read_hps_reg(rx_reg4_map[i], &old_val);                               \
-            write_hps_reg(rx_reg4_map[i], old_val & ~0x100);                      \
-            \
-            /*temporary disables tx dsp channels*/\
-            for (i = 0; i < NUM_CHANNELS; i++) {                         \
-                read_hps_reg(tx_reg4_map[i], &old_val);                               \
-                write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
-            }                                                                  \
-            /* send sync pulse */                                              \
-            char tmp_ret[10];\
-            char tmp_data[10];\
-            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
-            hdlr_rx_##ch##_jesd_reset(tmp_data, tmp_ret);\
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
+                                                                    \
+            /* reset JESD */                                              \
+            set_property("rx/" STR(ch) "/jesd/reset", "1");\
                                                                                \
-            /* Enable active dsp channels, and reset DSP */                    \
-            read_hps_reg(rx_reg4_map[i], &old_val);                           \
-            write_hps_reg(rx_reg4_map[i], old_val | 0x100);                   \
-            read_hps_reg(rx_reg4_map[i], &old_val);                           \
-            write_hps_reg(rx_reg4_map[i], old_val | 0x2);                     \
-            write_hps_reg(rx_reg4_map[i], old_val &(~0x2));                   \
-            /* Enable active dsp channels, and reset DSP */                    \
-            for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                /*temporarily disabled because its causeing issue with getting rx working*/\
-                /*if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
-                    write_hps_reg(tx_reg4_map[i], old_val | 0x100);              \
-                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
-                    write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
-                    write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
-                }*/                                                              \
-            }                                                                  \
+            /* Enable dsp, and reset DSP */                    \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x100);                   \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
+            \
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
             set_property("rx/" STR(ch) "/pwr_board", "0");\
                                                                                \
-            /*rx_power[INT(ch)] = PWR_OFF;*/                                       \
-            /*The half on command state is more representative of the actual state it gets set to*/\
-            /*This also will result in sysref not getting changed to continuous when restarting stuff*/\
-            rx_power[INT(ch)] = PWR_HALF_ON;\
+            rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
@@ -2684,10 +2680,8 @@ CHANNELS
         if (reboot == 1) {                                                     \
             /*This will cause an error if this runs during initialization*/\
             /*This will wait until the board is done booting*/\
-            set_property("rx/" STR(ch) "/pwr_board", "0");\
-            set_property("rx/" STR(ch) "/pwr_board", "1");\
-            /*Brings up the JESD link after reboot*/\
-            set_property("rx/" STR(ch) "/jesd/reset", "1");\
+            set_property("rx/" STR(ch) "/pwr", "0");\
+            set_property("rx/" STR(ch) "/pwr", "1");\
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2745,6 +2739,27 @@ CHANNELS
         } else {                                                               \
             strcpy(ret, "bad");                                                \
         }                                                                      \
+        return RETURN_SUCCESS;                                                 \
+    }\
+    /*Check if the board is in  a bad state, the board will attempt to reinitialize itself if it is*/\
+    /*This is to avoid a wierd issue with the registers in adc32rf45*/\
+    /*2021-10-25: the bad state was caused by the ADC overheating*/\
+    static int hdlr_rx_##ch##_board_status(const char *data, char *ret) {       \
+        int reset;                                                            \
+        sscanf(data, "%i", &reset);                                           \
+        if (reset == - 1) return RETURN_SUCCESS;\
+        \
+        strcpy(buf, "status -g\r");                                                 \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        if (uart_ret_buf[0] == 'g') {\
+            strcpy(ret, "good");\
+            return RETURN_SUCCESS;\
+        } else {\
+            PRINT(ERROR, "Issues with board register, message: %s.\n", (char *)uart_ret_buf);\
+            strcpy(ret, "bad");\
+            return RETURN_ERROR;\
+        }\
+        \
         return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
@@ -3179,6 +3194,18 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
                   (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
     write_hps_reg("sys13", 1);
     write_hps_reg("sys13", 0);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
+    uint16_t freq;
+    sscanf(data, "%u", &freq);
+    sprintf(buf, "board -c %u\r", freq);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    int32_t ret_freq = -1;
+    sscanf(uart_ret_buf, "%i", &ret_freq);
+    if(ret_freq==freq) strcpy(ret, "good");
+    else sprintf(ret, "%i", ret_freq);
     return RETURN_SUCCESS;
 }
 
@@ -4254,6 +4281,9 @@ GPIO_PINS
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/status"              , hdlr_rx_##_c##_board_status,             RW, "-1", SP)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "1", SP)         \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
@@ -4295,8 +4325,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd_status"              , hdlr_rx_##_c##_jesd_status,             RW, "bad")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0")
 
@@ -4402,6 +4430,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "1000")\
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
