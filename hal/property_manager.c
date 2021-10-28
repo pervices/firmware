@@ -495,7 +495,7 @@ void sfp_trace_check_property_inotifies(void) {
 
     ssize_t i = 0;
     PRINT(INFO, "len: %i\n", len);
-    len = (ssize_t)(len/3.03125);
+    len = (ssize_t)(len/3.25);
     //sfp unresponsive when divided by 3
     //sfp unresponsive when divided by 3.0625
     //sfp unresponsive when divided by 3.125
