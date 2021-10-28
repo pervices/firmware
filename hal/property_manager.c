@@ -276,9 +276,10 @@ static void build_tree(void) {
     //sfp become unresponsive after here
 
     PRINT(INFO, "\tXXX: Changing permissions for all\n");
-    change_group_permissions_for_all();
 
     exit(0);
+    change_group_permissions_for_all();
+    //sfp become unresponsive before here
 
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
@@ -286,7 +287,6 @@ static void build_tree(void) {
 
     PRINT(INFO, "\tXXX: Last wd val: %i\n", get_prop(i - 1)->wd);
     PRINT(INFO, "\tXXX: Done building tree\n");
-    //sfp become unresponsive before here
 }
 
 int get_inotify_fd() { return inotify_fd; }
