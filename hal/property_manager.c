@@ -495,7 +495,8 @@ void sfp_trace_check_property_inotifies(void) {
 
     ssize_t i = 0;
     PRINT(INFO, "len: %i", len);
-    len = len/2;
+    len = len/4;
+    //sfp unresponsive when divided by 2
     PRINT(INFO, "debug where sfp fils test:: %i", len);
     while (i < len) {
         printf("%ld / %ld \n", i, len);
