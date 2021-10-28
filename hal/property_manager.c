@@ -281,8 +281,7 @@ static void build_tree(void) {
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
     //sfp become unresponsive after here
-    check_property_inotifies();
-    exit(0);
+    sfp_trace_check_property_inotifies();
     //sfp become unresponsive before here
 
     PRINT(INFO, "\tXXX: Last wd val: %i\n", get_prop(i - 1)->wd);
@@ -406,8 +405,6 @@ void check_property_inotifies(void) {
     char path[MAX_PATH_LEN];
     int n;
 
-    PRINT(INFO, "check_property_inotifies start\n");
-
     // returns if inotify_fd has no bytes to read to prevent server from hanging
     ioctl(inotify_fd, FIONREAD, &n);
     if (n == 0) {
@@ -415,7 +412,85 @@ void check_property_inotifies(void) {
         return;
     }
 
-    PRINT(INFO, "%i bytes availbe to be read\n", n);
+    ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
+
+    ssize_t i = 0;
+    while (i < len) {
+        printf("%ld / %ld \n", i, len);
+        // gets the event structure
+        struct inotify_event *event = (struct inotify_event *)&buf[i];
+        prop_t *prop = get_prop_from_wd(event->wd);
+
+        // check if prop exists, prop will not exist if concurrent modifications
+        // were made to the file while in this loop
+        if ((event->mask & IN_CLOSE_WRITE) && prop) {
+            // PRINT( VERBOSE,"Property located at %s has been modified,
+            // executing handler\n", prop -> path);
+
+            // empty out the buffers
+            memset(prop_data, 0, MAX_PROP_LEN);
+            memset(prop_ret, 0, MAX_PROP_LEN);
+
+            // read the change from the file
+            read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
+            strcpy(prop_ret, prop_data);
+
+            PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__,
+                  prop->path, prop_data);
+
+            const int t0 = time_it();
+            prop->handler(prop_data, prop_ret);
+            const int t1 = time_it();
+
+            PRINT(INFO, "%s :: %s -> %s :: %d\n", path, prop_data, prop_ret, t1 - t0);
+
+            if (prop->permissions == RO) {
+                memset(prop_ret, 0, sizeof(prop_ret));
+                sprintf(prop_ret, "%s", prop->def_val);
+            }
+
+            // if the return value didn't change, don't write to file again
+            if (strcmp(prop_ret, prop_data) != 0) {
+                // temperarily remove property from inotify so the file update
+                // won't trigger another inotify event
+                if (inotify_rm_watch(inotify_fd, prop->wd) < 0) {
+                    PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+                }
+                PRINT(VERBOSE, "Removed inotify, wd: %i\n", prop->wd);
+
+                // write output of handler to property
+                write_to_file(get_abs_path(prop, path), prop_ret);
+
+                // re-add property to inotify
+                prop->wd = inotify_add_watch(
+                    inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
+                if (prop->wd < 0) {
+                    PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+                }
+                PRINT(VERBOSE, "Re-added to inotify, wd: %i\n", prop->wd);
+            }
+        }
+
+        i += sizeof(struct inotify_event) + event->len;
+    }
+}
+
+// non-standard set property (file modification)
+void sfp_trace_check_property_inotifies(void) {
+    PRINT(INFO, "sfp_trace_check_property_inotifies\n");
+    exit(0);
+    uint8_t buf[EVENT_BUF_LEN];
+    char prop_data[MAX_PROP_LEN];
+    char prop_ret[MAX_PROP_LEN];
+    char path[MAX_PATH_LEN];
+    int n;
+
+    // returns if inotify_fd has no bytes to read to prevent server from hanging
+    ioctl(inotify_fd, FIONREAD, &n);
+    if (n == 0) {
+        PRINT(INFO, "No bytes available for read on inotify_fd\n");
+        return;
+    }
 
     ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 

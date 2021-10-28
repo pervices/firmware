@@ -52,6 +52,7 @@ int get_inotify_fd();
 
 int init_property(uint8_t options);
 void check_property_inotifies(void);
+void sfp_trace_check_property_inotifies(void);
 void update_status_properties(void);
 int save_properties(const char *file);
 int load_properties(const char *file);
