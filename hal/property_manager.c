@@ -495,8 +495,8 @@ void sfp_trace_check_property_inotifies(void) {
 
     ssize_t i = 0;
     PRINT(INFO, "len: %i\n", len);
-    len = (ssize_t)(len/3.375);
-    //sfp unresponsive when divided by 3.25
+    len = (ssize_t)(len/3.75);
+    //sfp unresponsive when divided by 3.375
     //first few sfp pings unresponsive when 3.5
     //sfp is responsive when divieded by 4
     PRINT(INFO, "debug where sfp fils test:: %i\n", len);
