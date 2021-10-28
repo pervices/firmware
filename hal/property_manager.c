@@ -282,6 +282,7 @@ static void build_tree(void) {
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
     //sfp become unresponsive after here
     check_property_inotifies();
+    exit(0);
     //sfp become unresponsive before here
 
     PRINT(INFO, "\tXXX: Last wd val: %i\n", get_prop(i - 1)->wd);
@@ -405,12 +406,16 @@ void check_property_inotifies(void) {
     char path[MAX_PATH_LEN];
     int n;
 
+    PRINT(INFO, "check_property_inotifies start\n");
+
     // returns if inotify_fd has no bytes to read to prevent server from hanging
     ioctl(inotify_fd, FIONREAD, &n);
     if (n == 0) {
         PRINT(INFO, "No bytes available for read on inotify_fd\n");
         return;
     }
+
+    PRINT(INFO, "%i bytes availbe to be read\n", n);
 
     ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 
@@ -475,7 +480,6 @@ void check_property_inotifies(void) {
 
         i += sizeof(struct inotify_event) + event->len;
     }
-    exit(0);
 }
 
 // Save properties to file
