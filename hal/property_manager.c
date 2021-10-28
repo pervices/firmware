@@ -281,7 +281,6 @@ static void build_tree(void) {
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
     sfp_trace_check_property_inotifies();
-    //sfp become unresponsive before here
 
     PRINT(INFO, "\tXXX: Last wd val: %i\n", get_prop(i - 1)->wd);
     PRINT(INFO, "\tXXX: Done building tree\n");
@@ -495,6 +494,9 @@ void sfp_trace_check_property_inotifies(void) {
     //sfp become unresponsive after here
 
     ssize_t i = 0;
+    PRINT(INFO, "len: %i", len);
+    len = len/2;
+    PRINT(INFO, "debug where sfp fils test:: %i", len);
     while (i < len) {
         printf("%ld / %ld \n", i, len);
         // gets the event structure
@@ -553,6 +555,7 @@ void sfp_trace_check_property_inotifies(void) {
 
         i += sizeof(struct inotify_event) + event->len;
     }
+    //sfp become unresponsive before here
     exit(0);
 }
 
