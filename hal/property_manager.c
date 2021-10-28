@@ -477,7 +477,6 @@ void check_property_inotifies(void) {
 // non-standard set property (file modification)
 void sfp_trace_check_property_inotifies(void) {
     PRINT(INFO, "sfp_trace_check_property_inotifies\n");
-    //sfp become unresponsive after here
     uint8_t buf[EVENT_BUF_LEN];
     char prop_data[MAX_PROP_LEN];
     char prop_ret[MAX_PROP_LEN];
@@ -493,7 +492,7 @@ void sfp_trace_check_property_inotifies(void) {
 
     ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 
-    exit(0);
+    //sfp become unresponsive after here
 
     ssize_t i = 0;
     while (i < len) {
@@ -554,6 +553,7 @@ void sfp_trace_check_property_inotifies(void) {
 
         i += sizeof(struct inotify_event) + event->len;
     }
+    exit(0);
 }
 
 // Save properties to file
