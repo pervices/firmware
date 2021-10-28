@@ -414,7 +414,7 @@ void check_property_inotifies(void) {
 
     ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 
-    exit(0);
+    //sfp become unresponsive after here
 
     ssize_t i = 0;
     while (i < len) {
@@ -475,6 +475,7 @@ void check_property_inotifies(void) {
 
         i += sizeof(struct inotify_event) + event->len;
     }
+    exit(0);
 }
 
 // Save properties to file
