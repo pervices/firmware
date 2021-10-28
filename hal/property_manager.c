@@ -277,11 +277,10 @@ static void build_tree(void) {
     PRINT(INFO, "\tXXX: Changing permissions for all\n");
 
     change_group_permissions_for_all();
-    //sfp become unresponsive after here
 
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
-    exit(0);
+    //sfp become unresponsive after here
     check_property_inotifies();
     //sfp become unresponsive before here
 
@@ -414,6 +413,8 @@ void check_property_inotifies(void) {
     }
 
     ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
+
+    exit(0);
 
     ssize_t i = 0;
     while (i < len) {
