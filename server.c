@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
       */
 
     // 1. set the time board back to pulsed sysref mode
-    set_property("/var/cyan/state/time/sync/sysref_mode","pulsed");
+    set_property("time/sync/sysref_mode","pulsed");
      
 // 2. check that time board plls are locked
     if (property_good("time/status/status_good") != 1) {
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
     int8_t rx_present[NUM_CHANNELS] = {0};
     for(int n = 0; n < NUM_CHANNELS; n++) {
         tmp_char = 'a' + n;
-        sprintf(prop_path, "/var/cyan/state/rx/%c/wait_pwr_board", tmp_char);
+        sprintf(prop_path, "rx/%c/wait_pwr_board", tmp_char);
         char read[3];
         get_property(&prop_path[0],&read[0],3);
         sscanf(read, "%hhi", &rx_present[n]);
