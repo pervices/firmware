@@ -3198,6 +3198,10 @@ static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
     sscanf(data, "%u", &freq);
     sprintf(buf, "board -c %u\r", freq);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    int32_t ret_freq = -1;
+    sscanf(uart_ret_buf, "%i", &ret_freq);
+    if(ret_freq==freq) strcpy(ret, "good");
+    else sprintf(ret, "%i", ret_freq);
     return RETURN_SUCCESS;
 }
 
