@@ -3197,6 +3197,18 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
+    uint16_t freq;
+    sscanf(data, "%u", &freq);
+    sprintf(buf, "board -c %u\r", freq);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    int32_t ret_freq = -1;
+    sscanf(uart_ret_buf, "%i", &ret_freq);
+    if(ret_freq==freq) strcpy(ret, "good");
+    else sprintf(ret, "%i", ret_freq);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_clk_cmd(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -4418,6 +4430,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
+    DEFINE_FILE_PROP("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "1000")\
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked")  \
