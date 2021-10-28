@@ -280,7 +280,6 @@ static void build_tree(void) {
 
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
-    //sfp become unresponsive after here
     sfp_trace_check_property_inotifies();
     //sfp become unresponsive before here
 
@@ -478,7 +477,7 @@ void check_property_inotifies(void) {
 // non-standard set property (file modification)
 void sfp_trace_check_property_inotifies(void) {
     PRINT(INFO, "sfp_trace_check_property_inotifies\n");
-    exit(0);
+    //sfp become unresponsive after here
     uint8_t buf[EVENT_BUF_LEN];
     char prop_data[MAX_PROP_LEN];
     char prop_ret[MAX_PROP_LEN];
@@ -494,7 +493,7 @@ void sfp_trace_check_property_inotifies(void) {
 
     ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 
-    //sfp become unresponsive after here
+    exit(0);
 
     ssize_t i = 0;
     while (i < len) {
