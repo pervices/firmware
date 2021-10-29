@@ -2776,18 +2776,11 @@ CHANNELS
 /* -------------------------------------------------------------------------- */
 
 static uint16_t cm_chanmask_get(const char *path) {
-    uint32_t r;
+    uint32_t r = 0;
 
-    FILE *fp;
-
-    r = 0;
-
-    if (!(fp = fopen(path, "r"))) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
-        return r;
-    }
-    fscanf(fp, "%x", &r);
-    fclose(fp);
+    char mask_s[10];
+    get_property(path, mask_s,10);
+    sscanf(mask_s, "%x", &r);
 
     return r;
 }
