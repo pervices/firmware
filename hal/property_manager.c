@@ -418,6 +418,8 @@ void check_property_inotifies(void) {
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
 
+        usleep(500000);
+
         // check if prop exists, prop will not exist if concurrent modifications
         // were made to the file while in this loop
         if ((event->mask & IN_CLOSE_WRITE) && prop) {
@@ -430,6 +432,7 @@ void check_property_inotifies(void) {
 
             // read the change from the file
             read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
+            PRINT(INFO, "checking path: %s\n", path);
             strcpy(prop_ret, prop_data);
 
             PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__,
