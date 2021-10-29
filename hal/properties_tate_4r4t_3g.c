@@ -4060,6 +4060,17 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_link_reset(const char *data, char *ret) {
+    int reset;
+
+    sscanf(data, "%i", &reset);
+    if (reset == 1) {
+        write_hps_reg("res_rw7", 0x40000000);
+        write_hps_reg("res_rw7", 0);
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
     uint32_t gps_time_lh = 0, gps_time_uh = 0;
     char gps_split[MAX_PROP_LEN];
@@ -4507,7 +4518,8 @@ GPIO_PINS
     DEFINE_FILE_PROP("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8900")              \
     DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
     DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
-    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
+    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")\
+    DEFINE_FILE_PROP("fpga/link/reset"                     , hdlr_fpga_link_reset,                   RW, "1")
 
 
 #define DEFINE_GPIO(_p)                                                                                                        \
