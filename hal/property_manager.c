@@ -417,7 +417,7 @@ void check_property_inotifies(void) {
         read_hps_reg("rxe4", &rxe4);
         PRINT(INFO, "wd: %i\n", i);
         PRINT(INFO, "rxe4: %x\n", rxe4);
-        if(i > 7376) {
+        if(i > 8288) {
             PRINT(INFO, "stopping before %i\n", i);
             exit(0);
         }
