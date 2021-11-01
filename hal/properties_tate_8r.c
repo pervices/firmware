@@ -1232,9 +1232,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             /* reset JESD */                                              \
             set_property("rx/" STR(ch) "/jesd/reset", "1");\
                                                                                \
-            /* Enable dsp, and reset DSP */                    \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x100);                   \
+            /* Reset DSP */                    \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
