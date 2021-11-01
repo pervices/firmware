@@ -417,6 +417,10 @@ void check_property_inotifies(void) {
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
+        if(i > 7830) {
+            PRINT(INFO, "stopping before %i\n", i);
+            exit(0);
+        }
 
         // check if prop exists, prop will not exist if concurrent modifications
         // were made to the file while in this loop
