@@ -413,12 +413,18 @@ void check_property_inotifies(void) {
 
     ssize_t i = 0;
     while (i < len) {
+        uint32_t rxe4;
+        read_hps_reg("rxe4", &rxe4);
+        PRINT(INFO, "wd: %i\n", i);
+        PRINT(INFO, "rxe4: %x\n", rxe4);
+        if(i > 1584) {
+            PRINT(INFO, "stopping before %i\n", i);
+            exit(0);
+        }
         printf("%ld / %ld \n", i, len);
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
-
-        usleep(500000);
 
         // check if prop exists, prop will not exist if concurrent modifications
         // were made to the file while in this loop
@@ -432,6 +438,7 @@ void check_property_inotifies(void) {
 
             // read the change from the file
             read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
+
             PRINT(INFO, "checking path: %s\n", path);
             strcpy(prop_ret, prop_data);
 
