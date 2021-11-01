@@ -1826,36 +1826,24 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                 set_property("tx/" STR(ch) "/pwr_board", "1");\
             }\
                                                                                \
-            /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS); i++) {                         \
-                read_hps_reg(tx_reg4_map[i], &old_val);                               \
-                write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
-            }                                                                  \
-            /* send sync pulse */                                              \
-            char tmp_ret[10];\
-            char tmp_data[10];\
-            /*Ideally this would be called through the property tree, but pwr must be initialized first*/\
-            hdlr_tx_##ch##_jesd_reset(tmp_data, tmp_ret);\
+            /* disable dsp */                                         \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                               \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x100);                      \
+            \
+            /* reset JESD */                                              \
+            set_property("tx/" STR(ch) "/jesd/reset", "1");\
                                                                                \
-            /* enable active dsp channels, and reset the DSP */                \
-            for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
-                    write_hps_reg(tx_reg4_map[i], old_val | 0x100);              \
-                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
-                    write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
-                    write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
-                }                                                              \
-            }                                                                  \
+            /* Enable dsp, and reset DSP */                    \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                           \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x100);                   \
+            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                           \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                     \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x2));                   \
                                                                                \
             tx_power[INT(ch)] = PWR_ON;\
             /* power off */                                                    \
         } else {                                                               \
-            char pwr_cmd [40];                                                 \
-            sprintf(pwr_cmd, "rfe_control %d off", INT_TX(ch));                   \
-            system(pwr_cmd);                                                   \
-            \
-            tx_power[INT(ch)] = PWR_OFF;                                       \
+            set_property("tx/" STR(ch) "/pwr_board", "0");\
             \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
