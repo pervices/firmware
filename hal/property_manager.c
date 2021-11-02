@@ -650,6 +650,7 @@ int set_property(const char *prop, const char *data) {
         // now)
         //This is what causes the power to turn on every time anthing with tx or rx in its path is called
         //This is the old method
+        PRINT(VERBOSE, "Using the old method of choosing if a baord needs to be powered on");
         power_on_channel_fixup(temp->path);
     } else if(temp->pwr_en == RP) {
         power_on_channel(0, temp->path);
