@@ -45,9 +45,9 @@ typedef enum {
 //PROP_UNSPECIFIED_PWR means to use the old very clunky way
 //It is being kept so that older stuff doesn't need to be tested with the new methd and should be phased out
 typedef enum {
-    TP, //indicates to set a tx board on
-    RP, //indicates to set an rx board on
-    SP, //indicates not to seta board to on
+    TP = 3, //indicates to set a tx board on
+    RP = 2, //indicates to set an rx board on
+    SP = 1, //indicates not to seta board to on
     UP = 0, //indicates that is is unspecified whether or not to set a channel power (uses old method)
 } prop_pwr_t;
 
