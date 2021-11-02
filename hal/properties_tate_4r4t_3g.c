@@ -228,7 +228,7 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate,
 #define set_reg_bits(name, shift, mask, val)                                   \
     ({                                                                         \
         int _r;                                                                \
-        uint32_t _t;                                                           \
+        uint32_t _t = 0;                                                       \
         _r = read_hps_reg(name, &_t);                                          \
         if (RETURN_SUCCESS != _r) {                                            \
             PRINT(ERROR, "read_hps_reg( '%s' ) failed: %d\n", name, _r);       \
@@ -253,7 +253,7 @@ static int hdlr_invalid(const char *data, char *ret) {
 }
 
 static int hdlr_rx_sync(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
 
     // toggle the bit sys0[5]
     read_hps_reg("sys0", &old_val);
@@ -264,7 +264,7 @@ static int hdlr_rx_sync(const char *data, char *ret) {
 }
 
 static int hdlr_tx_sync(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
 
     // toggle the bit sys0[6]
     read_hps_reg("sys0", &old_val);
@@ -482,7 +482,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
-        uint32_t val;                                                          \
+        uint32_t val = 0;                                                      \
         int r;                                                                 \
         r = valid_edge_backoff(data, &val) ||                                  \
             set_edge_backoff(true, #ch, val);                                  \
@@ -980,7 +980,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                                                                                \
             /* Turn OFF TX on HPS */                                           \
-            uint32_t old_val;                                                  \
+            uint32_t old_val = 0;                                              \
                                                                                \
             /* disable DSP cores */                                            \
             read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
@@ -1134,7 +1134,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         uint16_t base_factor, resamp_factor;                                   \
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
@@ -1184,7 +1184,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch0fpga_nco(const char *data, char *ret) {   \
         double freq;                                                           \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         uint8_t direction;                                                     \
                                                                                \
         /* check for a minus or plus sign at the front */                      \
@@ -1217,8 +1217,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch1fpga_nco(const char *data, char *ret) {   \
         /*Only ch0 is planned on being used at this point, this has not been modified*/\
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
+        double freq = 0;                                                       \
+        uint32_t old_val = 0;                                                  \
         uint8_t direction;                                                     \
                                                                                \
         /* check for a minus or plus sign at the front */                      \
@@ -1256,8 +1256,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch3fpga_nco(const char *data, char *ret) {   \
         /*Only ch0 is planned on being used at this point, this has not been modified*/\
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
+        double freq = 0;                                                       \
+        uint32_t old_val = 0;                                                  \
         uint8_t direction;                                                     \
                                                                                \
         /* check for a minus or plus sign at the front */                      \
@@ -1290,8 +1290,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch4fpga_nco(const char *data, char *ret) {   \
         /*Only ch0 is planned on being used at this point, this has not been modified*/\
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
+        double freq = 0;                                                       \
+        uint32_t old_val = 0;                                                  \
         uint8_t direction;                                                     \
                                                                                \
         /* check for a minus or plus sign at the front */                      \
@@ -1330,7 +1330,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
         PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__, toupper(CHR(ch)));    \
         write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                        \
@@ -1344,8 +1344,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
-        read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
+        uint32_t old_val = 0;                                                  \
+        read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
         if (strcmp(data, "1") == 0)                                            \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 14));              \
         else                                                                   \
@@ -1365,7 +1365,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
+        uint32_t port = 0;                                                     \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("tx" STR(ch) "15", port);                                 \
         return RETURN_SUCCESS;                                                 \
@@ -1373,7 +1373,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
         /*Only ch0 is planned on being used at this point, this has not been verified*/\
-        uint32_t port;                                                         \
+        uint32_t port = 0;                                                     \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("tx" STR(ch) "16", port);                                 \
         return RETURN_SUCCESS;                                                 \
@@ -1386,7 +1386,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
         /*Only ch0 is planned on being used at this point, this has not been verified*/\
-        uint32_t port;                                                         \
+        uint32_t port = 0;                                                     \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("tx" STR(ch) "17", port);                                 \
         return RETURN_SUCCESS;                                                 \
@@ -1394,7 +1394,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
         /*Only ch0 is planned on being used at this point, this has not been verified*/\
-        uint32_t port;                                                         \
+        uint32_t port = 0;                                                     \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("tx" STR(ch) "18", port);                                 \
         return RETURN_SUCCESS;                                                 \
@@ -1409,7 +1409,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
      * DOES NOT PORT WELL.                                                     \
      * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {       \
-        uint32_t lvl;                                                          \
+        uint32_t lvl = 0;                                                      \
         read_hps_reg("res_ro4", &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
@@ -1420,7 +1420,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
      * DOES NOT PORT WELL.                                                     \
      * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
+        uint32_t lvl = 0;                                                      \
         read_hps_reg("res_ro4", &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
@@ -1431,7 +1431,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
      * DOES NOT PORT WELL.                                                     \
      * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch1fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
+        uint32_t lvl = 0;                                                      \
         read_hps_reg("res_ro4", &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
@@ -1442,7 +1442,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
      * DOES NOT PORT WELL.                                                     \
      * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch2fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
+        uint32_t lvl = 0;                                                      \
         read_hps_reg("res_ro4", &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
@@ -1805,9 +1805,9 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        uint32_t old_val;                                                      \
-        uint8_t power;                                                         \
-        uint8_t i;                                                             \
+        uint32_t old_val = 0;                                                  \
+        uint8_t power = 0;                                                     \
+        uint8_t i = 0;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
@@ -2233,10 +2233,10 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val;                                                      \
-        uint16_t base_factor, resamp_factor;                                   \
+        uint32_t old_val = 0;                                                  \
+        uint16_t base_factor = 0, resamp_factor = 0;                           \
         double base_err = 0.0, resamp_err = 0.0;                               \
-        double rate;                                                           \
+        double rate = 0;                                                       \
         sscanf(data, "%lf", &rate);                                            \
         /*Currently only a sample rat eof 3Gsps is supported*/\
         rate = 3000000000;\
@@ -2269,9 +2269,9 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {       \
-        double freq;                                                           \
-        uint32_t old_val;                                                      \
-        uint8_t direction;                                                     \
+        double freq = 0;                                                       \
+        uint32_t old_val = 0;                                                  \
+        uint8_t direction = 0;                                                 \
                                                                                \
         /* check for a minus or plus sign at the front */                      \
         if (data[0] == '-') {                                                  \
@@ -2307,7 +2307,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
         write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                        \
         write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x2);                       \
@@ -2315,7 +2315,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_loopback(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
             write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x400);      \
@@ -2330,7 +2330,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_link_vita_en(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 14));              \
@@ -2391,8 +2391,8 @@ CHANNELS
     } \
     \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
-        uint32_t old_val;                                                      \
-        uint8_t stream;                                                        \
+        uint32_t old_val = 0;                                                  \
+        uint8_t stream = 0;                                                    \
         sscanf(data, "%" SCNd8 "", &stream);                                   \
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
@@ -2576,9 +2576,9 @@ CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        uint32_t old_val;                                                      \
-        uint8_t power;                                                         \
-        uint8_t i;                                                             \
+        uint32_t old_val = 0;                                                  \
+        uint8_t power = 0;                                                     \
+        uint8_t i = 0;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
@@ -3543,7 +3543,7 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_temp(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     read_hps_reg("sys14", &old_val);
 
     // Mask off temp
@@ -3677,7 +3677,7 @@ static inline int hdlr_fpga_board_flow_control_sfpd_port(const char *data,
 }
 
 static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
 
     read_hps_reg("sys0", &old_val);
     write_hps_reg("sys0", old_val | 0x10);
@@ -3691,7 +3691,7 @@ static int hdlr_fpga_about_id(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     int year, month, day, hour, min;
     read_hps_reg("sys15", &old_val);
 
@@ -3709,7 +3709,7 @@ static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     read_hps_reg("sys18", &old_val);
     sprintf(ret, "config. info. 0x%02x \n", old_val);
 
@@ -3773,7 +3773,7 @@ static int hdlr_server_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     read_hps_reg("sys1", &old_val);
 
     old_val = (old_val >> 7) & 0xf;
@@ -3819,8 +3819,8 @@ static int hdlr_fpga_link_sfpa_mac_addr(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpa_ver(const char *data, char *ret) {
-    uint32_t old_val;
-    uint8_t ver;
+    uint32_t old_val = 0;
+    uint8_t ver = 0;
     sscanf(data, "%" SCNd8 "", &ver);
     read_hps_reg("net0", &old_val);
     if (ver > 0)
@@ -3831,8 +3831,8 @@ static int hdlr_fpga_link_sfpa_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
-    uint32_t old_val;
-    uint32_t pay_len;
+    uint32_t old_val = 0;
+    uint32_t pay_len = 0;
     sscanf(data, "%" SCNd32 "", &pay_len);
     read_hps_reg("net0", &old_val);
     write_hps_reg("net0", (old_val & ~(0xffff0000)) | (pay_len << 16));
