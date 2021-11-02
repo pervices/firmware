@@ -4206,7 +4206,7 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
         } else {                                                              \
             write_hps_reg(res_reg_addr, old_val & (~(1 << (pin_number%32)))); \
         }                                                                     \
-        usleep(50000);\
+        usleep(10000);\
         return RETURN_SUCCESS;                                                \
     }
 GPIO_PINS
