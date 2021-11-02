@@ -4041,13 +4041,13 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_reset(const char *data, char *ret) {
-    int reset;
-
-    sscanf(data, "%i", &reset);
-    if (reset == 1) {
-        write_hps_reg("res_rw7", 0x40000000);
-        write_hps_reg("res_rw7", 0);
-    }
+//     int reset;
+//
+//     sscanf(data, "%i", &reset);
+//     if (reset == 1) {
+//         write_hps_reg("res_rw7", 0x40000000);
+//         write_hps_reg("res_rw7", 0);
+//     }
     return RETURN_SUCCESS;
 }
 
@@ -4188,6 +4188,7 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
 // X Macro for GPIO
 #define X(_p, io)                                                             \
     static int hdlr_gpio_##_p##_pin(const char *data, char *ret) {            \
+        PRINT(INFO, "Start of GPIO pin " #_p "\n");\
         uint32_t old_val = 0;                                                 \
         int pin_number = 0;                                                   \
         sscanf(#_p, "%d", &pin_number);                                      \
@@ -4200,12 +4201,16 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
             memcpy(res_reg_addr, "res_rw6", 8);                               \
         }                                                                     \
         read_hps_reg(res_reg_addr, &old_val);                                 \
+        PRINT(INFO, "Setting GPIO reg %s\n", res_reg_addr);\
         if (strcmp(data, "0") != 0) {                                         \
             /*Read res_r4 for bits 0 to 31 */                                 \
+            PRINT(INFO, "data = !=0\n");\
             write_hps_reg(res_reg_addr, old_val | (1 << (pin_number%32)));    \
         } else {                                                              \
+            PRINT(INFO, "data = 0\n");\
             write_hps_reg(res_reg_addr, old_val & (~(1 << (pin_number%32)))); \
         }                                                                     \
+        usleep(1000);\
         return RETURN_SUCCESS;                                                \
     }
 GPIO_PINS

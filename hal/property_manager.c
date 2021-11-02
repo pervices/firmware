@@ -417,7 +417,7 @@ void check_property_inotifies(void) {
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
-        if(i > 7830) {
+        if(i > 9200) {
             PRINT(INFO, "stopping before %i\n", i);
             exit(0);
         }
