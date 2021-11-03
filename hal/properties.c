@@ -3709,7 +3709,7 @@ out:
 void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
     
-    double freq = pll->vcoFreq / pll->d;
+    double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k \r");
