@@ -1811,9 +1811,9 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        uint32_t old_val;                                                      \
-        uint8_t power;                                                         \
-        uint8_t i;                                                             \
+        uint32_t old_val = 0;                                                  \
+        uint8_t power = 0;                                                     \
+        uint8_t i = 0;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
