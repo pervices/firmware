@@ -4321,10 +4321,9 @@ GPIO_PINS
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP)         \
-    DEFINE_FILE_PROP("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/jesd_status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad")       \
-    DEFINE_FILE_PROP("tx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0")\
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
