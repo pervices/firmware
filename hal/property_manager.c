@@ -644,6 +644,7 @@ int set_property(const char *prop, const char *data) {
         return RETURN_ERROR_SET_PROP;
     }
     PRINT(INFO, "pwr_en: %i\n", temp->pwr_en);
+    PRINT(INFO, "Setting: %s\n", temp->path);
     if(temp->pwr_en == UP) {
         // enable (turns on and initializes) channel if it has not been enabled yet
         // (enabling the channel later will erase the current channels, so enable
