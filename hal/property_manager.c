@@ -39,7 +39,7 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-//#define PROPERTY_MANGAER_DEBUG
+//#define PROPERTY_MANAGER_DEBUG
 
 #if !(defined(VAUNT) || defined(TATE) || defined(TATE_4R4T) || defined(TATE_4R4T_3G) || defined(TATE_8R) )
     #error "You must specify either ( TATE | TATE_4R4T | TATE_4R4T_3G | TATE_8R ) when compiling this project."
@@ -419,11 +419,11 @@ void check_property_inotifies(void) {
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
-#ifdef PROPERTY_MANGAER_DEBUG
-        if(i > 9200) {
-            PRINT(INFO, "stopping before %i\n", i);
-            exit(0);
-        }
+#ifdef PROPERTY_MANAGER_DEBUG
+//         if(i > 9200) {
+//             PRINT(INFO, "stopping before %i\n", i);
+//             exit(0);
+//         }
 #endif
 
         // check if prop exists, prop will not exist if concurrent modifications
@@ -648,7 +648,7 @@ int set_property(const char *prop, const char *data) {
         return RETURN_ERROR_SET_PROP;
     }
 
-#ifdef PROPERTY_MANGAER_DEBUG
+#ifdef PROPERTY_MANAGER_DEBUG
     PRINT(INFO, "pwr_en: %i\n", temp->pwr_en);
     PRINT(INFO, "Setting: %s\n", temp->path);
 #endif
