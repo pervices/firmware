@@ -1141,7 +1141,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dsp_gain(const char *data, char *ret) {          \
         /* TODO: FW code */                                                    \
-        PRINT(INFO,"Dsp gain; FW code");\
+        PRINT(INFO,"Dsp gain; FW code\n");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2578,7 +2578,6 @@ CHANNELS
         \
         usleep(300000);\
         /*Resets JESD on FPGA*/\
-        PRINT(INFO, "Individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
