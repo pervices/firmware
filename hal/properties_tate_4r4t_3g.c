@@ -1103,7 +1103,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_rf_board_test(const char *data, char *ret) {     \
         /* TODO: MCU code cleanup */                                           \
-        PRINT(INFO, "board/clean: MCU code cleanup");\
+        PRINT(INFO, "board/clean: MCU code cleanup\n");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1753,7 +1753,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                 strcpy(str_pwr, "off");\
             }\
             execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i", INT(ch));\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i\n", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
             sprintf(ret, "%i", pid);\
@@ -2499,7 +2499,7 @@ CHANNELS
                 strcpy(str_pwr, "off");\
             }\
             execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i", INT(ch));\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i\n", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
             sprintf(ret, "%i", pid);\
@@ -2564,7 +2564,6 @@ CHANNELS
         /*Resets JESD on FPGA*/\
         usleep(300000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
