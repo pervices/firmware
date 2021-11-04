@@ -605,6 +605,12 @@ static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(rx_power[ch] != PWR_NO_BOARD) {
         send_uart_comm(fd, buf, len);
         read_uart(fd);
+    } else {
+        size_t n = 0;
+        //clears the return buffer, to clear old replies, when there is no board
+        while (uart_ret_buf[n] != 0 && n < MAX_UART_RET_LEN) {
+            uart_ret_buf[n] = 0;
+        }
     }
 }
 static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
@@ -616,6 +622,12 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
         send_uart_comm(fd, buf, len);
         read_uart(fd);
+    } else {
+        size_t n = 0;
+        //clears the return buffer, to clear old replies, when there is no board
+        while (uart_ret_buf[n] != 0 && n < MAX_UART_RET_LEN) {
+            uart_ret_buf[n] = 0;
+        }
     }
 }
 static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
