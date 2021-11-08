@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
     int8_t rx_present[NUM_CHANNELS] = {0};
     for(int n = 0; n < NUM_CHANNELS; n++) {
         tmp_char = 'a' + n;
-        sprintf(prop_path, "rx/%c/wait_pwr_board", tmp_char);
+        sprintf(prop_path, "rx/%c/board/wait_async_pwr", tmp_char);
         char read[3];
         get_property(&prop_path[0],&read[0],3);
         sscanf(read, "%hhi", &rx_present[n]);
