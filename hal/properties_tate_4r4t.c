@@ -679,8 +679,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for setting the dac nco on every dac. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_dac_nco_freq(const char *data, char *ret) {      \
-        set_property("tx/" STR(ch) "/rf/dac/nco/dac0freq", *data);\
-        get_property("tx/" STR(ch) "/rf/dac/nco/dac0freq", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/rf/dac/nco/dac0freq", data);\
+        get_property("tx/" STR(ch) "/rf/dac/nco/dac0freq", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -830,8 +830,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for setting the nco on every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_ch_nco_freq(const char *data, char *ret) {      \
-        set_property("tx/" STR(ch) "/rf/dac/nco/ch0freq", *data);\
-        get_property("tx/" STR(ch) "/rf/dac/nco/ch0freq", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/rf/dac/nco/ch0freq", data);\
+        get_property("tx/" STR(ch) "/rf/dac/nco/ch0freq", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -969,8 +969,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for setting the nco on every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_dac_gain_atten(const char *data, char *ret) {      \
-        set_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", *data);\
-        get_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", data);\
+        get_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1353,8 +1353,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for setting the dsp nco of every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_dsp_fpga_nco(const char *data, char *ret) {    \
-        set_property("tx/" STR(ch) "/dsp/ch0fpga_nco", *data);\
-        get_property("tx/" STR(ch) "/dsp/ch0fpga_nco", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/dsp/ch0fpga_nco", data);\
+        get_property("tx/" STR(ch) "/dsp/ch0fpga_nco", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1436,8 +1436,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for setting the port for every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
-        set_property("tx/" STR(ch) "/link/ch0port", *data);\
-        get_property("tx/" STR(ch) "/link/ch0port", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/link/ch0port", data);\
+        get_property("tx/" STR(ch) "/link/ch0port", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1509,8 +1509,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for checking the fifo of every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {    \
-        set_property("tx/" STR(ch) "/qa/ch0fifo_lvl", *data);\
-        get_property("tx/" STR(ch) "/qa/ch0fifo_lvl", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/qa/ch0fifo_lvl", data);\
+        get_property("tx/" STR(ch) "/qa/ch0fifo_lvl", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1612,8 +1612,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for checking the oflow of every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {    \
-        set_property("tx/" STR(ch) "/qa/ch0oflow", *data);\
-        get_property("tx/" STR(ch) "/qa/ch0oflow", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/qa/ch0oflow", data);\
+        get_property("tx/" STR(ch) "/qa/ch0oflow", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1715,8 +1715,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Interface for checking the oflow of every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {    \
-        set_property("tx/" STR(ch) "/qa/ch0uflow", *data);\
-        get_property("tx/" STR(ch) "/qa/ch0uflow", *ret, MAX_PROP_LEN);       \
+        set_property("tx/" STR(ch) "/qa/ch0uflow", data);\
+        get_property("tx/" STR(ch) "/qa/ch0uflow", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
