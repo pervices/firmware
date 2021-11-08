@@ -974,7 +974,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-                                                                               \
     static int hdlr_tx_##ch##_rf_dac_temp(const char *data, char *ret) {       \
         strcpy(buf, "board -c " STR(ch) " -t\r");                              \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
@@ -4348,17 +4347,17 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_ch0port,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch4fifo_lvl"           , hdlr_tx_##_c##_qa_ch4fifo_lvl,          RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0oflow"              , hdlr_tx_##_c##_qa_ch0oflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1oflow"              , hdlr_tx_##_c##_qa_ch1oflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3oflow"              , hdlr_tx_##_c##_qa_ch3oflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch4oflow"              , hdlr_tx_##_c##_qa_ch4oflow,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0uflow"              , hdlr_tx_##_c##_qa_ch0uflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1uflow"              , hdlr_tx_##_c##_qa_ch1uflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3uflow"              , hdlr_tx_##_c##_qa_ch3uflow,             RW, "0")         \
@@ -4382,7 +4381,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch3freq"       , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch4freq"       , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch5freq"       , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/freq"          , hdlr_tx_##_c##_ch_nco_freq,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/freq"          , hdlr_tx_##_c##_ch_nco_freq,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch0atten"     , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch1atten"     , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch2atten"     , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
@@ -4401,21 +4400,13 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
     DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
     DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2oflow"              , hdlr_tx_##_c##_qa_ch2oflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5oflow"              , hdlr_tx_##_c##_qa_ch5oflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2uflow"              , hdlr_tx_##_c##_qa_ch2uflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5uflow"              , hdlr_tx_##_c##_qa_ch5uflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch2fpga_nco"          , hdlr_tx_##_c##_dsp_ch2fpga_nco,         RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch5fpga_nco"          , hdlr_tx_##_c##_dsp_ch5fpga_nco,         RW, "0")         \
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/reboot"                         , hdlr_time_reboot,                       RW, "0")         \

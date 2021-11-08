@@ -687,6 +687,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /*Interface for setting the dac nco on every dac. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_dac_nco_freq(const char *data, char *ret) {      \
+        set_property("tx/" STR(ch) "/rf/dac/nco/dac0freq", data);\
+        get_property("tx/" STR(ch) "/rf/dac/nco/dac0freq", ret, MAX_PROP_LEN);       \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {   \
         double freq;                                                           \
@@ -831,6 +838,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /*Interface for setting the nco on every channel. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_ch_nco_freq(const char *data, char *ret) {      \
+        set_property("tx/" STR(ch) "/rf/dac/nco/ch0freq", data);\
+        get_property("tx/" STR(ch) "/rf/dac/nco/ch0freq", ret, MAX_PROP_LEN);       \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_gain_ch0atten(const char *data, char *ret) { \
         double atten;                                                          \
@@ -963,7 +977,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    /*Interface for setting the nco on every channel. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_dac_gain_atten(const char *data, char *ret) {      \
+        set_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", data);\
+        get_property("tx/" STR(ch) "/rf/dac/gain/ch0atten", ret, MAX_PROP_LEN);       \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_dac_temp(const char *data, char *ret) {       \
         strcpy(buf, "board -c " STR(ch) " -t\r");                              \
@@ -1340,6 +1360,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         /* CH5 CURRENTLY UNSUPPORTED */                                        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /*Interface for setting the dsp nco of every channel. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_dsp_fpga_nco(const char *data, char *ret) {    \
+        set_property("tx/" STR(ch) "/dsp/ch0fpga_nco", data);\
+        get_property("tx/" STR(ch) "/dsp/ch0fpga_nco", ret, MAX_PROP_LEN);       \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val = 0;                                                  \
@@ -1406,7 +1433,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
         /*Only ch0 is planned on being used at this point, this has not been verified*/\
-        uint32_t port = 0;                                                     \
+        uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("tx" STR(ch) "18", port);                                 \
         return RETURN_SUCCESS;                                                 \
@@ -1416,15 +1443,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         /* CH5 CURRENTLY UNSUPPORTED */                                         \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
-    static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {       \
-        uint32_t lvl = 0;                                                      \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
+    \
+    /*Interface for setting the port for every channel. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
+        set_property("tx/" STR(ch) "/link/ch0port", data);\
+        get_property("tx/" STR(ch) "/link/ch0port", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1493,20 +1516,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sprintf(ret, "%u", lvl);                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
-    static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+    \
+    /*Interface for checking the fifo of every channel. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {    \
+        set_property("tx/" STR(ch) "/qa/ch0fifo_lvl", data);\
+        get_property("tx/" STR(ch) "/qa/ch0fifo_lvl", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1605,20 +1619,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sprintf(ret, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
-    static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+    \
+    /*Interface for checking the oflow of every channel. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_qa_oflow(const char *data, char *ret) {    \
+        set_property("tx/" STR(ch) "/qa/ch0oflow", data);\
+        get_property("tx/" STR(ch) "/qa/ch0oflow", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1715,6 +1720,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sprintf(flc_reg, "flc%d", flc_reg_num);                                \
         read_hps_reg(flc_reg, &count);                                         \
         sprintf(ret, "%u", count);                                             \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /*Interface for checking the oflow of every channel. Currently only ch0 is used*/\
+    static int hdlr_tx_##ch##_qa_uflow(const char *data, char *ret) {    \
+        set_property("tx/" STR(ch) "/qa/ch0uflow", data);\
+        get_property("tx/" STR(ch) "/qa/ch0uflow", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -4373,18 +4385,22 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch4fifo_lvl"           , hdlr_tx_##_c##_qa_ch4fifo_lvl,          RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0oflow"              , hdlr_tx_##_c##_qa_ch0oflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1oflow"              , hdlr_tx_##_c##_qa_ch1oflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3oflow"              , hdlr_tx_##_c##_qa_ch3oflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch4oflow"              , hdlr_tx_##_c##_qa_ch4oflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0uflow"              , hdlr_tx_##_c##_qa_ch0uflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1uflow"              , hdlr_tx_##_c##_qa_ch1uflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3uflow"              , hdlr_tx_##_c##_qa_ch3uflow,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch4uflow"              , hdlr_tx_##_c##_qa_ch4uflow,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
@@ -4392,21 +4408,25 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dsp/ch1fpga_nco"          , hdlr_tx_##_c##_dsp_ch1fpga_nco,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/ch3fpga_nco"          , hdlr_tx_##_c##_dsp_ch3fpga_nco,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/ch4fpga_nco"          , hdlr_tx_##_c##_dsp_ch4fpga_nco,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/fpga_nco"             , hdlr_tx_##_c##_dsp_fpga_nco,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac0freq"      , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac1freq"      , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dacfreq"       , hdlr_tx_##_c##_dac_nco_freq,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch0freq"       , hdlr_tx_##_c##_dac_nco_ch0freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch1freq"       , hdlr_tx_##_c##_dac_nco_ch1freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch2freq"       , hdlr_tx_##_c##_dac_nco_ch2freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch3freq"       , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch4freq"       , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch5freq"       , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/freq"          , hdlr_tx_##_c##_ch_nco_freq,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch0atten"     , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch1atten"     , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch2atten"     , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch3atten"     , hdlr_tx_##_c##_dac_gain_ch3atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch4atten"     , hdlr_tx_##_c##_dac_gain_ch4atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch5atten"     , hdlr_tx_##_c##_dac_gain_ch5atten,       RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/atten"        , hdlr_tx_##_c##_dac_gain_atten,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1")        \
     DEFINE_FILE_PROP("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31")        \
     DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
@@ -4419,28 +4439,13 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
     DEFINE_FILE_PROP("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION)     \
     DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
 //     DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
-//    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
 //    DEFINE_FILE_PROP("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5fifo_lvl"           , hdlr_tx_##_c##_qa_ch5fifo_lvl,          RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2oflow"              , hdlr_tx_##_c##_qa_ch2oflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5oflow"              , hdlr_tx_##_c##_qa_ch5oflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch2uflow"              , hdlr_tx_##_c##_qa_ch2uflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/qa/ch5uflow"              , hdlr_tx_##_c##_qa_ch5uflow,             RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch2fpga_nco"          , hdlr_tx_##_c##_dsp_ch2fpga_nco,         RW, "0")         \
-    //    DEFINE_FILE_PROP("tx/" #_c "/dsp/ch5fpga_nco"          , hdlr_tx_##_c##_dsp_ch5fpga_nco,         RW, "0")         \
-    //DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
-    //DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
-    //DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")         \
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/reboot"                         , hdlr_time_reboot,                       RW, "0")         \
