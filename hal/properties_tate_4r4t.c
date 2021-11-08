@@ -4602,7 +4602,8 @@ set_default_str("rx/d/link/ip_dest","10.10.13.10");
     set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
     set_default_int("tx/" #ch "/link/ch1port", base_port + INT_TX(ch)*4 + 1 + NUM_CHANNELS);               \
     set_default_int("tx/" #ch "/link/ch3port", base_port + INT_TX(ch)*4 + 2 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch4port", base_port + INT_TX(ch)*4 + 3 + NUM_CHANNELS);
+    set_default_int("tx/" #ch "/link/ch4port", base_port + INT_TX(ch)*4 + 3 + NUM_CHANNELS);               \
+    set_default_int("tx/" #ch "/link/port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);                  \
 
     CHANNELS
 #undef X
