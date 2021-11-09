@@ -38,13 +38,22 @@
 #include <signal.h>
 #include "channels.h"
 #include "gpio_pins.h"
+#include <math.h>
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   500000000.0  //After base rate
+//temporary as a system if changedm TRUE_ will eventally be replaced back with BASE_
+#define TRUE_BASE_SAMPLE_RATE   1000000000.0
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
     ((double)8.589934592)
+
+//TX sample rate factor must be less than thist
+#define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
+#define MIN_TX_SAMPLE_RATE TRUE_BASE_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
+//a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
+#define TX_ROUND_BIAS 0.75
 
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
 #define MIN_RF_ATTEN_TX 0
@@ -1160,45 +1169,31 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
-                                                                               \
-        /* get the error for base rate */                                      \
-        base_factor =                                                          \
-            get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);          \
-        resamp_factor =                                                        \
-            get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);      \
-                                                                               \
-        /* set the appropriate sample rate */                                  \
-        memset(ret, 0, MAX_PROP_LEN);                                          \
-                                                                               \
-        int channel = INT_TX(ch);                                                 \
-        char reg = 'a' + (channel/4)*4;                                        \
-        int shift = (channel%4)*8;                                             \
-        char reg_name[5];                                                      \
-        sprintf(reg_name, "txg%c", reg);                                       \
-      /* Disable resampler configuration by setting following to false */      \
-      /*  if (resamp_err < base_err) {                                  */     \
-        if ( false ) {                                                         \
-            write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
-            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 15));              \
-            sprintf(ret, "%lf",                                                \
-                    RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
-            /* Set gain adjustment */                                          \
-            read_hps_reg(reg_name, &old_val);                                  \
-            write_hps_reg(reg_name,                                            \
-                          (old_val & ~(0xff << shift)) |                       \
-                              (interp_gain_lut[(resamp_factor)] << shift));    \
-        } else {                                                               \
-            write_hps_reg("tx" STR(ch) "1", base_factor);                      \
-            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 15));             \
-            sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
-            /* Set gain adjustment */                                          \
-            read_hps_reg(reg_name, &old_val);                                  \
-            write_hps_reg(reg_name,                                            \
-                          (old_val & ~(0xff << shift)) |                       \
-                              (interp_gain_lut[(base_factor)] << shift));      \
-        }                                                                      \
+        uint16_t sample_factor;\
+        \
+        if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
+        \
+        if(rate > TRUE_BASE_SAMPLE_RATE) rate = TRUE_BASE_SAMPLE_RATE;\
+        \
+        /*the upper sample factor is lower because the rate is divided by it*/\
+        uint16_t upper_sample_factor = floor(TRUE_BASE_SAMPLE_RATE/rate);\
+        double upper_rate = TRUE_BASE_SAMPLE_RATE/upper_sample_factor;\
+        uint16_t lower_sample_factor = ceil(TRUE_BASE_SAMPLE_RATE/rate);\
+        double lower_rate = TRUE_BASE_SAMPLE_RATE/lower_sample_factor;\
+        double rate_range = upper_rate - lower_rate;\
+        double lower_diff = rate - lower_rate;\
+        \
+        if(lower_diff/rate_range > TX_ROUND_BIAS) {\
+            sample_factor = upper_sample_factor;\
+            rate = upper_rate;\
+        } else {\
+            sample_factor = lower_sample_factor;\
+            rate = lower_rate;\
+        }\
+        sample_factor--;\
+        write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
+        \
+        sprintf(ret, "%lf", rate);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
