@@ -1855,11 +1855,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             tx_power[INT(ch)] = PWR_ON;\
             /* power off */                                                    \
         } else {                                                               \
-            set_property("tx/" STR(ch) "/board/pwr_board", "0");\
-            \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
+            \
+            set_property("tx/" STR(ch) "/board/pwr_board", "0");\
                                                                                \
             /* disable DSP cores */                                            \
             read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
