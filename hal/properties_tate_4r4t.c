@@ -653,6 +653,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
         }                                                                      \
                                                                                \
+        /*command format:*/\
+        /*nco -t (type) -n (number) -a (?) -h 6 (least significant digits of freq) -m freq in megahertz rounded down*/\
         strcpy(buf, "nco -t d -n 0 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
@@ -1351,6 +1353,39 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         get_property("tx/" STR(ch) "/dsp/ch0fpga_nco", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+\
+    static int hdlr_tx_##ch##_dsp_all_nco(const char *data, char *ret) {    \
+        double target_nco = 0;\
+        double actual_nco = 0;\
+        double last_nco = 0;\
+        sscanf(data, "%lf", &target_nco);\
+        char nco_s[50];\
+        \
+        /*Sets the nco in the dsp*/\
+        sprintf(nco_s, "%lf", target_nco - actual_nco);\
+        set_property("tx/" STR(ch) "/dsp/fpga_nco", data);\
+        get_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s, 50);       \
+        sscanf(nco_s, "%lf", &last_nco);\
+        actual_nco = actual_nco + last_nco;\
+        \
+        /*Sets the nco in the channel part of the dac (see page 2 of AD9176 for clarification on channels)*/\
+        sprintf(nco_s, "%lf", target_nco - actual_nco);\
+        set_property("tx/" STR(ch) "/rf/dac/nco/chfreq", data);\
+        get_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s, 50);\
+        sscanf(nco_s, "%lf", &last_nco);\
+        actual_nco = actual_nco + last_nco;\
+        \
+        /*Sets the nco in the channel part of the dac (see page 2 of AD9176 for clarification on channels)*/\
+        sprintf(nco_s, "%lf", target_nco - actual_nco);\
+        set_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", data);\
+        get_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s, 50);\
+        sscanf(nco_s, "%lf", &last_nco);\
+        actual_nco = actual_nco + last_nco;\
+        \
+        sprintf(ret, "%lf", 50);\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+\
                                                                                \
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val;                                                      \
@@ -4366,6 +4401,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/dsp/ch3fpga_nco"          , hdlr_tx_##_c##_dsp_ch3fpga_nco,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/ch4fpga_nco"          , hdlr_tx_##_c##_dsp_ch4fpga_nco,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/fpga_nco"             , hdlr_tx_##_c##_dsp_fpga_nco,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/dsp/all_nco"              , hdlr_tx_##_c##_dsp_all_nco,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac0freq"      , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/dac1freq"      , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0")         \
@@ -4376,7 +4412,8 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch3freq"       , hdlr_tx_##_c##_dac_nco_ch3freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch4freq"       , hdlr_tx_##_c##_dac_nco_ch4freq,         RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/ch5freq"       , hdlr_tx_##_c##_dac_nco_ch5freq,         RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/freq"          , hdlr_tx_##_c##_ch_nco_freq,             RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco/chfreq"        , hdlr_tx_##_c##_ch_nco_freq,             RW, "0")         \
+    DEFINE_SYMLINK_PROP("tx/" #_c "/rf/dac/nco/all_nco", "tx/" #_c "/dsp/all_nco")                                    \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch0atten"     , hdlr_tx_##_c##_dac_gain_ch0atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch1atten"     , hdlr_tx_##_c##_dac_gain_ch1atten,       RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/rf/dac/gain/ch2atten"     , hdlr_tx_##_c##_dac_gain_ch2atten,       RW, "0")         \
