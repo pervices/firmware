@@ -2352,7 +2352,6 @@ CHANNELS
         \
         usleep(300000);\
         /*Resets JESD on FPGA*/\
-        PRINT(INFO, "Individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
