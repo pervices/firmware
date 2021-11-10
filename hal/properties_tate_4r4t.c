@@ -1354,6 +1354,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
 \
+    /*Set the fpga, main dac, and dac channel ncos*/\
     static int hdlr_tx_##ch##_dsp_all_nco(const char *data, char *ret) {    \
         double target_nco = 0;\
         double actual_nco = 0;\
