@@ -1363,21 +1363,21 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         \
         /*Sets the nco in the dsp*/\
         sprintf(nco_s, "%lf", target_nco - actual_nco);\
-        set_property("tx/" STR(ch) "/dsp/fpga_nco", data);\
+        set_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s);\
         get_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s, 50);       \
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
         \
         /*Sets the nco in the channel part of the dac (see page 2 of AD9176 for clarification on channels)*/\
         sprintf(nco_s, "%lf", target_nco - actual_nco);\
-        set_property("tx/" STR(ch) "/rf/dac/nco/chfreq", data);\
+        set_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s);\
         get_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s, 50);\
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
         \
         /*Sets the nco in the channel part of the dac (see page 2 of AD9176 for clarification on channels)*/\
         sprintf(nco_s, "%lf", target_nco - actual_nco);\
-        set_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", data);\
+        set_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s);\
         get_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s, 50);\
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
@@ -2613,7 +2613,6 @@ CHANNELS
         /*Resets JESD on FPGA*/\
         usleep(300000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
