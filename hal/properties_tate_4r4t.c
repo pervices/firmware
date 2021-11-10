@@ -1115,7 +1115,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
+    static int hdlr_tx_##ch##_link_buffer_reset(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
         if (strcmp(data, "1") == 0)                                            \
@@ -1124,6 +1124,16 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
                                                                                \
         /* sync_channels( 15 ); */                                             \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
+        uint32_t old_val;                                                      \
+        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
+        if (strcmp(data, "1") == 0)                                            \
+            write_hps_reg("tx" STR(ch) "4", old_val | (1 << 1));              \
+        else                                                                   \
+            write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 1));             \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1578,6 +1588,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
+            set_property("tx/" STR(ch) "/link/buffer_reset", "1");\
+            \
             if(tx_power[INT(ch)] == PWR_OFF) {\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
@@ -4073,9 +4085,10 @@ GPIO_PINS
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"              , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP)       \
-    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"              , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP)\
-    DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "1", SP)   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP)   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,              RW, "0", SP)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/buffer_reset"      , hdlr_tx_##_c##_link_buffer_reset,       RW, "0", SP)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP)     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
@@ -4090,7 +4103,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0")         \
+    DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0")            \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0")         \
