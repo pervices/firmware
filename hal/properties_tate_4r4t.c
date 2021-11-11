@@ -49,6 +49,8 @@
 #define DSP_NCO_CONST \
     ((double)8.589934592)
 
+#define MAX_DSP_NCO TRUE_BASE_SAMPLE_RATE / 2.0
+
 //TX sample rate factor must be less than thist
 #define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
 #define MIN_TX_SAMPLE_RATE TRUE_BASE_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
@@ -1017,6 +1019,9 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             sscanf(data, "%lf", &freq);                                        \
             direction = 0;                                                     \
         }                                                                      \
+        \
+        if(freq > MAX_DSP_NCO) freq = MAX_DSP_NCO;\
+        else if (freq < -MAX_DSP_NCO) freq = -MAX_DSP_NCO;\
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
