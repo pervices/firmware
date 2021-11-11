@@ -1749,7 +1749,7 @@ CHANNELS
         }                                                                       \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
+        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll, INT(ch));  \
                                                                                 \
         /* if HB add back in freq before printing value to state tree */        \
         if (band == 2) {                                                        \
@@ -4822,55 +4822,55 @@ out:
     return r;
 }
 
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
 
     // Ensure that the LoGen board is powered on
     strcpy(buf, "lmx -O 0\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // Send Reference in MHz to MCU
     strcpy(buf, "lmx -o ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
     strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX R
     strcpy(buf, "lmx -r ");
     sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
     strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX N
     strcpy(buf, "lmx -n ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
     strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX D
     strcpy(buf, "lmx -d ");
     sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
     strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX Output RF Power
     strcpy(buf, "lmx -p ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", 60 /*TODO: pll->power*/);
     // default to high power
     strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX Output Frequency in MHz
     strcpy(buf, "lmx -f ");
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
     strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
     usleep(100000);
 }
 
