@@ -42,21 +42,21 @@
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   500000000.0  //After base rate
-//temporary as a system if changedm TRUE_ will eventally be replaced back with BASE_
-#define TRUE_BASE_SAMPLE_RATE   1000000000.0
+//temporary as a system if changed TRUE_ will eventally be replaced back with BASE_
+#define TX_BASE_SAMPLE_RATE   500000000.0
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (BASE_SAMPLE_RATE)
 #define DSP_NCO_CONST \
     ((double)8.589934592)
 
-#define MAX_DSP_NCO TRUE_BASE_SAMPLE_RATE / 2.0
+#define MAX_DSP_NCO TX_BASE_SAMPLE_RATE / 2.0
 //max nco of the AD9176, higher nco's result in errors in the board
 //the nco cna probably be rasied if those errors are fixed
 #define MAX_DAC_NCO 4000000000
 
 //TX sample rate factor must be less than thist
 #define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
-#define MIN_TX_SAMPLE_RATE TRUE_BASE_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
+#define MIN_TX_SAMPLE_RATE TX_BASE_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
 #define TX_ROUND_BIAS 0.75
 
@@ -990,13 +990,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         \
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
         \
-        if(rate > TRUE_BASE_SAMPLE_RATE) rate = TRUE_BASE_SAMPLE_RATE;\
+        if(rate > TX_BASE_SAMPLE_RATE) rate = TX_BASE_SAMPLE_RATE;\
         \
         /*the upper sample factor is lower because the rate is divided by it*/\
-        uint16_t upper_sample_factor = floor(TRUE_BASE_SAMPLE_RATE/rate);\
-        double upper_rate = TRUE_BASE_SAMPLE_RATE/upper_sample_factor;\
-        uint16_t lower_sample_factor = ceil(TRUE_BASE_SAMPLE_RATE/rate);\
-        double lower_rate = TRUE_BASE_SAMPLE_RATE/lower_sample_factor;\
+        uint16_t upper_sample_factor = floor(TX_BASE_SAMPLE_RATE/rate);\
+        double upper_rate = TX_BASE_SAMPLE_RATE/upper_sample_factor;\
+        uint16_t lower_sample_factor = ceil(TX_BASE_SAMPLE_RATE/rate);\
+        double lower_rate = TX_BASE_SAMPLE_RATE/lower_sample_factor;\
         double rate_range = upper_rate - lower_rate;\
         double lower_diff = rate - lower_rate;\
         \
