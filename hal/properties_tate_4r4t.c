@@ -692,25 +692,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_ch0freq(const char *data, char *ret) {   \
-        double freq;                                                           \
-        sscanf(data, "%lf", &freq);                                            \
-        uint32_t freq_hz = 0;                                                  \
-        uint32_t freq_mhz = 0;                                                 \
-                                                                               \
-        /* split the frequency into MHz + Hz */                                \
-        if (freq < 1000000){                                                   \
-            freq_hz = freq;                                                    \
-        }                                                                      \
-        else {                                                                 \
-            freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
-        }                                                                      \
-                                                                               \
-        strcpy(buf, "nco -t c -n 0 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        /*The channelizer nco is not used in the current configuration*/\
+        sprintf(ret, "0");\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
