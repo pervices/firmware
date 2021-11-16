@@ -867,7 +867,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
-        if ((band == 0) || (band == 1) || (band == 9)) {                       \
+        if ((band == 0) || (band == 1) || (band == 2)) {                       \
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
