@@ -41,7 +41,8 @@
 #include <math.h>
 
 // Sample rates are in samples per second (SPS).
-#define BASE_SAMPLE_RATE   500000000.0  //After base rate
+#define RX_BASE_SAMPLE_RATE   1000000000.0
+#define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
 //temporary as a system if changed TRUE_ will eventally be replaced back with BASE_
 #define TX_BASE_SAMPLE_RATE   500000000.0
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
@@ -2043,33 +2044,42 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
         uint32_t old_val;                                                      \
-        uint16_t base_factor, resamp_factor;                                   \
-        double base_err = 0.0, resamp_err = 0.0;                               \
+        double base_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
-                                                                               \
-        /* get the error for base rate */                                      \
-        base_factor =                                                          \
-            get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);          \
-        resamp_factor =                                                        \
-            get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);      \
-                                                                               \
-        /* set the appropriate sample rate */                                  \
-        memset(ret, 0, MAX_PROP_LEN);                                          \
-                                                                               \
-        /*if (resamp_err < base_err) {*/\
-        if (false){     \
-            write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 15));              \
-            sprintf(ret, "%lf",                                                \
-                    RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
-        } else {                                                               \
-            write_hps_reg("rx" STR(ch) "1", base_factor);                      \
-            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);             \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));\
-            sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
-        }                                                                      \
+        uint16_t factor = 0;\
+        /*Bypasses dsp interp and fir when 2. Bypasses dsp interp when 1*/\
+        uint32_t bypass = 0;\
+        \
+        if(rate > ((RX_BASE_SAMPLE_RATE+RX_DSP_SAMPLE_RATE)/2)) {\
+            rate = RX_BASE_SAMPLE_RATE;\
+            /*the factor does not matter when bypassing the dsp*/\
+            factor = 0;\
+            bypass = 2;\
+            sprintf(ret, "%lf", RX_BASE_SAMPLE_RATE); \
+        \
+        } else if(rate > RX_DSP_SAMPLE_RATE *0.75) {\
+            PRINT(INFO, "T2\n");\
+            rate = RX_DSP_SAMPLE_RATE;\
+            /*the factor does not matter when bypassing the dsp*/\
+            factor = 0;\
+            bypass = 1;\
+            sprintf(ret, "%lf", RX_DSP_SAMPLE_RATE); \
+        } else {\
+            bypass = 0;\
+            factor = get_optimal_sr_factor(rate, RX_DSP_SAMPLE_RATE, &base_err);\
+            /*Returns the actual sample rate set*/\
+            sprintf(ret, "%lf", RX_DSP_SAMPLE_RATE / (double)(factor + 1)); \
+        }\
+        \
+        /*Sets the resamp factor*/\
+        write_hps_reg("rx" STR(ch) "1", factor);                      \
+        /*Set whether to bypass dsp and fir*/\
+        write_hps_reg("rx" STR(ch) "2", bypass);                      \
+        /*Sets whether fraction samples are used (always false)*/\
+        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);             \
+        write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));\
+        \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
