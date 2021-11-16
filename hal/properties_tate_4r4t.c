@@ -50,12 +50,18 @@
     ((double)8.589934592)
 
 #define MAX_DSP_NCO TRUE_BASE_SAMPLE_RATE / 2.0
+//max nco of the AD9176, higher nco's result in errors in the board
+//the nco cna probably be rasied if those errors are fixed
+#define MAX_DAC_NCO 4000000000
 
 //TX sample rate factor must be less than thist
 #define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
 #define MIN_TX_SAMPLE_RATE TRUE_BASE_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
 #define TX_ROUND_BIAS 0.75
+
+//The nco in the dac of the AD9176 must be non 0
+#define MIN_DAC_NCO 1
 
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
 #define MIN_RF_ATTEN_TX 0
@@ -645,6 +651,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sscanf(data, "%lf", &freq);                                            \
         uint32_t freq_hz = 0;                                                  \
         uint32_t freq_mhz = 0;                                                 \
+        \
+        /*Makes sure the DAC is always non 0. If the dac is set to 0 there is no useful output*/\
+        /*Currently this function only takes positive values*/\
+        if(freq < MIN_DAC_NCO) freq = MIN_DAC_NCO;\
+        else if (freq > MAX_DAC_NCO) freq = MAX_DAC_NCO;\
                                                                                \
         /* split the frequency into MHz + Hz */                                \
         if (freq < 1000000){                                                   \
@@ -661,7 +672,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        sprintf(ret, "%lf", freq);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1020,8 +1032,9 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             direction = 0;                                                     \
         }                                                                      \
         \
+        /*the magnitude and direction of the nco are stored in seperate registers*/\
+        if(freq < 0) freq = -freq;\
         if(freq > MAX_DSP_NCO) freq = MAX_DSP_NCO;\
-        else if (freq < -MAX_DSP_NCO) freq = -MAX_DSP_NCO;\
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
@@ -1080,14 +1093,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sscanf(data, "%lf", &target_nco);\
         char nco_s[50];\
         \
-        /*Sets the nco in the dsp*/\
-        sprintf(nco_s, "%lf", target_nco - actual_nco);\
-        set_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s);\
-        get_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s, 50);       \
-        sscanf(nco_s, "%lf", &last_nco);\
-        actual_nco = actual_nco + last_nco;\
-        \
         /*Sets the nco in the channel part of the dac (see page 2 of AD9176 for clarification on channels)*/\
+        /*The DAC goes first since it needs to be non 0*/\
         sprintf(nco_s, "%lf", target_nco - actual_nco);\
         set_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s);\
         get_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s, 50);\
@@ -1098,6 +1105,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sprintf(nco_s, "%lf", target_nco - actual_nco);\
         set_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s);\
         get_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s, 50);\
+        sscanf(nco_s, "%lf", &last_nco);\
+        actual_nco = actual_nco + last_nco;\
+        \
+        /*Sets the nco in the dsp*/\
+        sprintf(nco_s, "%lf", target_nco - actual_nco);\
+        set_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s);\
+        get_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s, 50);       \
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
         \
