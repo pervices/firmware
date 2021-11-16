@@ -810,58 +810,54 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
-        uint64_t freq = 0;                                                     \
-        sscanf(data, "%" SCNd64 "", &freq);                                    \
-                                                                               \
-        /* if freq = 0, do nothing */                                          \
-        if (freq == 0) {                                                       \
-          /* Don't mute channel as FPGA/DAC-CP/DAC-MDP tuning might be used*/  \
-          /* strcpy(buf, "rf -c " STR(ch) " -z\r");                        */  \
-          /* ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));       */  \
-                                                                               \
-            return RETURN_SUCCESS;                                             \
-        }                                                                      \
-                                                                               \
-        /* if freq out of bounds, kill channel*/                               \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
-            strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
-                                                                               \
-            /* Turn OFF TX on HPS */                                           \
-            uint32_t old_val;                                                  \
-                                                                               \
-            /* disable DSP cores */                                            \
-            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
-            PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
-                  toupper(CHR(ch)));                                           \
-            write_hps_reg("tx" STR_TX(ctx) "4", old_val | 0x2);                    \
-                                                                               \
-            /* disable channel */                                              \
-            read_hps_reg("tx" STR_TX(ctx) "4", &old_val);                          \
-            write_hps_reg("tx" STR_TX(ctx) "4", old_val &(~0x100));                \
-                                                                               \
-            tx_power[INT(ch)] = PWR_OFF;                                       \
-                                                                               \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
-                         "Shutting Down TX" STR(ch) ".\n");                    \
-                                                                               \
-            return RETURN_ERROR;                                               \
+        uint64_t freq = 0;                                                      \
+        sscanf(data, "%" SCNd64 "", &freq);                                     \
+        char fullpath[PROP_PATH_LEN] = "tx/" STR(ch) "/rf/freq/band";           \
+        int band;                                                               \
+        char band_read[3];                                                      \
+                                                                                \
+        /* if freq = 0, mute PLL */                                             \
+        if (freq == 0) {                                                        \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            sprintf(ret, "%i", 0);                                              \
+            return RETURN_SUCCESS;                                              \
+        }                                                                       \
+                                                                                \
+        /* if freq out of bounds, mute lmx*/                                    \
+        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            PRINT(ERROR,"LMX Freq Invalid \n");                                 \
+            sprintf(ret, "%i", 0);                                              \
+            return RETURN_ERROR;                                                \
+        }                                                                       \
+                                                                                \
+        /* check band: if HB, subtract freq to account for cascaded mixers*/    \
+        get_property(&fullpath,&band_read,3);                                   \
+        sscanf(band_read, "%i", &band);                                         \
+        if (band == 2) {                                                        \
+            freq -= HB_STAGE2_MIXER_FREQ;                                      \
         }                                                                      \
                                                                                \
         /* run the pll calc algorithm */                                       \
-        pllparam_t pll;                                                        \
+        pllparam_t pll = pll_def_lmx2595;                                      \
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-                                                                               \
-        /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
+            pll.R = pll.R + 1;                                                 \
+            outfreq = setFreq(&freq, &pll);                                    \
+        }                                                                      \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, \
-                          &pll, true, INT_TX(ch));                                \
+        set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll, INT(ch));  \
                                                                                \
+        /* if HB add back in freq before printing value to state tree */       \
+        if (band == 2) {                                                       \
+            outfreq += HB_STAGE2_MIXER_FREQ;                                   \
+        }                                                                      \
+        /* Save the frequency that is being set into the property */           \
         sprintf(ret, "%Lf", outfreq);                                          \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -4895,6 +4891,60 @@ void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int c
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
     strcat(buf, "\r");
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+    usleep(100000);
+}
+
+//At time of write, the only differences between set_lo_frequency rx and tx is the ping function used
+//which is used to avoid sending uart commands to unpopulated boards
+void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+    // extract lo variables and pass to MCU (LMX2595)
+
+    double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
+
+    // Ensure that the LoGen board is powered on
+    strcpy(buf, "lmx -O 0\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+
+    // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
+    strcpy(buf, "lmx -k\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+
+    // Send Reference in MHz to MCU
+    strcpy(buf, "lmx -o ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
+    strcat(buf, "\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+
+    // write LMX R
+    strcpy(buf, "lmx -r ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
+    strcat(buf, "\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+
+    // write LMX N
+    strcpy(buf, "lmx -n ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
+    strcat(buf, "\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+
+    // write LMX D
+    strcpy(buf, "lmx -d ");
+    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
+    strcat(buf, "\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+
+    // write LMX Output RF Power
+    strcpy(buf, "lmx -p ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 60 /*TODO: pll->power*/);
+    // default to high power
+    strcat(buf, "\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
+
+    // write LMX Output Frequency in MHz
+    strcpy(buf, "lmx -f ");
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
+    strcat(buf, "\r");
+    ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
     usleep(100000);
 }
 
