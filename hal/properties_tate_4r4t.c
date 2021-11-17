@@ -795,7 +795,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
-        char fullpath[PROP_PATH_LEN] = "tx/" STR(ch) "/rf/freq/band";           \
+        char fullpath[PROP_PATH_LEN] = "tx/" STR(ch) "/rf/band";                \
         int band;                                                               \
         char band_read[3];                                                      \
                                                                                 \
