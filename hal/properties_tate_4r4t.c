@@ -1081,14 +1081,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         char nco_s[50];\
         \
         /*Sets the nco in the channel part of the dac (see page 2 of AD9176 for clarification on channels)*/\
-        /*The DAC goes first since it needs to be non 0*/\
         sprintf(nco_s, "%lf", target_nco - actual_nco);\
         set_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s);\
         get_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s, 50);\
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
         \
-        /*Sets the nco in the channel part of the dac (see page 2 of AD9176 for clarification on channels)*/\
+        /*The DAC goes before FPGA since it needs to be non 0*/\
         sprintf(nco_s, "%lf", target_nco - actual_nco);\
         set_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s);\
         get_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s, 50);\
@@ -1102,7 +1101,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
         \
-        sprintf(ret, "%lf", 50);\
+        sprintf(ret, "%lf", actual_nco);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
 \
