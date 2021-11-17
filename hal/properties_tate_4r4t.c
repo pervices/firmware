@@ -1197,6 +1197,18 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         get_property("tx/" STR(ch) "/link/ch0port", ret, MAX_PROP_LEN);       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /*Swaps iq, should be always 0 in the end, but will often need to be flipped for debugging purposes*/\
+    static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
+        uint32_t old_val;                                                      \
+        read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
+        if (strcmp(data, "1") == 0)                                            \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
+        else                                                                   \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     /* XXX:                                                                    \
      * DOES NOT PORT WELL.                                                     \
@@ -4116,6 +4128,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0")            \
+    DEFINE_FILE_PROP("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "1")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0")         \
