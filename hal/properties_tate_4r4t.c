@@ -46,11 +46,18 @@
 //temporary as a system if changed TRUE_ will eventally be replaced back with BASE_
 #define TX_BASE_SAMPLE_RATE   500000000.0
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
-// (2 ^ 32) / (BASE_SAMPLE_RATE)
-#define DSP_NCO_CONST \
+// (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
+#define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
-#define MAX_DSP_NCO TX_BASE_SAMPLE_RATE / 2.0
+// TX_DSP_NCO_CONST = (2 ^ 32) / (TX_BASE_SAMPLE_RATE)
+// TX_DSP_NCO_CONST should be 1G, however due to other issues it is 500M, for this calc 1G was used
+#define TX_DSP_NCO_CONST \
+    ((double)4.294967296)
+
+//#define MAX_DSP_NCO (TX_BASE_SAMPLE_RATE / 2.0)
+// due to other issues TX_BASE_SAMPLE_RATE is half of what it should be, siwtch back to the line above this when that is fixed
+#define MAX_DSP_NCO (500000000.0)
 //max nco of the AD9176, higher nco's result in errors in the board
 //the nco cna probably be rasied if those errors are fixed
 #define MAX_DAC_NCO 4000000000
@@ -1017,12 +1024,12 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         if(freq > MAX_DSP_NCO) freq = MAX_DSP_NCO;\
                                                                                \
         /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        uint32_t nco_steps = (uint32_t)round(freq * TX_DSP_NCO_CONST);            \
         write_hps_reg("tx" STR(ch) "10", nco_steps);                           \
         if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+            sprintf(ret, "-%lf", (double)nco_steps / TX_DSP_NCO_CONST);           \
         } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+            sprintf(ret, "%lf", (double)nco_steps / TX_DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
@@ -2081,12 +2088,12 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        uint32_t nco_steps = (uint32_t)round(freq * RX_DSP_NCO_CONST);            \
         write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
         if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+            sprintf(ret, "-%lf", (double)nco_steps / RX_DSP_NCO_CONST);           \
         } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+            sprintf(ret, "%lf", (double)nco_steps / RX_DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
