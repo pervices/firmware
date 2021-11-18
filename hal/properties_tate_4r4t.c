@@ -858,6 +858,9 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if ((band == 0) || (band == 1) || (band == 2)) {                       \
+            /*In low band i and q are reversed*/\
+            if(band == 0) set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            else set_property("tx/" STR(ch) "/link/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -4165,7 +4168,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0", TP)            \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "1", TP)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch3fifo_lvl"           , hdlr_tx_##_c##_qa_ch3fifo_lvl,          RW, "0", TP)         \
