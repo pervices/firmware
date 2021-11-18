@@ -60,6 +60,7 @@ typedef struct prop {
     char def_val[MAX_PROP_LEN]; // default value
     int wd;                     // inotify watch descriptor
     prop_pwr_t pwr_en; //stores wether or not to make sure a board is on before setting the property
+    char ch[2];//channel number, only relevant for rx and tx (it is a string because of the way macros work, in practice it should be treated as char
 
 } prop_t;
 
