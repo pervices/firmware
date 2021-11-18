@@ -113,6 +113,7 @@ static const char *tx_reg4_map[4] = { "txa4", "txe4", "txi4", "txm4" };
 
 //used to figure out which register, and where in the register to set dsp gain
 static const char *rxg_map[1] = { "rxga" };
+static const char *txg_map[1] = { "txga" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -965,8 +966,20 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_gain(const char *data, char *ret) {          \
-        /* TODO: FW code */                                                    \
-        PRINT(INFO,"Dsp gain; FW code");\
+        uint32_t gain;\
+        uint32_t clear_util = 0xff;\
+        sscanf(data, "%i", &gain);                                            \
+        if(gain > 0xff) gain = 0xff;\
+        gain = gain << (8*INT(ch));\
+        clear_util = clear_util << (8*INT(ch));\
+        uint32_t reg_val;\
+        read_hps_reg(txg_map[(int)(INT(ch)/4)], &reg_val);                                  \
+        /*Clears the bits used in the reg for this channel's dsp gain*/\
+        reg_val = reg_val & ~clear_util;\
+        /*Sets the bits used in the reg for this channel's dsp gain*/\
+        reg_val = reg_val | gain;\
+        write_hps_reg(txg_map[(int)(INT(ch)/4)], reg_val);            \
+        sprintf(ret, "%i", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -4185,7 +4198,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch4uflow"              , hdlr_tx_##_c##_qa_ch4uflow,             RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10", TP)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "255", TP)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", TP)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/ch0fpga_nco"          , hdlr_tx_##_c##_dsp_ch0fpga_nco,         RW, "0", TP)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/ch1fpga_nco"          , hdlr_tx_##_c##_dsp_ch1fpga_nco,         RW, "0", TP)         \
