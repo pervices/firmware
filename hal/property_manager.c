@@ -589,12 +589,15 @@ int get_channel_for_path(const char *path) {
     // PRINT( VERBOSE,"%s(): %s\n", __func__, NULL == path ? "(null)" : path );
 
     if (NULL == path) {
+        PRINT(ERROR, "No channel corresponding to path: %s\n", path);
         return -1;
     }
     if (strlen(path) < 4) {
+        PRINT(ERROR, "No channel corresponding to path: %s\n", path);
         return -1;
     }
     if (1 && 0 != strncmp("rx", path, 2) && 0 != strncmp("tx", path, 2)) {
+        PRINT(ERROR, "No channel corresponding to path: %s\n", path);
         // note: this is not necessarily an error (some paths do not begin with
         // rx or tx)
         return -1;
@@ -613,7 +616,7 @@ void power_on_channel(bool tx, int channel) {
     snprintf(buf, sizeof(buf), "%s/%c/pwr", tx ? "tx" : "rx", 'a' + channel);
     prop = get_prop_from_cmd(buf);
     if (NULL == prop) {
-        PRINT(ERROR, "Cannot find prop for command '%s'\n", buf);
+        PRINT(ERROR, "Cannot find prop for command '%s', channel: %i\n", buf, channel);
         return;
     }
     write_to_file(get_abs_path(prop, buf), "1");
@@ -661,9 +664,11 @@ int set_property(const char *prop, const char *data) {
         PRINT(VERBOSE, "Using the old method of choosing if a baord needs to be powered on\n");
         power_on_channel_fixup(temp->path);
     } else if(temp->pwr_en == RP) {
-        power_on_channel(0, temp->path);
+        int ch = get_channel_for_path(temp->path);
+        power_on_channel(0, ch);
     } else if(temp->pwr_en == TP) {
-        power_on_channel(1, temp->path);
+        int ch = get_channel_for_path(temp->path);
+        power_on_channel(1, ch);
     }
 
     write_to_file(get_abs_path(temp, path), data);
