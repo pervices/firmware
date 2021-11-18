@@ -1199,9 +1199,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     \
     /*Swaps iq, should be always 0 in the end, but will often need to be flipped for debugging purposes*/\
     static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
+        int swap;                                                            \
+        sscanf(data, "%i", &swap);                                           \
         uint32_t old_val;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
-        if (strcmp(data, "1") == 0)                                            \
+        if ( swap == 1)                                            \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
         else                                                                   \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
