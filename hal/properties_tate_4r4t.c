@@ -140,18 +140,6 @@ int max_attempts = 0;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
-//Of the following PWR, only PWR_OFF and PWR_ON are valid inputs, the rest are used internally to check the status of things
-//indicates that no board is present
-#define PWR_NO_BOARD 2
-//indicates that either the board if off, if no board is present it will default to this value until the fact that the baord is missing is detected
-#define PWR_OFF 0
-//indicates that the board is on, but the rest of the startup sequence has not been doner
-#define PWR_HALF_ON 3
-#define PWR_ON 1
-static uint8_t rx_power[NUM_CHANNELS] = {0};
-
-static uint8_t tx_power[NUM_CHANNELS] = {0};
-
 static uint8_t rx_stream[NUM_CHANNELS] = {0};
 
 static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};

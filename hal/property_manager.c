@@ -609,11 +609,17 @@ int get_channel_for_path(const char *path) {
     return path[3] - 'a';
 }
 
-void power_on_channel(bool tx, int channel) {
+void power_on_channel(bool is_tx, char channel) {
     char buf[MAX_PATH_LEN];
     prop_t *prop;
+    //skips powering on the channel if it is already on
+    if(is_tx) {
+        if(tx_power[channel - 'a'] == PWR_ON) return;
+    } else {
+        if(rx_power[channel - 'a'] == PWR_ON) return;
+    }
 
-    snprintf(buf, sizeof(buf), "%s/%c/pwr", tx ? "tx" : "rx", 'a' + channel);
+    snprintf(buf, sizeof(buf), "%s/%c/pwr", is_tx ? "tx" : "rx", channel);
     prop = get_prop_from_cmd(buf);
     if (NULL == prop) {
         PRINT(ERROR, "Cannot find prop for command '%s', channel: %i\n", buf, channel);
@@ -663,12 +669,11 @@ int set_property(const char *prop, const char *data) {
         //This is the old method
         PRINT(VERBOSE, "Using the old method of choosing if a baord needs to be powered on\n");
         power_on_channel_fixup(temp->path);
+    //powers of channels if they are not already on
     } else if(temp->pwr_en == RP) {
-        int ch = get_channel_for_path(temp->path);
-        power_on_channel(0, ch);
+        power_on_channel(0, *(temp->ch));
     } else if(temp->pwr_en == TP) {
-        int ch = get_channel_for_path(temp->path);
-        power_on_channel(1, ch);
+        power_on_channel(1, *(temp->ch));
     }
 
     write_to_file(get_abs_path(temp, path), data);

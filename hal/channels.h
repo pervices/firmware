@@ -98,8 +98,14 @@
 
 //creates channel maps
 #if defined (TATE_4R4T)
+    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
+    #define NUM_CHANNELS 4
     #define NUM_TX_CHANNELS 4
+    static uint8_t tx_power[NUM_TX_CHANNELS] = {0};
+
     #define NUM_RX_CHANNELS 4
+    static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
+
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
 
@@ -115,8 +121,14 @@
     #undef X
     };
 #elif defined (TATE_8R)
+    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
+    #define NUM_CHANNELS 8
     #define NUM_TX_CHANNELS 0
+    static uint8_t tx_power[NUM_TX_CHANNELS] = {0};
+
     #define NUM_RX_CHANNELS 8
+    static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
+
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
     #define CHR_RX(crx) #crx[0]
@@ -133,8 +145,14 @@
     };
 //creates channel maps
 #elif defined (TATE_4R4T_3G)
+    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
+    #define NUM_CHANNELS 4
     #define NUM_TX_CHANNELS 4
+    static uint8_t tx_power[NUM_TX_CHANNELS] = {0};
+
     #define NUM_RX_CHANNELS 4
+    static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
+
     #define STR_RX(crx) #crx
     #define STR_TX(ctx) #ctx
 
@@ -162,9 +180,6 @@
     };
 
 #endif
-// Number of channels.
-#define NUM_CHANNELS ARRAY_SIZE(channel_names)
-
 /* clang-format on */
 
 #endif

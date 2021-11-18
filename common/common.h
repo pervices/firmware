@@ -60,6 +60,15 @@
 //length for property path buffer
 #define PROP_PATH_LEN 50
 
+//Of the following PWR, only PWR_OFF and PWR_ON are valid inputs to pwr, the rest are used internally to check the status of things
+//indicates that no board is present
+#define PWR_NO_BOARD 2
+//indicates that either the board if off, if no board is present it will default to this value until the fact that the baord is missing is detected
+#define PWR_OFF 0
+//indicates that the board is on, but the rest of the startup sequence has not been doner
+#define PWR_HALF_ON 3
+#define PWR_ON 1
+
 // macro for string comparison
 #define EQUAL_STR(VAR, STR) (strncmp(VAR, STR, strlen(STR)) == 0)
 
