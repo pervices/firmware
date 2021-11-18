@@ -4413,7 +4413,7 @@ GPIO_PINS
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP, #_c)   \
-    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,              RW, "0", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_tx_##_c##_jesd_reset,              RW, "0", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/buffer_reset"      , hdlr_tx_##_c##_link_buffer_reset,       RW, "0", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", TP, #_c)     \
