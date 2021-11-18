@@ -4322,7 +4322,7 @@ GPIO_PINS
 
 
 #define DEFINE_GPIO(_p)                                                                                                        \
-    DEFINE_FILE_PROP("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0")
+    DEFINE_FILE_PROP_P("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0", SP)
 
 #define DEFINE_CM()                                                    \
     DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
