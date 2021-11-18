@@ -218,8 +218,8 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
 
     if (!pll_CheckParams(pll, 1)) {
 #ifndef _PLL_DEBUG_STANDALONE
-        PRINT(ERROR,
-              "BAD PLL SETTINGS: PLL1: N: %" PRIu32 ", R: %" PRIu16
+        PRINT(INFO,
+              "BAD PLL CALC RESULT, retrying: PLL1: N: %" PRIu32 ", R: %" PRIu16
               ", D: %" PRIu16 ", x2en: %" PRIu8 ", VCO: %Lf.\n",
               pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
 #else
