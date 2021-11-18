@@ -2368,14 +2368,6 @@ CHANNELS
         sscanf(data, "%i", &reset);                                           \
         if (!reset) return RETURN_SUCCESS;\
         \
-        int reboot_attempts = 0;\
-        while(property_good("rx/" STR(ch) "/board/status") != 1 && reboot_attempts < max_brd_reboot_attempts) {\
-            reboot_attempts++;\
-            /*The board is rebooted this way since this function is part of the JESD reset system call by pwr (which reboot calls)*/\
-            PRINT(ERROR, "Rx board is in a bad state, rebooting attempt %i\n", reboot_attempts);\
-            set_property("rx/" STR(ch) "/board/pwr_board", "0");\
-            set_property("rx/" STR(ch) "/board/pwr_board", "1");\
-        }\
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
         usleep(100000);\
@@ -2555,27 +2547,6 @@ CHANNELS
         } else {                                                               \
             strcpy(ret, "bad");                                                \
         }                                                                      \
-        return RETURN_SUCCESS;                                                 \
-    }\
-    /*Check if the board is in  a bad state, the board will attempt to reinitialize itself if it is*/\
-    /*This is to avoid a wierd issue with the registers in adc32rf45*/\
-    /*2021-10-25: the bad state was caused by the ADC overheating*/\
-    static int hdlr_rx_##ch##_board_status(const char *data, char *ret) {       \
-        int reset;                                                            \
-        sscanf(data, "%i", &reset);                                           \
-        if (reset == - 1) return RETURN_SUCCESS;\
-        \
-        strcpy(buf, "status -g\r");                                                 \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        if (uart_ret_buf[0] == 'g') {\
-            strcpy(ret, "good");\
-            return RETURN_SUCCESS;\
-        } else {\
-            PRINT(ERROR, "Issues with board register, message: %s.\n", (char *)uart_ret_buf);\
-            strcpy(ret, "bad");\
-            return RETURN_ERROR;\
-        }\
-        \
         return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
@@ -4094,7 +4065,6 @@ GPIO_PINS
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/board/status"           , hdlr_rx_##_c##_board_status,             RW, "-1", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
