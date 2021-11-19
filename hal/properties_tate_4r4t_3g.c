@@ -1388,7 +1388,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sprintf(ret, "%lf", actual_nco);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-\
+                                                                               \
+    /*resets dsp (including buffer)*/\
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val = 0;                                                  \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
@@ -1402,27 +1403,18 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                            \
-    static int hdlr_tx_##ch##_link_buffer_reset(const char *data, char *ret) { \
-        if(data[0]=='1' && data[1]==0) {\
-            uint32_t old_val;                                                  \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                      \
-            write_hps_reg("tx" STR(ch) "4", old_val | (1 << 1));          \
-            write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 1));         \
-        }\
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
-        uint32_t old_val = 0;                                                  \
+        uint32_t old_val;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
-        if (strcmp(data, "1") == 0)                                            \
-            write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 14));              \
-        else                                                                   \
-            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
-                                                                               \
-        /* sync_channels( 15 ); */                                             \
+        /*Bit 14 enables*/\
+        if (strcmp(data, "1") == 0) {                                          \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 14));\
+            /*Resets dsp to get rid of false underflows, since when vita is low the system is always trying to stream*/\
+            /*And detects underflows since it is not being sent any data*/\
+            set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
+        } else                                                                   \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 14));         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -4414,7 +4406,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_tx_##_c##_jesd_reset,              RW, "0", SP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/buffer_reset"      , hdlr_tx_##_c##_link_buffer_reset,       RW, "0", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", TP, #_c)         \
@@ -4456,7 +4448,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/ch4fpga_nco"          , hdlr_tx_##_c##_dsp_ch4fpga_nco,         RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/fpga_nco"             , hdlr_tx_##_c##_dsp_fpga_nco,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/all_nco"              , hdlr_tx_##_c##_dsp_all_nco,             RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco/dac0freq"      , hdlr_tx_##_c##_dac_nco_dac0freq,        RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco/dac1freq"      , hdlr_tx_##_c##_dac_nco_dac1freq,        RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco/dacfreq"       , hdlr_tx_##_c##_dac_nco_freq,            RW, "0", TP, #_c)         \

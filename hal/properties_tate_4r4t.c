@@ -1108,7 +1108,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         sprintf(ret, "%lf", actual_nco);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-\
                                                                                \
     /*resets dsp (including buffer)*/\
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
@@ -1125,7 +1124,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    \
     static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
         uint32_t old_val;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
