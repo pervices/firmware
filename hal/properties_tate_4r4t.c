@@ -677,6 +677,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_dac1freq(const char *data, char *ret) {  \
         /* DAC1 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -696,26 +697,31 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_ch1freq(const char *data, char *ret) {   \
         /* CH1 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_ch2freq(const char *data, char *ret) {   \
         /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_ch3freq(const char *data, char *ret) {   \
         /* CH3 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_ch4freq(const char *data, char *ret) {   \
         /* CH4 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_nco_ch5freq(const char *data, char *ret) {   \
         /* CH5 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -750,26 +756,31 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dac_gain_ch1atten(const char *data, char *ret) { \
         /* CH1 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_gain_ch2atten(const char *data, char *ret) { \
         /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_gain_ch3atten(const char *data, char *ret) { \
         /* CH3 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_gain_ch4atten(const char *data, char *ret) { \
         /* CH4 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dac_gain_ch5atten(const char *data, char *ret) { \
         /* CH5 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1045,27 +1056,31 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch1fpga_nco(const char *data, char *ret) {   \
         /* CH1 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch2fpga_nco(const char *data, char *ret) {   \
         /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch3fpga_nco(const char *data, char *ret) {   \
         /* CH3 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch4fpga_nco(const char *data, char *ret) {   \
         /* CH4 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-                                                                               \
     static int hdlr_tx_##ch##_dsp_ch5fpga_nco(const char *data, char *ret) {   \
         /* CH5 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1155,36 +1170,32 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
-        /*Only ch0 is planned on being used at this point, this has not been verified*/\
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "16", port);                                 \
+        /* CH1 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch2port(const char *data, char *ret) {      \
         /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
-        /*Only ch0 is planned on being used at this point, this has not been verified*/\
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "17", port);                                 \
+        /* CH3 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
-        /*Only ch0 is planned on being used at this point, this has not been verified*/\
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "18", port);                                 \
+        /* CH4 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_ch5port(const char *data, char *ret) {      \
-        /* CH5 CURRENTLY UNSUPPORTED */                                         \
+        /* CH5 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1219,58 +1230,33 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch1fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
+        /* CH1 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch2fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
+        /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch3fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
+        /* CH3 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch4fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
+        /* CH4 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch5fifo_lvl(const char *data, char *ret) {    \
-        uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
-        lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
+        /* CH5 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1297,83 +1283,33 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch1oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH1 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch2oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch3oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH3 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch4oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH4 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch5oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH5 CURRENTLY UNSUPPORTED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
