@@ -802,6 +802,13 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             sprintf(ret, "%i", 0);                                              \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
+        \
+        /* check band: if HB, subtract freq to account for cascaded mixers*/    \
+        get_property(&fullpath,&band_read,3);                                   \
+        sscanf(band_read, "%i", &band);                                         \
+        if (band == 2) {                                                        \
+            freq -= HB_STAGE2_MIXER_FREQ;                                      \
+        }                                                                      \
                                                                                 \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
@@ -811,13 +818,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             sprintf(ret, "%i", 0);                                              \
             return RETURN_ERROR;                                                \
         }                                                                       \
-                                                                                \
-        /* check band: if HB, subtract freq to account for cascaded mixers*/    \
-        get_property(&fullpath,&band_read,3);                                   \
-        sscanf(band_read, "%i", &band);                                         \
-        if (band == 2) {                                                        \
-            freq -= HB_STAGE2_MIXER_FREQ;                                      \
-        }                                                                      \
                                                                                \
         /* run the pll calc algorithm */                                       \
         pllparam_t pll = pll_def_lmx2595;                                      \
