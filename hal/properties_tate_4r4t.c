@@ -1552,7 +1552,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
-            set_property("tx/" STR(ch) "/link/buffer_reset", "1");\
+            set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
             \
             if(tx_power[INT(ch)] == PWR_OFF) {\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
