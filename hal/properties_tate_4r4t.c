@@ -69,7 +69,7 @@
 #define TX_ROUND_BIAS 0.75
 
 //The nco in the dac of the AD9176 must be non 0
-#define MIN_DAC_NCO 1
+#define MIN_DAC_NCO 0
 
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
 #define MIN_RF_ATTEN_TX 0
@@ -664,7 +664,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         }                                                                      \
                                                                                \
         /*command format:*/\
-        /*nco -t (type) -n (number) -a (?) -h 6 (least significant digits of freq) -m freq in megahertz rounded down*/\
+        /*nco -t (type) -n (number) -a (?) -h (6 least significant digits of freq) -m freq in megahertz rounded down*/\
         strcpy(buf, "nco -t d -n 0 -a 0 -h ");                                 \
         sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
