@@ -1601,7 +1601,7 @@ static int hdlr_time_reboot(const char *data, char *ret) {
 
         if (reboot == 1) {
             strcpy(buf, "board -r\r");
-            ping_write_only(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));
+            ping_write_only(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         }
 
         return RETURN_SUCCESS;
