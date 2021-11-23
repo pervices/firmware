@@ -1172,7 +1172,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         \
         usleep(300000);\
         /*Resets JESD on FPGA*/\
-        PRINT(INFO, "Individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
