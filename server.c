@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
     init_property(options);
     const int t1 = time_it();
 
-    printf("boot time %d\n", t1 - t0);
+    PRINT(INFO, "boot time %d\n", t1 - t0);
 
     inotify_fd = get_inotify_fd();
 
