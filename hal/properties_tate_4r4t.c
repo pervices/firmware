@@ -964,6 +964,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /* 8 bits from the dsp gain register are ued for each channel (7:0 for a, 15:8 for b...)*/\
     static int hdlr_tx_##ch##_dsp_gain(const char *data, char *ret) {          \
         uint32_t gain;\
         uint32_t clear_util = 0xff;\
@@ -978,6 +979,9 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         /*Sets the bits used in the reg for this channel's dsp gain*/\
         reg_val = reg_val | gain;\
         write_hps_reg(txg_map[(int)(INT(ch)/4)], reg_val);            \
+        /* Calculates gain set (should be the same as gain was originally)*/\
+        gain = reg_val & clear_util;\
+        gain = gain >> (8*INT(ch));\
         sprintf(ret, "%i", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
