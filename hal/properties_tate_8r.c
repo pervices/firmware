@@ -601,7 +601,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     /*sets variable amplifiers, variable attentuators, bypassable amplifiers to achieve desired gain*/\
     /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        const char fullpath[PROP_PATH_LEN] = "state/rx/" STR(ch) "/rf/freq/band";    \
+        const char fullpath[PROP_PATH_LEN] = "rx/" STR(ch) "/rf/freq/band";    \
         int gain;                                                              \
         int net_gain;                                                          \
         int atten;                                                             \
@@ -1159,7 +1159,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         /*Resets JESD on FPGA*/\
         usleep(300000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        PRINT(INFO, "individual_reset_bit: %i", individual_reset_bit);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
@@ -1204,7 +1203,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         if (power >= PWR_ON) {                                                 \
             /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
             if(rx_power[INT(ch)] == PWR_OFF) {\
-                set_property("rx/" STR(ch) "/pwr_board", "1");\
+                set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
                                                                                \
             /* disable dsp */                                         \
@@ -1222,7 +1221,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
-            set_property("rx/" STR(ch) "/pwr_board", "0");\
+            set_property("rx/" STR(ch) "/board/pwr_board", "0");\
                                                                                \
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
@@ -3153,7 +3152,7 @@ void jesd_reset_all() {
             continue;
         }
         sprintf(reset_path, "rx/%c/jesd/reset", chan+'a');
-        sprintf(status_path, "rx/%c/jesd_status", chan+'a');
+        sprintf(status_path, "rx/%c/jesd/status", chan+'a');
         while(property_good(status_path) != 1) {
             if(attempts >= max_attempts) {
                 PRINT(ERROR, "JESD link for channel %c failed after %i attempts \n", chan+'a', max_attempts);
