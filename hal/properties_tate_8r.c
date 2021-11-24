@@ -839,9 +839,10 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         uint16_t factor = 0;\
-        /*Bypasses dsp interp and fir when 2. Bypasses dsp interp when 1*/\
+        /*Bypasses dsp and half band filer 2. Bypasses dsp when 1*/\
         uint32_t bypass = 0;\
         \
+        /*If sample rate is roundable to RX_BASE_SAMPLE_RATE*/\
         if(rate > ((RX_BASE_SAMPLE_RATE+RX_DSP_SAMPLE_RATE)/2)) {\
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
@@ -849,6 +850,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             bypass = 2;\
             sprintf(ret, "%lf", RX_BASE_SAMPLE_RATE); \
         \
+        /*If sample rate is roundable to RX_DSP_SAMPLE_RATE*/\
         } else if(rate > RX_DSP_SAMPLE_RATE *0.75) {\
             PRINT(INFO, "T2\n");\
             rate = RX_DSP_SAMPLE_RATE;\
@@ -879,9 +881,16 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         double freq;                                                           \
         uint32_t old_val;                                                      \
         uint8_t direction;                                                     \
+        char rate_s[50];\
+        get_property("rx/" STR(ch) "/dsp/rate", rate_s, 50);\
+        double rate;\
+        sscanf(rate_s, "%lf", &rate);\
                                                                                \
+        /* The dsp (including the nco is bypassed at or above the RX_DSP_SAMPLE_RATE */                      \
+        if (rate >= RX_DSP_SAMPLE_RATE) {\
+            freq = 0;\
         /* check for a minus or plus sign at the front */                      \
-        if (data[0] == '-') {                                                  \
+        } else if (data[0] == '-') {                                                  \
             sscanf(data + 1, "%lf", &freq);                                    \
             direction = 1;                                                     \
         } else if (data[0] == '+') {                                           \
