@@ -38,35 +38,32 @@
 #include <signal.h>
 #include "channels.h"
 #include "gpio_pins.h"
-#include <math.h>
 
 // Sample rates are in samples per second (SPS).
 #define RX_BASE_SAMPLE_RATE   1000000000.0
 #define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
-//temporary as a system if changed TRUE_ will eventally be replaced back with BASE_
-#define TX_BASE_SAMPLE_RATE   500000000.0
+#define TX_BASE_SAMPLE_RATE   1000000000.0
+#define TX_DSP_SAMPLE_RATE   500000000.0
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
 #define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
-// TX_DSP_NCO_CONST = (2 ^ 32) / (TX_BASE_SAMPLE_RATE)
+// TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
 // TX_DSP_NCO_CONST should be 1G, however due to other issues it is 500M, for this calc 1G was used
 #define TX_DSP_NCO_CONST \
     ((double)4.294967296)
 
-//#define MAX_DSP_NCO (TX_BASE_SAMPLE_RATE / 2.0)
-// due to other issues TX_BASE_SAMPLE_RATE is half of what it should be, siwtch back to the line above this when that is fixed
-#define MAX_DSP_NCO (500000000.0)
+#define MAX_DSP_NCO (TX_BASE_SAMPLE_RATE / 2.0)
 //max nco of the AD9176, higher nco's result in errors in the board
 //the nco cna probably be rasied if those errors are fixed
 #define MAX_DAC_NCO 4000000000
 
 //TX sample rate factor must be less than thist
 #define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
-#define MIN_TX_SAMPLE_RATE TX_BASE_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
+#define MIN_TX_SAMPLE_RATE TX_DSP_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
-#define TX_ROUND_BIAS 0.75
+#define RATE_ROUND_BIAS 0.75
 
 //The nco in the dac of the AD9176 must be non 0
 #define MIN_DAC_NCO 0
@@ -196,46 +193,35 @@ static int read_uart(int uartfd) {
 }
 
 // Finds the optimal value for the sample rate blocks
-static uint16_t get_optimal_sr_factor(double rate, double base_rate,
-                                      double *err) {
+static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     double max_factor = 65536; // 2^16
-    double min_factor = 1;
-    double lower_factor_violation = 0;
-    double upper_factor_violation = 0;
+    // 16 bits are used to store the sample factor
+    uint16_t sample_factor;
 
-    double lower_factor = (double)floor(base_rate / rate);
-    double upper_factor = lower_factor + 1;
-
-    // Error bounds check
-    if (lower_factor > max_factor || lower_factor < min_factor)
-        lower_factor_violation = 1;
-    if (upper_factor > max_factor || upper_factor < min_factor)
-        upper_factor_violation = 1;
-
-    double lower_factor_error = (base_rate / (double)lower_factor) - rate;
-    double upper_factor_error = rate - (base_rate / (double)upper_factor);
-
-    if (lower_factor_violation && upper_factor_violation) {
-        return 0xffff;
-    } else if (lower_factor_violation) {
-        if (err)
-            *err = upper_factor_error;
-        return (uint16_t)(upper_factor - 1);
-    } else if (upper_factor_violation) {
-        if (err)
-            *err = lower_factor_error;
-        return (uint16_t)(lower_factor - 1);
-    } else { // Nothing is wrong, then
-        if (lower_factor_error < upper_factor_error) {
-            if (err)
-                *err = lower_factor_error;
-            return (uint16_t)(lower_factor - 1);
-        } else {
-            if (err)
-                *err = upper_factor_error;
-            return (uint16_t)(upper_factor - 1);
-        }
+    /*the upper sample factor is lower because the rate is divided by it*/
+    if(rate == 0) {
+        return max_factor;\
     }
+    uint16_t upper_sample_factor = floor(dsp_rate/(*rate));
+    double upper_rate = dsp_rate/upper_sample_factor;
+    uint16_t lower_sample_factor = ceil(dsp_rate/(*rate));
+    double lower_rate = dsp_rate/lower_sample_factor;
+    double rate_range = upper_rate - lower_rate;
+    double lower_diff = *rate - lower_rate;
+
+    if(lower_diff/rate_range > RATE_ROUND_BIAS) {
+        sample_factor = upper_sample_factor;
+        *rate = upper_rate;
+    } else {
+        sample_factor = lower_sample_factor;
+        *rate = lower_rate;
+    }
+    /* The above calculations output the number of samples to the DAC per sample send by the host*/
+    /* the register for sample factor takes the number of samples that need to be added per sample from the host*/
+    if(sample_factor != 0) {
+        sample_factor--;
+    }
+    return sample_factor;
 }
 
 // XXX
@@ -992,28 +978,33 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
+        /*The sample rate only uses 16 bits*/\
         uint16_t sample_factor;\
+        /* Whether to bypass the dsp*/\
+        uint32_t bypass;\
         \
+        /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
+        if(rate > TX_BASE_SAMPLE_RATE) rate = TX_DSP_SAMPLE_RATE;\
         \
-        if(rate > TX_BASE_SAMPLE_RATE) rate = TX_BASE_SAMPLE_RATE;\
-        \
-        /*the upper sample factor is lower because the rate is divided by it*/\
-        uint16_t upper_sample_factor = floor(TX_BASE_SAMPLE_RATE/rate);\
-        double upper_rate = TX_BASE_SAMPLE_RATE/upper_sample_factor;\
-        uint16_t lower_sample_factor = ceil(TX_BASE_SAMPLE_RATE/rate);\
-        double lower_rate = TX_BASE_SAMPLE_RATE/lower_sample_factor;\
-        double rate_range = upper_rate - lower_rate;\
-        double lower_diff = rate - lower_rate;\
-        \
-        if(lower_diff/rate_range > TX_ROUND_BIAS) {\
-            sample_factor = upper_sample_factor;\
-            rate = upper_rate;\
+        /* bypasses dsp when at the full sample rate*/\
+        if(rate > ((TX_BASE_SAMPLE_RATE*RATE_ROUND_BIAS)+(TX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
+            rate = TX_BASE_SAMPLE_RATE;\
+            PRINT(ERROR, "Tx full sample rate not implemented yet\n");\
+            sample_factor = 0;\
+            bypass = 1;\
         } else {\
-            sample_factor = lower_sample_factor;\
-            rate = lower_rate;\
+            bypass = 0;\
+            sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
         }\
-        sample_factor--;\
+        /* TODO: implement register write */\
+        if(bypass) {\
+            /* Sets sample rate to max without bypass when attempting to bypass dsp, since it is not implemented on the FPGA yet*/\
+            PRINT(ERROR, "Tx full sample rate not implemented yet\n");\
+            rate = TX_DSP_SAMPLE_RATE;\
+            sample_factor = 0;\
+            sprintf(ret, "%lf", rate);\
+        }\
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
         sprintf(ret, "%lf", rate);\
@@ -1954,17 +1945,16 @@ CHANNELS
         /*Bypasses dsp and half band filer 2. Bypasses dsp when 1*/\
         uint32_t bypass = 0;\
         \
-        /*If sample rate is roundable to RX_BASE_SAMPLE_RATE*/\
-        if(rate > ((RX_BASE_SAMPLE_RATE+RX_DSP_SAMPLE_RATE)/2)) {\
+        /*If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff*/\
+        if(rate > ((RX_BASE_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
             bypass = 2;\
             sprintf(ret, "%lf", RX_BASE_SAMPLE_RATE); \
         \
-        /*If sample rate is roundable to RX_DSP_SAMPLE_RATE*/\
-        } else if(rate > RX_DSP_SAMPLE_RATE *0.75) {\
-            PRINT(INFO, "T2\n");\
+        /*If sample rate is roundable to RX_DSP_SAMPLE_RATE (which bypasses some dsp stuff)*/\
+        } else if(rate > RX_DSP_SAMPLE_RATE * (0.5* RATE_ROUND_BIAS + 0.5)) {\
             rate = RX_DSP_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
@@ -1972,7 +1962,7 @@ CHANNELS
             sprintf(ret, "%lf", RX_DSP_SAMPLE_RATE); \
         } else {\
             bypass = 0;\
-            factor = get_optimal_sr_factor(rate, RX_DSP_SAMPLE_RATE, &base_err);\
+            factor = get_optimal_sr_factor(&rate, RX_DSP_SAMPLE_RATE);\
             /*Returns the actual sample rate set*/\
             sprintf(ret, "%lf", RX_DSP_SAMPLE_RATE / (double)(factor + 1)); \
         }\
