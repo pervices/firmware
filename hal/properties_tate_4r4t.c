@@ -1279,31 +1279,31 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch1oflow(const char *data, char *ret) {       \
-        /* CH1 CURRENTLY UNSUPPORTED */                                        \
+        /* CH1 CURRENTLY UNUSED */                                        \
         sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch2oflow(const char *data, char *ret) {       \
-        /* CH2 CURRENTLY UNSUPPORTED */                                        \
+        /* CH2 CURRENTLY UNUSED */                                        \
         sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch3oflow(const char *data, char *ret) {       \
-        /* CH3 CURRENTLY UNSUPPORTED */                                        \
+        /* CH3 CURRENTLY UNUSED */                                        \
         sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch4oflow(const char *data, char *ret) {       \
-        /* CH4 CURRENTLY UNSUPPORTED */                                        \
+        /* CH4 CURRENTLY UNUSED */                                        \
         sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch5oflow(const char *data, char *ret) {       \
-        /* CH5 CURRENTLY UNSUPPORTED */                                        \
+        /* CH5 CURRENTLY UNUSED */                                        \
         sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1315,9 +1315,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_ch0uflow(const char *data, char *ret) {          \
         int flc_reg_num;                                                       \
         char flc_reg[8];                                                       \

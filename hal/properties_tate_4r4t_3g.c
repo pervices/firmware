@@ -1577,83 +1577,33 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch1oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH1 CURRENTLY UNUSED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch2oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH2 CURRENTLY UNUSED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch3oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH3 CURRENTLY UNUSED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch4oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH4 CURRENTLY UNUSED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch5oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /* CH5 CURRENTLY UNUSED */                                        \
+        sprintf(ret, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1664,9 +1614,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_ch0uflow(const char *data, char *ret) {          \
         int flc_reg_num;                                                       \
         char flc_reg[8];                                                       \
@@ -1680,83 +1627,33 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_ch1uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /*Only ch 0 is used*/\
+        sprintf(ret, "0");                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_ch2uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /*Only ch 0 is used*/\
+        sprintf(ret, "0");                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_ch3uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /*Only ch 0 is used*/\
+        sprintf(ret, "0");                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_ch4uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /*Only ch 0 is used*/\
+        sprintf(ret, "0");                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * flc6 uses different offsets for channels starting at index 6? */        \
     static int hdlr_tx_##ch##_qa_ch5uflow(const char *data, char *ret) {          \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+6;                      \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        /*Only ch 0 is used*/\
+        sprintf(ret, "0");                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
