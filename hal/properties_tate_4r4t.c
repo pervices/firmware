@@ -1218,7 +1218,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
      * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
         uint32_t lvl;                                                          \
-        read_hps_reg("res_ro4", &lvl);                                         \
+        char lvl_reg[] = {'r', 'e', 's', '_', 'r', 'o', INT(ch)+'4', 0};\
+        read_hps_reg(lvl_reg, &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
         return RETURN_SUCCESS;                                                 \
