@@ -112,6 +112,10 @@ static const char *tx_reg4_map[4] = { "txa4", "txb4", "txc4", "txd4" };
 static const char *tx_uflow_map_lsb[4] = { "flc6", "flc8", "flc10", "flc12" };
 //most significant 32 bits used to store underflow count
 static const char *tx_uflow_map_msb[4] = { "flc7", "flc9", "flc11", "flc13" };
+//least significant 32 bits used to store overflow count
+static const char *tx_oflow_map_lsb[4] = { "flc14", "flc16", "flc18", "flc20" };
+//most significant 32 bits used to store overflow count
+static const char *tx_oflow_map_msb[4] = { "flc15", "flc17", "flc19", "flc21" };
 
 //used to figure out which register, and where in the register to set dsp gain
 static const char *rxg_map[1] = { "rxga" };
@@ -1267,20 +1271,14 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-       DOES NOT PORT WELL.                                                     \
-       flc14 uses different offsets for chanenls starting at index 14? */      \
     static int hdlr_tx_##ch##_qa_ch0oflow(const char *data, char *ret) {       \
-        int flc_reg_num;                                                       \
-        char flc_reg[8];                                                       \
-        uint32_t count;                                                        \
-        /* this is technically a 64-bit register, but we currently only need   \
-         * the bottom 32-bits */                                               \
-        flc_reg_num = ((INT_TX(ch)/4)*38)+((INT_TX(ch)%4)*2)+14;                     \
-        sprintf(flc_reg, "flc%d", flc_reg_num);                                \
-        read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
-        return RETURN_SUCCESS;                                                 \
+       /* Registers are 32 bits, the 64 bit count is split across 2 registers*/\
+        uint32_t lsb_count;                                                        \
+        uint32_t msb_count;                                                        \
+        read_hps_reg(tx_oflow_map_lsb[INT(ch)], &lsb_count);                   \
+        read_hps_reg(tx_oflow_map_msb[INT(ch)], &msb_count);                   \
+        uint64_t count = (((uint64_t) msb_count) << 32) | lsb_count;\
+        sprintf(ret, "%lu", count);                                             \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch1oflow(const char *data, char *ret) {       \
