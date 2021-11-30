@@ -3285,6 +3285,20 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
+    //does not reset if the user write a 0
+    int reset = 0;
+    sscanf(data, "%i", &reset);
+    if(!reset) return RETURN_SUCCESS;
+    uint32_t val;
+    read_hps_reg("res_rw7", &val);
+    val = val | (1 << 29);
+    write_hps_reg("res_rw7", val);
+    val = val & ~(1 << 29);
+    write_hps_reg("res_rw7", val);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
     sync_channels(15);
     return RETURN_SUCCESS;
@@ -4123,6 +4137,7 @@ GPIO_PINS
 
 //This performs the step that resets the master JESD IP, it must be done before initializing the boards
 #define DEFINE_FPGA_PRE()\
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "1", SP, -1)                 \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, -1)                 \
 
 #define DEFINE_FPGA()                                                                                                         \
