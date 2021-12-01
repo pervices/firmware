@@ -613,24 +613,28 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 //ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
 static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(rx_power[ch] != PWR_NO_BOARD) {
-        send_uart_comm(fd, buf, len);
-        read_uart(fd);
+        ping(fd, buf, len);
+    //empties the uart return buffer
+    } else {
+        uart_ret_buf[0] = 0;
     }
 }
 static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(rx_power[ch] != PWR_NO_BOARD) {
-        send_uart_comm(fd, buf, len);
+        ping_write_only(fd, buf, len);
     }
 }
 static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
-        send_uart_comm(fd, buf, len);
-        read_uart(fd);
+        ping(fd, buf, len);
+    //empties the uart return buffer
+    } else {
+        uart_ret_buf[0] = 0;
     }
 }
 static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
-        send_uart_comm(fd, buf, len);
+        ping_write_only(fd, buf, len);
     }
 }
 /* -------------------------------------------------------------------------- */
