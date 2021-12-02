@@ -857,9 +857,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if ((band == 0) || (band == 1) || (band == 2)) {                       \
-            /*In low band i and q are reversed*/\
-            if(band == 0) set_property("tx/" STR(ch) "/link/iq_swap", "1");\
-            else set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+            set_property("tx/" STR(ch) "/link/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
