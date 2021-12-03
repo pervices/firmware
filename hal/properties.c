@@ -39,6 +39,7 @@
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
 #define RESAMP_SAMPLE_RATE 260000000.0
+#define REF_FREQ           5000000
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
@@ -710,13 +711,15 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* run the pll calc algorithm */                                       \
+        /* read the lmx freq property for the ref_freq of the ADF5355*/        \
         pllparam_t pll = pll_def_adf5355;                                      \
+                                                                               \
+        /* run the pll calc algorithm */                                       \
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
@@ -2083,26 +2086,12 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
 static int hdlr_time_lmx_freq(const char* data, char* ret) {
     uint64_t freq = 0;
     sscanf(data, "%" SCNd64 "", &freq);
-    char prop_read[MAX_PROP_LEN];
-    char prop_path[128];
-    
-    strcpy(prop_path, STATE_DIR);
-    strcat(prop_path, "time/about/hw_ver"); 
-
-    // Read EEPROM, if stock unit do nothing
-    get_property(&prop_path,prop_read,MAX_PROP_LEN);
-    if (strstr(prop_read,"reg 0x11 = 0x1") == NULL) {
-        PRINT(INFO, "No LMX\n");
-        return RETURN_SUCCESS;
-    }
-
-    // if the EEPROM tells us that time has an LMX set the LMX freq
-    PRINT(INFO, "Setting LMX\n");
 
     /* if freq = 0, mute PLL */
     if (freq == 0) {
         strcpy(buf, "lmx -k\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(INFO, "LMX Muted\n");
         return RETURN_SUCCESS;
     }
     
@@ -2116,11 +2105,12 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     
     /* run the pll calc algorithm */
     pllparam_t pll = pll_def_lmx2595;
+    pll.ref_freq = REF_FREQ;
     long double outfreq = 0;
     outfreq = setFreq(&freq, &pll);
     
     /* Send Parameters over to the MCU */
-    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, 1);
                                                                         
     sprintf(ret, "%Lf", outfreq);
     
@@ -3121,7 +3111,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
     DEFINE_FILE_PROP("time/clk/set_time"                   , hdlr_time_clk_set_time,                 WO, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
-    DEFINE_FILE_PROP("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "0")         \
+    DEFINE_FILE_PROP("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "10000000")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
@@ -3200,13 +3190,13 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0")
 
 static prop_t property_table[] = {
+    DEFINE_TIME()
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
 #define X(ch) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
-    DEFINE_TIME()
     DEFINE_FPGA()
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
@@ -3706,10 +3696,21 @@ out:
     return r;
 }
 
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t chan) {
     // extract lo variables and pass to MCU (LMX2595)
     
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
+
+    // TODO: add MCU feature that lets us override default output MUX
+    // This is a HACK that forces the MCU to always choose output MUX A,
+    // which is the required output of the LMX for stock crimson
+    if (freq < 6001000000){ freq = 6001000000; }
+
+    // Select the desired LMX
+    strcpy(buf, "lmx -c ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", chan);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k \r");
@@ -3751,6 +3752,13 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(freq / 1000000));
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
+    // Set LMX sync according to divFBen
+    strcpy(buf, "lmx -s ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
     usleep(100000);
 }
 

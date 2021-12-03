@@ -62,10 +62,10 @@
 // Increasing both will lead to better frequency accuracy on the radio side,
 // but at the cost of accuracy.
 
-#define _PLL_OUT_MAX_DEVIATION 500000
+#define _PLL_OUT_MAX_DEVIATION 1000000
 
 // Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
+#define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
 
 // PLL IDs
 #define PLL_ID_ADF5355 5355
@@ -115,7 +115,8 @@
 #define LMX2595_VCO_MAX2_HZ 11500000000ULL      // vco frequency limit if d if 8 or more
 #define LMX2595_D_THRESH_VCO 7                  // set border between check for VCO upper limit
 #define LMX2595_VCO_MIN_HZ 7500000000ULL        // from datasheet
-#define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
+#define LMX2595_DIV_MAX 768
+//#define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels (important for cyan RFE)
 #define LMX2595_DIV_MIN 1       // from datasheet
 #define LMX2595_N_MAX 524287    // from datasheet
 #define LMX2595_N_MIN 28        // from datasheet

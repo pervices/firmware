@@ -295,25 +295,24 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         pll->x2en = 0;
         // determine D based on Table 8 pg 27 of LMX2595 datasheet
         uint16_t D = 0;
-        if (*reqFreq > 3750000000 ) { D = 2; }
-        else if (*reqFreq > 1875000000 ) { D = 4; }
-        else if (*reqFreq > 1250000000 ) { D = 6; }
-        else if (*reqFreq > 950000000  ) { D = 8; }
-        else if (*reqFreq > 630000000 ) { D = 12; }
-        else if (*reqFreq > 470000000 ) { D = 16; }
-        else if (*reqFreq > 320000000 ) { D = 24; }
-        else if (*reqFreq > 235000000 ) { D = 32; }
-        else if (*reqFreq > 160000000 ) { D = 48; }
-        else if (*reqFreq > 130000000 ) { D = 64; }
-        else if (*reqFreq > 110000000 ) { D = 72; }
-        else if (*reqFreq > 80000000 ) { D = 96; }
-        else if (*reqFreq > 60000000 ) { D = 128; }
-        else if (*reqFreq > 40000000 ) { D = 192; }
-        else if (*reqFreq > 30000000 ) { D = 256; }
-        else if (*reqFreq > 19532000 ) { D = 384; }
-        //else if (*reqFreq > 20000000 ) {D = 384; }    // to allow synchronizing for phase coherency across RF channels D < 512
-        //else if (*reqFreq > 15000000 ) { D = 512; }
-        //else if (*reqFreq >= 10000000 ) { D = 768; }
+        if      (*reqFreq > 3750000000 ) { D = 2;   }
+        else if (*reqFreq > 1875000000 ) { D = 4;   }
+        else if (*reqFreq > 1250000000 ) { D = 6;   }
+        else if (*reqFreq >  937500000 ) { D = 8;   }
+        else if (*reqFreq >  625000000 ) { D = 12;  }
+        else if (*reqFreq >  468750000 ) { D = 16;  }
+        else if (*reqFreq >  312500000 ) { D = 24;  }
+        else if (*reqFreq >  234375000 ) { D = 32;  }
+        else if (*reqFreq >  156250000 ) { D = 48;  }
+        else if (*reqFreq >  117187500 ) { D = 64;  }
+        else if (*reqFreq >  104167000 ) { D = 72;  }
+        else if (*reqFreq >   78125000 ) { D = 96;  }
+        else if (*reqFreq >   58594000 ) { D = 128; }
+        else if (*reqFreq >   39062500 ) { D = 192; }
+        else if (*reqFreq >   29297000 ) { D = 256; }
+        else if (*reqFreq >   19531000 ) { D = 384; }    // to allow synchronizing for phase coherency across Cyan RF channels: D < 512
+        else if (*reqFreq >   14648000 ) { D = 512; }
+        else if (*reqFreq >=   9766000 ) { D = 768; }
         else { D = 0 ;}                                 // if reqFreq is too low d=0 will cause error during check
         pll->d = D;
         pll->vcoFreq = (uint64_t)(D * (*reqFreq));
