@@ -50,7 +50,6 @@
     ((double)8.589934592)
 
 // TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
-// TX_DSP_NCO_CONST should be 1G, however due to other issues it is 500M, for this calc 1G was used
 #define TX_DSP_NCO_CONST \
     ((double)4.294967296)
 
@@ -1224,9 +1223,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* XXX:                                                                    \
-     * DOES NOT PORT WELL.                                                     \
-     * r04 uses different offsets for channels starting at index 4? */         \
     static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
         uint32_t lvl;                                                          \
         char lvl_reg[] = {'r', 'e', 's', '_', 'r', 'o', INT(ch)+'4', 0};\
@@ -1392,7 +1388,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
-        /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     /*returns the pid of the powr on process*/\
     static int hdlr_tx_##ch##_async_pwr_board(const char *data, char *ret) {               \
@@ -1695,6 +1691,7 @@ CHANNELS
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+                                                                               \
     static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
         /*Not Yet Implmented in MCU*/\
         return RETURN_SUCCESS;                                                 \
