@@ -62,13 +62,14 @@
 
 //TX sample rate factor must be less than thist
 #define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
-#define MIN_TX_SAMPLE_RATE TX_DSP_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR
+#define MIN_TX_SAMPLE_RATE (TX_DSP_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR)
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
 #define RATE_ROUND_BIAS 0.75
 
 //The nco in the dac of the AD9176 must be non 0
 #define MIN_DAC_NCO 0
 
+//the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
 #define MIN_RF_ATTEN_TX 0
 #define MAX_RF_ATTEN_TX 30
 #define RF_ATTEN_STEP_TX 2.0
@@ -484,7 +485,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
 #define X(ch, io, crx, ctx)                                                              \
     static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_mode(data, &val) ||                                  \
             set_trigger_mode(true, true, #ch, val);                            \
         return r;                                                              \
@@ -501,7 +502,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
                                                       char *ret) {             \
-        uint64_t val;                                                          \
+        uint64_t val = 0;                                                      \
         int r;                                                                 \
         r = valid_edge_sample_num(data, &val) ||                               \
             set_edge_sample_num(true, #ch, val);                               \
@@ -509,7 +510,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        uint32_t val;                                                          \
+        uint32_t val = 0;                                                      \
         int r;                                                                 \
         r = valid_trigger_sel(data, &val) || set_trigger_sel(true, #ch, val);  \
         return r;                                                              \
@@ -517,7 +518,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_dir(data, &val) ||                                   \
             set_trigger_ufl_dir(true, #ch, val);                               \
         return r;                                                              \
@@ -525,7 +526,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_mode(const char *data, char *ret) {  \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_mode(data, &val) ||                                  \
             set_trigger_mode(false, true, #ch, val);                           \
         return r;                                                              \
@@ -533,7 +534,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_pol(data, &val) ||                                   \
             set_trigger_ufl_pol(true, #ch, val);                               \
         return r;                                                              \
@@ -541,7 +542,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_mode(data, &val) ||                                  \
             set_trigger_mode(true, false, #ch, val);                           \
         return r;                                                              \
@@ -549,7 +550,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_rx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
-        uint32_t val;                                                          \
+        uint32_t val = 0;                                                      \
         int r;                                                                 \
         r = valid_edge_backoff(data, &val) ||                                  \
             set_edge_backoff(false, #ch, val);                                 \
@@ -558,7 +559,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_rx_##ch##_trigger_edge_sample_num(const char *data,        \
                                                       char *ret) {             \
-        uint64_t val;                                                          \
+        uint64_t val = 0;                                                      \
         int r;                                                                 \
         r = valid_edge_sample_num(data, &val) ||                               \
             set_edge_sample_num(false, #ch, val);                              \
@@ -566,7 +567,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        uint32_t val;                                                          \
+        uint32_t val = 0;                                                      \
         int r;                                                                 \
         r = valid_trigger_sel(data, &val) || set_trigger_sel(false, #ch, val); \
         return r;                                                              \
@@ -574,7 +575,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_dir(data, &val) ||                                   \
             set_trigger_ufl_dir(false, #ch, val);                              \
         return r;                                                              \
@@ -582,7 +583,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_mode(const char *data, char *ret) {  \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_mode(data, &val) ||                                  \
             set_trigger_mode(false, false, #ch, val);                          \
         return r;                                                              \
@@ -590,7 +591,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_trigger_pol(data, &val) ||                                   \
             set_trigger_ufl_pol(false, #ch, val);                              \
         return r;                                                              \
@@ -648,7 +649,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         uint32_t freq_hz = 0;                                                  \
         uint32_t freq_mhz = 0;                                                 \
         \
-        /*Makes sure the DAC is always non 0. If the dac is set to 0 there is no useful output*/\
         /*Currently this function only takes positive values*/\
         if(freq < MIN_DAC_NCO) freq = MIN_DAC_NCO;\
         else if (freq > MAX_DAC_NCO) freq = MAX_DAC_NCO;\
@@ -856,7 +856,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
-        if ((band == 0) || (band == 1) || (band == 9)) {                       \
+        if ((band == 0) || (band == 1) || (band == 2)) {                       \
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -885,7 +885,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
         sscanf(s_atten, "%lf", &atten);\
         gain = (((atten)-MIN_RF_ATTEN_TX)/(MAX_RF_ATTEN_TX-MIN_RF_ATTEN_TX)) * (MIN_RF_GAIN_TX - MAX_RF_GAIN_TX) + MAX_RF_GAIN_TX;\
-        snprintf(ret, 25, "%f", gain);\
+        snprintf(ret, 25, "%lf", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
 										\
@@ -983,7 +983,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         uint16_t base_factor, resamp_factor;                                   \
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
@@ -1026,7 +1026,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
     static int hdlr_tx_##ch##_dsp_ch0fpga_nco(const char *data, char *ret) {   \
         double freq;                                                           \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         uint8_t direction;                                                     \
                                                                                \
         /* check for a minus or plus sign at the front */                      \
@@ -1148,7 +1148,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
         /*Bit 14 enables*/\
         if (strcmp(data, "1") == 0) {                                          \
@@ -1217,7 +1217,7 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
     static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
         sscanf(data, "%i", &swap);                                           \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
         if ( swap == 1)                                            \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
@@ -1392,11 +1392,10 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
-        /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
+    /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     /*returns the pid of the powr on process*/\
     static int hdlr_tx_##ch##_async_pwr_board(const char *data, char *ret) {               \
-        PRINT(INFO,"Channel %i start of async pwr board\n", INT(ch));\
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
@@ -1418,13 +1417,11 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             time(&tx_async_start_time[INT(ch)]);\
             tx_async_pwr_pid[INT(ch)]=pid;\
         }\
-        PRINT(INFO,"Channel %i end of wait pwr board\n", INT(ch));\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_tx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        PRINT(INFO,"Channel %i start of wait pwr board\n", INT(ch));\
         time_t current_time;\
         int8_t finished = -1;\
         int status = 0;\
@@ -1449,7 +1446,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
             strcpy(ret, "1");\
         }\
         tx_async_pwr_pid[INT(ch)] = 0;\
-        PRINT(INFO,"Channel %i end of wait pwr board\n", INT(ch));\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1486,7 +1482,10 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
+            set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
+            \
             if(tx_power[INT(ch)] == PWR_OFF) {\
+                set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
                                                                                \
@@ -1659,7 +1658,7 @@ CHANNELS
         }                                                                       \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
+        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll, INT(ch));  \
                                                                                 \
         /* if HB add back in freq before printing value to state tree */        \
         if (band == 2) {                                                        \
@@ -1939,7 +1938,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         double base_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
@@ -1985,7 +1984,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {       \
         double freq;                                                           \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         uint8_t direction;                                                     \
         char rate_s[50];\
         get_property("rx/" STR(ch) "/dsp/rate", rate_s, 50);\
@@ -2060,9 +2059,9 @@ CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-    \
+                                                                               \
     static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
-        uint32_t old_val;                                                      \
+        uint32_t old_val = 0;                                                  \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
         if (strcmp(data, "1") == 0)                                            \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 12));          \
@@ -2316,11 +2315,6 @@ CHANNELS
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
                                                                     \
-            /*temporary disables tx dsp channels*/\
-            for (i = 0; i < NUM_CHANNELS; i++) {                         \
-                read_hps_reg(tx_reg4_map[i], &old_val);                               \
-                write_hps_reg(tx_reg4_map[i], old_val & ~0x100);                      \
-            }                                                                  \
             /* reset JESD */                                              \
             set_property("rx/" STR(ch) "/jesd/reset", "1");\
                                                                                \
@@ -2328,19 +2322,7 @@ CHANNELS
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
-            /* Enable active dsp channels, and reset DSP */                    \
-            for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                /*temporarily disabled because its causeing issue with getting rx working*/\
-                /*if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
-                    write_hps_reg(tx_reg4_map[i], old_val | 0x100);              \
-                    read_hps_reg(tx_reg4_map[i], &old_val);                      \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
-                    write_hps_reg(tx_reg4_map[i], old_val | 0x2);                \
-                    write_hps_reg(tx_reg4_map[i], old_val &(~0x2));              \
-                }*/                                                              \
-            }                                                                  \
+            \
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
@@ -2364,6 +2346,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /*Reboot the board, performing minimal initialization*/\
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -2459,7 +2442,7 @@ CHANNELS
 #define X(ch, io, crx, ctx)                                                              \
     static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
         int r;                                                                 \
-        bool val;                                                              \
+        bool val = 0;                                                          \
         r = valid_gating_mode(data, &val) || set_gating_mode(#ch, val);        \
         return r;                                                              \
     }
@@ -2471,7 +2454,7 @@ CHANNELS
 /* -------------------------------------------------------------------------- */
 
 static uint16_t cm_chanmask_get(const char *path) {
-    uint32_t r = 0;
+    uint16_t r = 0;
 
     char mask_s[10];
     get_property(path, mask_s,10);
@@ -3203,7 +3186,7 @@ static int hdlr_time_about_hw_ver(const char *data, char *ret) {
     strcpy(ret, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
-}\
+}
 
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- FPGA ----------------------------------- */
@@ -3315,6 +3298,20 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
         write_hps_reg("sys0", reboot);
         return RETURN_SUCCESS;
     }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
+    //does not reset if the user write a 0
+    int reset = 0;
+    sscanf(data, "%i", &reset);
+    if(!reset) return RETURN_SUCCESS;
+    uint32_t val;
+    read_hps_reg("res_rw7", &val);
+    val = val | (1 << 29);
+    write_hps_reg("res_rw7", val);
+    val = val & ~(1 << 29);
+    write_hps_reg("res_rw7", val);
     return RETURN_SUCCESS;
 }
 
@@ -3595,7 +3592,7 @@ static int hdlr_fpga_link_sfpb_mac_addr(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpb_ver(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     uint8_t ver;
     sscanf(data, "%" SCNd8 "", &ver);
     read_hps_reg("net15", &old_val);
@@ -3607,7 +3604,7 @@ static int hdlr_fpga_link_sfpb_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
     read_hps_reg("net15", &old_val);
@@ -3649,7 +3646,7 @@ static int hdlr_fpga_link_sfpc_mac_addr(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpc_ver(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     uint8_t ver;
     sscanf(data, "%" SCNd8 "", &ver);
     read_hps_reg("net30", &old_val);
@@ -3661,7 +3658,7 @@ static int hdlr_fpga_link_sfpc_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpc_pay_len(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
     read_hps_reg("net30", &old_val);
@@ -3703,7 +3700,7 @@ static int hdlr_fpga_link_sfpd_mac_addr(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpd_ver(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     uint8_t ver;
     sscanf(data, "%" SCNd8 "", &ver);
     read_hps_reg("net45", &old_val);
@@ -3715,7 +3712,7 @@ static int hdlr_fpga_link_sfpd_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpd_pay_len(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
     read_hps_reg("net45", &old_val);
@@ -3760,17 +3757,6 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     strcat(command, ip_address);
     strcat(command, "/ /etc/init.d/mcu_init.sh");
     system(command);
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_fpga_link_reset(const char *data, char *ret) {
-//     int reset;
-//
-//     sscanf(data, "%i", &reset);
-//     if (reset == 1) {
-//         write_hps_reg("res_rw7", 0x40000000);
-//         write_hps_reg("res_rw7", 0);
-//     }
     return RETURN_SUCCESS;
 }
 
@@ -3929,6 +3915,7 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
         } else {                                                              \
             write_hps_reg(res_reg_addr, old_val & (~(1 << (pin_number%32)))); \
         }                                                                     \
+        /*Writing GPIO pins in quick succession causes something to break relating to rxb's ability to stream*/\
         usleep(10000);\
         return RETURN_SUCCESS;                                                \
     }
@@ -3951,11 +3938,13 @@ GPIO_PINS
         .permissions = p,            \
         .def_val = v,                \
         .pwr_en = UP,\
+        .ch = -1,\
     },
 
 //defines the file prop using the new (2021-10-19) method of deciding whether or not to turn the board on first
 //everything using DEFINE_FILE_PROP will set rx/pwr or tx/pwr to 1 for anything contianing rx or tx in the path
 //Things using this will only turn on rx or tx if specified in the define
+//See properties.h for the corresponding constants (prop_pwr_t)
 #define DEFINE_FILE_PROP_P(n, h, p, v, e, c) \
     {                                \
         .type = PROP_TYPE_FILE,      \
@@ -4047,7 +4036,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_tx_##_c##_jesd_reset,              RW, "0", SP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", TP, #_c)         \
@@ -4081,7 +4070,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch4uflow"              , hdlr_tx_##_c##_qa_ch4uflow,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "255", TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "127", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", TP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/ch0fpga_nco"          , hdlr_tx_##_c##_dsp_ch0fpga_nco,         RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/ch1fpga_nco"          , hdlr_tx_##_c##_dsp_ch1fpga_nco,         RW, "0", TP, #_c)         \
@@ -4167,6 +4156,7 @@ GPIO_PINS
 
 //This performs the step that resets the master JESD IP, it must be done before initializing the boards
 #define DEFINE_FPGA_PRE()\
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "1", SP, -1)    \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, -1)                 \
 
 #define DEFINE_FPGA()                                                                                                         \
@@ -4204,7 +4194,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, -1)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00", SP, -1) \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0", SP, -1)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "8900", SP, -1)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "9000", SP, -1)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2", SP, -1)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01", SP, -1) \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0", SP, -1)                 \
@@ -4238,25 +4228,25 @@ static prop_t property_table[] = {
     DEFINE_TIME()
     DEFINE_FPGA_PRE()
     //power off then on reboot rx/tx boards, but don't wait for them to finish booting
-#define X(ch, io, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
+#define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) DEFINE_TX_PWR_REBOOT(ch)
+#define X(ch, tx, crx, ctx) DEFINE_TX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
 
 //waits for boards to finish booting
-#define X(ch, io, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
+#define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
     CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
+#define X(ch, tx, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
     CHANNELS
 #undef X
 
-#define X(ch, io, crx, ctx) DEFINE_RX_CHANNEL(ch)
+#define X(ch, rx, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) DEFINE_TX_CHANNEL(ch)
+#define X(ch, tx, crx, ctx) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
     DEFINE_FPGA()
@@ -4401,9 +4391,9 @@ prop_t *get_prop_from_cmd(const char *cmd) {
     }
 
     for (i = 0; i < num_properties; i++) {
-        if ((strcmp(property_table[i].path, cmd) == 0) &&
-            (strlen(property_table[i].path) == strlen(cmd)))
+        if ((strcmp(property_table[i].path, cmd) == 0) && (strlen(property_table[i].path) == strlen(cmd))) {
             return (property_table + i);
+        }
     }
 
     // no matching prop found
