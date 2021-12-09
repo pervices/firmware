@@ -156,8 +156,28 @@ static boolean last(const int arg, const int argc) { return arg == argc - 1; }
 static void parse_args(int argc, char *argv[]) {
     // parse through the arguments
     for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0) {
+            printf("Branch: %s\n", VERSIONGITBRANCH);
+            printf("Revision: %s\n", VERSIONGITREVISION);
+            printf("Date: %s UTC\n", VERSIONDATE);
+            #if defined(TATE)
+                printf("Product: TATE\n");
+            #elif defined(TATE_4R4T)
+                printf("Product: TATE_4R4T\n");
+            #elif defined(TATE_4R4T_3G)
+                printf("Product: TATE_4R4T_3G\n");
+            #elif defined(TATE_8R)
+                printf("Product: TATE_8R\n");
+            #elif defined(VAUNT)
+                printf("Product: VAUNT\n");
+            #else
+                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+            #endif
+            exit(0);
+            return 0;
+        }
         // if argument to silent the output
-        if (streql(argv[i], ARG_MCU_SILENT)) {
+        else if (streql(argv[i], ARG_MCU_SILENT)) {
             silent = TRUE;
 
             // if argument to open a console transaction

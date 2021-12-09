@@ -12,6 +12,30 @@
 #define ARG_REG_CHECK "rc"
 
 int main(int argc, char *argv[]) {
+    // Check for firmware version
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0) {
+            printf("Branch: %s\n", VERSIONGITBRANCH);
+            printf("Revision: %s\n", VERSIONGITREVISION);
+            printf("Date: %s UTC\n", VERSIONDATE);
+            #if defined(TATE)
+                printf("Product: TATE\n");
+            #elif defined(TATE_4R4T)
+                printf("Product: TATE_4R4T\n");
+            #elif defined(TATE_4R4T_3G)
+                printf("Product: TATE_4R4T_3G\n");
+            #elif defined(TATE_8R)
+                printf("Product: TATE_8R\n");
+            #elif defined(VAUNT)
+                printf("Product: VAUNT\n");
+            #else
+                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+            #endif
+
+            return 0;
+        }
+    }
+
     char *reg;            // register
     uint32_t addr, value; // r/w address, and value if applicable
     int verbose = 0;      // printing verbosity, default, not verbose
