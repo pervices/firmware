@@ -486,114 +486,172 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(true, true, #ch, val);                            \
+        r = valid_trigger_mode(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_mode(true, true, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
-        uint32_t val = 0;                                                      \
         int r;                                                                 \
-        r = valid_edge_backoff(data, &val) ||                                  \
-            set_edge_backoff(true, #ch, val);                                  \
+        bool val = 0;                                                          \
+        r = valid_edge_backoff(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_edge_backoff(true, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
                                                       char *ret) {             \
-        uint64_t val = 0;                                                      \
         int r;                                                                 \
-        r = valid_edge_sample_num(data, &val) ||                               \
-            set_edge_sample_num(true, #ch, val);                               \
+        bool val = 0;                                                          \
+        r = valid_edge_sample_num(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_edge_sample_num(true, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        uint32_t val = 0;                                                      \
         int r;                                                                 \
-        r = valid_trigger_sel(data, &val) || set_trigger_sel(true, #ch, val);  \
+        bool val = 0;                                                          \
+        r = valid_trigger_sel(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_sel(true, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_dir(data, &val) ||                                   \
-            set_trigger_ufl_dir(true, #ch, val);                               \
+        r = valid_trigger_dir(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_ufl_dir(true, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(false, true, #ch, val);                           \
+        r = valid_trigger_mode(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_mode(false, true, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_pol(data, &val) ||                                   \
-            set_trigger_ufl_pol(true, #ch, val);                               \
+        r = valid_trigger_pol(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_ufl_pol(true, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(true, false, #ch, val);                           \
+        r = set_trigger_mode(true, false, #ch, val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_gating_mode(#ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
-        uint32_t val = 0;                                                      \
         int r;                                                                 \
-        r = valid_edge_backoff(data, &val) ||                                  \
-            set_edge_backoff(false, #ch, val);                                 \
+        bool val = 0;                                                          \
+        r = valid_edge_backoff(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_edge_backoff(false, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_edge_sample_num(const char *data,        \
                                                       char *ret) {             \
-        uint64_t val = 0;                                                      \
         int r;                                                                 \
-        r = valid_edge_sample_num(data, &val) ||                               \
-            set_edge_sample_num(false, #ch, val);                              \
+        bool val = 0;                                                          \
+        r = valid_edge_sample_num(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_edge_sample_num(false, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        uint32_t val = 0;                                                      \
         int r;                                                                 \
-        r = valid_trigger_sel(data, &val) || set_trigger_sel(false, #ch, val); \
+        bool val = 0;                                                          \
+        r = valid_trigger_sel(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_sel(false, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_dir(data, &val) ||                                   \
-            set_trigger_ufl_dir(false, #ch, val);                              \
+        r = valid_trigger_dir(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_ufl_dir(false, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(false, false, #ch, val);                          \
+        r = valid_trigger_mode(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_mode(false, false, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_pol(data, &val) ||                                   \
-            set_trigger_ufl_pol(false, #ch, val);                              \
+        r = valid_trigger_pol(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_trigger_ufl_pol(false, #ch, val);        \
+            \
+        }\
         return r;                                                              \
     }
 CHANNELS
@@ -2443,7 +2501,12 @@ CHANNELS
     static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_gating_mode(data, &val) || set_gating_mode(#ch, val);        \
+        r = valid_gating_mode(data, &val);\
+        if(r != RETURN_SUCCESS) return r;\
+        else {\
+            r = set_gating_mode(#ch, val);        \
+            \
+        }\
         return r;                                                              \
     }
 CHANNELS
@@ -3450,17 +3513,23 @@ static int hdlr_fpga_about_serial(const char *data, char *ret) {
 
 static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
     int r;
-    bool val;
-    r = valid_trigger_dir(data, &val) || set_sma_dir(val);
-
+    bool val = 0;
+    r = valid_trigger_dir(data, &val);
+    if(r != RETURN_SUCCESS) return r;
+    else {
+        r = set_sma_dir(val);
+    }
     return r;
 }
 
 static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
     int r;
-    bool val;
-    r = valid_trigger_pol(data, &val) || set_sma_pol(val);
-
+    bool val = 0;
+    r = valid_trigger_pol(data, &val);
+    if(r != RETURN_SUCCESS) return r;
+    else {
+        r = set_sma_pol(val);
+    }
     return r;
 }
 
