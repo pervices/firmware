@@ -698,19 +698,7 @@ int property_good(char *path) {
     get_property(&fullpath[0],property_read,5);
     
     if(strstr(&property_read[0],"good") == NULL){
-        //return 5;
-        
-        //THIS IS A HACK so that I don't have to flush the uart buffers
-        //TODO remove this and put a good uart flush in server.c
-        //double check that it is bad by trying to read it again
-        usleep(600000);
-        set_property(&fullpath[0],"0");
-        usleep(400000);
-        // then read from the property
-        get_property(&fullpath[0],property_read,5);
-        if(strstr(&property_read[0],"good") == 0){
-            return 5;
-        }
+        return 5;
     }
     return 1;
 }
