@@ -1587,10 +1587,8 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         if (reboot == 1) {                                                     \
             /*This will cause an error if this runs during initialization*/\
             /*This will wait until the board is done booting*/\
-            set_property("tx/" STR(ch) "/pwr_board", "0");\
-            set_property("tx/" STR(ch) "/pwr_board", "1");\
-            /*Brings up the JESD link after reboot*/\
-            set_property("tx/" STR(ch) "/jesd/reset", "1");\
+            set_property("tx/" STR(ch) "/pwr", "0");                           \
+            set_property("tx/" STR(ch) "/pwr", "1");                           \
         }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
