@@ -1695,7 +1695,7 @@ CHANNELS
         }                                                                       \
                                                                                 \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
-        get_property(&fullpath,&band_read,3);                                   \
+        get_property(fullpath, band_read, 3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
             freq -= HB_STAGE2_MIXER_FREQ;                                       \
@@ -1734,8 +1734,8 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        uint8_t band;                                                          \
-        sscanf(data, "%u", &band);                                             \
+        uint8_t band = 0;                                                          \
+        sscanf(data, "%hhu", &band);                                             \
                                                                                \
         strcpy(buf, "rf -b ");                                  \
         strcat(buf, data);                                                     \
@@ -1748,11 +1748,6 @@ CHANNELS
         } else {                                                               \
             set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
         }                                                                      \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
-        /*Not Yet Implmented in MCU*/\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2347,7 +2342,6 @@ CHANNELS
         }\
         uint32_t old_val = 0;                                                  \
         uint8_t power = 0;                                                     \
-        uint8_t i = 0;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
@@ -4213,13 +4207,13 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_tx_##_c##_about_sw_ver,            RW, VERSION, TP, #_c)
-//     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
-//     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
-//    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
-//    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
-//    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
-//    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
-//    DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")         \
+//     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")
+//     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")
+//    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
+//    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")
+//    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
+//    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")
+//    DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \

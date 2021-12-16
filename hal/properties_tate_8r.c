@@ -544,7 +544,7 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         }                                                                       \
                                                                                 \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
-        get_property(&fullpath,&band_read,3);                                   \
+        get_property(fullpath, band_read, 3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
             freq -= HB_STAGE2_MIXER_FREQ;                                       \
@@ -582,8 +582,8 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        uint8_t band;                                                          \
-        sscanf(data, "%u", &band);                                             \
+        uint8_t band = 0;                                                      \
+        sscanf(data, "%hhu", &band);                                             \
                                                                                \
         strcpy(buf, "rf -b ");                                  \
         strcat(buf, data);                                                     \
@@ -596,10 +596,6 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
         } else {                                                               \
             set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
         }                                                                      \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    static int hdlr_rx_##ch##_rf_freq_common_lo(const char *data, char *ret) {      \
-        /*Not Yet Implmented in MCU*/\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1211,9 +1207,8 @@ static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        uint32_t old_val;                                                      \
-        uint8_t power;                                                         \
-        uint8_t i;                                                             \
+        uint32_t old_val = 0;                                                      \
+        uint8_t power = 0;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
