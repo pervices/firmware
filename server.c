@@ -58,8 +58,6 @@ int main(int argc, char *argv[]) {
     char save_profile_path[MAX_PROP_LEN];
     char prop_path[PROP_PATH_LEN];
     char tmp_char;
-    int count_bad = 0;
-    int max_attempts = 1;
 
     const int port_nums[] = {
         /* UDP management port */

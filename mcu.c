@@ -174,7 +174,7 @@ static void parse_args(int argc, char *argv[]) {
                 #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
             #endif
             exit(0);
-            return 0;
+            return;
         }
         // if argument to silent the output
         else if (streql(argv[i], ARG_MCU_SILENT)) {
