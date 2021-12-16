@@ -2165,10 +2165,15 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
+        uint32_t val = 0;\
+        read_hps_reg(rx_reg4_map[INT(ch)], &val);\
+        val = val & ~(0x6002 | 0x2100);\
         if(data[0]=='0') {\
-            write_hps_reg(rx_reg4_map[INT(ch)], 0x6002);\
+            val = val | 0x6002;\
+            write_hps_reg(rx_reg4_map[INT(ch)], val);\
             rx_stream[INT(ch)] = STREAM_OFF;\
         }else {\
+            val = val | 0x2100;\
             write_hps_reg(rx_reg4_map[INT(ch)], 0x2100);\
             rx_stream[INT(ch)] = STREAM_ON;\
         }\
