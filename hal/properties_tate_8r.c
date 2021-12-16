@@ -1608,6 +1608,53 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+//makes all rx begin streaming data in phase with each other, using an sma trigger
+static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
+    int stream = 0;
+    sscanf(data, "%i", &stream);
+    char path_buffer[MAX_PATH_LEN];
+    if(stream == 1) {
+        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+            //stops any existing force streaming
+            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+            set_property(path_buffer, "0");
+            //disables responding to sma trigger
+            sprintf(path_buffer, "rx/%c/trigger/trig_sel", n+'a');
+            set_property(path_buffer, "0");
+        }
+        //sets the sma trigger to act as an input
+        set_property("fpga/trigger/sma_dir", "input");
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
+        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+            //sets it to use the global sma
+            sprintf(path_buffer, "rx/%c/trigger/trig_sel", n+'a');
+            set_property(path_buffer, "1");
+            //sets it to trigger streaming whenever the sma is on
+            sprintf(path_buffer, "rx/%c/trigger/sma_mode", n+'a');
+            set_property(path_buffer, "level");
+            //enables streaming wihtout a start command over the sfp. Will cause it to stream continuously when trig_sel = 0
+            //should also make it stream when the sma is activated
+            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+            set_property(path_buffer, "1");
+        }
+        //sets the sma to activate on negative, note that this requires there be resistor to ground in trg in
+        set_property("fpga/trigger/sma_pol", "positive");
+    } else {
+        //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
+        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+            //stops any existing force streaming
+            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+            set_property(path_buffer, "0");
+            //disables responding to sma trigger
+            sprintf(path_buffer, "rx/%c/trigger/trig_sel", n+'a');
+            set_property(path_buffer, "0");
+        }
+    }
+    return RETURN_SUCCESS;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TIME ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -2863,7 +2910,8 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0") \
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")
+    DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
+    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , WO, "0")
 
 static prop_t property_table[] = {
     DEFINE_TIME()
