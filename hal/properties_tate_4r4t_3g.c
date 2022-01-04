@@ -1757,6 +1757,48 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /*sets the gain on the variable amplifier*/\
+    static int hdlr_rx_##ch##_rf_gain_ampl(const char *data, char *ret) {      \
+        uint8_t band = 0;                                                      \
+        int32_t gain = 0;\
+        sscanf(data, "%i", &gain);                                             \
+        \
+        char band_read[3];                                                     \
+        get_property("rx/" STR(ch) "/rf/freq/band",&band_read[0],3);                 \
+        sscanf(band_read, "%hhu", &band);                                            \
+                                                                               \
+        /*Sets low band variable amplifer*/\
+        if(band == 0) {\
+            gain-= RX_LOW_GAIN_OFFSET;\
+            /*LMH6401 Gain Range: -6dB to 26dB*/                               \
+            if (gain > 26) {                                                   \
+                gain = 26;                                                     \
+            } else if (gain < -6) {                                            \
+                gain = -6;                                                     \
+            }                                                                  \
+            char gain_command[100];\
+            int32_t atten = 26 - gain;                                             \
+            /*The variable amplifer used in low band takes an attenuation value instead of a gain*/\
+            sprintf(buf, "vga -a %i\r", atten);\
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
+            gain+= RX_LOW_GAIN_OFFSET;\
+            sprintf(ret, "%i", gain);\
+        /*Sets mid/high band variable amplifer*/\
+        } else if(band == 1 || band == 2) {\
+            if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
+            else if (gain < 0) gain = 0;\
+            \
+            sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
+            sprintf(ret, "%i", gain);\
+            \
+        } else {\
+            PRINT(ERROR, "Invalid band (%hhu) detected when setting gain\n", band);\
+            return RETURN_ERROR;\
+        }\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     /*sets variable amplifiers, variable attentuators, bypassable amplifiers to achieve desired gain*/\
     /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
@@ -1772,20 +1814,13 @@ CHANNELS
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
-            gain-= RX_LOW_GAIN_OFFSET;\
-            /*LMH6401 Gain Range: -6dB to 26dB*/                               \
-            if (gain > 26) {                                                   \
-                gain = 26;                                                     \
-            } else if (gain < -6) {                                            \
-                gain = -6;                                                     \
-            }                                                                  \
-            atten = 26 - gain;                                                 \
-            strcpy(buf, "vga -a ");                                            \
-            sprintf(buf + strlen(buf), "%i", atten);                           \
-            strcat(buf, "\r");                                                 \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
+            char s_gain[50];\
+            sprintf(s_gain, "%i", gain);\
+            PRINT(ERROR, "gain t1:% i\n", gain);\
+            set_property("rx/" STR(ch) "/rf/gain/ampl",s_gain);                  \
+            get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
+            sscanf(s_gain, "%i", &gain);                                             \
             net_gain = gain;\
-            net_gain = gain + RX_LOW_GAIN_OFFSET;\
         } else if (band == 1) {                                                \
             gain-= RX_MID_GAIN_OFFSET;\
             /*lna_bypass means bypass the lna (AM1081) */                      \
@@ -1814,14 +1849,15 @@ CHANNELS
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
             char s_lna[5];\
             snprintf(s_lna, 5, "%u", lna_bypass);\
-            printf(s_lna);\
             set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
             \
-            /*Sets gain on the rx board*/\
-            strcpy(buf, "rf -g ");                                         \
-            sprintf(buf + strlen(buf), "%i", gain);                        \
-            strcat(buf, "\r");                                             \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            /*Sets the variable amplifier*/\
+            char s_gain[50];\
+            snprintf(s_gain, 50, "%i", gain - LTC5586_MIN_GAIN);\
+            set_property("rx/" STR(ch) "/rf/gain/ampl", s_gain);\
+            get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
+            sscanf(s_gain, "%i", &gain);                                             \
+            gain += LTC5586_MIN_GAIN;\
             \
             /*Sets the state tree property to handle the attenuation*/\
             if(atten < LTC5586_MIN_ATTEN) {\
@@ -1860,14 +1896,16 @@ CHANNELS
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
             char s_lna[5];\
             snprintf(s_lna, 5, "%u", lna_bypass);\
-            printf(s_lna);\
             set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
             \
-            /*Sets gain on the rx board*/\
-            strcpy(buf, "rf -g ");                                         \
-            sprintf(buf + strlen(buf), "%i", gain);                        \
-            strcat(buf, "\r");                                             \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            /*Sets the variable amplifier*/\
+            char s_gain[50];\
+            snprintf(s_gain, 50, "%i", gain - LTC5586_MIN_GAIN);\
+            set_property("rx/" STR(ch) "/rf/gain/ampl", s_gain);\
+            get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
+            sscanf(s_gain, "%i", &gain);                                             \
+            gain += LTC5586_MIN_GAIN;\
+            \
             /*Sets the state tree property to handle the attenuation*/\
             if(atten < LTC5586_MIN_ATTEN) {\
                 atten = LTC5586_MIN_ATTEN;\
@@ -4110,6 +4148,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
