@@ -6,7 +6,6 @@
 # to check if all of them compile use ALL
 
 if [ "$1" == "ALL" ]; then
-    echo "T1"
     ./$0 TATE_4R4T
     if [ ! -f "server" ]; then
         echo "TATE_4R4T failed"
