@@ -629,29 +629,10 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     }
     ctx->fd = -1;
 
-#if defined(TATE)
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#elif defined(TATE_4R4T)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#elif defined(TATE_4R4T_3G)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#elif defined(TATE_8R)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + (uint32_t)ctx->channel(ctx));
-#elif defined(VAUNT)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
-#endif
+
     system(cmdbuf);
 
 out:
@@ -790,29 +771,10 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
     r = EXIT_SUCCESS;
     ctx->enabled = true;
 
-#if defined(TATE)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#elif defined(TATE_4R4T)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#elif defined(TATE_4R4T_3G)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#elif defined(TATE_8R)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#elif defined(VAUNT)
     snprintf(cmdbuf, sizeof(cmdbuf),
             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-#else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
-#endif
+
     system(cmdbuf);
 
 out:

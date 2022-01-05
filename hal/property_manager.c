@@ -103,19 +103,9 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 }
 
 static void change_group_permissions_for_all(void) {
-#if defined(TATE)
+
     system("chgrp dev-grp0 -R " BASE_DIR);
-#elif defined(TATE_4R4T)
-    system("chgrp dev-grp0 -R " BASE_DIR);
-#elif defined(TATE_4R4T_3G)
-    system("chgrp dev-grp0 -R " BASE_DIR);
-#elif defined(TATE_8R)
-    system("chgrp dev-grp0 -R " BASE_DIR);
-#elif defined(VAUNT)
-    system("chgrp dev-grp0 -R " BASE_DIR);
-#else
-    #error This file must be called with a valid PRODUCT. Check spaces.
-#endif
+
 }
 
 // Helper function to make properties
@@ -175,40 +165,12 @@ static void make_prop(prop_t *prop) {
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
-#if defined(TATE)
         snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
-#elif defined(TATE_8R)
-        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
-#elif defined(TATE_4R4T)
-        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
-#elif defined(TATE_4R4T_3G)
-        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
-#elif defined(VAUNT)
-        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
-#else
-        #error This file must be called with a valid PRODUCT. Check spaces.
-#endif
         system(cmd);
 
         // TODO: replace with symlinkat(2)
-#if defined(TATE)
         snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
                  prop->symlink_target, prop->path);
-#elif defined(TATE_4R4T)
-        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
-                 prop->symlink_target, prop->path);
-#elif defined(TATE_4R4T_3G)
-        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
-                 prop->symlink_target, prop->path);
-#elif defined(TATE_8R)
-        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
-                 prop->symlink_target, prop->path);
-#elif defined(VAUNT)
-        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
-                 prop->symlink_target, prop->path);
-#else
-        #error This file must be called with a valid PRODUCT. Check spaces.
-#endif
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
