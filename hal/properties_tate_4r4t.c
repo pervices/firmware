@@ -680,22 +680,12 @@ static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
         uart_ret_buf[0] = 0;
     }
 }
-static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(rx_power[ch] != PWR_NO_BOARD) {
-        ping_write_only(fd, buf, len);
-    }
-}
 static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
         ping(fd, buf, len);
     //empties the uart return buffer
     } else {
         uart_ret_buf[0] = 0;
-    }
-}
-static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(tx_power[ch] != PWR_NO_BOARD) {
-        ping_write_only(fd, buf, len);
     }
 }
 /* -------------------------------------------------------------------------- */
@@ -980,12 +970,6 @@ static void ping_write_only_tx(const int fd, uint8_t *buf, const size_t len, int
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
                                                                                \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_rf_board_test(const char *data, char *ret) {     \
-        /* TODO: MCU code cleanup */                                           \
-        PRINT(INFO, "board/clean: MCU code cleanup\n");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \

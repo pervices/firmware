@@ -507,13 +507,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     uart_ret_buf[0] = 0;
     send_uart_comm(fd, buf, len);
 }
-//ping_write_only with a check to see if a board is inserted into the desired channel, does nothing if there is no board
-//ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
-static void ping_write_only_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(rx_power[ch] != PWR_NO_BOARD) {
-        send_uart_comm(fd, buf, len);
-    }
-}
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- RX ------------------------------------- */
 /* -------------------------------------------------------------------------- */

@@ -83,57 +83,59 @@ static int contains(const char *str, char letter, int size) {
     return cnt;
 }
 
-static void dump_args(void) {
-    int i = 0;
-#if defined(TATE)
-    printf("%s\n", UART_CYAN_SN);
-    for (i = 0; i < 16; i++) {
-        printf("%s\n", UART_CYAN_RFE[i]);
+#ifdef DEBUG_OUTPUTS
+    static void dump_args(void) {
+        int i = 0;
+    #if defined(TATE)
+        printf("%s\n", UART_CYAN_SN);
+        for (i = 0; i < 16; i++) {
+            printf("%s\n", UART_CYAN_RFE[i]);
+        }
+        for (i = 0; i < 16; i++) {
+            printf("%d\n", uart_cyan_synth_fd);
+        }
+        printf("%d\n", uart_cyan_rfe_fd[i]);
+    #elif defined(TATE_4R4T)
+        printf("%s\n", UART_CYAN_SN);
+        for (i = 0; i < 16; i++) {
+            printf("%s\n", UART_CYAN_RFE[i]);
+        }
+        for (i = 0; i < 16; i++) {
+            printf("%d\n", uart_cyan_synth_fd);
+        }
+        printf("%d\n", uart_cyan_rfe_fd[i]);
+    #elif defined(TATE_4R4T_3G)
+        printf("%s\n", UART_CYAN_SN);
+        for (i = 0; i < 16; i++) {
+            printf("%s\n", UART_CYAN_RFE[i]);
+        }
+        for (i = 0; i < 16; i++) {
+            printf("%d\n", uart_cyan_synth_fd);
+        }
+        printf("%d\n", uart_cyan_rfe_fd[i]);
+    #elif defined(TATE_8R)
+        printf("%s\n", UART_CYAN_SN);
+        for (i = 0; i < 16; i++) {
+            printf("%s\n", UART_CYAN_RFE[i]);
+        }
+        for (i = 0; i < 16; i++) {
+            printf("%d\n", uart_cyan_synth_fd);
+        }
+        printf("%d\n", uart_cyan_rfe_fd[i]);
+    #elif defined(VAUNT)
+        printf("%s\n", UART_CRIMSON_SN);
+        printf("%s\n", UART_CRIMSON_TX);
+        printf("%s\n", UART_CRIMSON_RX);
+        printf("%d\n", uart_crimson_synth_fd);
+        printf("%d\n", uart_crimson_tx_fd);
+        printf("%d\n", uart_crimson_rx_fd);
+    #else
+        #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #endif
+        printf("%d\n", fwd);
+        printf("%d\n", uart_comm_fd);
     }
-    for (i = 0; i < 16; i++) {
-        printf("%d\n", uart_cyan_synth_fd);
-    }
-    printf("%d\n", uart_cyan_rfe_fd[i]);
-#elif defined(TATE_4R4T)
-    printf("%s\n", UART_CYAN_SN);
-    for (i = 0; i < 16; i++) {
-        printf("%s\n", UART_CYAN_RFE[i]);
-    }
-    for (i = 0; i < 16; i++) {
-        printf("%d\n", uart_cyan_synth_fd);
-    }
-    printf("%d\n", uart_cyan_rfe_fd[i]);
-#elif defined(TATE_4R4T_3G)
-    printf("%s\n", UART_CYAN_SN);
-    for (i = 0; i < 16; i++) {
-        printf("%s\n", UART_CYAN_RFE[i]);
-    }
-    for (i = 0; i < 16; i++) {
-        printf("%d\n", uart_cyan_synth_fd);
-    }
-    printf("%d\n", uart_cyan_rfe_fd[i]);
-#elif defined(TATE_8R)
-    printf("%s\n", UART_CYAN_SN);
-    for (i = 0; i < 16; i++) {
-        printf("%s\n", UART_CYAN_RFE[i]);
-    }
-    for (i = 0; i < 16; i++) {
-        printf("%d\n", uart_cyan_synth_fd);
-    }
-    printf("%d\n", uart_cyan_rfe_fd[i]);
-#elif defined(VAUNT)
-    printf("%s\n", UART_CRIMSON_SN);
-    printf("%s\n", UART_CRIMSON_TX);
-    printf("%s\n", UART_CRIMSON_RX);
-    printf("%d\n", uart_crimson_synth_fd);
-    printf("%d\n", uart_crimson_tx_fd);
-    printf("%d\n", uart_crimson_rx_fd);
-#else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
-    printf("%d\n", fwd);
-    printf("%d\n", uart_comm_fd);
-}
 
 static void help(void) {
     printf("Usage: mcu"
