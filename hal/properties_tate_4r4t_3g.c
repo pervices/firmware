@@ -3309,7 +3309,7 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 
 static int hdlr_time_about_hw_ver(const char *data, char *ret) {
     strcpy(buf, "board -h\r");
-    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
@@ -4294,6 +4294,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
+    DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad", SP, NAC)
     //DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)
