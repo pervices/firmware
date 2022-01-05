@@ -104,15 +104,15 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 
 static void change_group_permissions_for_all(void) {
 #if defined(TATE)
-    system("chgrp dev-grp0 -R /var/cyan");
+    system("chgrp dev-grp0 -R " BASE_DIR);
 #elif defined(TATE_4R4T)
-    system("chgrp dev-grp0 -R /var/cyan");
+    system("chgrp dev-grp0 -R " BASE_DIR);
 #elif defined(TATE_4R4T_3G)
-    system("chgrp dev-grp0 -R /var/cyan");
+    system("chgrp dev-grp0 -R " BASE_DIR);
 #elif defined(TATE_8R)
-    system("chgrp dev-grp0 -R /var/cyan");
+    system("chgrp dev-grp0 -R " BASE_DIR);
 #elif defined(VAUNT)
-    system("chgrp dev-grp0 -R /var/crimson");
+    system("chgrp dev-grp0 -R " BASE_DIR);
 #else
     #error This file must be called with a valid PRODUCT. Check spaces.
 #endif
@@ -176,15 +176,15 @@ static void make_prop(prop_t *prop) {
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
 #if defined(TATE)
-        snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
+        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
 #elif defined(TATE_8R)
-        snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
+        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
 #elif defined(TATE_4R4T)
-        snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
+        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
 #elif defined(TATE_4R4T_3G)
-        snprintf(cmd, sizeof(cmd), "rm -Rf /var/cyan/state/%s", prop->path);
+        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
 #elif defined(VAUNT)
-        snprintf(cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path);
+        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
 #else
         #error This file must be called with a valid PRODUCT. Check spaces.
 #endif
@@ -192,19 +192,19 @@ static void make_prop(prop_t *prop) {
 
         // TODO: replace with symlinkat(2)
 #if defined(TATE)
-        snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
+        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
                  prop->symlink_target, prop->path);
 #elif defined(TATE_4R4T)
-        snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
+        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
                  prop->symlink_target, prop->path);
 #elif defined(TATE_4R4T_3G)
-        snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
+        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
                  prop->symlink_target, prop->path);
 #elif defined(TATE_8R)
-        snprintf(cmd, sizeof(cmd), "cd /var/cyan/state; ln -sf %s %s",
+        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
                  prop->symlink_target, prop->path);
 #elif defined(VAUNT)
-        snprintf(cmd, sizeof(cmd), "cd /var/crimson/state; ln -sf %s %s",
+        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
                  prop->symlink_target, prop->path);
 #else
         #error This file must be called with a valid PRODUCT. Check spaces.
@@ -688,7 +688,7 @@ void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
 
 int property_good(char *path) {
     char property_read[5];
-    char fullpath[200] = "/var/cyan/state/";
+    char fullpath[200] = STATE_DIR "/";
     
     strcat(&fullpath[0], path);
     // need to write to the property to force an update

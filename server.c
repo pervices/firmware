@@ -38,10 +38,10 @@
 #include "array-utils.h"
 #include "properties.h"
 #include "parser.h"
-#include "synth_lut.h"
 #include "led.h"
 #include "time_it.h"
 #include "channels.h"
+#include "synth_lut.h"
 
 int main(int argc, char *argv[]) {
 

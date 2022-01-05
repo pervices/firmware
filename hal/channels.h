@@ -98,6 +98,10 @@
 
 //creates channel maps
 #if defined (TATE_4R4T)
+    //directory of the state tree
+    #define BASE_DIR "/var/cyan"
+    //state tree
+    #define STATE_DIR "/var/cyan/state"
     //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
     #define NUM_CHANNELS 4
     #define NUM_TX_CHANNELS 4
@@ -121,6 +125,10 @@
     #undef X
     };
 #elif defined (TATE_8R)
+    //directory of the state tree
+    #define BASE_DIR "/var/cyan"
+    //state tree
+    #define STATE_DIR "/var/cyan/state"
     //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
     #define NUM_CHANNELS 8
     #define NUM_TX_CHANNELS 0
@@ -145,6 +153,10 @@
     };
 //creates channel maps
 #elif defined (TATE_4R4T_3G)
+    //directory of the state tree
+    #define BASE_DIR "/var/cyan"
+    //state tree
+    #define STATE_DIR "/var/cyan/state"
     //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
     #define NUM_CHANNELS 4
     #define NUM_TX_CHANNELS 4
@@ -167,8 +179,27 @@
         CHANNELS
     #undef X
     };
+//very old version of tate
+#elif defined (TATE)
+    //directory of the state tree
+    #define BASE_DIR "/var/cyan"
+    //state tree
+    #define STATE_DIR "/var/cyan/state"
+    // Converts an expanded char into a runtime integer.
+    #define INT(ch) ((int)(CHR(ch) - 'a'))
+
+    // Channel names as strings.
+    static const char* const channel_names[] = {
+    #define X(ch, io) STR(ch),
+        CHANNELS
+    #undef X
+    };
 //old method used by tate, and vaunt
-#else
+#elif defined (VAUNT)
+    //directory of the state tree
+    #define BASE_DIR "/var/volatile/crimson"
+    //state tree
+    #define STATE_DIR "/var/volatile/crimson/state"
     // Converts an expanded char into a runtime integer.
     #define INT(ch) ((int)(CHR(ch) - 'a'))
 

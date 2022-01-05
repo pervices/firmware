@@ -22,22 +22,26 @@
 
 #include "pllcalc.h"
 
-// I couldn't actually find this hard-coded anywhere.
-#ifndef VCS_PATH
-    #if defined(TATE)
-        #define VCS_PATH "/var/cyan/state"
-    #elif defined(TATE_4R4T)
-        #define VCS_PATH "/var/cyan/state"
-    #elif defined(TATE_4R4T_3G)
-        #define VCS_PATH "/var/cyan/state"
-    #elif defined(TATE_8R)
-        #define VCS_PATH "/var/cyan/state"
-    #elif defined(VAUNT)
-        #define VCS_PATH "/var/crimson/state"
-    #else
-        #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
-    #endif
+//STATE_DIR is also defined in channels, however it is also needed here
+#if defined(TATE)
+    #define CALIBRATION_DIR "/var/calibration-data"
+    #define STATE_DIR "/var/cyan/state"
+#elif defined(TATE_4R4T)
+    #define CALIBRATION_DIR "/var/calibration-data"
+    #define STATE_DIR "/var/cyan/state"
+#elif defined(TATE_4R4T_3G)
+    #define CALIBRATION_DIR "/var/calibration-data"
+    #define STATE_DIR "/var/cyan/state"
+#elif defined(TATE_8R)
+    #define CALIBRATION_DIR "/var/calibration-data"
+    #define STATE_DIR "/var/cyan/state"
+#elif defined(VAUNT)
+    #define CALIBRATION_DIR "/var/calibration-data"
+    #define STATE_DIR "/var/volatile/crimson/state"
+#else
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
+
 extern void server_init_led();
 extern void server_ready_led();
 
@@ -627,23 +631,23 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
 
 #if defined(TATE)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_4R4T)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_4R4T_3G)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/cyan/state/%cx/%c/rf/freq/lut_en",
+             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_8R)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
+             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + (uint32_t)ctx->channel(ctx));
 #elif defined(VAUNT)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/crimson/state/%cx/%c/rf/freq/lut_en",
+             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #else
     #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
@@ -788,23 +792,23 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
 
 #if defined(TATE)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
+             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_4R4T)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
+             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_4R4T_3G)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
+             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(TATE_8R)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/cyan/state/%cx/%lc/rf/freq/lut_en",
+             "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #elif defined(VAUNT)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/crimson/state/%cx/%lc/rf/freq/lut_en",
+            "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
 #else
     #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
@@ -968,29 +972,10 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     // truncate the string to the exact size of the matched regular expression
     buf[pmatch[1].rm_eo] = '\0';
 
-#if defined(TATE)
     snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             CALIBRATION_DIR "/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
              'A' + ctx->channel(ctx), buf);
-#elif defined(TATE_4R4T)
-    snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
-             'A' + ctx->channel(ctx), buf);
-#elif defined(TATE_4R4T_3G)
-    snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
-             'A' + ctx->channel(ctx), buf);
-#elif defined(TATE_8R)
-    snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/cyan/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
-             'A' + ctx->channel(ctx), buf);
-#elif defined(VAUNT)
-    snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
-             'A' + ctx->channel(ctx), buf);
-#else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
-#endif
+
     r = EXIT_SUCCESS;
 
 free_re:
