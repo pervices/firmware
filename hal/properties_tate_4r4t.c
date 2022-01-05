@@ -974,7 +974,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
-        strcpy(buf, "status -c " STR(ch) " -l\r");                             \
+        strcpy(buf, "status -l\r");                             \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -982,7 +982,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_status_dacld(const char *data, char *ret) {      \
-        strcpy(buf, "status -c " STR(ch) " -p\r");                             \
+        strcpy(buf, "status -p\r");                             \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -4224,9 +4224,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_tx_##_c##_about_sw_ver,            RW, VERSION, TP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", TP, #_c)
-//     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")
-//     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
