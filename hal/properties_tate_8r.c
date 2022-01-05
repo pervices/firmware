@@ -1790,10 +1790,10 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
 static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
     if ( (strcmp(data, "pulsed") == 0) || (strcmp(data, "0") == 0) ) {
         PRINT(INFO, "SYSREF MODE 'pulsed' selected.\n");
-        strcpy(buf, "debug -l 7 -r 139 -w 2\r");
+        strcpy(buf, "sync -c 0\r");
     } else if ( (strcmp(data, "continuous") == 0) || (strcmp(data, "1") == 0) )  {
         PRINT(INFO, "SYSREF MODE 'continuous' selected.\n");
-        strcpy(buf, "debug -l 7 -r 139 -w 3\r");
+        strcpy(buf, "sync -c 1\r");
     } else {
         PRINT(ERROR, "SYSREF MODE must be 'continuous' or 'pulsed'.\n");
         return RETURN_ERROR;
