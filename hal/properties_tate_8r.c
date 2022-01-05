@@ -809,7 +809,9 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        /*Not available*/                                     \
+        strcpy(buf, "board -c " STR(ch) " -t\r");                              \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
