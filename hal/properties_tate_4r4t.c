@@ -840,14 +840,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_rf_dac_temp(const char *data, char *ret) {       \
-        strcpy(buf, "board -c " STR(ch) " -t\r");                              \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
     static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
