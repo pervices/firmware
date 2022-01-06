@@ -4649,7 +4649,6 @@ void sync_channels(uint8_t chan_mask) {
 //tx not implemented yet
 void jesd_reset_all() {
     int chan;
-    char chan_lt;
     char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
     int attempts;
