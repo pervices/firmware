@@ -966,7 +966,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        strcpy(buf, "board -c " STR(ch) " -t\r");                              \
+        strcpy(buf, "board -t\r");                              \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -1539,7 +1539,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             /* power off */                                                    \
         } else {                                                               \
             /* kill the channel */                                             \
-            strcpy(buf, "board -c " STR(ch) " -k\r");                          \
+            strcpy(buf, "board -k\r");                          \
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
             \
             set_property("tx/" STR(ch) "/board/pwr_board", "0");\
@@ -1944,7 +1944,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        strcpy(buf, "board -c " STR(ch) " -t\r");                              \
+        strcpy(buf, "board -t\r");                              \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -2392,7 +2392,7 @@ CHANNELS
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* kill the channel */                                             \
-            /*strcpy(buf, "board -c " STR(ch) " -k\r");                   */       \
+            /*strcpy(buf, "board -k\r");                   */       \
             /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  */          \
                                                                                \
             /* disable DSP core */                                             \
