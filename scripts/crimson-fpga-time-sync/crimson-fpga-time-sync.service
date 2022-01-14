@@ -1,0 +1,14 @@
+[Unit]
+Description=Writing the systemtime to the fpga on a Per Vices crimson SDR
+Requires=crimson-server.service
+Requires=ntpd.service
+After=crimson-server.service
+After=ntpd.service
+
+[Service]
+User=root
+Group=dev-grp0
+ExecStart=/usr/bin/crimson-fpga-time-sync.sh
+
+[Install]
+WantedBy=multi-user.target

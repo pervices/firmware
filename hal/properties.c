@@ -2066,6 +2066,7 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
 }
 
 static int hdlr_time_clk_set_time(const char *data, char *ret) {
+    // Note that this function is used by both server.c and crimson-fpga-time-sync.sh (and by extension crimson-fpga-time-sync.service). Ensure that if this funciton or its state tree path are updated, those uses are also updated
     long double time;
     sscanf(data, "%Lf", &time);
     write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
