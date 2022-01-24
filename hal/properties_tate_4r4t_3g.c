@@ -704,6 +704,12 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /*Currently this function only takes positive values*/\
         if(freq < MIN_DAC_NCO) freq = MIN_DAC_NCO;\
         else if (freq > MAX_DAC_NCO) freq = MAX_DAC_NCO;\
+        \
+        /*The DAC nco must be bypassed (which happens when it is set to 0) at 3Gsps*/\
+        if(freq != 0) {\
+            freq = 0;\
+            PRINT(ERROR, "The DAC can only to be set to 0 when operating at 3Gsps");\
+        }\
                                                                                \
         /* split the frequency into MHz + Hz */                                \
         if (freq < 1000000){                                                   \
@@ -721,7 +727,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        sprintf(ret, "%lf", freq);\
+        sprintf(ret, "%lf", freq_mhz * 1000000 + freq_hz);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
