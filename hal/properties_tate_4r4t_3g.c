@@ -2190,13 +2190,21 @@ CHANNELS
         read_hps_reg(rx_reg4_map[INT(ch)], &val);\
         val = val & ~(0x6002 | 0x2100);\
         if(data[0]=='0') {\
+            /*sets it to use the global sma*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
+            /*sets it to trigger streaming whenever the sma is on*/\
+            set_property("rx/" STR(ch) "/trigger/sma_mode", "level");\
+            /*makes it stream when the sma is activated*/\
             val = val | 0x6002;\
             write_hps_reg(rx_reg4_map[INT(ch)], val);\
             rx_stream[INT(ch)] = STREAM_OFF;\
         }else {\
+            /*disables streaming*/\
             val = val | 0x2100;\
-            write_hps_reg(rx_reg4_map[INT(ch)], 0x2100);\
+            write_hps_reg(rx_reg4_map[INT(ch)], val);\
             rx_stream[INT(ch)] = STREAM_ON;\
+            /*disables responding to sma trigger*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
@@ -2917,17 +2925,17 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 }
 
 //makes all rx begin streaming data in phase with each other, using an sma trigger
+//0 stops all fore streaming. To start streaming set this using a value where each bit corresponds to ech channel
+//ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
+//using -1 for streaming all
 static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
-    int stream = 0;
-    sscanf(data, "%i", &stream);
+    int64_t stream = 0;
+    sscanf(data, "%li", &stream);
     char path_buffer[MAX_PATH_LEN];
-    if(stream == 1) {
+    if(stream != 0) {
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
             sprintf(path_buffer, "rx/%c/force_stream", n+'a');
-            set_property(path_buffer, "0");
-            //disables responding to sma trigger
-            sprintf(path_buffer, "rx/%c/trigger/trig_sel", n+'a');
             set_property(path_buffer, "0");
         }
         //sets the sma trigger to act as an input
@@ -2936,27 +2944,21 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
-            //sets it to use the global sma
-            sprintf(path_buffer, "rx/%c/trigger/trig_sel", n+'a');
-            set_property(path_buffer, "1");
-            //sets it to trigger streaming whenever the sma is on
-            sprintf(path_buffer, "rx/%c/trigger/sma_mode", n+'a');
-            set_property(path_buffer, "level");
-            //enables streaming wihtout a start command over the sfp. Will cause it to stream continuously when trig_sel = 0
-            //should also make it stream when the sma is activated
-            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
-            set_property(path_buffer, "1");
+            if(stream & 1 << n) {
+                sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+                set_property(path_buffer, "1");
+            } else {
+                sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+                set_property(path_buffer, "0");
+            }
         }
-        //sets the sma to activate on negative, note that this requires there be resistor to ground in trg in
+        //sets the sma to activate when high (there is a pullup resistor so not connected is high)
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
             sprintf(path_buffer, "rx/%c/force_stream", n+'a');
-            set_property(path_buffer, "0");
-            //disables responding to sma trigger
-            sprintf(path_buffer, "rx/%c/trigger/trig_sel", n+'a');
             set_property(path_buffer, "0");
         }
     }
