@@ -1027,12 +1027,12 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val = 0;                                                  \
+        uint32_t reg_val = 0;                                                  \
         uint16_t base_factor, resamp_factor;                                   \
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
-        /*Adjusting rate is not currently implemented, always uses max rate*/\
+        /*At present only the full rate is implemented*/\
         rate = 3000000000;\
         /*The sample rate only uses 16 bits*/\
         uint16_t sample_factor;\
@@ -1041,26 +1041,23 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
-        if(rate > TX_BASE_SAMPLE_RATE) rate = TX_DSP_SAMPLE_RATE;\
+        if(rate > TX_BASE_SAMPLE_RATE) rate = TX_BASE_SAMPLE_RATE;\
         \
         /* bypasses dsp when at the full sample rate*/\
-        if(rate > ((TX_BASE_SAMPLE_RATE*RATE_ROUND_BIAS)+(TX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
+        if(rate > ((TX_BASE_SAMPLE_RATE-TX_DSP_SAMPLE_RATE)*(1-RATE_ROUND_BIAS))+TX_DSP_SAMPLE_RATE) {\
             rate = TX_BASE_SAMPLE_RATE;\
-            PRINT(ERROR, "Tx full sample rate not implemented yet\n");\
             sample_factor = 0;\
             bypass = 1;\
         } else {\
             bypass = 0;\
             sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
         }\
-        /* TODO: implement register write */\
-        if(bypass) {\
-            /* Sets sample rate to max without bypass when attempting to bypass dsp, since it is not implemented on the FPGA yet*/\
-            PRINT(ERROR, "Tx full sample rate not implemented yet\n");\
-            rate = TX_DSP_SAMPLE_RATE;\
-            sample_factor = 0;\
-            sprintf(ret, "%lf", rate);\
-        }\
+        /*bit 0 of tx_0 is used to determine whether or not to bypass the dsp*/\
+        read_hps_reg("tx" STR(ch) "0", &reg_val);\
+        reg_val = reg_val & ~1;\
+        reg_val = reg_val | bypass;\
+        write_hps_reg("tx" STR(ch) "0", reg_val);\
+        \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
         sprintf(ret, "%lf", rate);\
