@@ -101,7 +101,7 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 // Crimson TNG specific defines
 #define FREQ_TOP PLL1_RFOUT_MAX_HZ
 //#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
-#define FREQ_BOTTOM 125000000
+#define FREQ_BOTTOM (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
 
 #define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ
 static struct synth_lut_ctx synth_lut_rx_ctx[] = {
