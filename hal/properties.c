@@ -718,6 +718,12 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
+            PRINT(INFO, "Retrying pll calc");                                  \
+            pll.R = pll.R + 1;                                                 \
+            outfreq = setFreq(&freq, &pll);                                    \
+        }                                                                      \
+                                                                               \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
@@ -1191,6 +1197,12 @@ CHANNELS
         pllparam_t pll = pll_def_adf5355;                                      \
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
+                                                                               \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
+            PRINT(INFO, "Retrying pll calc");                                  \
+            pll.R = pll.R + 1;                                                 \
+            outfreq = setFreq(&freq, &pll);                                    \
+        }                                                                      \
                                                                                \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
