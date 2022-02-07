@@ -718,6 +718,12 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
+            PRINT(INFO, "Retrying pll calc");                                  \
+            pll.R = pll.R + 1;                                                 \
+            outfreq = setFreq(&freq, &pll);                                    \
+        }                                                                      \
+                                                                               \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
@@ -1191,6 +1197,12 @@ CHANNELS
         pllparam_t pll = pll_def_adf5355;                                      \
         long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
+                                                                               \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
+            PRINT(INFO, "Retrying pll calc");                                  \
+            pll.R = pll.R + 1;                                                 \
+            outfreq = setFreq(&freq, &pll);                                    \
+        }                                                                      \
                                                                                \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
@@ -2066,6 +2078,7 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
 }
 
 static int hdlr_time_clk_set_time(const char *data, char *ret) {
+    // Note that this function is used by both server.c and crimson-fpga-time-sync.sh (and by extension crimson-fpga-time-sync.service). Ensure that if this funciton or its state tree path are updated, those uses are also updated
     long double time;
     sscanf(data, "%Lf", &time);
     write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
