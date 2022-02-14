@@ -65,17 +65,31 @@ static void write_to_file(const char *path, const char *data) {
 // Helper function to read to property
 static void read_from_file(const char *path, char *data, size_t max_len) {
     FILE *fd;
+
+    // Open file
     if (!(fd = fopen(path, "r"))) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
     }
-    fgets(data, max_len, fd);
+
+    // Read content
+    //    assumes file can have at most 1024 characters in line
+    char single_line_buffer[1024];
+    while ( fgets(single_line_buffer, max_len, fd) ) {
+        strncat(data, single_line_buffer, max_len);
+    }
     fclose(fd);
 
-    // remove the new line at the end of the file
+    // How big is the file?
     size_t pos = 0;
-    while (data[pos] != '\n' && data[pos] != '\0')
+    while (data[pos] != '\0'){
         pos++;
+    }
+
+    // Ignore any new lines found at the end of the file
+    while ( pos > 0 && data[pos - 1] == '\n'){
+        pos--;
+    }
     data[pos] = '\0';
 
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
