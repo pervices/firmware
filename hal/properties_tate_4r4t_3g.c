@@ -70,11 +70,20 @@
 #define MIN_DAC_NCO 0
 
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
-#define MIN_RF_ATTEN_TX 0
-#define MAX_RF_ATTEN_TX 30
+//AB in this variable names stands for all bands, and they are relevant to all bands
+#define MIN_RF_ATTEN_TX_AB 0.0
+#define MAX_RF_ATTEN_TX_AB 30.0
 #define RF_ATTEN_STEP_TX 2.0
-#define MIN_RF_GAIN_TX MIN_RF_ATTEN_TX
-#define MAX_RF_GAIN_TX MAX_RF_ATTEN_TX
+#define MIN_RF_GAIN_TX_AB MIN_RF_ATTEN_TX_AB
+#define MAX_RF_GAIN_TX_AB MAX_RF_ATTEN_TX_AB
+
+//The voltage range used to control and amplifier in high band
+//The full range is larger, but outside of this range it is very non-linear
+#define MIN_GAIN_V_TX_HB_GAIN 0.8
+#define MAX_GAIN_V_TX_HB_GAIN 2.2
+//Gain range of a high band only amplifier, note that this is in addition to the gains affecting all bands
+#define MIN_GAIN_TX_HB 0.0
+#define MAX_GAIN_TX_HB 23.0
 
 //Compnent properties in rx, used to figure out how to set up game
 //This are likely to change between variants, both thier values and how they are used
@@ -919,22 +928,57 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        double gain;\
+        double gain = 0;\
+        /*gain of components used by all bands*/\
+        double ab_gain = 0;\
+        /*gain of band specific components*/\
+        double band_gain = 0;\
+        int band;\
+        char band_read[3];\
         sscanf(data, "%lf", &gain);\
-        if(gain>MAX_RF_GAIN_TX) {\
-            gain = MAX_RF_GAIN_TX;\
+        get_property("tx/" STR(ch) "/rf/band",&band_read,3);\
+        sscanf(band_read, "%i", &band);\
+        if(gain>MAX_RF_GAIN_TX_AB) {\
+            ab_gain = MAX_RF_GAIN_TX_AB;\
         }\
-        else if (gain<MIN_RF_GAIN_TX) {\
-            gain = MIN_RF_GAIN_TX;\
+        else if (gain<MIN_RF_GAIN_TX_AB) {\
+            ab_gain = MIN_RF_GAIN_TX_AB;\
+        } else {\
+            ab_gain = gain;\
         }\
-        double atten = (((gain)-MIN_RF_GAIN_TX)/(MAX_RF_GAIN_TX-MIN_RF_GAIN_TX)) * (MIN_RF_ATTEN_TX - MAX_RF_ATTEN_TX) + MAX_RF_ATTEN_TX;\
+        if(band == 2) {\
+            band_gain = gain-ab_gain;\
+            if(band_gain > MAX_GAIN_TX_HB) {\
+                band_gain = MAX_GAIN_TX_HB;\
+            } else if(band_gain < MIN_GAIN_TX_HB) {\
+                band_gain = MIN_GAIN_TX_HB;\
+            }\
+        }\
+        double atten = (((ab_gain)-MIN_RF_GAIN_TX_AB)/(MAX_RF_GAIN_TX_AB-MIN_RF_GAIN_TX_AB)) * (MIN_RF_ATTEN_TX_AB - MAX_RF_ATTEN_TX_AB) + MAX_RF_ATTEN_TX_AB;\
         char s_atten[25];\
         \
+        /*Sets and attenuator used by all bands*/\
         snprintf(s_atten, 25, "%f", atten);\
         set_property("tx/" STR(ch) "/rf/atten", s_atten);\
         get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
         sscanf(s_atten, "%lf", &atten);\
-        gain = (((atten)-MIN_RF_ATTEN_TX)/(MAX_RF_ATTEN_TX-MIN_RF_ATTEN_TX)) * (MIN_RF_GAIN_TX - MAX_RF_GAIN_TX) + MAX_RF_GAIN_TX;\
+        \
+        if(band == 2) {\
+            int gain_control_mv = 0;\
+            gain_control_mv = \
+                (int)((band_gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
+            /*Command format: debug -p <Voltage in mV>*/\
+            sprintf(buf, "debug -p %i\r", gain_control_mv);\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        } else {\
+            /*Sets high band amplifier gain to 0 when adjusting the gain in other bands, to prevent a suprise max gain if the user is switching bands*/\
+            sprintf(buf, "debug -p 0\r");\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            \
+        }\
+        \
+        gain = (((atten)-MIN_RF_ATTEN_TX_AB)/(MAX_RF_ATTEN_TX_AB-MIN_RF_ATTEN_TX_AB)) * (MIN_RF_GAIN_TX_AB - MAX_RF_GAIN_TX_AB) + MAX_RF_GAIN_TX_AB;\
+        gain += band_gain;\
         snprintf(ret, 25, "%lf", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -942,7 +986,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
 	    float atten;							\
 	    sscanf(data, "%f", &atten);						\
-	    if(atten > MAX_RF_ATTEN_TX) atten = MAX_RF_ATTEN_TX;\
+	    if(atten > MAX_RF_ATTEN_TX_AB) atten = MAX_RF_ATTEN_TX_AB;\
         float codef = atten / (float)(RF_ATTEN_STEP_TX);\
         uint16_t codei = roundf(codef);\
 	    strcpy(buf, "rf -a ");						\
