@@ -507,7 +507,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
         int r;                                                                 \
-        bool val = 0;                                                          \
+        uint32_t val = 0;                                                          \
         r = valid_edge_backoff(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -520,7 +520,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
                                                       char *ret) {             \
         int r;                                                                 \
-        bool val = 0;                                                          \
+        uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -532,7 +532,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
         int r;                                                                 \
-        bool val = 0;                                                          \
+        uint32_t val = 0;                                                          \
         r = valid_trigger_sel(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -593,7 +593,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_rx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
         int r;                                                                 \
-        bool val = 0;                                                          \
+        uint32_t val = 0;                                                          \
         r = valid_edge_backoff(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -606,7 +606,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_rx_##ch##_trigger_edge_sample_num(const char *data,        \
                                                       char *ret) {             \
         int r;                                                                 \
-        bool val = 0;                                                          \
+        uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -618,7 +618,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
                                                                                \
     static int hdlr_rx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
         int r;                                                                 \
-        bool val = 0;                                                          \
+        uint32_t val = 0;                                                          \
         r = valid_trigger_sel(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
