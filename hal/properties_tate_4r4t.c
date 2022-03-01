@@ -337,7 +337,7 @@ CHANNELS
 static int set_gating_mode(const char *chan, bool dsp) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
-    return set_reg_bits(reg_name, 12, 1, dsp);
+    return set_reg_bits(reg_name, 13, 1, dsp);
 }
 
 static int valid_trigger_mode(const char *data, bool *edge) {
@@ -570,10 +570,10 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = set_trigger_mode(true, false, #ch, val);\
+        r = valid_trigger_mode(#ch, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
-            r = set_gating_mode(#ch, val);        \
+            r = set_trigger_mode(true, false, #ch, val);        \
             \
         }\
         return r;                                                              \
