@@ -17,7 +17,7 @@
 
 /* clang-format off */
 
-#if defined(TATE_4R4T_3G)
+#if defined(TATE_9R7T)
 
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
@@ -40,20 +40,18 @@
 #include "gpio_pins.h"
 
 // Sample rates are in samples per second (SPS).
-#define RX_BASE_SAMPLE_RATE   3000000000.0
-//RX_BASE_SAMPLE_RATE/2.0 is done because of a filter that halves the effective sample rate, however that part is not implemented yet
-//#define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
-#define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE)
-#define TX_BASE_SAMPLE_RATE   3000000000.0
-#define TX_DSP_SAMPLE_RATE   3000000000.0
+#define RX_BASE_SAMPLE_RATE   1000000000.0
+#define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
+#define TX_BASE_SAMPLE_RATE   1000000000.0
+#define TX_DSP_SAMPLE_RATE   500000000.0
 #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
 // (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
 #define RX_DSP_NCO_CONST \
-    ((double)1.43165576533)
+    ((double)8.589934592)
 
 // TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
 #define TX_DSP_NCO_CONST \
-    ((double)1.43165576533)
+    ((double)4.294967296)
 
 #define MAX_DSP_NCO (TX_BASE_SAMPLE_RATE / 2.0)
 //max nco of the AD9176, higher nco's result in errors in the board
@@ -70,20 +68,11 @@
 #define MIN_DAC_NCO 0
 
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
-//AB in this variable names stands for all bands, and they are relevant to all bands
-#define MIN_RF_ATTEN_TX_AB 0.0
-#define MAX_RF_ATTEN_TX_AB 30.0
+#define MIN_RF_ATTEN_TX 0
+#define MAX_RF_ATTEN_TX 30
 #define RF_ATTEN_STEP_TX 2.0
-#define MIN_RF_GAIN_TX_AB MIN_RF_ATTEN_TX_AB
-#define MAX_RF_GAIN_TX_AB MAX_RF_ATTEN_TX_AB
-
-//The voltage range used to control and amplifier in high band
-//The full range is larger, but outside of this range it is very non-linear
-#define MIN_GAIN_V_TX_HB_GAIN 0.8
-#define MAX_GAIN_V_TX_HB_GAIN 2.2
-//Gain range of a high band only amplifier, note that this is in addition to the gains affecting all bands
-#define MIN_GAIN_TX_HB 0.0
-#define MAX_GAIN_TX_HB 23.0
+#define MIN_RF_GAIN_TX MIN_RF_ATTEN_TX
+#define MAX_RF_GAIN_TX MAX_RF_ATTEN_TX
 
 //Compnent properties in rx, used to figure out how to set up game
 //This are likely to change between variants, both thier values and how they are used
@@ -111,25 +100,30 @@
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 #define INDIVIDUAL_RESET_BIT_OFFSET_TX 16
 
+static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd", "sfpd" };
+static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
-static const char *rx_reg4_map[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
+static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxe4", "rxi4", "rxm4", "rxb4", "rxf4", "rxj4", "rxn4", "rxc4" };
 
-static const char *tx_reg4_map[4] = { "txa4", "txe4", "txi4", "txm4" };
+static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4" };
 
 //least significant 32 bits used to store underflow count
-static const char *tx_uflow_map_lsb[4] = { "flc6", "flc8", "flc10", "flc12" };
+static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12", "flc44", "flc46", "flc48" };
 //most significant 32 bits used to store underflow count
-static const char *tx_uflow_map_msb[4] = { "flc7", "flc9", "flc11", "flc13" };
+static const char *tx_uflow_map_msb[NUM_TX_CHANNELS] = { "flc7", "flc9", "flc11", "flc13", "flc45", "flc47", "flc49" };
 //least significant 32 bits used to store overflow count
-static const char *tx_oflow_map_lsb[4] = { "flc14", "flc16", "flc18", "flc20" };
+static const char *tx_oflow_map_lsb[NUM_TX_CHANNELS] = { "flc14", "flc16", "flc18", "flc20", "flc52", "flc54", "flc56" };
 //most significant 32 bits used to store overflow count
-static const char *tx_oflow_map_msb[4] = { "flc15", "flc17", "flc19", "flc21" };
+static const char *tx_oflow_map_msb[NUM_TX_CHANNELS] = { "flc15", "flc17", "flc19", "flc21", "flc53", "flc55", "flc57" };
 
 //used to figure out which register, and where in the register to set dsp gain
-static const char *rxg_map[1] = { "rxga" };
-static const char *txg_map[1] = { "txga" };
+//ch0 uses [7:0] of the map[0], ch1 uses [15:8] of map[0], ch4 uses [7:0] of map[1]
+//most variant do not use all registers in this map
+static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
+static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -338,7 +332,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
     }
-CHANNELS
+RX_CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -507,7 +501,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
         int r;                                                                 \
-        uint32_t val = 0;                                                          \
+        bool val = 0;                                                          \
         r = valid_edge_backoff(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -663,7 +657,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         }\
         return r;                                                              \
     }
-CHANNELS
+RX_CHANNELS
 #undef X
 
 // Every uart send command must be accompanied by a uart read command
@@ -713,12 +707,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /*Currently this function only takes positive values*/\
         if(freq < MIN_DAC_NCO) freq = MIN_DAC_NCO;\
         else if (freq > MAX_DAC_NCO) freq = MAX_DAC_NCO;\
-        \
-        /*The DAC nco must be bypassed (which happens when it is set to 0) at 3Gsps*/\
-        if(freq != 0) {\
-            freq = 0;\
-            PRINT(ERROR, "The DAC can only to be set to 0 when operating at 3Gsps");\
-        }\
                                                                                \
         /* split the frequency into MHz + Hz */                                \
         if (freq < 1000000){                                                   \
@@ -736,7 +724,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        sprintf(ret, "%lf", freq_mhz * 1000000 + freq_hz);\
+        sprintf(ret, "%lf", freq);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -916,6 +904,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if ((band == 0) || (band == 1) || (band == 2)) {                       \
+            set_property("tx/" STR(ch) "/link/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -928,57 +917,22 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
-        double gain = 0;\
-        /*gain of components used by all bands*/\
-        double ab_gain = 0;\
-        /*gain of band specific components*/\
-        double band_gain = 0;\
-        int band;\
-        char band_read[3];\
+        double gain;\
         sscanf(data, "%lf", &gain);\
-        get_property("tx/" STR(ch) "/rf/band",&band_read,3);\
-        sscanf(band_read, "%i", &band);\
-        if(gain>MAX_RF_GAIN_TX_AB) {\
-            ab_gain = MAX_RF_GAIN_TX_AB;\
+        if(gain>MAX_RF_GAIN_TX) {\
+            gain = MAX_RF_GAIN_TX;\
         }\
-        else if (gain<MIN_RF_GAIN_TX_AB) {\
-            ab_gain = MIN_RF_GAIN_TX_AB;\
-        } else {\
-            ab_gain = gain;\
+        else if (gain<MIN_RF_GAIN_TX) {\
+            gain = MIN_RF_GAIN_TX;\
         }\
-        if(band == 2) {\
-            band_gain = gain-ab_gain;\
-            if(band_gain > MAX_GAIN_TX_HB) {\
-                band_gain = MAX_GAIN_TX_HB;\
-            } else if(band_gain < MIN_GAIN_TX_HB) {\
-                band_gain = MIN_GAIN_TX_HB;\
-            }\
-        }\
-        double atten = (((ab_gain)-MIN_RF_GAIN_TX_AB)/(MAX_RF_GAIN_TX_AB-MIN_RF_GAIN_TX_AB)) * (MIN_RF_ATTEN_TX_AB - MAX_RF_ATTEN_TX_AB) + MAX_RF_ATTEN_TX_AB;\
+        double atten = (((gain)-MIN_RF_GAIN_TX)/(MAX_RF_GAIN_TX-MIN_RF_GAIN_TX)) * (MIN_RF_ATTEN_TX - MAX_RF_ATTEN_TX) + MAX_RF_ATTEN_TX;\
         char s_atten[25];\
         \
-        /*Sets and attenuator used by all bands*/\
         snprintf(s_atten, 25, "%f", atten);\
         set_property("tx/" STR(ch) "/rf/atten", s_atten);\
         get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
         sscanf(s_atten, "%lf", &atten);\
-        \
-        if(band == 2) {\
-            int gain_control_mv = 0;\
-            gain_control_mv = \
-                (int)((band_gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
-            /*Command format: debug -p <Voltage in mV>*/\
-            sprintf(buf, "debug -p %i\r", gain_control_mv);\
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        } else {\
-            /*Sets high band amplifier gain to 0 when adjusting the gain in other bands, to prevent a suprise max gain if the user is switching bands*/\
-            sprintf(buf, "debug -p 0\r");\
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            \
-        }\
-        \
-        gain = (((atten)-MIN_RF_ATTEN_TX_AB)/(MAX_RF_ATTEN_TX_AB-MIN_RF_ATTEN_TX_AB)) * (MIN_RF_GAIN_TX_AB - MAX_RF_GAIN_TX_AB) + MAX_RF_GAIN_TX_AB;\
-        gain += band_gain;\
+        gain = (((atten)-MIN_RF_ATTEN_TX)/(MAX_RF_ATTEN_TX-MIN_RF_ATTEN_TX)) * (MIN_RF_GAIN_TX - MAX_RF_GAIN_TX) + MAX_RF_GAIN_TX;\
         snprintf(ret, 25, "%lf", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -986,7 +940,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
 	    float atten;							\
 	    sscanf(data, "%f", &atten);						\
-	    if(atten > MAX_RF_ATTEN_TX_AB) atten = MAX_RF_ATTEN_TX_AB;\
+	    if(atten > MAX_RF_ATTEN_TX) atten = MAX_RF_ATTEN_TX;\
         float codef = atten / (float)(RF_ATTEN_STEP_TX);\
         uint16_t codei = roundf(codef);\
 	    strcpy(buf, "rf -a ");						\
@@ -1054,8 +1008,8 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         uint32_t clear_util = 0xff;\
         sscanf(data, "%i", &gain);                                            \
         if(gain > 0xff) gain = 0xff;\
-        gain = gain << (8*INT(ch));\
-        clear_util = clear_util << (8*INT(ch));\
+        gain = gain << (8*(INT(ch)%4));\
+        clear_util = clear_util << (8*(INT(ch)%4));\
         uint32_t reg_val;\
         read_hps_reg(txg_map[(int)(INT(ch)/4)], &reg_val);                                  \
         /*Clears the bits used in the reg for this channel's dsp gain*/\
@@ -1076,8 +1030,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
-        /*At present only the full rate is implemented*/\
-        rate = 3000000000;\
         /*The sample rate only uses 16 bits*/\
         uint16_t sample_factor;\
         /* Whether to bypass the dsp*/\
@@ -1125,8 +1077,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             sscanf(data, "%lf", &freq);                                        \
             direction = 0;                                                     \
         }                                                                      \
-        /*NCO not implemented yet*/\
-        freq = 0;\
         \
         /*the magnitude and direction of the nco are stored in seperate registers*/\
         if(freq < 0) freq = -freq;\
@@ -1219,7 +1169,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
     /*resets dsp (including buffer)*/\
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
-        uint32_t old_val = 0;                                                  \
+        uint32_t old_val = 0;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
         PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__, toupper(CHR(ch)));    \
         write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                        \
@@ -1233,7 +1183,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_vita_en(const char *data, char *ret) {      \
-        uint32_t old_val = 0;                                                  \
+        uint32_t old_val = 0;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
         /*Bit 14 enables*/\
         if (strcmp(data, "1") == 0) {                                          \
@@ -1249,9 +1199,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
     static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        /* NOTE: This is strictly for tate 4t*/                                \
-        char channel = CHR(ch);                                                \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
+        sprintf(ret, tx_sfp_map[INT(ch)]);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1302,7 +1250,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
         sscanf(data, "%i", &swap);                                           \
-        uint32_t old_val = 0;                                                  \
+        uint32_t old_val = 0;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
         if ( swap == 1)                                            \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
@@ -1313,12 +1261,14 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
+        PRINT(ERROR, "Starting\n");\
         uint32_t lvl;                                                          \
         char lvl_reg[20];\
         sprintf(lvl_reg, "res_ro%i", INT(ch)+4);\
         read_hps_reg(lvl_reg, &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
+        PRINT(ERROR, "Finishing\n");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1571,7 +1521,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
             \
             if(tx_power[INT(ch)] == PWR_OFF) {\
-                set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
                                                                                \
@@ -1692,7 +1641,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }
-CHANNELS
+TX_CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -1999,7 +1948,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
         strcpy(buf, "board -t\r");                              \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2043,8 +1992,8 @@ CHANNELS
         uint32_t clear_util = 0xff;\
         sscanf(data, "%i", &gain);                                            \
         if(gain > 0xff) gain = 0xff;\
-        gain = gain << (8*INT(ch));\
-        clear_util = clear_util << (8*INT(ch));\
+        gain = gain << (8*(INT(ch)%4));\
+        clear_util = clear_util << (8*(INT(ch)%4));\
         uint32_t reg_val;\
         read_hps_reg(rxg_map[(int)(INT(ch)/4)], &reg_val);                                  \
         /*Clears the bits used in the reg for this channel's dsp gain*/\
@@ -2061,8 +2010,6 @@ CHANNELS
         double base_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
-        /*Adjusting rate is not currently implemented, always uses max rate*/\
-        rate = 3000000000;\
         uint16_t factor = 0;\
         /*Bypasses dsp and half band filer 2. Bypasses dsp when 1*/\
         uint32_t bypass = 0;\
@@ -2101,8 +2048,8 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {       \
-        double freq;                                                           \
+    static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {      \
+        double freq = 0;                                                       \
         uint32_t old_val = 0;                                                  \
         uint8_t direction = 0;                                                 \
         char rate_s[50];\
@@ -2124,8 +2071,6 @@ CHANNELS
             sscanf(data, "%lf", &freq);                                        \
             direction = 0;                                                     \
         }                                                                      \
-        /*NCO not implemented yet, always have a shift of 0*/\
-        freq = 0;\
                                                                                \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * RX_DSP_NCO_CONST);            \
@@ -2180,7 +2125,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
-        uint32_t old_val = 0;                                                  \
+        uint32_t old_val = 0;                                                      \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
         if (strcmp(data, "1") == 0)                                            \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 12));          \
@@ -2192,9 +2137,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        /* NOTE: This is strictly for tate 4r*/                                \
-        char channel = CHR(ch);                                                \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
+        sprintf(ret, rx_sfp_map[INT(ch)]);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2308,6 +2251,7 @@ CHANNELS
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
+            PRINT(ERROR, "T2\n");\
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
@@ -2315,6 +2259,7 @@ CHANNELS
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            PRINT(ERROR, "Sending command: %s\n", pwr_cmd);\
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_OFF;\
         }\
@@ -2567,7 +2512,7 @@ CHANNELS
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }
-CHANNELS
+RX_CHANNELS
 #undef X
 
 #define X(ch, io, crx, ctx)                                                              \
@@ -2582,7 +2527,7 @@ CHANNELS
         }\
         return r;                                                              \
     }
-CHANNELS
+TX_CHANNELS
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -2654,7 +2599,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 #define X(ch, io, crx, ctx)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2704,7 +2649,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 #define X(ch, io, crx, ctx)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2754,7 +2699,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 #define X(ch, io, crx, ctx)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_gain_val;
-        CHANNELS
+        TX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2822,7 +2767,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 #define X(ch, io, crx, ctx)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2848,7 +2793,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 #define X(ch, io, crx, ctx)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_lo_freq;
-        CHANNELS
+        TX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2916,7 +2861,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 #define X(ch, io, crx, ctx)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2946,7 +2891,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         hdlr = hdlr_tx_##ch##_dsp_ch3fpga_nco;                                 \
         hdlr = hdlr_tx_##ch##_dsp_ch4fpga_nco;                                 \
         hdlr = hdlr_tx_##ch##_dsp_ch5fpga_nco;                                 \
-        CHANNELS
+        TX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -3372,10 +3317,10 @@ static int hdlr_time_about_hw_ver(const char *data, char *ret) {
 // Dumps all of the board logs for TX, RX, and TIME
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
 #define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
-    CHANNELS
+    TX_CHANNELS
 #undef X
 #define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
-    CHANNELS
+    RX_CHANNELS
 #undef X
     hdlr_time_board_dump(NULL, NULL);
 
@@ -3396,13 +3341,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
         strcpy(buf, "board -g 1\r");
 #define X(ch, io, crx, ctx)                                                              \
     ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         strcpy(buf, "board -g 1\r");
 #define X(ch, io, crx, ctx)                                                              \
     ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
-        CHANNELS
+        TX_CHANNELS
 #undef X
     }
     if (strcmp(data, "2") == 0) {
@@ -3413,13 +3358,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
         strcpy(buf, "board -g 2\r");
 #define X(ch, io, crx, ctx)                                                              \
     ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         strcpy(buf, "board -g 2\r");
 #define X(ch, io, crx, ctx)                                                              \
     ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
-        CHANNELS
+        TX_CHANNELS
 #undef X
     }
     return RETURN_SUCCESS;
@@ -3505,13 +3450,13 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
     strcpy(buf, "board -r\r");
 #define X(ch, io, crx, ctx)                                                              \
     ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
-    CHANNELS
+    RX_CHANNELS
 #undef X
 
     strcpy(buf, "board -r\r");
 #define X(ch, io, crx, ctx)                                                              \
     ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
-    CHANNELS
+    TX_CHANNELS
 #undef X
 
     return RETURN_SUCCESS;
@@ -4098,8 +4043,6 @@ static int hdlr_gpio_gpio_all(const char *data, char *ret) {
         } else {                                                              \
             write_hps_reg(res_reg_addr, old_val & (~(1 << (pin_number%32)))); \
         }                                                                     \
-        /*Writing GPIO pins in quick succession causes something to break relating to rxb's ability to stream*/\
-        usleep(10000);\
         return RETURN_SUCCESS;                                                \
     }
 GPIO_PINS
@@ -4111,7 +4054,7 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "cyan_4r4t_3g"
+#define PROJECT_NAME "cyan_9r7t"
 
 #define DEFINE_FILE_PROP(n, h, p, v) \
     {                                \
@@ -4145,7 +4088,6 @@ GPIO_PINS
         .path = n,                   \
         .symlink_target = t,         \
     },
-
 
 #define DEFINE_RX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
@@ -4315,7 +4257,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
-    DEFINE_FILE_PROP_P("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "3000", SP, NAC)\
+    DEFINE_FILE_PROP_P("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "1000", SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked", SP, NAC)  \
@@ -4389,7 +4331,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "9000", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "8900", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0", SP, NAC)                 \
@@ -4425,25 +4367,25 @@ static prop_t property_table[] = {
     DEFINE_FPGA_PRE()
     //power off then on reboot rx/tx boards, but don't wait for them to finish booting
 #define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
-    CHANNELS
+    RX_CHANNELS
 #undef X
 #define X(ch, tx, crx, ctx) DEFINE_TX_PWR_REBOOT(ch)
-    CHANNELS
+    TX_CHANNELS
 #undef X
 
 //waits for boards to finish booting
 #define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
-    CHANNELS
+    RX_CHANNELS
 #undef X
 #define X(ch, tx, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
-    CHANNELS
+    TX_CHANNELS
 #undef X
 
 #define X(ch, rx, crx, ctx) DEFINE_RX_CHANNEL(ch)
-    CHANNELS
+    RX_CHANNELS
 #undef X
 #define X(ch, tx, crx, ctx) DEFINE_TX_CHANNEL(ch)
-    CHANNELS
+    TX_CHANNELS
 #undef X
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
@@ -4495,7 +4437,7 @@ void patch_tree(void) {
     const int base_port = 42836;
 
 #define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
-    CHANNELS
+    RX_CHANNELS
 #undef X
 
 set_default_str("rx/a/link/ip_dest","10.10.10.10");
@@ -4510,7 +4452,7 @@ set_default_str("rx/d/link/ip_dest","10.10.13.10");
     set_default_int("tx/" #ch "/link/ch4port", base_port + INT_TX(ch)*4 + 3 + NUM_CHANNELS);               \
     set_default_int("tx/" #ch "/link/port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);                  \
 
-    CHANNELS
+    TX_CHANNELS
 #undef X
 }
 
@@ -4714,9 +4656,9 @@ void sync_channels(uint8_t chan_mask) {
     return;
 }
 
+//tx not implemented yet
 void jesd_reset_all() {
     int chan;
-    char chan_lt;
     char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
     int attempts;
@@ -4737,7 +4679,6 @@ void jesd_reset_all() {
             attempts++;
             set_property(reset_path, "1");
         }
-
     }
 }
 
@@ -4909,13 +4850,13 @@ int set_freq_internal(const bool tx, const unsigned channel,
 
     static const fp_t rx_fp[] = {
 #define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_freq_val,
-        CHANNELS
+        RX_CHANNELS
 #undef X
     };
 
     static const fp_t tx_fp[] = {
 #define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_lo_freq,
-        CHANNELS
+        TX_CHANNELS
 #undef X
     };
 

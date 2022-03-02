@@ -25,6 +25,8 @@
         #define HPS2FPGA_GPR_OFST (0x80000000)
     #elif defined(TATE_4R4T)
         #define HPS2FPGA_GPR_OFST (0x80000000)
+    #elif defined(TATE_9R7T)
+        #define HPS2FPGA_GPR_OFST (0x80000000)
     #elif defined(TATE_4R4T_3G)
         #define HPS2FPGA_GPR_OFST (0x80000000)
     #elif defined(VAUNT)
@@ -224,6 +226,8 @@ int mmap_init() {
     mmap_len = 0x4000;
 #elif defined(TATE_4R4T)
     mmap_len = 0x4000;
+#elif defined(TATE_9R7T)
+    mmap_len = 0x4000;
 #elif defined(TATE_4R4T_3G)
     mmap_len = 0x4000;
 #elif defined(TATE_8R)
@@ -231,7 +235,7 @@ int mmap_init() {
 #elif defined(VAUNT)
     mmap_len = 0x1000;
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
 #endif
 
     rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
@@ -265,29 +269,3 @@ void mmap_fini() {
         mmap_fd = -1;
     }
 }
-
-// #if defined TATE_4R4T || defined TATE_8R
-// //the jesd_shift in this is the used for the bitshift to select the which jesd's registers to access
-// uint32_t read_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t *data) {
-//     uint32_t jesd_id = 1 << jesd_shift;
-//     int write_code = write_hps_reg("net6", jesd_id);
-//     write_hps_reg("net7", address/4);
-//     write_hps_reg("net9", 0x1);
-//     write_hps_reg("net9", 0x0);
-//     uint32_t tmp = 0;
-//     read_hps_reg("res_ro30", &tmp);
-//     *data = tmp;
-//     return RETURN_SUCCESS;
-// }
-//
-// //the jesd_shift in this is the one used for the bitshift to select the which jesd's registers to access
-// uint32_t write_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t data) {
-//     uint32_t jesd_id = 1 << jesd_shift;
-//     int write_code = write_hps_reg("net6", jesd_id);
-//     write_hps_reg("net7", address/4);
-//     write_hps_reg("net8", data);
-//     write_hps_reg("net9", 0x2);
-//     write_hps_reg("net9", 0x0);
-//     return RETURN_SUCCESS;
-// }
-// #endif

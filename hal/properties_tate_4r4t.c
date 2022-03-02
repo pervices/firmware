@@ -1259,7 +1259,8 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
     static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
         uint32_t lvl;                                                          \
-        char lvl_reg[] = {'r', 'e', 's', '_', 'r', 'o', INT(ch)+'4', 0};\
+        char lvl_reg[20];\
+        sprintf(lvl_reg, "res_ro%i", INT(ch)+4);\
         read_hps_reg(lvl_reg, &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \

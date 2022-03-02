@@ -1,14 +1,20 @@
 #!/bin/sh
 
-# For 4R4T use TATE_4R4T
-# For 8R use TATE_8R
-# For 3G 4R4T use TATE_4R4T_3G
+# For 4R4T 1G use TATE_4R4T
+# For 9R7T 1G use TATE_9R7T
+# For 8R 1G use TATE_8R
+# For 4R4T 3G use TATE_4R4T_3G
 # to check if all of them compile use ALL
 
 if [ "$1" == "ALL" ]; then
     ./$0 TATE_4R4T
     if [ ! -f "server" ]; then
         echo "TATE_4R4T failed"
+        exit 80
+    fi
+    ./$0 TATE_9R7T
+    if [ ! -f "server" ]; then
+        echo "TATE_9R7T failed"
         exit 80
     fi
     ./$0 TATE_8R

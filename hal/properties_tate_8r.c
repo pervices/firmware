@@ -80,7 +80,9 @@
 static const char *rx_reg4_map[] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
 
 //used to figure out which register, and where in the register to set dsp gain
-static const char *rxg_map[] = { "rxga", "rxge" };
+//ch0 uses [7:0] of the map[0], ch1 uses [15:8] of map[0], ch4 uses [7:0] of map[1]
+//most variant do not use all registers in this map
+static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -854,8 +856,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         uint32_t clear_util = 0xff;\
         sscanf(data, "%i", &gain);                                            \
         if(gain > 0xff) gain = 0xff;\
-        gain = gain << (8*INT(ch));\
-        clear_util = clear_util << (8*INT(ch));\
+        gain = gain << (8*(INT(ch)%4));\
+        clear_util = clear_util << (8*(INT(ch)%4));\
         uint32_t reg_val;\
         read_hps_reg(rxg_map[(int)(INT(ch)/4)], &reg_val);                                  \
         /*Clears the bits used in the reg for this channel's dsp gain*/\

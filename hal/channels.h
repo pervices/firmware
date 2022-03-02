@@ -68,6 +68,29 @@
         X(c, io, i, k) \
         X(d, io, m, o)
 
+#elif defined(TATE_9R7T)
+    //Will be only using the populated RF slots
+    //Column 3 is for rx, 4 is for tx
+    #define RX_CHANNELS \
+        X(a, io, a, g) \
+        X(b, io, e, k) \
+        X(c, io, i, o) \
+        X(d, io, m, d) \
+        X(e, io, b, h) \
+        X(f, io, f, l) \
+        X(g, io, j, o) \
+        X(h, rx, n, p) \
+        X(i, rx, c, q)
+        
+    #define TX_CHANNELS \
+        X(a, io, a, g) \
+        X(b, io, e, k) \
+        X(c, io, i, o) \
+        X(d, io, m, d) \
+        X(e, io, b, h) \
+        X(f, io, f, l) \
+        X(g, io, j, o)
+
 #elif defined(TATE_4R4T_3G)
     //Will be only using the populated RF slots
     //Column 3 is for rx, 4 is for tx
@@ -84,7 +107,7 @@
         X(c, io) \
         X(d, io)
 #else
-    #error "Project name (TATE | TATE_8R | TATE_4R4T | TATE_4R4T_3G | VAUNT) not specified or not recognized."
+    #error "Project name (TATE | TATE_8R | TATE_4R4T | TATE_9R7T | TATE_4R4T_3G | VAUNT) not specified or not recognized."
 #endif
 
 // Converts an expanded channel to a compile time string.
@@ -124,6 +147,27 @@
         CHANNELS
     #undef X
     };
+#elif defined (TATE_9R7T)
+    //directory of the state tree
+    #define BASE_DIR "/var/cyan"
+    //state tree
+    #define STATE_DIR "/var/cyan/state"
+    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
+    #define NUM_CHANNELS 9
+    #define NUM_TX_CHANNELS 7
+    static uint8_t tx_power[NUM_TX_CHANNELS] = {0};
+
+    #define NUM_RX_CHANNELS 9
+    static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
+
+    #define STR_RX(crx) #crx
+    #define STR_TX(ctx) #ctx
+
+    // Converts an expanded char into a runtime integer.
+    #define INT(ch) ((int)(CHR(ch) - 'a'))
+    #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+    #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
+
 #elif defined (TATE_8R)
     //directory of the state tree
     #define BASE_DIR "/var/cyan"
