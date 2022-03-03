@@ -84,6 +84,13 @@ static const char *rx_reg4_map[] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rx
 //most variant do not use all registers in this map
 static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
 
+//registers used by trigger selected
+//note: this registers have multiplee purposes, the code assumes bit 12:10 are used for trigger select
+//at time of writing it is per sfp, not per channel, hence the overlap
+static const char *rx_trig_sel_map[8] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
+static const char *rx_trig_sma_mode_map[8] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
+static const char *rx_trig_ufl_mode_map[8] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
+
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
 // TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -385,19 +392,30 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 }
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        char reg_name[8];
+        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 6 : 9);
-    return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(reg_name, 10, 0b11, sel);
+    }
+    else {
+        return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
+    }
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
-    unsigned shift;
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-    shift = sma ? 0 : 4;
-    return set_reg_bits(reg_name, shift, 1, edge);
+    if(tx) {
+        unsigned shift;
+        char reg_name[8];
+        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+                tx ? 6 : 9);
+        shift = sma ? 0 : 4;
+        return set_reg_bits(reg_name, shift, 1, edge);
+    } else if( !tx && sma) {
+        set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+    } else if (!tx && !sma) {
+        set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
+    }
 }
 
 static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
@@ -1054,31 +1072,28 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
+    static int hdlr_rx_##ch##_prime_trigger_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
         uint32_t val = 0;\
         read_hps_reg(rx_reg4_map[INT(ch)], &val);\
         val = val & ~(0x6002 | 0x2100);\
         if(data[0]=='0') {\
-            /*sets it to use the global sma*/\
-            set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
-            /*sets it to trigger streaming whenever the sma is on*/\
-            set_property("rx/" STR(ch) "/trigger/sma_mode", "level");\
-            /*makes it stream when the sma is activated*/\
+            /*puts the dsp in reset*/\
             val = val | 0x6002;\
             write_hps_reg(rx_reg4_map[INT(ch)], val);\
             rx_stream[INT(ch)] = STREAM_OFF;\
+            /*Ignores sma (enabling normal stream command)*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
         }else {\
-            /*disables streaming*/\
+            rx_stream[INT(ch)] = STREAM_ON;\
+            /*Stream when sma trigger (has the side effect of disabling normal stream commands)*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
+            /*takes the dsp out of reset*/\
             val = val | 0x2100;\
             write_hps_reg(rx_reg4_map[INT(ch)], val);\
-            rx_stream[INT(ch)] = STREAM_ON;\
-            /*disables responding to sma trigger*/\
-            set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
-    \
                                                                                \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
         uint32_t old_val;                                                      \
@@ -1667,7 +1682,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     if(stream != 0) {
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
-            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+            sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
         }
         //sets the sma trigger to act as an input
@@ -1677,10 +1692,10 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         set_property("fpga/trigger/sma_pol", "negative");
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
-                sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+                sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
             } else {
-                sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+                sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "0");
             }
         }
@@ -1690,9 +1705,14 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
-            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+            sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
         }
+        //sets the sma trigger to act as an input
+        set_property("fpga/trigger/sma_dir", "input");
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
     }
     return RETURN_SUCCESS;
 }
@@ -2855,8 +2875,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,    RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0", RP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0", RP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \

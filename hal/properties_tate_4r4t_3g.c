@@ -2226,27 +2226,25 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_force_stream(const char *data, char *ret) {     \
+    static int hdlr_rx_##ch##_prime_trigger_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
         uint32_t val = 0;\
         read_hps_reg(rx_reg4_map[INT(ch)], &val);\
         val = val & ~(0x6002 | 0x2100);\
         if(data[0]=='0') {\
-            /*sets it to use the global sma*/\
-            set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
-            /*sets it to trigger streaming whenever the sma is on*/\
-            set_property("rx/" STR(ch) "/trigger/sma_mode", "level");\
-            /*makes it stream when the sma is activated*/\
+            /*puts the dsp in reset*/\
             val = val | 0x6002;\
             write_hps_reg(rx_reg4_map[INT(ch)], val);\
             rx_stream[INT(ch)] = STREAM_OFF;\
+            /*Ignores sma (enabling normal stream command)*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
         }else {\
-            /*disables streaming*/\
+            rx_stream[INT(ch)] = STREAM_ON;\
+            /*Stream when sma trigger (has the side effect of disabling normal stream commands)*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
+            /*takes the dsp out of reset*/\
             val = val | 0x2100;\
             write_hps_reg(rx_reg4_map[INT(ch)], val);\
-            rx_stream[INT(ch)] = STREAM_ON;\
-            /*disables responding to sma trigger*/\
-            set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
@@ -2977,7 +2975,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     if(stream != 0) {
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
-            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+            sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
         }
         //sets the sma trigger to act as an input
@@ -2987,10 +2985,10 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         set_property("fpga/trigger/sma_pol", "negative");
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
-                sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+                sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
             } else {
-                sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+                sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "0");
             }
         }
@@ -3000,7 +2998,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
-            sprintf(path_buffer, "rx/%c/force_stream", n+'a');
+            sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
         }
     }
@@ -4205,7 +4203,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0", RP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/force_stream"             , hdlr_rx_##_c##_force_stream,                           RW, "0", RP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)
 
 #define DEFINE_TX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/wait_async_pwr", hdlr_tx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
