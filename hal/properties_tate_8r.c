@@ -82,14 +82,14 @@ static const char *rx_reg4_map[] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rx
 //used to figure out which register, and where in the register to set dsp gain
 //ch0 uses [7:0] of the map[0], ch1 uses [15:8] of map[0], ch4 uses [7:0] of map[1]
 //most variant do not use all registers in this map
-static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
+static const char *rxg_map[NUM_RX_CHANNELS] = { "rxga", "rxge", "rxgi", "rxgm" };
 
 //registers used by trigger selected
-//note: this registers have multiplee purposes, the code assumes bit 12:10 are used for trigger select
+//note: this registers have multiple purposes, the code assumes bit 12:10 are used for trigger select
 //at time of writing it is per sfp, not per channel, hence the overlap
-static const char *rx_trig_sel_map[8] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
-static const char *rx_trig_sma_mode_map[8] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
-static const char *rx_trig_ufl_mode_map[8] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
+static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
+static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
+static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }

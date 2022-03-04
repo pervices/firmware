@@ -110,6 +110,13 @@ static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxe4", "rxi4", "rxm
 
 static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4" };
 
+//registers used by trigger selected
+//note: this registers have multiple purposes, the code assumes bit 12:10 are used for trigger select
+//at time of writing it is per sfp, not per channel, hence the overlap
+static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
+static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
+static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
+
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12", "flc44", "flc46", "flc48" };
 //most significant 32 bits used to store underflow count
@@ -433,19 +440,30 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 }
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        char reg_name[8];
+        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 6 : 9);
-    return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(reg_name, 10, 0b11, sel);
+    }
+    else {
+        return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
+    }
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
-    unsigned shift;
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-    shift = sma ? 0 : 4;
-    return set_reg_bits(reg_name, shift, 1, edge);
+    if(tx) {
+        unsigned shift;
+        char reg_name[8];
+        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+                tx ? 6 : 9);
+        shift = sma ? 0 : 4;
+        return set_reg_bits(reg_name, shift, 1, edge);
+    } else if( !tx && sma) {
+        set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+    } else if (!tx && !sma) {
+        set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
+    }
 }
 
 static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
