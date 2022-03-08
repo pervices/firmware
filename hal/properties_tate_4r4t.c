@@ -437,10 +437,15 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 }
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        char reg_name[8];
+        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 6 : 9);
-    return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(reg_name, 10, 0b11, sel);
+    }
+    else {
+        return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
+    }
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
