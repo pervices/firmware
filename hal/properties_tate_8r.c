@@ -76,6 +76,12 @@
 
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 
+#ifdef RTM3
+    #define USE_RTM3 1
+#else
+    #define USE_RTM3 0
+#endif
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -643,29 +649,38 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             sprintf(ret, "%i", gain);\
         /*Sets mid/high band variable amplifer*/\
         } else if(band == 1 || band == 2) {\
-            if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) {                \
-                vga_gain = gain - LTC5586_MAX_GAIN + LTC5586_MIN_GAIN;      \
-                gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;                 \
-            }                                                               \
-            else if (gain < 0) {                                            \
-                vga_gain = gain;                                            \
-                gain = 0;                                                   \
-            }                                                               \
-                                                                            \
-            if (vga_gain > LMH6401_MAX_GAIN) {                              \
-                vga_gain = LMH6401_MAX_GAIN;                                \
-            } else if (vga_gain < LMH6401_MIN_GAIN) {                       \
-                vga_gain = LMH6401_MIN_GAIN;                                \
-            }                                                               \
-            atten = LMH6401_MAX_GAIN - vga_gain;                            \
-            /*Variable amplifer takes attenuation value instead of a gain*/ \
-            sprintf(buf, "vga -a %i\r", atten);                             \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            \
-            sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
-            sprintf(ret, "%i", gain+vga_gain);                              \
-            \
+            if(USE_RTM3) {\
+                /*RTM3 does not use one of the amplifiers in high and mid band*/\
+                if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
+                else if (gain < 0) gain = 0;\
+                \
+                sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
+                sprintf(ret, "%i", gain);\
+            } else {\
+                if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) {                \
+                    vga_gain = gain - LTC5586_MAX_GAIN + LTC5586_MIN_GAIN;      \
+                    gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;                 \
+                }                                                               \
+                else if (gain < 0) {                                            \
+                    vga_gain = gain;                                            \
+                    gain = 0;                                                   \
+                }                                                               \
+                                                                                \
+                if (vga_gain > LMH6401_MAX_GAIN) {                              \
+                    vga_gain = LMH6401_MAX_GAIN;                                \
+                } else if (vga_gain < LMH6401_MIN_GAIN) {                       \
+                    vga_gain = LMH6401_MIN_GAIN;                                \
+                }                                                               \
+                atten = LMH6401_MAX_GAIN - vga_gain;                            \
+                /*Variable amplifer takes attenuation value instead of a gain*/ \
+                sprintf(buf, "vga -a %i\r", atten);                             \
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                \
+                sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
+                sprintf(ret, "%i", gain+vga_gain);                              \
+            }\
         } else {\
             PRINT(ERROR, "Invalid band (%hhu) detected when setting gain\n", band);\
             return RETURN_ERROR;\

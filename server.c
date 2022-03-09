@@ -93,6 +93,9 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-v") == 0) {
             printf("Branch: %s\n", VERSIONGITBRANCH);
             printf("Revision: %s\n", VERSIONGITREVISION);
+            #ifdef RTM3
+                printf("RTM: 3\n");
+            #endif
             printf("Date: %s UTC\n", VERSIONDATE);
             #if defined(TATE)
                 printf("Product: TATE\n");

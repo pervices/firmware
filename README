@@ -33,7 +33,12 @@ which is available on yaourt.
 
 1.a.ii Cyan Optimized Compile Commands
 
-   sh autogen.sh
+    Automatic configuration and compilation: "sh autotate.sh <TATE_VERSION> <OPTIONAL: RTM version"
+    Example: "sh autotate.sh TATE_4R4T_3G RTM3"
+
+    sh autogen.sh
+
+    OR manually configure with:
 
     ./configure                         \
         --prefix=/usr                   \
@@ -46,11 +51,10 @@ which is available on yaourt.
         CXX=aarch64-linux-gnu-g++       \
         CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
                   -march=armv8-a -mtune=cortex-a53 " \
-        PRODUCT=TATE
+        PRODUCT=<TATE_VERSION> \
+        HW_REV=<HW_VERSION>
 
     make -j9
-
-    OR use "sh autotate.sh <TATE_VERSION>" to run those 4 commands automatically
 
 2. Specifying Build Variant Target
 
