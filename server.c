@@ -110,10 +110,12 @@ int main(int argc, char *argv[]) {
                 #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
             #endif
 
-            uint32_t ver39_32, ver31_0;
+            uint32_t ver39_32, ver31_0, verjesd;
             read_hps_reg("sys3", &ver39_32);
             read_hps_reg("sys4", &ver31_0);
             printf("FPGA: %01x%08x\n", (ver39_32 & 0xf), (ver31_0 & 0xffffffff));
+            read_hps_reg("res_ro11", &verjesd);
+            printf("JESD: %02x\n", (verjesd & 0xff00) >> 8);
 
             return 0;
         }
