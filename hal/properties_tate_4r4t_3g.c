@@ -714,7 +714,7 @@ static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(rx_power[ch] != PWR_NO_BOARD) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
-        if(error_code == RETURN_ERROR_UART_TIMEOUT) {
+        if(error_code != RETURN_SUCCESS) {
             rx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
@@ -727,8 +727,8 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
-        if(error_code == RETURN_ERROR_UART_TIMEOUT) {
-            rx_power[ch] = PWR_NO_BOARD;
+        if(error_code != RETURN_SUCCESS) {
+            tx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
     //empties the uart return buffer
@@ -3456,13 +3456,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 1\r");
 #define X(ch, io, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         CHANNELS
 #undef X
 
         strcpy(buf, "board -g 1\r");
 #define X(ch, io, crx, ctx)                                                              \
-    ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         CHANNELS
 #undef X
     }
@@ -3473,13 +3473,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 2\r");
 #define X(ch, io, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         CHANNELS
 #undef X
 
         strcpy(buf, "board -g 2\r");
 #define X(ch, io, crx, ctx)                                                              \
-    ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         CHANNELS
 #undef X
     }
@@ -3565,13 +3565,13 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
 
     strcpy(buf, "board -r\r");
 #define X(ch, io, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
     CHANNELS
 #undef X
 
     strcpy(buf, "board -r\r");
 #define X(ch, io, crx, ctx)                                                              \
-    ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
     CHANNELS
 #undef X
 
