@@ -3733,7 +3733,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     if (i2c_return != 0) {
         sprintf(ret, "UNKNOWN: EEPROM read error"); // NEVER CHANGE THIS PRINT, IT WILL BREAK THE AUTOMATIC UPDATE TOOL
         pclose(i2c_return);
-        return RETURN_ERROR;
+        return RETURN_SUCCESS;
     }
 
     fgets(i2c_value, sizeof(i2c_value), i2c_return);
