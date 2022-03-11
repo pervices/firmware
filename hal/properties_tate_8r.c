@@ -2391,7 +2391,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     char i2c_value[512];
 
     i2c_return = popen("cat /sys/bus/i2c/devices/1-0050/eeprom", "r");
-    if (i2c_return != NULL) {
+    if (i2c_return != 0) {
         sprintf(ret, "UNKNOWN: EEPROM read error"); // NEVER CHANGE THIS PRINT, IT WILL BREAK THE AUTOMATIC UPDATE TOOL
         pclose(i2c_return);
         return RETURN_ERROR;
