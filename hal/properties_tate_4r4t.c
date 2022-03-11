@@ -4405,7 +4405,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
-    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , WO, "0")
+    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
 static prop_t property_table[] = {
     DEFINE_TIME()
