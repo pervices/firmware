@@ -2473,13 +2473,10 @@ CHANNELS
                 PRINT(INFO, "rx_err0 is good");\
             }\
             else{\
-                PRINT(INFO, "Bad Link: rx_err0: %s", read_VAL);\
+                PRINT(INFO, "Bad Link: rx_err0: %u", read_VAL);\
                 PRINT(INFO, "Reset Errors");\
-                write_hps_reg(net6, i);\
-                write_hps_reg(net7, 18);\
-                write_hps_reg(net8, read_VAL_0);\
-                write_hps_reg(net9, 2);\
-                write_hps_reg(net9, 0);\
+                /* reset JESD */                                              \
+                set_property("rx/" STR(ch) "/jesd/reset", "1");\
             }\
             \
             /*For rx_err1*/\
@@ -2492,13 +2489,10 @@ CHANNELS
                 PRINT(INFO, "rx_err1 is good");\
             }\
             else{\
-                PRINT(INFO, "Bad Link: rx_err1: %s", read_VAL);\
+                PRINT(INFO, "Bad Link: rx_err1: %u", read_VAL);\
                 PRINT(INFO, "Reset Errors");\
-                write_hps_reg(net6, i);\
-                write_hps_reg(net7, 19);\
-                write_hps_reg(net8, read_VAL_1);\
-                write_hps_reg(net9, 2);\
-                write_hps_reg(net9, 0);\
+                /* reset JESD */                                              \
+                set_property("rx/" STR(ch) "/jesd/reset", "1");\
             }\
             \
         }\
@@ -4267,7 +4261,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0")\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", RP, #_c)         \
