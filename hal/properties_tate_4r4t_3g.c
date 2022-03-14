@@ -2457,6 +2457,54 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    static int hdlr_rx_##ch##_jesd_error(const char *data, char *ret) {       \
+        /*The onehot jesd core converted into hex*/\
+        uint16_t jesd_rx[8] = { 1, 2, 4, 8, 10, 20, 40, 80 } \
+        uint32_t read_VAL_0;\
+        uint32_t read_VAL_1;\
+        for (i = 0; i < 7; i++){\
+            /*For rx_err0*/\
+            write_hps_reg(net6, i);\
+            write_hps_reg(net7, 18);\
+            write_hps_reg(net9, 1);\
+            write_hps_reg(net9, 0);\
+            read_hps_reg(res_ro30, &read_VAL_0);\
+            if (uint32_t(read_VAL) == uint32_t(0) ){\
+                PRINT(INFO, "rx_err0 is good");\
+            }\
+            else{\
+                PRINT(INFO, "Bad Link: rx_err0: %s", read_VAL);\
+                PRINT(INFO, "Reset Errors");\
+                write_hps_reg(net6, i);\
+                write_hps_reg(net7, 18);\
+                write_hps_reg(net8, read_VAL_0);\
+                write_hps_reg(net9, 2);\
+                write_hps_reg(net9, 0);\
+            }\
+            \
+            /*For rx_err1*/\
+            write_hps_reg(net6, i);\
+            write_hps_reg(net7, 19);\
+            write_hps_reg(net9, 1);\
+            write_hps_reg(net9, 0);\
+            read_hps_reg(res_ro30, &read_VAL_1);\
+            if (uint32_t(read_VAL) == uint32_t(0) ){\
+                PRINT(INFO, "rx_err1 is good");\
+            }\
+            else{\
+                PRINT(INFO, "Bad Link: rx_err1: %s", read_VAL);\
+                PRINT(INFO, "Reset Errors");\
+                write_hps_reg(net6, i);\
+                write_hps_reg(net7, 19);\
+                write_hps_reg(net8, read_VAL_1);\
+                write_hps_reg(net9, 2);\
+                write_hps_reg(net9, 0);\
+            }\
+            \
+        }\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -4219,6 +4267,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0")\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", RP, #_c)         \
