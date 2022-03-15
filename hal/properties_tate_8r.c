@@ -2378,6 +2378,21 @@ static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_about_sw_ver(const char *data, char *ret) {
+    /* FPGA version info
+     * We just read this from the FPGA and store it in the state tree.
+     * per issue 8871:
+     * wRsvdROReg12[ 0] = ECC_ENABLED_DDRA; (0 or 1, 1 if enabled)
+     * wRsvdROReg12[11: 4] = XG_ETH ; (100 or 40 0x64 or 0x28)
+     * wRsvdROReg12[13:12] = JESD_THROUGHPUT ; (1 or 3 GSPS)
+     * wRsvdROReg12[31:14] = 18'h1c0de ; Reserved value that never changes, If this is 00000, that means the FPGA is older than when this register was implemented
+     */
+    uint32_t reg_val;
+    read_hps_reg("res_ro12", &reg_val);
+    sprintf(ret, "0x%08x\n", reg_val);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_server_about_fw_ver(const char *data, char *ret) {
     FILE *fp = NULL;
     char buf[MAX_PROP_LEN] = {0};
@@ -2395,12 +2410,20 @@ static int hdlr_server_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
-    uint32_t old_val;
-    read_hps_reg("sys1", &old_val);
+    FILE *i2c_return;
+    char i2c_value[512];
 
-    old_val = (old_val >> 7) & 0xf;
+    i2c_return = popen("cat /sys/bus/i2c/devices/1-0050/eeprom", "r");
+    if (i2c_return != 0) {
+        sprintf(ret, "UNKNOWN: EEPROM read error"); // NEVER CHANGE THIS PRINT, IT WILL BREAK THE AUTOMATIC UPDATE TOOL
+        pclose(i2c_return);
+        return RETURN_SUCCESS;
+    }
 
-    sprintf(ret, "ver. 0x%02x", old_val);
+    fgets(i2c_value, sizeof(i2c_value), i2c_return);
+    pclose(i2c_return);
+    sprintf(ret, "%s",i2c_value);
+
     return RETURN_SUCCESS;
 }
 
@@ -2969,7 +2992,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
-    DEFINE_FILE_PROP_P("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)             \
+    DEFINE_FILE_PROP_P("fpga/about/sw_ver"                   , hdlr_fpga_about_sw_ver,                 RW, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "", SP, NAC)                  \
     DEFINE_FILE_PROP_P("fpga/about/hw_ver"                   , hdlr_fpga_about_hw_ver,                 RW, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001", SP, NAC)               \
