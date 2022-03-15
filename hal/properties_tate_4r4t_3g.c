@@ -180,6 +180,9 @@ uint8_t *_load_profile;
 char *_save_profile_path;
 char *_load_profile_path;
 
+//onehot encoding of the RX channels
+static uint32_t jesd_rx[8] = {1, 2, 4, 8, 10, 20, 40, 80};
+
 static const uint8_t ipver[] = {
     IPVER_IPV4,
     IPVER_IPV4,
@@ -2459,42 +2462,90 @@ CHANNELS
     \
     static int hdlr_rx_##ch##_jesd_error(const char *data, char *ret) {       \
         /*The onehot jesd core converted into hex*/\
-        uint16_t jesd_rx[8] = { 1, 2, 4, 8, 10, 20, 40, 80 } \
-        uint32_t read_VAL_0;\
-        uint32_t read_VAL_1;\
-        for (i = 0; i < 7; i++){\
-            /*For rx_err0*/\
-            write_hps_reg(net6, i);\
-            write_hps_reg(net7, 18);\
-            write_hps_reg(net9, 1);\
-            write_hps_reg(net9, 0);\
-            read_hps_reg(res_ro30, &read_VAL_0);\
-            if (uint32_t(read_VAL) == uint32_t(0) ){\
-                PRINT(INFO, "rx_err0 is good");\
+        /*uint16_t jesd_rx[8] = { 1, 2, 4, 8, 10, 20, 40, 80 } */\
+        PRINT(INFO, "Before start validated\n");\
+        int start;                                                            \
+        sscanf(data, "%i", &start);\
+        PRINT(INFO, "Before if statement\n");\
+        PRINT(INFO, "start value is: %i\n", start);\
+        if ( start == 1 ){\
+            PRINT(INFO, "In if == 1 statement\n");\
+            uint64_t read_VAL_0 = 0;\
+            uint64_t read_VAL_1 = 0;\
+            for (int i = 0; i <= 7; i++){\
+                PRINT(INFO, "In for loop: iteration %i\n", i);\
+                PRINT(INFO, "In for loop: onehot encoded value %i\n", jesd_rx[i]);\
+                /*For rx_err0*/\
+                write_hps_reg("net6", jesd_rx[i]);\
+                write_hps_reg("net7", 0x18);\
+                write_hps_reg("net9", 0x1);\
+                write_hps_reg("net9", 0x0);\
+                read_hps_reg("res_ro30", &read_VAL_0);\
+                PRINT(INFO, "read_VAL_0 is : %X\n", read_VAL_0);\
+                if (read_VAL_0 == 0 ){\
+                    PRINT(INFO, "rx_err0 is good\n");\
+                    /*Resets JESD on FPGA*/\
+                    usleep(300000);\
+                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+                    write_hps_reg("res_rw7",  individual_reset_bit);\
+                    /*this wait is needed*/\
+                    usleep(300000);\
+                    write_hps_reg("res_rw7", 0);\
+                    /*this wait is need*/\
+                    usleep(300000);\
+                }\
+                else{\
+                    PRINT(INFO, "Bad Link: rx_err0: %X\n", read_VAL_0);\
+                    PRINT(INFO, "Reset Errors\n");\
+                    /* reset JESD */                                              \
+                    /*Resets JESD on FPGA*/\
+                    usleep(300000);\
+                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+                    write_hps_reg("res_rw7",  individual_reset_bit);\
+                    /*this wait is needed*/\
+                    usleep(300000);\
+                    write_hps_reg("res_rw7", 0);\
+                    /*this wait is need*/\
+                    usleep(300000);\
+                }\
+                \
+                /*For rx_err1*/\
+                write_hps_reg("net6", jesd_rx[i]);\
+                write_hps_reg("net7", 0x19);\
+                write_hps_reg("net9", 0x1);\
+                write_hps_reg("net9", 0x0);\
+                read_hps_reg("res_ro30", &read_VAL_1);\
+                PRINT(INFO, "read_VAL_1 is : %X\n", read_VAL_1);\
+                if (read_VAL_1 == 0 ){\
+                    PRINT(INFO, "rx_err1 is good\n");\
+                    /*Resets JESD on FPGA*/\
+                    usleep(300000);\
+                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
+                    write_hps_reg("res_rw7",  individual_reset_bit);\
+                    /*this wait is needed*/\
+                    usleep(300000);\
+                    write_hps_reg("res_rw7", 0);\
+                    /*this wait is need*/\
+                    usleep(300000);\
+                }\
+                else{\
+                    PRINT(INFO, "Bad Link: rx_err1: %X\n", read_VAL_1);\
+                    PRINT(INFO, "Reset Errors\n");\
+                    /* reset JESD */                                              \
+                    /*Resets JESD on FPGA*/\
+                    usleep(300000);\
+                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX + 1);\
+                    write_hps_reg("res_rw7",  individual_reset_bit);\
+                    /*this wait is needed*/\
+                    usleep(300000);\
+                    write_hps_reg("res_rw7", 0);\
+                    /*this wait is need*/\
+                    usleep(300000);\
+                }\
+                \
+                read_VAL_0 = 0;\
+                read_VAL_1 = 0;\
             }\
-            else{\
-                PRINT(INFO, "Bad Link: rx_err0: %u", read_VAL);\
-                PRINT(INFO, "Reset Errors");\
-                /* reset JESD */                                              \
-                set_property("rx/" STR(ch) "/jesd/reset", "1");\
-            }\
-            \
-            /*For rx_err1*/\
-            write_hps_reg(net6, i);\
-            write_hps_reg(net7, 19);\
-            write_hps_reg(net9, 1);\
-            write_hps_reg(net9, 0);\
-            read_hps_reg(res_ro30, &read_VAL_1);\
-            if (uint32_t(read_VAL) == uint32_t(0) ){\
-                PRINT(INFO, "rx_err1 is good");\
-            }\
-            else{\
-                PRINT(INFO, "Bad Link: rx_err1: %u", read_VAL);\
-                PRINT(INFO, "Reset Errors");\
-                /* reset JESD */                                              \
-                set_property("rx/" STR(ch) "/jesd/reset", "1");\
-            }\
-            \
         }\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -4261,7 +4312,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", RP, #_c)         \
