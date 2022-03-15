@@ -940,7 +940,12 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
-        if ((band == 0) || (band == 1) || (band == 2)) {                       \
+        if (band == 0) {                       \
+            set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            strcpy(buf, "rf -b ");                                             \
+            sprintf(buf + strlen(buf),"%i", band);                             \
+            strcat(buf, "\r");                                                 \
+        } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
