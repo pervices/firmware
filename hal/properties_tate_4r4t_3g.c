@@ -2462,33 +2462,27 @@ CHANNELS
     \
     static int hdlr_rx_##ch##_jesd_error(const char *data, char *ret) {       \
         /*The onehot jesd core converted into hex*/\
-        /*uint16_t jesd_rx[8] = { 1, 2, 4, 8, 10, 20, 40, 80 } */\
-        PRINT(INFO, "Before start validated\n");\
         int start;                                                            \
         sscanf(data, "%i", &start);\
-        PRINT(INFO, "Before if statement\n");\
-        PRINT(INFO, "start value is: %i\n", start);\
         if ( start == 1 ){\
-            PRINT(INFO, "In if == 1 statement\n");\
             uint64_t rx_err0_VAL = 0;\
             uint64_t rx_err1_VAL = 0;\
+            uint64_t TEST = 0;\
             for (int i = 0; i <= 7; i++){\
-                PRINT(INFO, "In for loop: iteration %i\n", i);\
-                PRINT(INFO, "In for loop: onehot encoded value %i\n", jesd_rx[i]);\
                 /*Getting rx_err0*/\
                 write_hps_reg("net6", jesd_rx[i]);\
                 write_hps_reg("net7", 0x18);\
                 write_hps_reg("net9", 0x1);\
                 write_hps_reg("net9", 0x0);\
                 read_hps_reg("res_ro30", &rx_err0_VAL);\
-                PRINT(INFO, "rx_err0_VAL is : %X\n", rx_err0_VAL);\
+                PRINT(INFO, "rx_err0 is : %X\n", rx_err0_VAL);\
                 /*Checking for errors*/\
                 if (rx_err0_VAL == 0 ){\
-                    PRINT(INFO, "rx_err0 is good\n");\
+                    PRINT(INFO, "rx_err0 has no errors\n");\
                 }\
                 else{\
                     PRINT(INFO, "Bad Link: rx_err0: %X\n", rx_err0_VAL);\
-                    PRINT(INFO, "Reset Errors\n");\
+                    PRINT(INFO, "Reseting Errors\n");\
                     write_hps_reg("net6", jesd_rx[i]);\
                     write_hps_reg("net7", 0x18);\
                     write_hps_reg("net8", rx_err0_VAL);\
@@ -2503,10 +2497,10 @@ CHANNELS
                 write_hps_reg("net9", 0x1);\
                 write_hps_reg("net9", 0x0);\
                 read_hps_reg("res_ro30", &rx_err1_VAL);\
-                PRINT(INFO, "rx_err1_VAL is : %X\n", rx_err1_VAL);\
+                PRINT(INFO, "rx_err1 is : %X\n", rx_err1_VAL);\
                 /*Checking for errors*/\
                 if (rx_err1_VAL == 0 ){\
-                    PRINT(INFO, "rx_err1 is good\n");\
+                    PRINT(INFO, "rx_err1 has no errors\n");\
                 }\
                 else{\
                     PRINT(INFO, "Bad Link: rx_err1: %X\n", rx_err1_VAL);\
@@ -4286,7 +4280,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
-    DEFINE_FILE_PROP_P("rx/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "1", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", RP, #_c)         \
