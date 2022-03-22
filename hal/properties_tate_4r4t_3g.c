@@ -2470,43 +2470,31 @@ CHANNELS
         PRINT(INFO, "start value is: %i\n", start);\
         if ( start == 1 ){\
             PRINT(INFO, "In if == 1 statement\n");\
-            uint64_t read_VAL_0 = 0;\
-            uint64_t read_VAL_1 = 0;\
+            uint64_t rx_err0_VAL = 0;\
+            uint64_t rx_err1_VAL = 0;\
             for (int i = 0; i <= 7; i++){\
                 PRINT(INFO, "In for loop: iteration %i\n", i);\
                 PRINT(INFO, "In for loop: onehot encoded value %i\n", jesd_rx[i]);\
-                /*For rx_err0*/\
+                /*Getting rx_err0*/\
                 write_hps_reg("net6", jesd_rx[i]);\
                 write_hps_reg("net7", 0x18);\
                 write_hps_reg("net9", 0x1);\
                 write_hps_reg("net9", 0x0);\
-                read_hps_reg("res_ro30", &read_VAL_0);\
-                PRINT(INFO, "read_VAL_0 is : %X\n", read_VAL_0);\
-                if (read_VAL_0 == 0 ){\
+                read_hps_reg("res_ro30", &rx_err0_VAL);\
+                PRINT(INFO, "rx_err0_VAL is : %X\n", rx_err0_VAL);\
+                /*Checking for errors*/\
+                if (rx_err0_VAL == 0 ){\
                     PRINT(INFO, "rx_err0 is good\n");\
-                    /*Resets JESD on FPGA*/\
-                    usleep(300000);\
-                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-                    write_hps_reg("res_rw7",  individual_reset_bit);\
-                    /*this wait is needed*/\
-                    usleep(300000);\
-                    write_hps_reg("res_rw7", 0);\
-                    /*this wait is need*/\
-                    usleep(300000);\
                 }\
                 else{\
-                    PRINT(INFO, "Bad Link: rx_err0: %X\n", read_VAL_0);\
+                    PRINT(INFO, "Bad Link: rx_err0: %X\n", rx_err0_VAL);\
                     PRINT(INFO, "Reset Errors\n");\
-                    /* reset JESD */                                              \
-                    /*Resets JESD on FPGA*/\
-                    usleep(300000);\
-                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-                    write_hps_reg("res_rw7",  individual_reset_bit);\
-                    /*this wait is needed*/\
-                    usleep(300000);\
-                    write_hps_reg("res_rw7", 0);\
-                    /*this wait is need*/\
-                    usleep(300000);\
+                    write_hps_reg("net6", jesd_rx[i]);\
+                    write_hps_reg("net7", 0x18);\
+                    write_hps_reg("net8", rx_err0_VAL);\
+                    write_hps_reg("net9", 0x2);\
+                    write_hps_reg("net9", 0x0);\
+                    PRINT(INFO, "rx_err0 been reset\n");\
                 }\
                 \
                 /*For rx_err1*/\
@@ -2514,37 +2502,23 @@ CHANNELS
                 write_hps_reg("net7", 0x19);\
                 write_hps_reg("net9", 0x1);\
                 write_hps_reg("net9", 0x0);\
-                read_hps_reg("res_ro30", &read_VAL_1);\
-                PRINT(INFO, "read_VAL_1 is : %X\n", read_VAL_1);\
-                if (read_VAL_1 == 0 ){\
+                read_hps_reg("res_ro30", &rx_err1_VAL);\
+                PRINT(INFO, "rx_err1_VAL is : %X\n", rx_err1_VAL);\
+                /*Checking for errors*/\
+                if (rx_err1_VAL == 0 ){\
                     PRINT(INFO, "rx_err1 is good\n");\
-                    /*Resets JESD on FPGA*/\
-                    usleep(300000);\
-                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-                    write_hps_reg("res_rw7",  individual_reset_bit);\
-                    /*this wait is needed*/\
-                    usleep(300000);\
-                    write_hps_reg("res_rw7", 0);\
-                    /*this wait is need*/\
-                    usleep(300000);\
                 }\
                 else{\
-                    PRINT(INFO, "Bad Link: rx_err1: %X\n", read_VAL_1);\
+                    PRINT(INFO, "Bad Link: rx_err1: %X\n", rx_err1_VAL);\
                     PRINT(INFO, "Reset Errors\n");\
-                    /* reset JESD */                                              \
-                    /*Resets JESD on FPGA*/\
-                    usleep(300000);\
-                    uint32_t individual_reset_bit = 1 << (jesd_rx[i] + INDIVIDUAL_RESET_BIT_OFFSET_RX + 1);\
-                    write_hps_reg("res_rw7",  individual_reset_bit);\
-                    /*this wait is needed*/\
-                    usleep(300000);\
-                    write_hps_reg("res_rw7", 0);\
-                    /*this wait is need*/\
-                    usleep(300000);\
+                    write_hps_reg("net6", jesd_rx[i]);\
+                    write_hps_reg("net7", 0x18);\
+                    write_hps_reg("net8", rx_err1_VAL);\
+                    write_hps_reg("net9", 0x2);\
+                    write_hps_reg("net9", 0x0);\
+                    PRINT(INFO, "rx_err1 been reset\n");\
                 }\
                 \
-                read_VAL_0 = 0;\
-                read_VAL_1 = 0;\
             }\
         }\
         return RETURN_SUCCESS;                                                 \
