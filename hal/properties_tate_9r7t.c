@@ -1303,7 +1303,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
-        PRINT(ERROR, "Starting\n");\
         uint32_t lvl;                                                          \
         char lvl_reg[20];\
         sprintf(lvl_reg, "res_ro%i", INT(ch)+4);\
@@ -2325,7 +2324,6 @@ TX_CHANNELS
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
-            PRINT(ERROR, "Sending command: %s\n", pwr_cmd);\
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_OFF;\
         }\
