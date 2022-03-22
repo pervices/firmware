@@ -114,7 +114,7 @@ static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
-static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxe4", "rxi4", "rxm4", "rxb4", "rxf4", "rxj4", "rxn4", "rxc4" };
+static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4", "rxo4" };
 
 static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4" };
 
