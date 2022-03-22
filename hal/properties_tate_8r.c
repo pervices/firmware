@@ -1736,6 +1736,8 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             if(stream & 1 << n) {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
+                sprintf(path_buffer, "rx/%c/trigger/sma_mode", n+'a');
+                set_property(path_buffer, "level");
             } else {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "0");
