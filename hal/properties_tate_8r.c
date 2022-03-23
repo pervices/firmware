@@ -76,6 +76,12 @@
 
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 
+#ifdef RTM3
+    #define USE_RTM3 1
+#else
+    #define USE_RTM3 0
+#endif
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -509,18 +515,26 @@ CHANNELS
 // so that the command prompt '>' is respected before the next send uart
 // command can be used. This removes the need for delay calls in the uart
 // send function.
-static void ping(const int fd, uint8_t *buf, const size_t len) {
+static int ping(const int fd, uint8_t *buf, const size_t len) {
     //sets the first byte of the turn buffer to null, effectively clearing it
     uart_ret_buf[0] = 0;
     send_uart_comm(fd, buf, len);
-    read_uart(fd);
+    int error_code = read_uart(fd);
+    return error_code;
 }
 //ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
 //ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
 static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(rx_power[ch] != PWR_NO_BOARD) {
-        send_uart_comm(fd, buf, len);
-        read_uart(fd);
+        int error_code = ping(fd, buf, len);
+        //Due to hardware issues some boards will report as on even when the slot is empty
+        if(error_code != RETURN_SUCCESS) {
+            rx_power[ch] = PWR_NO_BOARD;
+            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
+        }
+    //empties the uart return buffer
+    } else {
+        uart_ret_buf[0] = 0;
     }
 }
 
@@ -643,29 +657,38 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             sprintf(ret, "%i", gain);\
         /*Sets mid/high band variable amplifer*/\
         } else if(band == 1 || band == 2) {\
-            if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) {                \
-                vga_gain = gain - LTC5586_MAX_GAIN + LTC5586_MIN_GAIN;      \
-                gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;                 \
-            }                                                               \
-            else if (gain < 0) {                                            \
-                vga_gain = gain;                                            \
-                gain = 0;                                                   \
-            }                                                               \
-                                                                            \
-            if (vga_gain > LMH6401_MAX_GAIN) {                              \
-                vga_gain = LMH6401_MAX_GAIN;                                \
-            } else if (vga_gain < LMH6401_MIN_GAIN) {                       \
-                vga_gain = LMH6401_MIN_GAIN;                                \
-            }                                                               \
-            atten = LMH6401_MAX_GAIN - vga_gain;                            \
-            /*Variable amplifer takes attenuation value instead of a gain*/ \
-            sprintf(buf, "vga -a %i\r", atten);                             \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            \
-            sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
-            sprintf(ret, "%i", gain+vga_gain);                              \
-            \
+            if(USE_RTM3) {\
+                /*RTM3 does not use one of the amplifiers in high and mid band*/\
+                if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
+                else if (gain < 0) gain = 0;\
+                \
+                sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
+                sprintf(ret, "%i", gain);\
+            } else {\
+                if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) {                \
+                    vga_gain = gain - LTC5586_MAX_GAIN + LTC5586_MIN_GAIN;      \
+                    gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;                 \
+                }                                                               \
+                else if (gain < 0) {                                            \
+                    vga_gain = gain;                                            \
+                    gain = 0;                                                   \
+                }                                                               \
+                                                                                \
+                if (vga_gain > LMH6401_MAX_GAIN) {                              \
+                    vga_gain = LMH6401_MAX_GAIN;                                \
+                } else if (vga_gain < LMH6401_MIN_GAIN) {                       \
+                    vga_gain = LMH6401_MIN_GAIN;                                \
+                }                                                               \
+                atten = LMH6401_MAX_GAIN - vga_gain;                            \
+                /*Variable amplifer takes attenuation value instead of a gain*/ \
+                sprintf(buf, "vga -a %i\r", atten);                             \
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                \
+                sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
+                sprintf(ret, "%i", gain+vga_gain);                              \
+            }\
         } else {\
             PRINT(ERROR, "Invalid band (%hhu) detected when setting gain\n", band);\
             return RETURN_ERROR;\
@@ -2111,7 +2134,7 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 1\r");
 #define X(ch, rx, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         CHANNELS
 #undef X
 
@@ -2128,7 +2151,7 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 
         strcpy(buf, "board -g 2\r");
 #define X(ch, rx, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         CHANNELS
 #undef X
 
@@ -2206,7 +2229,7 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
 
     strcpy(buf, "board -r\r");
 #define X(ch, rx, crx, ctx)                                                              \
-    ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf)), usleep(50000);
+    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
     CHANNELS
 #undef X
 
@@ -3025,7 +3048,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
-    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , WO, "0")
+    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
 static prop_t property_table[] = {
     DEFINE_TIME()

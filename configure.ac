@@ -57,6 +57,7 @@ CFLAGS+=" -DVERSIONGITREVISION=\\\"`git describe --abbrev=8 --dirty --always --l
 CFLAGS+=" -DVERSIONDATE=\\\"`TZ=UTC date '+%F-%T'`\\\""
 
 CFLAGS+=" -D${PRODUCT}"
+CFLAGS+=" -D${HW_REV}"
 
 LDFLAGS="${LDFLAGS}"
 LDFLAGS+=" -Wl,-no-undefined"
