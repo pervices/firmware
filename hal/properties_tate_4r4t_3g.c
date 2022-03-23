@@ -180,8 +180,8 @@ uint8_t *_load_profile;
 char *_save_profile_path;
 char *_load_profile_path;
 
-//onehot encoding of the RX channels
-static uint32_t jesd_rx[8] = {1, 2, 4, 8, 10, 20, 40, 80};
+//onehot encoding of the RX channels, up to 16 RX
+static uint32_t jesd_rx[8] = {1, 2, 4, 8, 10, 20, 40, 80, 100, 200, 400, 800, 1000, 2000, 4000, 8000};
 
 static const uint8_t ipver[] = {
     IPVER_IPV4,
@@ -2475,13 +2475,15 @@ CHANNELS
                 write_hps_reg("net9", 0x1);\
                 write_hps_reg("net9", 0x0);\
                 read_hps_reg("res_ro30", &rx_err0_VAL);\
-                PRINT(INFO, "rx_err0 is : %X\n", rx_err0_VAL);\
                 /*Checking for errors*/\
                 if (rx_err0_VAL == 0 ){\
                     PRINT(INFO, "rx_err0 has no errors\n");\
                 }\
+                else if (rx_err0_VAL == 0xDEADBEEF) {\
+                ;\
+                }\
                 else{\
-                    PRINT(INFO, "Bad Link: rx_err0: %X\n", rx_err0_VAL);\
+                    PRINT(INFO, "Bad link for Rx : %d, rx_err0 is : %X\n", jesd_rx[i], rx_err0_VAL);\
                     PRINT(INFO, "Reseting Errors\n");\
                     write_hps_reg("net6", jesd_rx[i]);\
                     write_hps_reg("net7", 0x18);\
@@ -2497,13 +2499,15 @@ CHANNELS
                 write_hps_reg("net9", 0x1);\
                 write_hps_reg("net9", 0x0);\
                 read_hps_reg("res_ro30", &rx_err1_VAL);\
-                PRINT(INFO, "rx_err1 is : %X\n", rx_err1_VAL);\
                 /*Checking for errors*/\
                 if (rx_err1_VAL == 0 ){\
                     PRINT(INFO, "rx_err1 has no errors\n");\
                 }\
+                else if (rx_err1_VAL == 0xDEADBEEF) {\
+                ;\
+                }\
                 else{\
-                    PRINT(INFO, "Bad Link: rx_err1: %X\n", rx_err1_VAL);\
+                    PRINT(INFO, "Bad link for Rx : %d, rx_err1 is : %X\n", jesd_rx[i], rx_err1_VAL);\
                     PRINT(INFO, "Reset Errors\n");\
                     write_hps_reg("net6", jesd_rx[i]);\
                     write_hps_reg("net7", 0x18);\
