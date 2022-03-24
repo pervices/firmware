@@ -368,6 +368,7 @@ static int valid_trigger_mode(const char *data, bool *edge) {
     } else if (0 == strncmp("level", data, strlen("level"))) {
         *edge = false;
     } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
 
@@ -601,7 +602,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_mode(#ch, &val);\
+        r = valid_trigger_mode(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
             r = set_trigger_mode(true, false, #ch, val);        \

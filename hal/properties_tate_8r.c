@@ -320,6 +320,7 @@ static int valid_trigger_mode(const char *data, bool *edge) {
     } else if (0 == strncmp("level", data, strlen("level"))) {
         *edge = false;
     } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
 
