@@ -1879,8 +1879,8 @@ CHANNELS
                 gain = gain - AM1081_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = LTC5586_MAX_GAIN;\
                 atten = 0;\
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -1927,7 +1927,7 @@ CHANNELS
             } else {\
                 lna_bypass = 0;\
                 atten = 0;\
-                /*gain deliberately unmodified*/                            \
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\

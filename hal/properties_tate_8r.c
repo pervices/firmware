@@ -740,8 +740,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                 gain = gain - AM1081_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = LTC5586_MAX_GAIN;\
                 atten = 0;\
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -788,7 +788,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else {\
                 lna_bypass = 0;\
                 atten = 0;\
-                /*gain deliberately unmodified*/                            \
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
