@@ -113,8 +113,8 @@ static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc
 
 static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10", "10.10.13.10" };
 
-// Same registers are also used as the source for rx
-static const char *tx_dst_port_map[NUM_RX_CHANNELS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15" };
+// Registers containing both the src port for rx and dst port for tx (same value)
+static const char *device_side_port_map[NUM_RX_CHANNELS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15" };
 
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
@@ -1251,50 +1251,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg(tx_dst_port_map[INT(ch)], port);                                 \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
-        /* CH1 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch2port(const char *data, char *ret) {      \
-        /* CH2 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
-        /* CH3 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
-        /* CH4 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch5port(const char *data, char *ret) {      \
-        /* CH5 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    \
-    /*Interface for setting the port for every channel. Currently only ch0 is used*/\
-    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
-        set_property("tx/" STR(ch) "/link/ch0port", data);\
-        get_property("tx/" STR(ch) "/link/ch0port", ret, MAX_PROP_LEN);       \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    \
     static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
         sscanf(data, "%i", &swap);                                           \
@@ -1315,7 +1271,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         read_hps_reg(lvl_reg, &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
-        PRINT(ERROR, "Finishing\n");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2599,6 +2554,25 @@ RX_CHANNELS
         return r;                                                              \
     }
 TX_CHANNELS
+#undef X
+
+//
+#define X(ch, io, crx, ctx)                                                              \
+    /* rx src port and tx dst port use the same register */\
+    /*Interface for setting the port for every channel. Currently only ch0 is used*/\
+    static int hdlr_shared_##ch##_device_link_port(const char *data, char *ret) {      \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg(device_side_port_map[INT(ch)], port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+
+#if NUM_RX_CHANNELS > NUM_TX_CHANNELS
+    RX_CHANNELS
+#else
+    TX_CHANNELS
+#endif
+
 #undef X
 
 /* -------------------------------------------------------------------------- */
@@ -4270,13 +4244,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", TP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", TP, #_c)      \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch0port"             , hdlr_tx_##_c##_link_ch0port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0", TP, #_c)            \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0", TP, #_c)         \
@@ -4458,6 +4425,19 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
+// For values shared between rx and tx channels, that need to be accessible independents
+#define DEFINE_CH_CM(_c)\
+    DEFINE_FILE_PROP("cm/trx/" #_c "/link/device_port", hdlr_shared_##_c##_device_link_port , RW, "0")\
+
+// Links from r and tx to shared values, necessary when there are different numbers of tx and rx channels
+#define DEFINE_CH_CM_RX(_c)\
+    DEFINE_SYMLINK_PROP("rx/" #_c "/link/src_port", "cm/trx/#_c")\
+
+#define DEFINE_CH_CM_TX(_c)\
+    DEFINE_SYMLINK_PROP("tx/" #_c "/link/port", "cm/trx/#_c")\
+
+
+
 static prop_t property_table[] = {
     DEFINE_TIME()
     DEFINE_FPGA_PRE()
@@ -4481,6 +4461,19 @@ static prop_t property_table[] = {
     RX_CHANNELS
 #undef X
 #define X(ch, tx, crx, ctx) DEFINE_TX_CHANNEL(ch)
+    TX_CHANNELS
+#undef X
+#define X(ch, tx, crx, ctx) DEFINE_CH_CM(ch)
+#if NUM_RX_CHANNELS > NUM_TX_CHANNELS
+    RX_CHANNELS
+#else
+    TX_CHANNELS
+#endif
+#undef X
+#define X(ch, tx, crx, ctx) DEFINE_CH_CM_RX(ch)
+    RX_CHANNELS
+#undef X
+#define X(ch, tx, crx, ctx) DEFINE_CH_CM_RX(ch)
     TX_CHANNELS
 #undef X
     DEFINE_FPGA()
@@ -4539,14 +4532,14 @@ void patch_tree(void) {
     RX_CHANNELS
 #undef X
 
-#define X(ch, io, crx, ctx)                                                                                       \
-    set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch1port", base_port + INT_TX(ch)*4 + 1 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch3port", base_port + INT_TX(ch)*4 + 2 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch4port", base_port + INT_TX(ch)*4 + 3 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);                  \
+#define X(ch, io, crx, ctx) \
+    set_default_int("cm/trx/" #ch "/link/device_port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);
 
+#if NUM_RX_CHANNELS > NUM_TX_CHANNELS
+    RX_CHANNELS
+#else
     TX_CHANNELS
+#endif
 #undef X
 }
 
