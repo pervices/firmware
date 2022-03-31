@@ -111,6 +111,11 @@
 static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd", "sfpd" };
 static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
 
+static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10", "10.10.13.10" };
+
+// Same registers are also used as the source for rx
+static const char *tx_dst_port_map[NUM_RX_CHANNELS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15" };
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -1249,7 +1254,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "15", port);                                 \
+        write_hps_reg(tx_dst_port_map[INT(ch)], port);                                 \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2209,6 +2214,7 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /* Destination UDP port for rx. the source port is set by (hdlr_tx_##ch##_link_port)*/\
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
@@ -4526,14 +4532,12 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42836;
 
-#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
+#define X(ch, io, crx, ctx) \
+    set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
+    set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
+
     RX_CHANNELS
 #undef X
-
-set_default_str("rx/a/link/ip_dest","10.10.10.10");
-set_default_str("rx/b/link/ip_dest","10.10.11.10");
-set_default_str("rx/c/link/ip_dest","10.10.12.10");
-set_default_str("rx/d/link/ip_dest","10.10.13.10");
 
 #define X(ch, io, crx, ctx)                                                                                       \
     set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
