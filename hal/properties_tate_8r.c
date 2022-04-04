@@ -49,6 +49,9 @@
 #define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
+//a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
+#define RATE_ROUND_BIAS 0.75
+
 //Compnent properties in rx, used to figure out how to set up game
 //This are likely to change between variants, both thier values and how they are used
 #define AM1081_GAIN 17
