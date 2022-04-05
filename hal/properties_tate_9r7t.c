@@ -4431,10 +4431,10 @@ GPIO_PINS
 
 // Links from r and tx to shared values, necessary when there are different numbers of tx and rx channels
 #define DEFINE_CH_CM_RX(_c)\
-    DEFINE_SYMLINK_PROP("rx/" #_c "/link/src_port", "cm/trx/#_c")\
+    DEFINE_SYMLINK_PROP("rx/" #_c "/link/src_port", "cm/trx/" #_c "/link/device_port")\
 
 #define DEFINE_CH_CM_TX(_c)\
-    DEFINE_SYMLINK_PROP("tx/" #_c "/link/port", "cm/trx/#_c")\
+    DEFINE_SYMLINK_PROP("tx/" #_c "/link/port", "cm/trx/" #_c "/link/device_port")\
 
 
 
@@ -4473,7 +4473,7 @@ static prop_t property_table[] = {
 #define X(ch, tx, crx, ctx) DEFINE_CH_CM_RX(ch)
     RX_CHANNELS
 #undef X
-#define X(ch, tx, crx, ctx) DEFINE_CH_CM_RX(ch)
+#define X(ch, tx, crx, ctx) DEFINE_CH_CM_TX(ch)
     TX_CHANNELS
 #undef X
     DEFINE_FPGA()
