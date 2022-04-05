@@ -115,8 +115,10 @@ static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", 
 
 static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1, 2 };
 
-// Registers containing both the src port for rx and dst port for tx (same value)
-static const char *device_side_port_map[NUM_RX_CHANNELS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15" };
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+static const char *device_side_port_map[16] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4, 5, 8, 9, 12, 13};
+static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
@@ -1252,6 +1254,13 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         sprintf(ret, tx_sfp_map[INT(ch)]);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg(device_side_port_map[tx_dst_port_map[INT(ch)]], port);   \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
@@ -2171,11 +2180,18 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    /* Destination UDP port for rx. the source port is set by (hdlr_tx_##ch##_link_port)*/\
+    /* Destination UDP port for rx*/\
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("rx" STR(ch) "8", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    static int hdlr_rx_##ch##_link_src_port(const char *data, char *ret) {         \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg(device_side_port_map[rx_src_port_map[INT(ch)]], port);   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2280,7 +2296,6 @@ TX_CHANNELS
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
-            PRINT(ERROR, "T2\n");\
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
@@ -2558,24 +2573,6 @@ RX_CHANNELS
 TX_CHANNELS
 #undef X
 
-//
-#define X(ch, io, crx, ctx)                                                              \
-    /* rx src port and tx dst port use the same register */\
-    /*Interface for setting the port for every channel. Currently only ch0 is used*/\
-    static int hdlr_shared_##ch##_device_link_port(const char *data, char *ret) {      \
-        uint32_t port;                                                         \
-        sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg(device_side_port_map[INT(ch)], port);                                 \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-
-#if NUM_RX_CHANNELS > NUM_TX_CHANNELS
-    RX_CHANNELS
-#else
-    TX_CHANNELS
-#endif
-
-#undef X
 
 /* -------------------------------------------------------------------------- */
 /* ------------------------------ CHANNEL MASK ------------------------------ */
@@ -4216,9 +4213,10 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/src_port"            , hdlr_rx_##_c##_link_src_port,           RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)
 
 #define DEFINE_TX_WAIT_PWR(_c) \
@@ -4246,6 +4244,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", TP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", TP, #_c)      \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0", TP, #_c)         \
@@ -4427,19 +4426,6 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
-// For values shared between rx and tx channels, that need to be accessible independents
-#define DEFINE_CH_CM(_c)\
-    DEFINE_FILE_PROP("cm/trx/" #_c "/link/device_port", hdlr_shared_##_c##_device_link_port , RW, "0")\
-
-// Links from r and tx to shared values, necessary when there are different numbers of tx and rx channels
-#define DEFINE_CH_CM_RX(_c)\
-    DEFINE_SYMLINK_PROP("rx/" #_c "/link/src_port", "cm/trx/" #_c "/link/device_port")\
-
-#define DEFINE_CH_CM_TX(_c)\
-    DEFINE_SYMLINK_PROP("tx/" #_c "/link/port", "cm/trx/" #_c "/link/device_port")\
-
-
-
 static prop_t property_table[] = {
     DEFINE_TIME()
     DEFINE_FPGA_PRE()
@@ -4465,19 +4451,7 @@ static prop_t property_table[] = {
 #define X(ch, tx, crx, ctx) DEFINE_TX_CHANNEL(ch)
     TX_CHANNELS
 #undef X
-#define X(ch, tx, crx, ctx) DEFINE_CH_CM(ch)
-#if NUM_RX_CHANNELS > NUM_TX_CHANNELS
-    RX_CHANNELS
-#else
-    TX_CHANNELS
-#endif
-#undef X
-#define X(ch, tx, crx, ctx) DEFINE_CH_CM_RX(ch)
-    RX_CHANNELS
-#undef X
-#define X(ch, tx, crx, ctx) DEFINE_CH_CM_TX(ch)
-    TX_CHANNELS
-#undef X
+
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
@@ -4530,25 +4504,18 @@ void patch_tree(void) {
 #define X(ch, io, crx, ctx) \
     set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
     set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
+    set_default_int("rx/" #ch "/link/src_port", base_port + rx_src_port_map[INT(ch)]*4); \
+    set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
 
     RX_CHANNELS
 #undef X
 
 #define X(ch, io, crx, ctx) \
-    set_default_int("cm/trx/" #ch "/link/device_port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);
+    set_default_int("tx/" #ch "/link/port", base_port + tx_dst_port_map[INT(ch)]*4);
 
-#if NUM_RX_CHANNELS > NUM_TX_CHANNELS
-    RX_CHANNELS
-#else
     TX_CHANNELS
-#endif
 #undef X
 
-#define X(ch, rx, crx, ctx) \
-    set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
-
-    RX_CHANNELS
-#undef X
 }
 
 size_t get_num_prop(void) { return num_properties; }
