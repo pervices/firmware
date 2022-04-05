@@ -113,6 +113,8 @@ static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc
 
 static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10", "10.10.13.10" };
 
+static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1, 2 };
+
 // Registers containing both the src port for rx and dst port for tx (same value)
 static const char *device_side_port_map[NUM_RX_CHANNELS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15" };
 
@@ -4540,6 +4542,12 @@ void patch_tree(void) {
 #else
     TX_CHANNELS
 #endif
+#undef X
+
+#define X(ch, rx, crx, ctx) \
+    set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
+
+    RX_CHANNELS
 #undef X
 }
 
