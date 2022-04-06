@@ -134,6 +134,13 @@ static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", 
 static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
 static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
 
+static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
+static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
+static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
+
+static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7", "txq7", "txr7"};
+static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8", "txq8", "txr8"};
+
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12", "flc44", "flc46", "flc48" };
 //most significant 32 bits used to store underflow count
@@ -438,10 +445,15 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
     char regname_msw[8];
     char regname_lsw[8];
 
-    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        snprintf(regname_msw, sizeof(regname_msw), tx_nsamp_msw_map[(*chan)-'a']);
+        snprintf(regname_lsw, sizeof(regname_lsw), tx_nsamp_lsw_map[(*chan)-'a']);
+    } else {
+        snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 7 : 10);
-    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
+        snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 8 : 11);
+    }
 
     val_msw = num >> 32;
     val_lsw = num & 0xffffffff;
@@ -459,10 +471,7 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
     if(tx) {
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-        return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(tx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
     }
     else {
         return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
@@ -470,13 +479,10 @@ static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
-    if(tx) {
-        unsigned shift;
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-                tx ? 6 : 9);
-        shift = sma ? 0 : 4;
-        return set_reg_bits(reg_name, shift, 1, edge);
+    if(tx && sma) {
+        return set_reg_bits(tx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+    } else if(tx && !sma) {
+        return set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     } else if( !tx && sma) {
         set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
