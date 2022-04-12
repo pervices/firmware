@@ -122,6 +122,13 @@ static const char *rx_trig_sel_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 static const char *rx_trig_sma_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 static const char *rx_trig_ufl_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 
+static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+
+static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txi7", "txj7", "txk7", "txl7" };
+static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txi7", "txj8", "txk8", "txl8" };
+
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[4] = { "flc6", "flc8", "flc10", "flc12" };
 //most significant 32 bits used to store underflow count
@@ -424,10 +431,15 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
     char regname_msw[8];
     char regname_lsw[8];
 
-    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        snprintf(regname_msw, sizeof(regname_msw), tx_nsamp_msw_map[(*chan)-'a']);
+        snprintf(regname_lsw, sizeof(regname_lsw), tx_nsamp_lsw_map[(*chan)-'a']);
+    } else {
+        snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 7 : 10);
-    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
+        snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 8 : 11);
+    }
 
     val_msw = num >> 32;
     val_lsw = num & 0xffffffff;
@@ -445,10 +457,7 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
     if(tx) {
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-        return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(tx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
     }
     else {
         return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
@@ -456,13 +465,10 @@ static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
-    if(tx) {
-        unsigned shift;
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-                tx ? 6 : 9);
-        shift = sma ? 0 : 4;
-        return set_reg_bits(reg_name, shift, 1, edge);
+    if(tx && sma) {
+        return set_reg_bits(tx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+    } else if(tx && !sma) {
+        return set_reg_bits(tx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     } else if( !tx && sma) {
         set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
@@ -1086,8 +1092,8 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             bypass = 0;\
             sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
         }\
-        /*bit 0 of tx_0 is used to determine whether or not to bypass the dsp*/\
-        read_hps_reg("tx" STR(ch) "0", &reg_val);\
+        /*bit 0 of tx_2 is used to determine whether or not to bypass the dsp*/\
+        read_hps_reg("tx" STR(ch) "2", &reg_val);\
         reg_val = reg_val & ~1;\
         reg_val = reg_val | bypass;\
         write_hps_reg("tx" STR(ch) "0", reg_val);\
