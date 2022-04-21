@@ -78,6 +78,7 @@
 #define STREAM_OFF 0
 
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
+#define RX_JESD_RESET_MASK 0xff0
 
 #ifdef RTM3
     #define USE_RTM3 1
@@ -1347,6 +1348,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
+            PRINT(INFO, "Skipping turning of board due to issues when reinitializing JESD\n");\
+            return RETURN_SUCCESS;\
             set_property("rx/" STR(ch) "/board/pwr_board", "0");\
                                                                                \
             rx_power[INT(ch)] = PWR_OFF;                                       \
@@ -3383,6 +3386,12 @@ void jesd_reset_all() {
         }
 
     }
+    //usleep(2000000);
+    write_hps_reg("res_rw7", RX_JESD_RESET_MASK);
+    //usleep(2000000);
+    write_hps_reg("res_rw7", 0);
+    //usleep(2000000);
+    set_property("time/sync/lmk_sync_tgl_jesd", "1");
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
