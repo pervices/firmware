@@ -1277,38 +1277,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         int reset;                                                            \
         sscanf(data, "%i", &reset);                                           \
         if (!reset) return RETURN_SUCCESS;\
-        \
-        /*Using sysref pulses would be better, but the pulses have problems*/\
-        set_property("time/sync/sysref_mode", "continuous");\
-        usleep(100000);\
-        \
-        /*enables responding to sysref*/\
-        strcpy(buf, "board -s 1\r");\
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        /*Resets JESD on FPGA*/\
-        usleep(300000);\
-        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
-        /*this wait is needed*/\
-        usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
-        /*this wait is need*/\
-        usleep(300000);\
-        \
-        /*disable responding to sysref*/\
-        strcpy(buf, "board -s 0\r");\
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        \
-        usleep(300000);\
-        /*Resets JESD on FPGA*/\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
-        /*this wait is needed*/\
-        usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
-        /*this wait is need*/\
-        usleep(300000);\
-        \
-        set_property("time/sync/sysref_mode", "pulsed");\
+        jesd_reset_all();\
         \
         return RETURN_SUCCESS;                                                 \
     }\
@@ -1348,8 +1317,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
-            PRINT(INFO, "Skipping turning of board due to issues when reinitializing JESD\n");\
-            return RETURN_SUCCESS;\
             set_property("rx/" STR(ch) "/board/pwr_board", "0");\
                                                                                \
             rx_power[INT(ch)] = PWR_OFF;                                       \
@@ -3363,34 +3330,10 @@ void sync_channels(uint8_t chan_mask) {
 }
 
 void jesd_reset_all() {
-    int chan;
-    char reset_path[PROP_PATH_LEN];
-    char status_path[PROP_PATH_LEN];
-    int attempts;
-    attempts = 0;
-    for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-        //Skips empty boards, off boards, and boards that have not begun initialization
-        //Note: make sure when this is called in pwr that the board being turned on is already set as on
-        if(rx_power[chan]!=PWR_ON) {
-            continue;
-        }
-        sprintf(reset_path, "rx/%c/jesd/reset", chan+'a');
-        sprintf(status_path, "rx/%c/jesd/status", chan+'a');
-        while(property_good(status_path) != 1) {
-            if(attempts >= max_attempts) {
-                PRINT(ERROR, "JESD link for channel %c failed after %i attempts \n", chan+'a', max_attempts);
-                break;
-            }
-            attempts++;
-            set_property(reset_path, "1");
-        }
-
-    }
-    //usleep(2000000);
+    write_hps_reg("res_rw7",0x10000000);
+    write_hps_reg("res_rw7",0x0);
     write_hps_reg("res_rw7", RX_JESD_RESET_MASK);
-    //usleep(2000000);
     write_hps_reg("res_rw7", 0);
-    //usleep(2000000);
     set_property("time/sync/lmk_sync_tgl_jesd", "1");
 }
 
