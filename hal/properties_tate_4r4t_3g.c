@@ -3067,6 +3067,9 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma to activate when high (there is a pullup resistor so not connected is high)
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
