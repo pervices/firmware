@@ -108,6 +108,18 @@
     #define USE_RTM3 false
 #endif
 
+static const char *rx_sfp_map[NUM_CHANNELS] = { "sfpa", "sfpb", "sfpc", "sfpd" };
+static const char *tx_sfp_map[NUM_CHANNELS] = { "sfpa", "sfpb", "sfpc", "sfpd" };
+
+static const char *rx_ip_dst[NUM_CHANNELS] = { "10.10.10.10", "10.10.11.10", "10.10.12.10", "10.10.13.10" };
+
+static const int rx_jesd_map[NUM_CHANNELS] = { 0, 0, 0, 0 };
+
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+static const char *device_side_port_map[16] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+static const int tx_dst_port_map[NUM_CHANNELS] = { 0, 1, 2, 3 };
+static const int rx_src_port_map[NUM_CHANNELS] = { 0, 1, 2, 3 };
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -122,6 +134,13 @@ static const char *rx_trig_sel_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 static const char *rx_trig_sma_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 static const char *rx_trig_ufl_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 
+static const char *tx_trig_sel_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_sma_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_ufl_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+
+static const char *tx_nsamp_msw_map[NUM_CHANNELS] = { "txi7", "txj7", "txk7", "txl7" };
+static const char *tx_nsamp_lsw_map[NUM_CHANNELS] = { "txi7", "txj8", "txk8", "txl8" };
+
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[4] = { "flc6", "flc8", "flc10", "flc12" };
 //most significant 32 bits used to store underflow count
@@ -132,8 +151,10 @@ static const char *tx_oflow_map_lsb[4] = { "flc14", "flc16", "flc18", "flc20" };
 static const char *tx_oflow_map_msb[4] = { "flc15", "flc17", "flc19", "flc21" };
 
 //used to figure out which register, and where in the register to set dsp gain
-static const char *rxg_map[1] = { "rxga" };
-static const char *txg_map[1] = { "txga" };
+//ch0 uses [7:0] of the map[0], ch1 uses [15:8] of map[0], ch4 uses [7:0] of map[1]
+//most variant do not use all registers in this map
+static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
+static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -424,10 +445,15 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
     char regname_msw[8];
     char regname_lsw[8];
 
-    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        snprintf(regname_msw, sizeof(regname_msw), tx_nsamp_msw_map[(*chan)-'a']);
+        snprintf(regname_lsw, sizeof(regname_lsw), tx_nsamp_lsw_map[(*chan)-'a']);
+    } else {
+        snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 7 : 10);
-    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
+        snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 8 : 11);
+    }
 
     val_msw = num >> 32;
     val_lsw = num & 0xffffffff;
@@ -445,10 +471,7 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
     if(tx) {
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-        return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(tx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
     }
     else {
         return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
@@ -456,13 +479,10 @@ static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
-    if(tx) {
-        unsigned shift;
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-                tx ? 6 : 9);
-        shift = sma ? 0 : 4;
-        return set_reg_bits(reg_name, shift, 1, edge);
+    if(tx && sma) {
+        return set_reg_bits(tx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+    } else if(tx && !sma) {
+        return set_reg_bits(tx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     } else if( !tx && sma) {
         set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
@@ -1086,8 +1106,8 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             bypass = 0;\
             sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
         }\
-        /*bit 0 of tx_0 is used to determine whether or not to bypass the dsp*/\
-        read_hps_reg("tx" STR(ch) "0", &reg_val);\
+        /*bit 0 of tx_2 is used to determine whether or not to bypass the dsp*/\
+        read_hps_reg("tx" STR(ch) "2", &reg_val);\
         reg_val = reg_val & ~1;\
         reg_val = reg_val | bypass;\
         write_hps_reg("tx" STR(ch) "0", reg_val);\
@@ -1237,56 +1257,17 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
     static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        /* NOTE: This is strictly for tate 4t*/                                \
-        char channel = CHR(ch);                                                \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
+        sprintf(ret, tx_sfp_map[INT(ch)]);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
+    \
+    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "15", port);                                 \
+        write_hps_reg(device_side_port_map[tx_dst_port_map[INT(ch)]], port);   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
-        /* CH1 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch2port(const char *data, char *ret) {      \
-        /* CH2 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
-        /* CH3 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
-        /* CH4 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch5port(const char *data, char *ret) {      \
-        /* CH5 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    \
-    /*Interface for setting the port for every channel. Currently only ch0 is used*/\
-    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
-        set_property("tx/" STR(ch) "/link/ch0port", data);\
-        get_property("tx/" STR(ch) "/link/ch0port", ret, MAX_PROP_LEN);       \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    \
+                                                                            \
     static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
         sscanf(data, "%i", &swap);                                           \
@@ -2201,9 +2182,7 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        /* NOTE: This is strictly for tate 4r*/                                \
-        char channel = CHR(ch);                                                \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
+        sprintf(ret, rx_sfp_map[INT(ch)]);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2211,6 +2190,13 @@ CHANNELS
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("rx" STR(ch) "8", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    static int hdlr_rx_##ch##_link_src_port(const char *data, char *ret) {         \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg(device_side_port_map[rx_src_port_map[INT(ch)]], port);   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2982,7 +2968,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     sscanf(data, "%li", &stream);
     char path_buffer[MAX_PATH_LEN];
     if(stream != 0) {
-        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        for(int n = 0; n < NUM_CHANNELS; n++) {
             //stops any existing force streaming
             sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
@@ -2992,7 +2978,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma trigger to activate when it is low (pullup reistor will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
-        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        for(int n = 0; n < NUM_CHANNELS; n++) {
             if(stream & 1 << n) {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
@@ -3007,7 +2993,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
-        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        for(int n = 0; n < NUM_CHANNELS; n++) {
             //stops any existing force streaming
             sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
@@ -4231,6 +4217,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/src_port"            , hdlr_rx_##_c##_link_src_port,           RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0", RP, #_c)\
@@ -4261,12 +4248,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", TP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", TP, #_c)      \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch0port"             , hdlr_tx_##_c##_link_ch0port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0", TP, #_c)            \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0", TP, #_c)         \
@@ -4523,24 +4504,21 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42836;
 
-#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
-    CHANNELS
-#undef X
-
-set_default_str("rx/a/link/ip_dest","10.10.10.10");
-set_default_str("rx/b/link/ip_dest","10.10.11.10");
-set_default_str("rx/c/link/ip_dest","10.10.12.10");
-set_default_str("rx/d/link/ip_dest","10.10.13.10");
-
-#define X(ch, io, crx, ctx)                                                                                       \
-    set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch1port", base_port + INT_TX(ch)*4 + 1 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch3port", base_port + INT_TX(ch)*4 + 2 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch4port", base_port + INT_TX(ch)*4 + 3 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);                  \
+#define X(ch, io, crx, ctx) \
+    set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
+    set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
+    set_default_int("rx/" #ch "/link/src_port", base_port + rx_src_port_map[INT(ch)]*4); \
+    set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
 
     CHANNELS
 #undef X
+
+#define X(ch, io, crx, ctx) \
+    set_default_int("tx/" #ch "/link/port", base_port + tx_dst_port_map[INT(ch)]*4);
+
+    CHANNELS
+#undef X
+
 }
 
 size_t get_num_prop(void) { return num_properties; }
@@ -4750,7 +4728,7 @@ void jesd_reset_all() {
     char status_path[PROP_PATH_LEN];
     int attempts;
     attempts = 0;
-    for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+    for(chan = 0; chan < NUM_CHANNELS; chan++) {
         //Skips empty boards, off boards, and boards that have not begun initialization
         //Note: make sure when this is called in pwr that the board being turned on is already set as on
         if(rx_power[chan]!=PWR_ON) {

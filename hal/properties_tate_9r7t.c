@@ -482,7 +482,7 @@ static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
     if(tx && sma) {
         return set_reg_bits(tx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if(tx && !sma) {
-        return set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
+        return set_reg_bits(tx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     } else if( !tx && sma) {
         set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
