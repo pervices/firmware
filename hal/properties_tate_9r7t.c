@@ -49,6 +49,8 @@
 #define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
+//Remember to adjust hdlr_tx_##ch##_trigger_edge_sample_num when changing the sample rate
+
 // TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
 #define TX_DSP_NCO_CONST \
     ((double)4.294967296)
@@ -559,10 +561,19 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
-        else {\
-            r = set_edge_sample_num(true, #ch, val);        \
-            \
+        \
+        char s_rate[100];\
+        get_property("tx/" STR(ch) "/dsp/rate", s_rate, 100);\
+        double rate = 0;\
+        sscanf(s_rate, "%lf", &rate);\
+        /* Adjustment to number of samples requested, to get around an issue that would be difficult to fix in the FPGA */\
+        /* This adjustment will result in the correct final number */\
+        if( rate <= 500000000 ) {\
+            val -= 2;\
+        } else {\
+            val -= 4;\
         }\
+        r = set_edge_sample_num(true, #ch, val);        \
         return r;                                                              \
     }                                                                          \
                                                                                \

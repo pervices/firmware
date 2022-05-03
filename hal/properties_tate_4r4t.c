@@ -49,7 +49,7 @@
 #define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
-//Remember to adjust the
+//Remember to adjust hdlr_tx_##ch##_trigger_edge_sample_num when changing the sample rate
 
 // TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
 #define TX_DSP_NCO_CONST \
