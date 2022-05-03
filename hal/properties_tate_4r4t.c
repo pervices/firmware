@@ -1122,7 +1122,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         read_hps_reg("tx" STR(ch) "2", &reg_val);\
         reg_val = reg_val & ~1;\
         reg_val = reg_val | bypass;\
-        write_hps_reg("tx" STR(ch) "0", reg_val);\
+        write_hps_reg("tx" STR(ch) "2", reg_val);\
         \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
