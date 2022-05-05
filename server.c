@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
             read_hps_reg("sys4", &ver31_0);
             printf("FPGA: %01x%08x\n", (ver39_32 & 0xf), (ver31_0 & 0xffffffff));
             read_hps_reg("res_ro11", &verjesd);
-            printf("JESD: %02x\n", (verjesd & 0xff00) >> 8);
+            printf("JESD: %02x\n", (verjesd & 0xff0000) >> 16);
 
             return 0;
         }
