@@ -142,7 +142,7 @@ static const char *tx_trig_sma_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6"
 static const char *tx_trig_ufl_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
 
 static const char *tx_nsamp_msw_map[NUM_CHANNELS] = { "txi7", "txj7", "txk7", "txl7" };
-static const char *tx_nsamp_lsw_map[NUM_CHANNELS] = { "txi7", "txj8", "txk8", "txl8" };
+static const char *tx_nsamp_lsw_map[NUM_CHANNELS] = { "txi8", "txj8", "txk8", "txl8" };
 
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[4] = { "flc6", "flc8", "flc10", "flc12" };
