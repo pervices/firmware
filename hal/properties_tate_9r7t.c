@@ -570,11 +570,13 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         sscanf(s_rate, "%lf", &rate);\
         /* Adjustment to number of samples requested, to get around an issue that would be difficult to fix in the FPGA */\
         /* This adjustment will result in the correct final number */\
-        if( rate <= 500000000 ) {\
+        if( rate < 500000000 ) {/*TODO fix to account for rs register*/\
             val -= 2;\
-        } else {\
-            val -= 4;\
-        }\
+        } else if (rate > 500000000 ){\
+            val -= 20;\
+        } else { /*rate == 500MSPS*/\
+            val -= 10; \
+        } \
         r = set_edge_sample_num(true, #ch, val);        \
         return r;                                                              \
     }                                                                          \
