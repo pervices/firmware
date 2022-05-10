@@ -49,6 +49,8 @@
 #define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
+//Remember to adjust hdlr_tx_##ch##_trigger_edge_sample_num when changing the sample rate
+
 // TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
 #define TX_DSP_NCO_CONST \
     ((double)4.294967296)
@@ -116,7 +118,9 @@ static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", 
 static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1, 2 };
 
 // Registers contianing the src port for rx and dst port for tx overlap but are not identical
-static const char *device_side_port_map[16] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+#define TOTAL_NUM_PORTS 16
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+static const char *device_side_port_map[TOTAL_NUM_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
 static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4, 5, 8, 9, 12, 13};
 static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
@@ -559,10 +563,19 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
-        else {\
-            r = set_edge_sample_num(true, #ch, val);        \
-            \
+        \
+        char s_rate[100];\
+        get_property("tx/" STR(ch) "/dsp/rate", s_rate, 100);\
+        double rate = 0;\
+        sscanf(s_rate, "%lf", &rate);\
+        /* Adjustment to number of samples requested, to get around an issue that would be difficult to fix in the FPGA */\
+        /* This adjustment will result in the correct final number */\
+        if( rate <= 500000000 ) {\
+            val -= 2;\
+        } else {\
+            val -= 4;\
         }\
+        r = set_edge_sample_num(true, #ch, val);        \
         return r;                                                              \
     }                                                                          \
                                                                                \
@@ -1107,10 +1120,10 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
         }\
         /*bit 0 of tx_0 is used to determine whether or not to bypass the dsp*/\
-        read_hps_reg("tx" STR(ch) "0", &reg_val);\
+        read_hps_reg("tx" STR(ch) "2", &reg_val);\
         reg_val = reg_val & ~1;\
         reg_val = reg_val | bypass;\
-        write_hps_reg("tx" STR(ch) "0", reg_val);\
+        write_hps_reg("tx" STR(ch) "2", reg_val);\
         \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
@@ -2994,6 +3007,9 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma to activate when high (there is a pullup resistor so not connected is high)
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
@@ -3491,6 +3507,15 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
 
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
     sync_channels(15);
+    return RETURN_SUCCESS;
+}
+
+//In the current FPGA all possible tx ports are created, but only certain ones are used
+//This resets all ports to 0 at the stat of serfer boot, then the ports get set while initializing tx
+static int hdlr_fpga_link_clear_tx_ports(const char *data, char *ret) {
+    for(int n = 0; n < TOTAL_NUM_PORTS; n++) {
+        write_hps_reg(device_side_port_map[n], 0);
+    }
     return RETURN_SUCCESS;
 }
 
@@ -4359,6 +4384,7 @@ GPIO_PINS
 #define DEFINE_FPGA_PRE()\
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "1", SP, NAC)    \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/clear_tx_ports"            , hdlr_fpga_link_clear_tx_ports,             RW, "0", SP, NAC)
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
