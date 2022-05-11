@@ -569,12 +569,20 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         /* Adjustment to number of samples requested, the FPGA will stop sending samples a deterministic amount of time after send the number written to this register */\
         /* This adjustment will result in the correct final number */\
         if( rate == 1000000000 ) {\
+            val = (uint64_t)(val/4)*4;\
+            sprintf(ret, "%lu", val);\
             val -= 20;\
         } else if (rate >= 500000000 ) {\
+            val = (uint64_t)(val/2)*2;\
+            sprintf(ret, "%lu", val);\
             val -= 10;\
         } else if (rate >= 250000000) {\
+            val = (uint64_t)(val/2)*2;\
+            sprintf(ret, "%lu", val);\
             val -= 4; \
         } else if (rate >= 100000000) {\
+            val = (uint64_t)(val/2)*2;\
+            sprintf(ret, "%lu", val);\
             val -= 2;\
         }\
         r = set_edge_sample_num(true, #ch, val);        \

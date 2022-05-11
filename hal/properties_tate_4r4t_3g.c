@@ -551,6 +551,8 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         /* Adjustment to number of samples requested, the FPGA will stop sending samples a deterministic amount of time after send the number written to this register */\
+        val = (uint64_t)(val/2)*8;\
+        sprintf(ret, "%lu", val);\
         val -= 40;\
         \
         r = set_edge_sample_num(true, #ch, val);        \
