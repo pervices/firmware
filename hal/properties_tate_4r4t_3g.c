@@ -113,6 +113,11 @@
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 #define INDIVIDUAL_RESET_BIT_OFFSET_TX 16
 
+// The FPGA is hard coded assuming each sample contains 16 bits, this unit uses 12 so the stream command needs to say 3/4 of the actual amount, since 12 is 3/4 of 16
+// Equivalents of these also need to be changed in UHD
+#define TATE_4R4T_3G_SAMPS_NUM_RX 3
+#define TATE_4R4T_3G_SAMPS_DEM_RX 4
+
 #ifdef RTM3
     #define USE_RTM3 true
 #else
@@ -644,6 +649,8 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         int r;                                                                 \
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
+        r = r * TATE_4R4T_3G_SAMPS_NUM_RX / TATE_4R4T_3G_SAMPS_DEM_RX;\
+        sprintf(ret, "%lu", r);                                             \
         if(r != RETURN_SUCCESS) return r;\
         else {\
             r = set_edge_sample_num(false, #ch, val);        \
