@@ -117,6 +117,8 @@
 // Equivalents of these also need to be changed in UHD
 #define TATE_4R4T_3G_SAMPS_NUM_RX 3
 #define TATE_4R4T_3G_SAMPS_DEM_RX 4
+// The number of samples per trigger must be a multiple of this
+#define TATE_4R4T_3G_SAMPS_MULTIPLE_RX 2208
 
 #ifdef RTM3
     #define USE_RTM3 true
@@ -649,8 +651,10 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         int r;                                                                 \
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
-        r = r * TATE_4R4T_3G_SAMPS_NUM_RX / TATE_4R4T_3G_SAMPS_DEM_RX;\
-        sprintf(ret, "%lu", r);                                             \
+        val = val * TATE_4R4T_3G_SAMPS_NUM_RX / TATE_4R4T_3G_SAMPS_DEM_RX;\
+        val = (val / TATE_4R4T_3G_SAMPS_MULTIPLE_RX) * TATE_4R4T_3G_SAMPS_MULTIPLE_RX;\
+        uint64_t actual_nsamps = val * TATE_4R4T_3G_SAMPS_DEM_RX / TATE_4R4T_3G_SAMPS_NUM_RX;\
+        sprintf(ret, "%lu", actual_nsamps);                                             \
         if(r != RETURN_SUCCESS) return r;\
         else {\
             r = set_edge_sample_num(false, #ch, val);        \
