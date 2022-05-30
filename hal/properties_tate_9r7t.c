@@ -49,6 +49,8 @@
 #define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
+//Remember to adjust hdlr_tx_##ch##_trigger_edge_sample_num when changing the sample rate
+
 // TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
 #define TX_DSP_NCO_CONST \
     ((double)4.294967296)
@@ -99,8 +101,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
-#define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
-#define INDIVIDUAL_RESET_BIT_OFFSET_TX 16
+#define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
+#define INDIVIDUAL_RESET_BIT_OFFSET_TX 13
 
 #ifdef RTM3
     #define USE_RTM3 true
@@ -111,10 +113,21 @@
 static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd", "sfpd" };
 static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
 
+static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10", "10.10.13.10" };
+
+static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1, 2 };
+
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+#define TOTAL_NUM_PORTS 16
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+static const char *device_side_port_map[TOTAL_NUM_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4, 5, 8, 9, 12, 13};
+static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
-static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxe4", "rxi4", "rxm4", "rxb4", "rxf4", "rxj4", "rxn4", "rxc4" };
+static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4", "rxo4" };
 
 static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4" };
 
@@ -124,6 +137,13 @@ static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd
 static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
 static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
 static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
+
+static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
+static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
+static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
+
+static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7", "txq7", "txr7"};
+static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8", "txq8", "txr8"};
 
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12", "flc44", "flc46", "flc48" };
@@ -371,6 +391,7 @@ static int valid_trigger_mode(const char *data, bool *edge) {
     } else if (0 == strncmp("level", data, strlen("level"))) {
         *edge = false;
     } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
 
@@ -431,10 +452,15 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
     char regname_msw[8];
     char regname_lsw[8];
 
-    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        snprintf(regname_msw, sizeof(regname_msw), tx_nsamp_msw_map[(*chan)-'a']);
+        snprintf(regname_lsw, sizeof(regname_lsw), tx_nsamp_lsw_map[(*chan)-'a']);
+    } else {
+        snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 7 : 10);
-    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
+        snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 8 : 11);
+    }
 
     val_msw = num >> 32;
     val_lsw = num & 0xffffffff;
@@ -452,10 +478,7 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
     if(tx) {
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-        return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(tx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
     }
     else {
         return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
@@ -463,13 +486,10 @@ static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
-    if(tx) {
-        unsigned shift;
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-                tx ? 6 : 9);
-        shift = sma ? 0 : 4;
-        return set_reg_bits(reg_name, shift, 1, edge);
+    if(tx && sma) {
+        return set_reg_bits(tx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+    } else if(tx && !sma) {
+        return set_reg_bits(tx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     } else if( !tx && sma) {
         set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
@@ -540,16 +560,36 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         return r;                                                              \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
-                                                      char *ret) {             \
+    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data, char *ret) {\
         int r;                                                                 \
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
-        else {\
-            r = set_edge_sample_num(true, #ch, val);        \
-            \
+        \
+        char s_rate[100];\
+        get_property("tx/" STR(ch) "/dsp/rate", s_rate, 100);\
+        double rate = 0;\
+        sscanf(s_rate, "%lf", &rate);\
+        /* Adjustment to number of samples requested, the FPGA will stop sending samples a deterministic amount of time after send the number written to this register */\
+        /* This adjustment will result in the correct final number */\
+        if( rate == 1000000000 ) {\
+            val = (uint64_t)(val/4)*4;\
+            sprintf(ret, "%lu", val);\
+            val -= 20;\
+        } else if (rate >= 500000000 ) {\
+            val = (uint64_t)(val/2)*2;\
+            sprintf(ret, "%lu", val);\
+            val -= 10;\
+        } else if (rate >= 250000000) {\
+            val = (uint64_t)(val/2)*2;\
+            sprintf(ret, "%lu", val);\
+            val -= 4; \
+        } else if (rate >= 100000000) {\
+            val = (uint64_t)(val/2)*2;\
+            sprintf(ret, "%lu", val);\
+            val -= 2;\
         }\
+        r = set_edge_sample_num(true, #ch, val);        \
         return r;                                                              \
     }                                                                          \
                                                                                \
@@ -604,7 +644,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_mode(#ch, &val);\
+        r = valid_trigger_mode(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
             r = set_trigger_mode(true, false, #ch, val);        \
@@ -943,7 +983,16 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
-        if ((band == 0) || (band == 1) || (band == 2)) {                       \
+        if (band == 0) {                       \
+            if(USE_RTM3) {\
+                set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            } else {\
+                set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+            }\
+            strcpy(buf, "rf -b ");                                             \
+            sprintf(buf + strlen(buf),"%i", band);                             \
+            strcat(buf, "\r");                                                 \
+        } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
@@ -1089,10 +1138,10 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
         }\
         /*bit 0 of tx_0 is used to determine whether or not to bypass the dsp*/\
-        read_hps_reg("tx" STR(ch) "0", &reg_val);\
+        read_hps_reg("tx" STR(ch) "2", &reg_val);\
         reg_val = reg_val & ~1;\
         reg_val = reg_val | bypass;\
-        write_hps_reg("tx" STR(ch) "0", reg_val);\
+        write_hps_reg("tx" STR(ch) "2", reg_val);\
         \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
@@ -1242,51 +1291,14 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         sprintf(ret, tx_sfp_map[INT(ch)]);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch0port(const char *data, char *ret) {      \
+    \
+    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("tx" STR(ch) "15", port);                                 \
+        write_hps_reg(device_side_port_map[tx_dst_port_map[INT(ch)]], port);   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_link_ch1port(const char *data, char *ret) {      \
-        /* CH1 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch2port(const char *data, char *ret) {      \
-        /* CH2 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch3port(const char *data, char *ret) {      \
-        /* CH3 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch4port(const char *data, char *ret) {      \
-        /* CH4 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_link_ch5port(const char *data, char *ret) {      \
-        /* CH5 CURRENTLY UNSUPPORTED */                                        \
-        sprintf(ret, "0");\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    \
-    /*Interface for setting the port for every channel. Currently only ch0 is used*/\
-    static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
-        set_property("tx/" STR(ch) "/link/ch0port", data);\
-        get_property("tx/" STR(ch) "/link/ch0port", ret, MAX_PROP_LEN);       \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    \
     static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
         sscanf(data, "%i", &swap);                                           \
@@ -1301,14 +1313,12 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch0fifo_lvl(const char *data, char *ret) {    \
-        PRINT(ERROR, "Starting\n");\
         uint32_t lvl;                                                          \
         char lvl_reg[20];\
         sprintf(lvl_reg, "res_ro%i", INT(ch)+4);\
         read_hps_reg(lvl_reg, &lvl);                                         \
         lvl &= 0xffff;                                                         \
         sprintf(ret, "%u", lvl);                                               \
-        PRINT(ERROR, "Finishing\n");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1881,8 +1891,8 @@ TX_CHANNELS
                 gain = gain - AM1081_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = LTC5586_MAX_GAIN;\
                 atten = 0;\
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -1929,7 +1939,7 @@ TX_CHANNELS
             } else {\
                 lna_bypass = 0;\
                 atten = 0;\
-                /*gain deliberately unmodified*/                            \
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -2013,8 +2023,8 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        strcpy(buf, "board -t\r");                              \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        strcpy(buf, "board -u\r");                              \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2081,7 +2091,7 @@ TX_CHANNELS
         uint32_t bypass = 0;\
         \
         /*If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff*/\
-        if(rate > ((RX_BASE_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
+        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
@@ -2207,10 +2217,18 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /* Destination UDP port for rx*/\
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("rx" STR(ch) "8", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    static int hdlr_rx_##ch##_link_src_port(const char *data, char *ret) {         \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg(device_side_port_map[rx_src_port_map[INT(ch)]], port);   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2315,7 +2333,6 @@ TX_CHANNELS
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
-            PRINT(ERROR, "T2\n");\
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
@@ -2323,7 +2340,6 @@ TX_CHANNELS
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
-            PRINT(ERROR, "Sending command: %s\n", pwr_cmd);\
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_OFF;\
         }\
@@ -2655,6 +2671,7 @@ RX_CHANNELS
     }
 TX_CHANNELS
 #undef X
+
 
 /* -------------------------------------------------------------------------- */
 /* ------------------------------ CHANNEL MASK ------------------------------ */
@@ -3060,6 +3077,8 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             if(stream & 1 << n) {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
+                sprintf(path_buffer, "rx/%c/trigger/sma_mode", n+'a');
+                set_property(path_buffer, "level");
             } else {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "0");
@@ -3068,6 +3087,9 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma to activate when high (there is a pullup resistor so not connected is high)
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
@@ -3568,6 +3590,15 @@ static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+//In the current FPGA all possible tx ports are created, but only certain ones are used
+//This resets all ports to 0 at the stat of serfer boot, then the ports get set while initializing tx
+static int hdlr_fpga_link_clear_tx_ports(const char *data, char *ret) {
+    for(int n = 0; n < TOTAL_NUM_PORTS; n++) {
+        write_hps_reg(device_side_port_map[n], 0);
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
     strcpy(buf, "board -r\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -3766,12 +3797,6 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     char i2c_value[512];
 
     i2c_return = popen("cat /sys/bus/i2c/devices/1-0050/eeprom", "r");
-    if (i2c_return != 0) {
-        sprintf(ret, "UNKNOWN: EEPROM read error"); // NEVER CHANGE THIS PRINT, IT WILL BREAK THE AUTOMATIC UPDATE TOOL
-        pclose(i2c_return);
-        return RETURN_SUCCESS;
-    }
-
     fgets(i2c_value, sizeof(i2c_value), i2c_return);
     pclose(i2c_return);
     sprintf(ret, "%s",i2c_value);
@@ -4261,7 +4286,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level", RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", RP, #_c)  \
-    DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
@@ -4291,12 +4316,13 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_rx_##_c##_about_sw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/src_port"            , hdlr_rx_##_c##_link_src_port,           RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)
 
 #define DEFINE_TX_WAIT_PWR(_c) \
@@ -4324,13 +4350,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", TP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", TP, #_c)      \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch0port"             , hdlr_tx_##_c##_link_ch0port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch1port"             , hdlr_tx_##_c##_link_ch1port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch2port"             , hdlr_tx_##_c##_link_ch2port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch3port"             , hdlr_tx_##_c##_link_ch3port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch4port"             , hdlr_tx_##_c##_link_ch4port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/ch5port"             , hdlr_tx_##_c##_link_ch5port,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,            RW, "0", TP, #_c)            \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0", TP, #_c)         \
@@ -4445,6 +4465,7 @@ GPIO_PINS
 #define DEFINE_FPGA_PRE()\
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "1", SP, NAC)    \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/clear_tx_ports"            , hdlr_fpga_link_clear_tx_ports,             RW, "0", SP, NAC)
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
@@ -4537,6 +4558,7 @@ static prop_t property_table[] = {
 #define X(ch, tx, crx, ctx) DEFINE_TX_CHANNEL(ch)
     TX_CHANNELS
 #undef X
+
     DEFINE_FPGA()
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
@@ -4586,24 +4608,21 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42836;
 
-#define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
+#define X(ch, io, crx, ctx) \
+    set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
+    set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
+    set_default_int("rx/" #ch "/link/src_port", base_port + rx_src_port_map[INT(ch)]*4); \
+    set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
+
     RX_CHANNELS
 #undef X
 
-set_default_str("rx/a/link/ip_dest","10.10.10.10");
-set_default_str("rx/b/link/ip_dest","10.10.11.10");
-set_default_str("rx/c/link/ip_dest","10.10.12.10");
-set_default_str("rx/d/link/ip_dest","10.10.13.10");
-
-#define X(ch, io, crx, ctx)                                                                                       \
-    set_default_int("tx/" #ch "/link/ch0port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch1port", base_port + INT_TX(ch)*4 + 1 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch3port", base_port + INT_TX(ch)*4 + 2 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/ch4port", base_port + INT_TX(ch)*4 + 3 + NUM_CHANNELS);               \
-    set_default_int("tx/" #ch "/link/port", base_port + INT_TX(ch)*4 + 0 + NUM_CHANNELS);                  \
+#define X(ch, io, crx, ctx) \
+    set_default_int("tx/" #ch "/link/port", base_port + tx_dst_port_map[INT(ch)]*4);
 
     TX_CHANNELS
 #undef X
+
 }
 
 size_t get_num_prop(void) { return num_properties; }

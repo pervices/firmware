@@ -169,7 +169,7 @@ static void make_prop(prop_t *prop) {
         system(cmd);
 
         // TODO: replace with symlinkat(2)
-        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf %s %s",
+        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf " STATE_DIR "/%s %s",
                  prop->symlink_target, prop->path);
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);

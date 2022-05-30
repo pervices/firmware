@@ -49,6 +49,9 @@
 #define RX_DSP_NCO_CONST \
     ((double)8.589934592)
 
+//a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
+#define RATE_ROUND_BIAS 0.75
+
 //Compnent properties in rx, used to figure out how to set up game
 //This are likely to change between variants, both thier values and how they are used
 #define AM1081_GAIN 17
@@ -75,6 +78,7 @@
 #define STREAM_OFF 0
 
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
+#define RX_JESD_RESET_MASK 0xff0
 
 #ifdef RTM3
     #define USE_RTM3 1
@@ -323,6 +327,7 @@ static int valid_trigger_mode(const char *data, bool *edge) {
     } else if (0 == strncmp("level", data, strlen("level"))) {
         *edge = false;
     } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
 
@@ -742,8 +747,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                 gain = gain - AM1081_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = LTC5586_MAX_GAIN;\
                 atten = 0;\
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -790,7 +795,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else {\
                 lna_bypass = 0;\
                 atten = 0;\
-                /*gain deliberately unmodified*/                            \
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -874,7 +879,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        strcpy(buf, "board -t\r");                              \
+        strcpy(buf, "board -u\r");                              \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -941,8 +946,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /*Bypasses dsp and half band filer 2. Bypasses dsp when 1*/\
         uint32_t bypass = 0;\
         \
-        /*If sample rate is roundable to RX_BASE_SAMPLE_RATE*/\
-        if(rate > ((RX_BASE_SAMPLE_RATE+RX_DSP_SAMPLE_RATE)/2)) {\
+        /*If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff*/\
+        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
@@ -1408,6 +1413,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
+            PRINT(INFO, "Skipping turning of board due to issues when reinitializing JESD\n");\
+            return RETURN_SUCCESS;\
             set_property("rx/" STR(ch) "/board/pwr_board", "0");\
                                                                                \
             rx_power[INT(ch)] = PWR_OFF;                                       \
@@ -1801,6 +1808,8 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             if(stream & 1 << n) {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
+                sprintf(path_buffer, "rx/%c/trigger/sma_mode", n+'a');
+                set_property(path_buffer, "level");
             } else {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "0");
@@ -1809,6 +1818,9 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma to activate when high (there is a pullup resistor so not connected is high)
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
@@ -1817,9 +1829,6 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         }
         //sets the sma trigger to act as an input
         set_property("fpga/trigger/sma_dir", "input");
-        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
-        //the sma trigger should be inactive from here until the end of the function
-        set_property("fpga/trigger/sma_pol", "negative");
     }
     return RETURN_SUCCESS;
 }
@@ -2282,6 +2291,20 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
+    //does not reset if the user write a 0
+    int reset = 0;
+    sscanf(data, "%i", &reset);
+    if(!reset) return RETURN_SUCCESS;
+    uint32_t val;
+    read_hps_reg("res_rw7", &val);
+    val = val | (1 << 29);
+    write_hps_reg("res_rw7", val);
+    val = val & ~(1 << 29);
+    write_hps_reg("res_rw7", val);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
     sync_channels(15);
     return RETURN_SUCCESS;
@@ -2479,12 +2502,6 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     char i2c_value[512];
 
     i2c_return = popen("cat /sys/bus/i2c/devices/1-0050/eeprom", "r");
-    if (i2c_return != 0) {
-        sprintf(ret, "UNKNOWN: EEPROM read error"); // NEVER CHANGE THIS PRINT, IT WILL BREAK THE AUTOMATIC UPDATE TOOL
-        pclose(i2c_return);
-        return RETURN_SUCCESS;
-    }
-
     fgets(i2c_value, sizeof(i2c_value), i2c_return);
     pclose(i2c_return);
     sprintf(ret, "%s",i2c_value);
@@ -3050,6 +3067,7 @@ GPIO_PINS
 
 //This performs the step that resets the master JESD IP, it must be done before initializing the boards
 #define DEFINE_FPGA_PRE()\
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "1", SP, NAC)    \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)       \
 
 #define DEFINE_FPGA()                                                                                                         \
@@ -3428,6 +3446,12 @@ void jesd_reset_all() {
         }
 
     }
+    //usleep(2000000);
+    write_hps_reg("res_rw7", RX_JESD_RESET_MASK);
+    //usleep(2000000);
+    write_hps_reg("res_rw7", 0);
+    //usleep(2000000);
+    set_property("time/sync/lmk_sync_tgl_jesd", "1");
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,

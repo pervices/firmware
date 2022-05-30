@@ -113,6 +113,11 @@
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 #define INDIVIDUAL_RESET_BIT_OFFSET_TX 16
 
+// The FPGA is hard coded assuming each sample contains 16 bits, this unit uses 12 so the stream command needs to say 3/4 of the actual amount, since 12 is 3/4 of 16
+// Equivalents of these also need to be changed in UHD
+#define TATE_4R4T_3G_SAMPS_NUM_RX 3
+#define TATE_4R4T_3G_SAMPS_DEM_RX 4
+
 #ifdef RTM3
     #define USE_RTM3 true
 #else
@@ -133,6 +138,13 @@ static const char *rx_trig_sel_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 static const char *rx_trig_sma_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 static const char *rx_trig_ufl_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 
+static const char *tx_trig_sel_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_sma_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_ufl_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+
+static const char *tx_nsamp_msw_map[NUM_CHANNELS] = { "txi7", "txj7", "txk7", "txl7" };
+static const char *tx_nsamp_lsw_map[NUM_CHANNELS] = { "txi8", "txj8", "txk8", "txl8" };
+
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[4] = { "flc6", "flc8", "flc10", "flc12" };
 //most significant 32 bits used to store underflow count
@@ -143,8 +155,8 @@ static const char *tx_oflow_map_lsb[4] = { "flc14", "flc16", "flc18", "flc20" };
 static const char *tx_oflow_map_msb[4] = { "flc15", "flc17", "flc19", "flc21" };
 
 //used to figure out which register, and where in the register to set dsp gain
-static const char *rxg_map[1] = { "rxga" };
-static const char *txg_map[1] = { "txga" };
+static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
+static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -167,7 +179,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 0;
+int max_attempts = 2;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
@@ -377,6 +389,7 @@ static int valid_trigger_mode(const char *data, bool *edge) {
     } else if (0 == strncmp("level", data, strlen("level"))) {
         *edge = false;
     } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
 
@@ -437,10 +450,15 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
     char regname_msw[8];
     char regname_lsw[8];
 
-    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
+    if(tx) {
+        snprintf(regname_msw, sizeof(regname_msw), tx_nsamp_msw_map[(*chan)-'a']);
+        snprintf(regname_lsw, sizeof(regname_lsw), tx_nsamp_lsw_map[(*chan)-'a']);
+    } else {
+        snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 7 : 10);
-    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
+        snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 8 : 11);
+    }
 
     val_msw = num >> 32;
     val_lsw = num & 0xffffffff;
@@ -458,10 +476,7 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
     if(tx) {
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-        return set_reg_bits(reg_name, 10, 0b11, sel);
+        return set_reg_bits(tx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
     }
     else {
         return set_reg_bits(rx_trig_sel_map[(*chan)-'a'], 10, 0b11, sel);
@@ -469,13 +484,10 @@ static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
-    if(tx) {
-        unsigned shift;
-        char reg_name[8];
-        snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-                tx ? 6 : 9);
-        shift = sma ? 0 : 4;
-        return set_reg_bits(reg_name, shift, 1, edge);
+    if(tx && sma) {
+        return set_reg_bits(tx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+    } else if(tx && !sma) {
+        return set_reg_bits(tx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     } else if( !tx && sma) {
         set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
@@ -552,10 +564,13 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
-        else {\
-            r = set_edge_sample_num(true, #ch, val);        \
-            \
-        }\
+        /* Adjustment to number of samples requested, the FPGA will stop sending samples a deterministic amount of time after send the number written to this register */\
+        val = (uint64_t)(val/8)*8;\
+        sprintf(ret, "%lu", val);\
+        val -= 48;\
+        \
+        r = set_edge_sample_num(true, #ch, val);        \
+        \
         return r;                                                              \
     }                                                                          \
                                                                                \
@@ -610,7 +625,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_trigger_mode(#ch, &val);\
+        r = valid_trigger_mode(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
             r = set_trigger_mode(true, false, #ch, val);        \
@@ -637,6 +652,8 @@ static int valid_gating_mode(const char *data, bool *dsp) {
         int r;                                                                 \
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
+        r = r * TATE_4R4T_3G_SAMPS_NUM_RX / TATE_4R4T_3G_SAMPS_DEM_RX;\
+        sprintf(ret, "%lu", r);                                             \
         if(r != RETURN_SUCCESS) return r;\
         else {\
             r = set_edge_sample_num(false, #ch, val);        \
@@ -955,7 +972,13 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
-        if ((band == 0) || (band == 1) || (band == 2)) {                       \
+        if (band == 0) {                       \
+            set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            strcpy(buf, "rf -b ");                                             \
+            sprintf(buf + strlen(buf),"%i", band);                             \
+            strcat(buf, "\r");                                                 \
+        } else if ((band == 1) || (band == 2)) {                       \
+            set_property("tx/" STR(ch) "/link/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -1932,8 +1955,8 @@ CHANNELS
                 gain = gain - AM1081_GAIN;\
             } else {\
                 lna_bypass = 0;\
-                gain = LTC5586_MAX_GAIN;\
                 atten = 0;\
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -1980,7 +2003,7 @@ CHANNELS
             } else {\
                 lna_bypass = 0;\
                 atten = 0;\
-                /*gain deliberately unmodified*/                            \
+                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
             \
             /*Sets the property to enable/disable bypassing the fixed amplifier*/\
@@ -2064,7 +2087,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        strcpy(buf, "board -t\r");                              \
+        strcpy(buf, "board -u\r");                              \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
@@ -2134,7 +2157,7 @@ CHANNELS
         uint32_t bypass = 0;\
         \
         /*If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff*/\
-        if(rate > ((RX_BASE_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
+        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
@@ -3115,6 +3138,8 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             if(stream & 1 << n) {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
+                sprintf(path_buffer, "rx/%c/trigger/sma_mode", n+'a');
+                set_property(path_buffer, "level");
             } else {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "0");
@@ -3123,6 +3148,9 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma to activate when high (there is a pullup resistor so not connected is high)
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
@@ -3821,12 +3849,6 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     char i2c_value[512];
 
     i2c_return = popen("cat /sys/bus/i2c/devices/1-0050/eeprom", "r");
-    if (i2c_return != 0) {
-        sprintf(ret, "UNKNOWN: EEPROM read error"); // NEVER CHANGE THIS PRINT, IT WILL BREAK THE AUTOMATIC UPDATE TOOL
-        pclose(i2c_return);
-        return RETURN_SUCCESS;
-    }
-
     fgets(i2c_value, sizeof(i2c_value), i2c_return);
     pclose(i2c_return);
     sprintf(ret, "%s",i2c_value);
