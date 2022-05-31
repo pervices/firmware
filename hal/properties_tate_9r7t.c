@@ -2468,9 +2468,9 @@ TX_CHANNELS
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
             \
-            /* Check if low noise aplifier is in a good condition */\
+            /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
             int num_lna_attempts = 0;\
-            while(1) {\
+            while(!USE_RTM3) {\
                 snprintf(buf, 10, "rf -S\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 if(strncmp((char *)uart_ret_buf, "LNA_RDY: 1", 10) == 0) {\
