@@ -139,7 +139,7 @@ static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 1, 2, 3 };
 //Unlike most channels rx_4 uses a different patttern
 static const char *rx_reg4_map[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
 
-static const char *tx_reg4_map[4] = { "txa4", "txe4", "txi4", "txm4" };
+static const char *tx_reg4_map[4] = { "txa4", "txb4", "txc4", "txd4" };
 
 //registers used by trigger selected
 //note: this registers have multiple purposes, the code assumes bit 12:10 are used for trigger select
@@ -982,7 +982,11 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if (band == 0) {                       \
-            set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            if(USE_RTM3) {\
+                set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            } else {\
+                set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+            }\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
