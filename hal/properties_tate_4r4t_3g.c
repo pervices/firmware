@@ -984,14 +984,17 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         if (band == 0) {                       \
             if(USE_RTM3) {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+                set_property("tx/" STR(ch) "/iq/iq_swap", "1");\
             } else {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+                set_property("tx/" STR(ch) "/iq/iq_swap", "0");\
             }\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
         } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+            set_property("tx/" STR(ch) "/iq/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -1336,7 +1339,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
+    static int hdlr_tx_##ch##_iq_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
         sscanf(data, "%i", &swap);                                           \
         uint32_t old_val = 0;                                                  \
@@ -1812,8 +1815,10 @@ CHANNELS
         /* if mid or high band swap iq to address RTM3 layout issue */         \
         if (band == 0) {                                                       \
             set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
+            set_property("rx/" STR(ch) "/iq/iq_swap", "1");                    \
         } else {                                                               \
             set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
+            set_property("rx/" STR(ch) "/iq/iq_swap", "0");                    \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2242,7 +2247,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
+    static int hdlr_rx_##ch##_iq_iq_swap(const char *data, char *ret) {      \
         uint32_t old_val = 0;                                                  \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
         if (strcmp(data, "1") == 0)                                            \
@@ -2250,6 +2255,44 @@ CHANNELS
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
                                                                                \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_iq_gain_correction(const char *data, char *ret) {      \
+           double iq_gain_error = 0;                                           \
+           sscanf(data, "%lf", &iq_gain_error);                                \
+           /* Gain is expected to be between -0.5 .. +0.5dB */                 \
+           if ( iq_gain_error >= 0.5 ){                                        \
+               iq_gain_error = 0.5;                                             \
+           }                                                                   \
+           if ( iq_gain_error <= -0.5 ){                                       \
+               iq_gain_error = -0.5;                                            \
+           }                                                                   \
+         /* Set range to hex between 0x00 to 0x3F, with 0x20 being zero */     \
+         /* So we use: (<requested_gain_offset_dB> / <number of steps> ) + offset */       \
+            double iq_gain_correction = round ( ( iq_gain_correction / (double) 64 ) ) ;   \
+            uint8_t iq_gain_factor = 0x20;                                                 \
+            if ( iq_gain_correction >= 0) {                                                \
+                iq_gain_factor += (uint8_t) iq_gain_correction + (uint8_t) 0x20;           \
+            } else { /* less than zero */                                                  \
+                iq_gain_factor = (uint8_t) 0x20 - (uint8_t) iq_gain_correction;            \
+            }                                                                              \
+          strcpy(buf, "iq -g ");                                                           \
+          strcat(buf, iq_gain_factor);                                                     \
+          strcat(buf, "\r");                                                               \
+          ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));           \
+          return RETURN_SUCCESS;                                                           \
+    }                                                                          \
+    static int hdlr_rx_##ch##_iq_phase_correction(const char *data, char *ret) {      \
+           /* To do */                                           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    static int hdlr_rx_##ch##_iq_dco_i(const char *data, char *ret) {      \
+           /* To do */                                           \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    static int hdlr_rx_##ch##_iq_dco_q(const char *data, char *ret) {      \
+           /* To do */                                         \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -4276,11 +4319,15 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_swap"            , hdlr_rx_##_c##_iq_iq_swap,            RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_gaincor"         , hdlr_rx_##_c##_iq_gain_correction,      RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_phasecor"        , hdlr_rx_##_c##_iq_phase_correction,     RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_dcoffset_i"      , hdlr_rx_##_c##_iq_dco_i,                RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_dcoffset_q"      , hdlr_rx_##_c##_iq_dco_q,                RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
@@ -4304,6 +4351,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_iq_iq_swap,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0", RP, #_c)\
@@ -4335,7 +4383,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", TP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_iq_iq_swap,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0", TP, #_c)         \
