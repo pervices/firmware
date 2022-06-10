@@ -984,17 +984,17 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         if (band == 0) {                       \
             if(USE_RTM3) {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "1");\
-                set_property("tx/" STR(ch) "/iq/iq_swap", "1");\
+                set_property("tx/" STR(ch) "/rf/iq/iq_swap", "1");\
             } else {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-                set_property("tx/" STR(ch) "/iq/iq_swap", "0");\
+                set_property("tx/" STR(ch) "/rf/iq/iq_swap", "0");\
             }\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
         } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-            set_property("tx/" STR(ch) "/iq/iq_swap", "0");\
+            set_property("tx/" STR(ch) "/rf/iq/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -1815,10 +1815,10 @@ CHANNELS
         /* if mid or high band swap iq to address RTM3 layout issue */         \
         if (band == 0) {                                                       \
             set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
-            set_property("rx/" STR(ch) "/iq/iq_swap", "1");                    \
+            set_property("rx/" STR(ch) "/rf/iq/iq_swap", "1");                    \
         } else {                                                               \
             set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
-            set_property("rx/" STR(ch) "/iq/iq_swap", "0");                    \
+            set_property("rx/" STR(ch) "/rf/iq/iq_swap", "0");                    \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2261,6 +2261,7 @@ CHANNELS
     static int hdlr_rx_##ch##_iq_gain_correction(const char *data, char *ret) {      \
            double iq_gain_error = 0;                                           \
            sscanf(data, "%lf", &iq_gain_error);                                \
+           PRINT(INFO,"data as entered %lf\n", iq_gain_error);\
            /* Gain is expected to be between -0.5 .. +0.5dB */                 \
            if ( iq_gain_error >= 0.5 ){                                        \
                iq_gain_error = 0.5;                                             \
@@ -2268,34 +2269,125 @@ CHANNELS
            if ( iq_gain_error <= -0.5 ){                                       \
                iq_gain_error = -0.5;                                            \
            }                                                                   \
-         /* Set range to hex between 0x00 to 0x3F, with 0x20 being zero */     \
-         /* So we use: (<requested_gain_offset_dB> / <number of steps> ) + offset */       \
-            double iq_gain_correction = round ( ( iq_gain_correction / (double) 64 ) ) ;   \
+           PRINT(INFO,"data after limit check: %lf\n", iq_gain_error);\
+           PRINT(INFO,"Flag 0\n");                                              \
+           double step_size = 0.015625;                                          \
+            double iq_gain_correction = (iq_gain_error/step_size);                \
+            PRINT(INFO,"intermediate conversion: %lf\n",iq_gain_correction);               \
             uint8_t iq_gain_factor = 0x20;                                                 \
             if ( iq_gain_correction >= 0) {                                                \
-                iq_gain_factor += (uint8_t) iq_gain_correction + (uint8_t) 0x20;           \
+                iq_gain_factor += (uint8_t) iq_gain_correction;                            \
             } else { /* less than zero */                                                  \
-                iq_gain_factor = (uint8_t) 0x20 - (uint8_t) iq_gain_correction;            \
+                iq_gain_correction = (uint8_t) ((int)iq_gain_correction) * -1;             \
+                iq_gain_factor = (uint8_t) 0x20 - iq_gain_correction;                      \
             }                                                                              \
+            if(iq_gain_error == 0.5){                                                       \
+                iq_gain_factor -= 0x01;                                                     \
+            }                                                                               \
+            PRINT(INFO,"data after float to hex conversion: %x\n",iq_gain_factor);          \
           strcpy(buf, "iq -g ");                                                           \
-          strcat(buf, iq_gain_factor);                                                     \
+          sprintf(buf + strlen(buf), "%x", iq_gain_factor);                                \
           strcat(buf, "\r");                                                               \
           ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));           \
           return RETURN_SUCCESS;                                                           \
-    }                                                                          \
-    static int hdlr_rx_##ch##_iq_phase_correction(const char *data, char *ret) {      \
-           /* To do */                                           \
-        return RETURN_SUCCESS;                                                 \
+    }                                                                                       \
+    static int hdlr_rx_##ch##_iq_phase_correction(const char *data, char *ret) {            \
+        double iq_phase_error = 0;                                                          \
+        /*input range: -2.5 to 2.5, output range:0x0000 to 0x01FF, offset: 0x100, */        \
+        sscanf(data,"%lf",&iq_phase_error);                                                 \
+        PRINT(INFO,"data as entered %lf\n",iq_phase_error);                                 \
+        if (iq_phase_error >= 2.5){                                                         \
+            iq_phase_error = 2.5;                                                           \
+        }                                                                                   \
+        if (iq_phase_error <= -2.5){                                                        \
+            iq_phase_error = -2.5;                                                          \
+        }                                                                                   \
+        double inv_step_size = 102.4;                                                       \
+        PRINT(INFO, "data after limit check: %lf \n",iq_phase_error);                       \
+        double iq_phase_correction = (iq_phase_error*inv_step_size);                        \
+        PRINT(INFO,"intermediate conversion: %lf\n",iq_phase_correction);                   \
+        uint32_t iq_phase_factor = 0x100;                                                    \
+        if(iq_phase_correction >= 0){                                                       \
+            iq_phase_factor += (uint32_t) iq_phase_correction;                               \
+        } else{                                                                             \
+            iq_phase_correction = (uint32_t) ((int)iq_phase_correction) * -1;                \
+            iq_phase_factor = (uint32_t) 0x100 -iq_phase_correction;                         \
+        }                                                                                   \
+        if(iq_phase_error == 2.5){                                                          \
+            iq_phase_factor -= 0x01;                                                        \
+        }                                                                                   \
+        PRINT(INFO,"data after float to hex conversion: %x\n",iq_phase_factor);             \
+        strcpy(buf, "iq -p ");                                                              \
+        sprintf(buf + strlen(buf), "%x", iq_phase_factor);                                  \
+        strcat(buf, "\r");                                                                  \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));              \
+        return RETURN_SUCCESS;                                                              \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_i(const char *data, char *ret) {      \
-           /* To do */                                           \
+        double iq_dcoffset_i = 0;                                                          \
+        /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
+        sscanf(data,"%lf",&iq_dcoffset_i);                                                 \
+        PRINT(INFO,"data as entered %lf\n",iq_dcoffset_i);                                 \
+        if (iq_dcoffset_i >= 200){                                                         \
+            iq_dcoffset_i = 200;                                                           \
+        }                                                                                   \
+        if (iq_dcoffset_i <= -200){                                                        \
+            iq_dcoffset_i = -200;                                                          \
+        }                                                                                   \
+        double step_size = 1.5625;                                                       \
+        PRINT(INFO, "data after limit check: %lf \n",iq_dcoffset_i);                       \
+        double iq_dcoi_correction = (iq_dcoffset_i/step_size);                        \
+        PRINT(INFO,"intermediate conversion: %lf\n",iq_dcoi_correction);              \
+        uint8_t iq_dcoi_factor = 0x80;                                                    \
+        if(iq_dcoi_correction >= 0){                                                       \
+            iq_dcoi_factor += (uint8_t) iq_dcoi_correction;                               \
+        } else {                                                                             \
+            iq_dcoi_correction = (uint8_t) ((int)iq_dcoi_correction) * -1;                \
+            iq_dcoi_factor = (uint8_t) 0x80 -iq_dcoi_correction;                         \
+        }                                                                                   \
+        if(iq_dcoffset_i == 200){                                                          \
+            iq_dcoi_factor -= 0x01;                                                        \
+        }                                                                                   \
+        PRINT(INFO,"data after float to hex conversion: %x\n",iq_dcoi_factor);             \
+        strcpy(buf, "iq -c ");                                                              \
+        sprintf(buf + strlen(buf), "%x", iq_dcoi_factor);                                  \
+        strcat(buf, "\r");                                                                  \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_q(const char *data, char *ret) {      \
            /* To do */                                         \
+        double iq_dcoffset_q = 0;                                                          \
+        /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
+        sscanf(data,"%lf",&iq_dcoffset_q);                                                 \
+        PRINT(INFO,"data as entered %lf\n",iq_dcoffset_q);                                 \
+        if (iq_dcoffset_q >= 200){                                                         \
+            iq_dcoffset_q = 200;                                                           \
+        }                                                                                   \
+        if (iq_dcoffset_q <= -200){                                                        \
+            iq_dcoffset_q = -200;                                                          \
+        }                                                                                   \
+        double step_size = 1.5625;                                                       \
+        PRINT(INFO, "data after limit check: %lf \n",iq_dcoffset_q);                       \
+        double iq_dcoq_correction = (iq_dcoffset_q/step_size);                        \
+        PRINT(INFO,"intermediate conversion: %lf\n",iq_dcoq_correction);              \
+        uint8_t iq_dcoq_factor = 0x80;                                                    \
+        if(iq_dcoq_correction >= 0){                                                       \
+            iq_dcoq_factor += (uint8_t) iq_dcoq_correction;                               \
+        } else {                                                                             \
+            iq_dcoq_correction = (uint8_t) ((int)iq_dcoq_correction) * -1;                \
+            iq_dcoq_factor = (uint8_t) 0x80 -iq_dcoq_correction;                         \
+        }                                                                                   \
+        if(iq_dcoffset_q == 200){                                                          \
+            iq_dcoq_factor -= 0x01;                                                        \
+        }                                                                                   \
+        PRINT(INFO,"data after float to hex conversion: %x\n",iq_dcoq_factor);             \
+        strcpy(buf, "iq -C ");                                                              \
+        sprintf(buf + strlen(buf), "%x", iq_dcoq_factor);                                  \
+        strcat(buf, "\r");                                                                  \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
         /* NOTE: This is strictly for tate 4r*/                                \
@@ -4323,7 +4415,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
-    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_swap"            , hdlr_rx_##_c##_iq_iq_swap,            RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_swap"            , hdlr_rx_##_c##_iq_iq_swap,              RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_gaincor"         , hdlr_rx_##_c##_iq_gain_correction,      RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_phasecor"        , hdlr_rx_##_c##_iq_phase_correction,     RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_dcoffset_i"      , hdlr_rx_##_c##_iq_dco_i,                RW, "0", RP, #_c)         \
