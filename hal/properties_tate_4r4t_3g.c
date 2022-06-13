@@ -739,7 +739,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 }
 //ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
 //ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
-static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
+static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(rx_power[ch] != PWR_NO_BOARD) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
@@ -747,12 +747,14 @@ static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
             rx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
+        return error_code;
     //empties the uart return buffer
     } else {
         uart_ret_buf[0] = 0;
+        return 0;
     }
 }
-static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
+static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
@@ -760,11 +762,57 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             tx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
+        return error_code;
     //empties the uart return buffer
     } else {
         uart_ret_buf[0] = 0;
+        return 0;
     }
 }
+
+static unsigned int read_dac_reg(const int fd, int ch, int reg) {
+    if(tx_power[ch] != PWR_NO_BOARD) {
+        snprintf(buf, 20, "dac -r %x\r", reg);
+        int error_code = ping_tx(fd, (uint8_t *)buf, strlen(buf), ch);
+        //Due to hardware issues some boards will report as on even when the slot is empty
+        if(error_code != RETURN_SUCCESS) {
+            tx_power[ch] = PWR_NO_BOARD;
+            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
+            return 0;
+        } else {
+            int actual_reg = 0;
+            int val = 0;
+            sscanf((char *)uart_ret_buf, "Read Address: 0x%x%*s%*s%*s%x", &actual_reg, &val);
+            if(actual_reg != reg) {
+                PRINT(ERROR, "Command failed while attempting to read DAC register: 0x%x\n", reg);
+                return 0;
+            }
+            return val;
+        }
+    //empties the uart return buffer
+    } else {
+        uart_ret_buf[0] = 0;
+        return 0;
+    }
+}
+
+static void write_dac_reg(const int fd, int ch, int reg, int val) {
+    if(tx_power[ch] != PWR_NO_BOARD) {
+        snprintf(buf, 20, "dac -r %x -w %x\r", reg, val);
+        int error_code = ping_tx(fd, (uint8_t *)buf, strlen(buf), ch);
+        //Due to hardware issues some boards will report as on even when the slot is empty
+        if(error_code != RETURN_SUCCESS) {
+            tx_power[ch] = PWR_NO_BOARD;
+            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
+            return 0;
+        }
+    //empties the uart return buffer
+    } else {
+        uart_ret_buf[0] = 0;
+        return 0;
+    }
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -1589,6 +1637,53 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /*this wait is need*/\
         usleep(300000);\
         /*TODO: add check to send sysref pulse if not in continuous*/\
+        return RETURN_SUCCESS;                                                 \
+    }\
+    \
+    /*Will probably need to be overhauled when porting*/\
+    static int hdlr_tx_##ch##_get_dyn_link_latency_0(const char *data, char *ret) {       \
+        int req = 0;                                                          \
+        sscanf(data, "%i", &req);                                             \
+        if( req == -1 ) {\
+            return RETURN_SUCCESS;\
+        }\
+        int reg_val = read_dac_reg(uart_tx_fd[INT_TX(ch)], INT(ch), 0x302); \
+        snprintf(ret, 20, "0x%x", reg_val);\
+        return RETURN_SUCCESS;                                                 \
+    }\
+    /*Will probably need to be overhauled when porting*/\
+    static int hdlr_tx_##ch##_set_fix_link_lat_0(const char *data, char *ret) {       \
+        int req = 0;                                                          \
+        sscanf(data, "%i", &req);                                             \
+        if( req == -1 ) {\
+            return RETURN_SUCCESS;\
+        }\
+        int not_hex = strncmp(data, "0x", 2);\
+        int val = 0;\
+        if(not_hex) {\
+            sscanf(data, "%i\n", &val);\
+        } else {\
+            sscanf(data, "%x\n", &val);\
+        }\
+        write_dac_reg(uart_tx_fd[INT_TX(ch)], INT(ch), 0x304, val);\
+        return RETURN_SUCCESS;                                                 \
+    }\
+    \
+    /*Will probably need to be overhauled when porting*/\
+    static int hdlr_tx_##ch##_set_var_link_lat_0(const char *data, char *ret) {       \
+        int req = 0;                                                          \
+        sscanf(data, "%i", &req);                                             \
+        if( req == -1 ) {\
+            return RETURN_SUCCESS;\
+        }\
+        int not_hex = strncmp(data, "0x", 2);\
+        int val = 0;\
+        if(not_hex) {\
+            sscanf(data, "%i\n", &val);\
+        } else {\
+            sscanf(data, "%x\n", &val);\
+        }\
+        write_dac_reg(uart_tx_fd[INT_TX(ch)], INT(ch), 0x306, val);\
         return RETURN_SUCCESS;                                                 \
     }\
     \
@@ -4462,6 +4557,9 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_tx_##_c##_jesd_reset,              RW, "0", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/get_dyn_link_latency_0" , hdlr_tx_##_c##_get_dyn_link_latency_0, RW, "-1", SP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/set_fix_link_lat_0" , hdlr_tx_##_c##_set_fix_link_lat_0, RW, "-1", SP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/set_var_link_lat_0" , hdlr_tx_##_c##_set_var_link_lat_0, RW, "-1", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", TP, #_c)     \
