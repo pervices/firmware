@@ -33,6 +33,14 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#ifdef RTM3
+    #define RTM_VER 3
+#elif RTM4
+    #define RTM_VER 4
+#else
+    #error "This file must be compiled with a valid hardware revision (RTM3, RTM4)"
+#endif
+
 typedef enum { RW, RO, WO } perm_t;
 typedef enum { POLL, NO_POLL } poll_t;
 

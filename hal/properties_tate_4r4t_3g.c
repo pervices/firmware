@@ -120,12 +120,6 @@
 // The number of samples per trigger must be a multiple of this
 #define TATE_4R4T_3G_SAMPS_MULTIPLE_RX 2208
 
-#ifdef RTM3
-    #define USE_RTM3 true
-#else
-    #define USE_RTM3 false
-#endif
-
 static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpc", "sfpd" };
 
 // Registers contianing the src port for rx and dst port for tx overlap but are not identical
@@ -1030,7 +1024,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if (band == 0) {                       \
-            if(USE_RTM3) {\
+            if(RTM_VER==3) {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "1");\
             } else {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "0");\
@@ -1904,7 +1898,7 @@ CHANNELS
         strcat(buf, "\r");                                                     \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
-        /* if mid or high band swap iq to address RTM3 layout issue */         \
+        /* if mid or high band swap iq to address layout issue */         \
         if (band == 0) {                                                       \
             set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
         } else {                                                               \
@@ -1942,7 +1936,7 @@ CHANNELS
             sprintf(ret, "%i", gain);\
         /*Sets mid/high band variable amplifer*/\
         } else if(band == 1 || band == 2) {\
-            if(USE_RTM3) {\
+            if(RTM_VER==3) {\
                 /*RTM3 does not use one of the amplifiers in high and mid band*/\
                 if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
                 else if (gain < 0) gain = 0;\
@@ -2604,7 +2598,7 @@ CHANNELS
             \
             /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
             int num_lna_attempts = 0;\
-            while(!USE_RTM3) {\
+            while(!(RTM_VER==3)) {\
                 snprintf(buf, 10, "rf -S\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 if(strncmp((char *)uart_ret_buf, "LNA_RDY: 1", 10) == 0) {\

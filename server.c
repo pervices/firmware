@@ -95,6 +95,10 @@ int main(int argc, char *argv[]) {
             printf("Revision: %s\n", VERSIONGITREVISION);
             #ifdef RTM3
                 printf("RTM: 3\n");
+            #elif RTM4
+                printf("RTM: 4\n");
+            #else
+                #error "This file must be compiled with a valid hardware revision (RTM3, RTM4)"
             #endif
             printf("Date: %s UTC\n", VERSIONDATE);
             #if defined(TATE)

@@ -80,12 +80,6 @@
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 #define RX_JESD_RESET_MASK 0xff0
 
-#ifdef RTM3
-    #define USE_RTM3 1
-#else
-    #define USE_RTM3 0
-#endif
-
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -662,7 +656,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             sprintf(ret, "%i", gain);\
         /*Sets mid/high band variable amplifer*/\
         } else if(band == 1 || band == 2) {\
-            if(USE_RTM3) {\
+            if(RTM_VER==3) {\
                 /*RTM3 does not use one of the amplifiers in high and mid band*/\
                 if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
                 else if (gain < 0) gain = 0;\
@@ -1339,7 +1333,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             \
             /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
             int num_lna_attempts = 0;\
-            while(!USE_RTM3) {\
+            while(!(RTM_VER==3)) {\
                 snprintf(buf, 10, "rf -S\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 if(strncmp((char *)uart_ret_buf, "LNA_RDY: 1", 10) == 0) {\
