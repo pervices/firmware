@@ -1306,7 +1306,29 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         \
         return RETURN_SUCCESS;                                                 \
     }\
-     \
+    \
+    static int hdlr_rx_##ch##_invert_devclk(const char *data, char *ret) {       \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        int invert;                                                            \
+        sscanf(data, "%i", &invert);                                           \
+        if (invert) {\
+            snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
+            PRINT(ERROR, "invert command: %s\n", buf);\
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
+            usleep(1);\
+        } else {\
+            snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
+            PRINT(ERROR, "invert command: %s\n", buf);\
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
+            usleep(1);\
+        }\
+        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -2919,6 +2941,7 @@ GPIO_PINS
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/invert_devclk"     , hdlr_rx_##_c##_invert_devclk,             RW, "0", SP, #_c)\
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP, #_c)
@@ -3149,23 +3172,37 @@ void patch_tree(void) {
     CHANNELS
 #undef X
 
-set_default_str("rx/a/link/ip_dest","10.10.10.10");
-set_default_str("rx/b/link/ip_dest","10.10.10.10");
-set_default_str("rx/c/link/ip_dest","10.10.11.10");
-set_default_str("rx/d/link/ip_dest","10.10.11.10");
-set_default_str("rx/e/link/ip_dest","10.10.12.10");
-set_default_str("rx/f/link/ip_dest","10.10.12.10");
-set_default_str("rx/g/link/ip_dest","10.10.13.10");
-set_default_str("rx/h/link/ip_dest","10.10.13.10");
+    set_default_str("rx/a/link/ip_dest","10.10.10.10");
+    set_default_str("rx/b/link/ip_dest","10.10.10.10");
+    set_default_str("rx/c/link/ip_dest","10.10.11.10");
+    set_default_str("rx/d/link/ip_dest","10.10.11.10");
+    set_default_str("rx/e/link/ip_dest","10.10.12.10");
+    set_default_str("rx/f/link/ip_dest","10.10.12.10");
+    set_default_str("rx/g/link/ip_dest","10.10.13.10");
+    set_default_str("rx/h/link/ip_dest","10.10.13.10");
 
-set_default_int("rx/a/link/jesd_num",0);
-set_default_int("rx/b/link/jesd_num",1);
-set_default_int("rx/c/link/jesd_num",0);
-set_default_int("rx/d/link/jesd_num",1);
-set_default_int("rx/e/link/jesd_num",0);
-set_default_int("rx/f/link/jesd_num",1);
-set_default_int("rx/g/link/jesd_num",0);
-set_default_int("rx/h/link/jesd_num",1);
+    set_default_int("rx/a/link/jesd_num",0);
+    set_default_int("rx/b/link/jesd_num",1);
+    set_default_int("rx/c/link/jesd_num",0);
+    set_default_int("rx/d/link/jesd_num",1);
+    set_default_int("rx/e/link/jesd_num",0);
+    set_default_int("rx/f/link/jesd_num",1);
+    set_default_int("rx/g/link/jesd_num",0);
+    set_default_int("rx/h/link/jesd_num",1);
+
+#if RTM_VER == 3 || RTM_VER == 4
+    #define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
+
+        CHANNELS
+    #undef X
+#elif RTM_VER == 5
+    #define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
+
+        CHANNELS
+    #undef X
+#else
+    #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
+#endif
 
 }
 
