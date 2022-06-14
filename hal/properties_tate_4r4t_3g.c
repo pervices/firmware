@@ -2285,6 +2285,7 @@ CHANNELS
                 iq_gain_factor -= 0x01;                                                     \
             }                                                                               \
             PRINT(INFO,"data after float to hex conversion: %x\n",iq_gain_factor);          \
+          sprintf(ret,"%f",(uint8_t) iq_gain_correction * step_size);                      \
           strcpy(buf, "iq -g ");                                                           \
           sprintf(buf + strlen(buf), "%x", iq_gain_factor);                                \
           strcat(buf, "\r");                                                               \
@@ -2316,7 +2317,7 @@ CHANNELS
         if(iq_phase_error == 2.5){                                                          \
             iq_phase_factor -= 0x01;                                                        \
         }                                                                                   \
-        PRINT(INFO,"data after float to hex conversion: %x\n",iq_phase_factor);             \
+        sprintf(ret,"%f",(unsigned long) iq_phase_correction * (1/inv_step_size));       \
         strcpy(buf, "iq -p ");                                                              \
         sprintf(buf + strlen(buf), "%x", iq_phase_factor);                                  \
         strcat(buf, "\r");                                                                  \
@@ -2348,7 +2349,7 @@ CHANNELS
         if(iq_dcoffset_i == 200){                                                          \
             iq_dcoi_factor -= 0x01;                                                        \
         }                                                                                   \
-        PRINT(INFO,"data after float to hex conversion: %x\n",iq_dcoi_factor);             \
+        sprintf(ret,"%d",(uint8_t) iq_dcoi_correction);                                     \
         strcpy(buf, "iq -c ");                                                              \
         sprintf(buf + strlen(buf), "%x", iq_dcoi_factor);                                  \
         strcat(buf, "\r");                                                                  \
@@ -2382,6 +2383,7 @@ CHANNELS
             iq_dcoq_factor -= 0x01;                                                        \
         }                                                                                   \
         PRINT(INFO,"data after float to hex conversion: %x\n",iq_dcoq_factor);             \
+        sprintf(ret,"%d",(uint8_t) iq_dcoq_correction);                                     \
         strcpy(buf, "iq -C ");                                                              \
         sprintf(buf + strlen(buf), "%x", iq_dcoq_factor);                                  \
         strcat(buf, "\r");                                                                  \
