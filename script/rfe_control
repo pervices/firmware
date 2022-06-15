@@ -139,6 +139,9 @@ if {$::argv0 eq [info script]} {
         set_gpio_direction $en_gpio_file "high"
 
     } elseif { [string equal $board_state "off"] } {
+	# power off LNA bias controller gracefully to avoid voltage spike suspected of
+	# causing damage to MAAL-011141 on RTM4 RX
+	exec echo "rf -L 0" | mcu -f $board_number -s
         set_gpio_direction $en_gpio_file "low"
     }
 

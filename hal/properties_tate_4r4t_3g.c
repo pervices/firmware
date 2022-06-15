@@ -1036,14 +1036,17 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
         if (band == 0) {                       \
             if(RTM_VER==3) {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+                set_property("tx/" STR(ch) "/rf/iq/iq_swap", "1");\
             } else {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+                set_property("tx/" STR(ch) "/rf/iq/iq_swap", "0");\
             }\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
         } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+            set_property("tx/" STR(ch) "/rf/iq/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -1386,7 +1389,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_link_iq_swap(const char *data, char *ret) {      \
+    static int hdlr_tx_##ch##_iq_iq_swap(const char *data, char *ret) {      \
         int swap;                                                            \
         sscanf(data, "%i", &swap);                                           \
         uint32_t old_val = 0;                                                  \
@@ -1910,8 +1913,10 @@ CHANNELS
         /* if mid or high band swap iq to address layout issue */         \
         if (band == 0) {                                                       \
             set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
+            set_property("rx/" STR(ch) "/rf/iq/iq_swap", "1");                    \
         } else {                                                               \
             set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
+            set_property("rx/" STR(ch) "/rf/iq/iq_swap", "0");                    \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2338,7 +2343,7 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
+    static int hdlr_rx_##ch##_iq_iq_swap(const char *data, char *ret) {      \
         uint32_t old_val = 0;                                                  \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
         if (strcmp(data, "1") == 0)                                            \
@@ -2349,6 +2354,426 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_iq_gain_correction(const char *data, char *ret) {      \
+           double iq_gain_error = 0;                                           \
+           sscanf(data, "%lf", &iq_gain_error);                                \
+           PRINT(INFO,"data as entered %lf\n", iq_gain_error);\
+           /* Gain is expected to be between -0.5 .. +0.5dB */                 \
+           if ( iq_gain_error >= 0.5 ){                                        \
+               iq_gain_error = 0.5;                                             \
+           }                                                                   \
+           if ( iq_gain_error <= -0.5 ){                                       \
+               iq_gain_error = -0.5;                                            \
+           }                                                                   \
+           PRINT(INFO,"data after limit check: %lf\n", iq_gain_error);\
+           PRINT(INFO,"Flag 0\n");                                              \
+           double step_size = 0.015625;                                          \
+            double iq_gain_correction = (iq_gain_error/step_size);                \
+            PRINT(INFO,"intermediate conversion: %lf\n",iq_gain_correction);               \
+            uint8_t iq_gain_factor = 0x20;                                                 \
+            if ( iq_gain_correction >= 0) {                                                \
+                iq_gain_factor += (uint8_t) iq_gain_correction;                            \
+            } else { /* less than zero */                                                  \
+                iq_gain_correction = (uint8_t) ((int)iq_gain_correction) * -1;             \
+                iq_gain_factor = (uint8_t) 0x20 - iq_gain_correction;                      \
+            }                                                                              \
+            if(iq_gain_error == 0.5){                                                       \
+                iq_gain_factor -= 0x01;                                                     \
+            }                                                                               \
+            PRINT(INFO,"data after float to hex conversion: %x\n",iq_gain_factor);          \
+          sprintf(ret,"%f",(uint8_t) iq_gain_correction * step_size);                      \
+          strcpy(buf, "iq -g ");                                                           \
+          sprintf(buf + strlen(buf), "%x", iq_gain_factor);                                \
+          strcat(buf, "\r");                                                               \
+          ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));           \
+          return RETURN_SUCCESS;                                                           \
+    }                                                                                       \
+    static int hdlr_rx_##ch##_iq_phase_correction(const char *data, char *ret) {            \
+        double iq_phase_error = 0;                                                          \
+        /*input range: -2.5 to 2.5, output range:0x0000 to 0x01FF, offset: 0x100, */        \
+        sscanf(data,"%lf",&iq_phase_error);                                                 \
+        PRINT(INFO,"data as entered %lf\n",iq_phase_error);                                 \
+        if (iq_phase_error >= 2.5){                                                         \
+            iq_phase_error = 2.5;                                                           \
+        }                                                                                   \
+        if (iq_phase_error <= -2.5){                                                        \
+            iq_phase_error = -2.5;                                                          \
+        }                                                                                   \
+        double inv_step_size = 102.4;                                                       \
+        PRINT(INFO, "data after limit check: %lf \n",iq_phase_error);                       \
+        double iq_phase_correction = (iq_phase_error*inv_step_size);                        \
+        PRINT(INFO,"intermediate conversion: %lf\n",iq_phase_correction);                   \
+        uint32_t iq_phase_factor = 0x100;                                                    \
+        if(iq_phase_correction >= 0){                                                       \
+            iq_phase_factor += (uint32_t) iq_phase_correction;                               \
+        } else{                                                                             \
+            iq_phase_correction = (uint32_t) ((int)iq_phase_correction) * -1;                \
+            iq_phase_factor = (uint32_t) 0x100 -iq_phase_correction;                         \
+        }                                                                                   \
+        if(iq_phase_error == 2.5){                                                          \
+            iq_phase_factor -= 0x01;                                                        \
+        }                                                                                   \
+        sprintf(ret,"%f",(unsigned long) iq_phase_correction * (1/inv_step_size));       \
+        strcpy(buf, "iq -p ");                                                              \
+        sprintf(buf + strlen(buf), "%x", iq_phase_factor);                                  \
+        strcat(buf, "\r");                                                                  \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));              \
+        return RETURN_SUCCESS;                                                              \
+    }                                                                          \
+    static int hdlr_rx_##ch##_iq_dco_i(const char *data, char *ret) {      \
+        double iq_dcoffset_i = 0;                                                          \
+        /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
+        sscanf(data,"%lf",&iq_dcoffset_i);                                                 \
+        PRINT(INFO,"data as entered %lf\n",iq_dcoffset_i);                                 \
+        if (iq_dcoffset_i >= 200){                                                         \
+            iq_dcoffset_i = 200;                                                           \
+        }                                                                                   \
+        if (iq_dcoffset_i <= -200){                                                        \
+            iq_dcoffset_i = -200;                                                          \
+        }                                                                                   \
+        double step_size = 1.5625;                                                       \
+        PRINT(INFO, "data after limit check: %lf \n",iq_dcoffset_i);                       \
+        double iq_dcoi_correction = (iq_dcoffset_i/step_size);                        \
+        PRINT(INFO,"intermediate conversion: %lf\n",iq_dcoi_correction);              \
+        uint8_t iq_dcoi_factor = 0x80;                                                    \
+        if(iq_dcoi_correction >= 0){                                                       \
+            iq_dcoi_factor += (uint8_t) iq_dcoi_correction;                               \
+        } else {                                                                             \
+            iq_dcoi_correction = (uint8_t) ((int)iq_dcoi_correction) * -1;                \
+            iq_dcoi_factor = (uint8_t) 0x80 -iq_dcoi_correction;                         \
+        }                                                                                   \
+        if(iq_dcoffset_i == 200){                                                          \
+            iq_dcoi_factor -= 0x01;                                                        \
+        }                                                                                   \
+        sprintf(ret,"%d",(uint8_t) iq_dcoi_correction);                                     \
+        strcpy(buf, "iq -c ");                                                              \
+        sprintf(buf + strlen(buf), "%x", iq_dcoi_factor);                                  \
+        strcat(buf, "\r");                                                                  \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));              \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    static int hdlr_rx_##ch##_iq_dco_q(const char *data, char *ret) {      \
+           /* To do */                                         \
+        double iq_dcoffset_q = 0;                                                          \
+        /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
+        sscanf(data,"%lf",&iq_dcoffset_q);                                                 \
+        PRINT(INFO,"data as entered %lf\n",iq_dcoffset_q);                                 \
+        if (iq_dcoffset_q >= 200){                                                         \
+            iq_dcoffset_q = 200;                                                           \
+        }                                                                                   \
+        if (iq_dcoffset_q <= -200){                                                        \
+            iq_dcoffset_q = -200;                                                          \
+        }                                                                                   \
+        double step_size = 1.5625;                                                       \
+        PRINT(INFO, "data after limit check: %lf \n",iq_dcoffset_q);                       \
+        double iq_dcoq_correction = (iq_dcoffset_q/step_size);                        \
+        PRINT(INFO,"intermediate conversion: %lf\n",iq_dcoq_correction);              \
+        uint8_t iq_dcoq_factor = 0x80;                                                    \
+        if(iq_dcoq_correction >= 0){                                                       \
+            iq_dcoq_factor += (uint8_t) iq_dcoq_correction;                               \
+        } else {                                                                             \
+            iq_dcoq_correction = (uint8_t) ((int)iq_dcoq_correction) * -1;                \
+            iq_dcoq_factor = (uint8_t) 0x80 -iq_dcoq_correction;                         \
+        }                                                                                   \
+        if(iq_dcoffset_q == 200){                                                          \
+            iq_dcoq_factor -= 0x01;                                                        \
+        }                                                                                   \
+        PRINT(INFO,"data after float to hex conversion: %x\n",iq_dcoq_factor);             \
+        sprintf(ret,"%d",(uint8_t) iq_dcoq_correction);                                     \
+        strcpy(buf, "iq -C ");                                                              \
+        sprintf(buf + strlen(buf), "%x", iq_dcoq_factor);                                  \
+        strcat(buf, "\r");                                                                  \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));              \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                                   \
+    static int hdlr_rx_##ch##_iq_hd2_ix(const char *data, char *ret) {                      \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -z ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                                   \
+    static int hdlr_rx_##ch##_iq_hd2_iy(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -y ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_hd2_qx(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -Z ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_hd2_qy(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -Y ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_hd3_ix(const char *data, char *ret) {                      \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -x ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                                   \
+    static int hdlr_rx_##ch##_iq_hd3_iy(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -w ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_hd3_qx(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -X ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_hd3_qy(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -W ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_im2_ix(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -h ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_im2_qx(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -H ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_im3_ix(const char *data, char *ret) {                      \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);  \
+            strcpy(buf, "iq -k ");                                                     \
+            sprintf(buf + strlen(buf),"%x",harmonic_distortion);                       \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                                   \
+    static int hdlr_rx_##ch##_iq_im3_iy(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -l ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_im3_qx(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -K ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_im3_qy(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 255){                                            \
+                harmonic_distortion = 255;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -L ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                                  \
+    static int hdlr_rx_##ch##_iq_ip3cc(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 3){                                            \
+                harmonic_distortion = 3;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -m ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
+    static int hdlr_rx_##ch##_iq_ip3ic(const char *data, char *ret) {                  \
+                                                                                    \
+            uint8_t harmonic_distortion;                                               \
+            sscanf(data,"%d",&harmonic_distortion);                                      \
+            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            if(harmonic_distortion >= 7){                                            \
+                harmonic_distortion = 7;                                             \
+            }                                                                          \
+            if(harmonic_distortion <= 0){                                              \
+                harmonic_distortion = 0;                                              \
+            }                                                                          \
+            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            strcpy(buf, "iq -n ");                                                     \
+            sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
+            strcat(buf, "\r");                                                         \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            return RETURN_SUCCESS;                                                     \
+    }                                                                               \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
         /* NOTE: This is strictly for tate 4r*/                                \
@@ -4395,11 +4820,31 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_swap"            , hdlr_rx_##_c##_iq_iq_swap,              RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_gaincor"         , hdlr_rx_##_c##_iq_gain_correction,      RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_phasecor"        , hdlr_rx_##_c##_iq_phase_correction,     RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_dcoffset_i"      , hdlr_rx_##_c##_iq_dco_i,                RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_dcoffset_q"      , hdlr_rx_##_c##_iq_dco_q,                RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd2ix"           , hdlr_rx_##_c##_iq_hd2_ix,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd2iy"           , hdlr_rx_##_c##_iq_hd2_iy,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd2qx"           , hdlr_rx_##_c##_iq_hd2_qx,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd2qy"           , hdlr_rx_##_c##_iq_hd2_qy,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd3ix"           , hdlr_rx_##_c##_iq_hd3_ix,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd3iy"           , hdlr_rx_##_c##_iq_hd3_iy,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd3qx"           , hdlr_rx_##_c##_iq_hd3_qx,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_hd3qy"           , hdlr_rx_##_c##_iq_hd3_qy,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_im2ix"           , hdlr_rx_##_c##_iq_im2_ix,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_im2qx"           , hdlr_rx_##_c##_iq_im2_qx,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_im3ix"           , hdlr_rx_##_c##_iq_im3_ix,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_im3iy"           , hdlr_rx_##_c##_iq_im3_iy,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_im3qx"           , hdlr_rx_##_c##_iq_im3_qx,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_im3qy"           , hdlr_rx_##_c##_iq_im3_qy,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_ip3cc"           , hdlr_rx_##_c##_iq_ip3cc,                RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_ip3ic"           , hdlr_rx_##_c##_iq_ip3ic,                RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
@@ -4423,6 +4868,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_iq_iq_swap,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"                 , hdlr_invalid,                                   RO, "0", RP, #_c)\
@@ -4457,7 +4903,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", TP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_iq_iq_swap,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch0fifo_lvl"           , hdlr_tx_##_c##_qa_ch0fifo_lvl,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch1fifo_lvl"           , hdlr_tx_##_c##_qa_ch1fifo_lvl,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch2fifo_lvl"           , hdlr_tx_##_c##_qa_ch2fifo_lvl,          RW, "0", TP, #_c)         \
