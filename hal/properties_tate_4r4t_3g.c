@@ -1036,17 +1036,14 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
         if (band == 0) {                       \
             if(RTM_VER==3) {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "1");\
-                set_property("tx/" STR(ch) "/rf/iq/iq_swap", "1");\
             } else {\
                 set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-                set_property("tx/" STR(ch) "/rf/iq/iq_swap", "0");\
             }\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
         } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-            set_property("tx/" STR(ch) "/rf/iq/iq_swap", "0");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -1912,10 +1909,8 @@ CHANNELS
                                                                                \
         /* if mid or high band swap iq to address layout issue */         \
         if (band == 0) {                                                       \
-            set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
             set_property("rx/" STR(ch) "/rf/iq/iq_swap", "1");                    \
         } else {                                                               \
-            set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
             set_property("rx/" STR(ch) "/rf/iq/iq_swap", "0");                    \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
@@ -4868,6 +4863,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    DEFINE_SYMLINK_PROP("rx/" #_c "/link/iq_swap", "rx/" #_c "/rf/iq/iq_swap")\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_iq_iq_swap,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
