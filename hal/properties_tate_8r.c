@@ -1825,6 +1825,21 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Controls both the source of pps (internal vs external) and whether the port is output or input
+static int hdlr_time_clk_pps_direction(const char *data, char *ret) {
+    uint32_t external;
+    if (strcmp(data, "external") == 0) {
+        external = 2;
+    } else if (strcmp(data, "internal") == 0) {
+        external = 0;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\nValid arguments: external, internal\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+    write_hps_reg_mask("sys13", external, 2);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_clk_cur_time(const char *data, char *ret) {
     long double time;
     sscanf(data, "%Lf", &time);
@@ -1834,8 +1849,8 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 
     write_hps_reg("sys11",
                   (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
-    write_hps_reg("sys13", 1);
-    write_hps_reg("sys13", 0);
+    write_hps_reg_mask("sys13", 1, 1);
+    write_hps_reg_mask("sys13", 0, 1);
     return RETURN_SUCCESS;
 }
 
@@ -2778,8 +2793,8 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     write_hps_reg("sys10", systime_uh);
     write_hps_reg("sys11", 0); // Set frac_time to 0
     write_hps_reg("sys12", 0); // Set frac_time to 0
-    write_hps_reg("sys13", 1); // Writing 1, then 0 to sys9 sets the time
-    write_hps_reg("sys13", 0); // to what is written in sys7 and sys8
+    write_hps_reg_mask("sys13", 1, 1); // Writing 1, then 0 to sys9 sets the time
+    write_hps_reg_mask("sys13", 0, 1); // to what is written in sys7 and sys8
 
     return RETURN_SUCCESS;
 }
@@ -3002,6 +3017,7 @@ GPIO_PINS
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/clk/pps_dir"                    , hdlr_time_clk_pps_direction,            RW, "internal", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, "1000", SP, NAC)\
