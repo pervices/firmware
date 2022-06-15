@@ -59,7 +59,7 @@ typedef enum {
     UP = 0, //indicates that is is unspecified whether or not to set a channel power (uses old method)
 } prop_pwr_t;
 
-//constant used in DEFINE_FILE_PROP_P, when a channel number is no applicable
+//constant used in DEFINE_FILE_PROP_P, when a channel number is not applicable
 #define NAC "-1"
 
 typedef struct prop {

@@ -80,6 +80,8 @@
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
 #define RX_JESD_RESET_MASK 0xff0
 
+static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -140,7 +142,7 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll);
+void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll);
 /* clang-format on */
 
 // Also known as strchr (maybe we should replace this someday).
@@ -419,10 +421,11 @@ static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
         shift = sma ? 0 : 4;
         return set_reg_bits(reg_name, shift, 1, edge);
     } else if( !tx && sma) {
-        set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+        return set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
-        set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
+        return set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     }
+    return -1;
 }
 
 static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
@@ -589,7 +592,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }                                                                       \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
+        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll);  \
                                                                                 \
         /* if HB add back in freq before printing value to state tree */        \
         if (band == 2) {                                                        \
@@ -647,7 +650,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else if (gain < LMH6401_MIN_GAIN) {                              \
                 gain = LMH6401_MIN_GAIN;                                       \
             }                                                                  \
-            char gain_command[100];\
             atten = LMH6401_MAX_GAIN - gain;                                   \
             /*Variable amplifer takes attenuation value instead of a gain*/ \
             sprintf(buf, "vga -a %i\r", atten);\
@@ -1506,7 +1508,7 @@ static uint16_t cm_chanmask_get(const char *path) {
 
     char mask_s[10];
     get_property(path, mask_s,10);
-    sscanf(mask_s, "%x", &r);
+    sscanf(mask_s, "%hux", &r);
 
     return r;
 }
@@ -1839,11 +1841,11 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 
 static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
     uint16_t freq;
-    sscanf(data, "%u", &freq);
-    sprintf(buf, "board -c %u\r", freq);
+    sscanf(data, "%hu", &freq);
+    sprintf(buf, "board -c %hu\r", freq);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     int32_t ret_freq = -1;
-    sscanf(uart_ret_buf, "%i", &ret_freq);
+    sscanf((char *) uart_ret_buf, "%i", &ret_freq);
     if(ret_freq==freq) strcpy(ret, "good");
     else sprintf(ret, "%i", ret_freq);
     return RETURN_SUCCESS;
@@ -2083,6 +2085,7 @@ static int hdlr_time_board_test(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Get temperature results in a crash with the current MCU code
 static int hdlr_time_board_temp(const char *data, char *ret) {
     strcpy(buf, "board -t\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -3657,7 +3660,7 @@ out:
     return r;
 }
 
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
     
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);

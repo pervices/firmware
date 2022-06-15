@@ -584,12 +584,6 @@ int get_channel_for_path(const char *path) {
 void power_on_channel(bool is_tx, char channel) {
     char buf[MAX_PATH_LEN];
     prop_t *prop;
-    //skips powering on the channel if it is already on
-    if(is_tx) {
-        if(tx_power[channel - 'a'] == PWR_ON) return;
-    } else {
-        if(rx_power[channel - 'a'] == PWR_ON) return;
-    }
 
     snprintf(buf, sizeof(buf), "%s/%c/pwr", is_tx ? "tx" : "rx", channel);
     prop = get_prop_from_cmd(buf);

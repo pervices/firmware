@@ -38,6 +38,7 @@
 #include <signal.h>
 #include "channels.h"
 #include "gpio_pins.h"
+#include <sys/wait.h>
 
 // Sample rates are in samples per second (SPS).
 #define RX_BASE_SAMPLE_RATE   1000000000.0
@@ -104,6 +105,9 @@
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
 #define INDIVIDUAL_RESET_BIT_OFFSET_TX 13
 
+static uint8_t tx_power[NUM_TX_CHANNELS] = {0};
+static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
+
 static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd", "sfpd" };
 static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
 
@@ -132,12 +136,12 @@ static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", 
 static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
 static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
 
-static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
-static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
-static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6", "txq6", "txr6"};
+static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
+static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
+static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
 
-static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7", "txq7", "txr7"};
-static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8", "txq8", "txr8"};
+static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7"};
+static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8"};
 
 //least significant 32 bits used to store underflow count
 static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12", "flc44", "flc46", "flc48" };
@@ -198,6 +202,9 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
     IPVER_IPV4,
 };
+
+void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 
 /* clang-format on */
 
@@ -482,10 +489,11 @@ static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
     } else if(tx && !sma) {
         return set_reg_bits(tx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     } else if( !tx && sma) {
-        set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
+        return set_reg_bits(rx_trig_sma_mode_map[(*chan)-'a'], 0, 1, edge);
     } else if (!tx && !sma) {
-        set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
+        return set_reg_bits(rx_trig_ufl_mode_map[(*chan)-'a'], 4, 1, edge);
     }
+    return -1;
 }
 
 static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
@@ -541,7 +549,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
                                                    char *ret) {                \
         int r;                                                                 \
-        bool val = 0;                                                          \
+        uint32_t val = 0;                                                          \
         r = valid_edge_backoff(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -795,7 +803,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
         strcat(buf, " -s\r");                                                  \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        sprintf(ret, "%lf", freq);\
+        sprintf(ret, "%lu", (uint64_t)(freq_mhz * 1000000 + freq_hz));\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -932,7 +940,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         }                                                                       \
         \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
-        get_property(&fullpath,&band_read,3);                                   \
+        get_property(fullpath,band_read,3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
             freq -= HB_STAGE2_MIXER_FREQ;                                      \
@@ -1106,8 +1114,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
     static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
         uint32_t reg_val = 0;                                                  \
-        uint16_t base_factor, resamp_factor;                                   \
-        double base_err = 0.0, resamp_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         /*The sample rate only uses 16 bits*/\
@@ -1366,6 +1372,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         read_hps_reg(tx_oflow_map_msb[INT(ch)], &msb_count);                   \
         uint64_t count = (((uint64_t) msb_count) << 32) | lsb_count;\
         sprintf(ret, "%lu", count);                                             \
+        return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch1oflow(const char *data, char *ret) {       \
@@ -1413,6 +1420,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         read_hps_reg(tx_uflow_map_msb[INT(ch)], &msb_count);                   \
         uint64_t count = (((uint64_t) msb_count) << 32) | lsb_count;\
         sprintf(ret, "%lu", count);                                             \
+        return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_qa_ch1uflow(const char *data, char *ret) {          \
@@ -1558,7 +1566,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         }\
         uint32_t old_val = 0;                                                  \
         uint8_t power = 0;                                                     \
-        uint8_t i = 0;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
@@ -1799,7 +1806,6 @@ TX_CHANNELS
             } else if (gain < LMH6401_MIN_GAIN) {                              \
                 gain = LMH6401_MIN_GAIN;                                       \
             }                                                                  \
-            char gain_command[100];\
             atten = LMH6401_MAX_GAIN - gain;                                   \
             /*Variable amplifer takes attenuation value instead of a gain*/ \
             sprintf(buf, "vga -a %i\r", atten);\
@@ -2082,7 +2088,6 @@ TX_CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
         uint32_t old_val = 0;                                                  \
-        double base_err = 0.0;                               \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         uint16_t factor = 0;\
@@ -2660,7 +2665,7 @@ static uint16_t cm_chanmask_get(const char *path) {
 
     char mask_s[10];
     get_property(path, mask_s,10);
-    sscanf(mask_s, "%x", &r);
+    sscanf(mask_s, "%hux", &r);
 
     return r;
 }
@@ -3114,11 +3119,11 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 
 static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
     uint16_t freq;
-    sscanf(data, "%u", &freq);
-    sprintf(buf, "board -c %u\r", freq);
+    sscanf(data, "%hu", &freq);
+    sprintf(buf, "board -c %hu\r", freq);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     int32_t ret_freq = -1;
-    sscanf(uart_ret_buf, "%i", &ret_freq);
+    sscanf((char *) uart_ret_buf, "%i", &ret_freq);
     if(ret_freq==freq) strcpy(ret, "good");
     else sprintf(ret, "%i", ret_freq);
     return RETURN_SUCCESS;
@@ -3168,22 +3173,6 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
         strcpy(buf, "clk -t 0\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-
-// External Source Buffer Select
-static int hdlr_time_source_extsine(const char *data, char *ret) {
-    if (strcmp(data, "sine") == 0) {
-        strcpy(buf, "HMC -h 1 -b 1\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    } else if (strcmp(data, "LVPECL") == 0) {
-        strcpy(buf, "HMC -h 1 -b 0\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    } else {
-        strcpy(buf, "HMC -h 1 -B\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        strcpy(ret, (char *)uart_ret_buf);
-    }
     return RETURN_SUCCESS;
 }
 
@@ -3368,6 +3357,7 @@ static int hdlr_time_board_test(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Get temperature results in a crash with the current MCU code
 static int hdlr_time_board_temp(const char *data, char *ret) {
     strcpy(buf, "board -t\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -4216,7 +4206,7 @@ GPIO_PINS
         .permissions = p,            \
         .def_val = v,                \
         .pwr_en = UP,\
-        .ch = -1,\
+        .ch = "-1",\
     },
 
 //defines the file prop using the new (2021-10-19) method of deciding whether or not to turn the board on first
