@@ -121,6 +121,9 @@ static const char *device_side_port_map[TOTAL_NUM_PORTS] = { "txa15", "txa16", "
 static const int tx_dst_port_map[NUM_CHANNELS] = { 0, 4, 8, 12 };
 static const int rx_src_port_map[NUM_CHANNELS] = { 0, 4, 8, 12 };
 
+static const int tx_jesd_pll_lock_num[NUM_TX_CHANNELS] = { 8, 9, 10, 11};
+static const int rx_jesd_pll_lock_num[NUM_RX_CHANNELS] = { 0, 1, 2, 3 };
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -1694,6 +1697,20 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
         return RETURN_SUCCESS;                                                 \
     }\
     \
+    static int hdlr_tx_##ch##_jesd_pll_locked(const char *data, char *ret) {       \
+        uint32_t lock_status = 0;\
+        write_hps_reg("res_rw8", tx_jesd_pll_lock_num[INT(ch)]);\
+        read_hps_reg("res_ro20", &lock_status);\
+        lock_status = lock_status & 0x2;\
+        if(lock_status) {\
+            snprintf(ret, 10, "locked");\
+        } else {\
+            snprintf(ret, 10, "unlocked");\
+        }\
+        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
         if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -2581,6 +2598,20 @@ CHANNELS
         usleep(300000);\
         \
         set_property("time/sync/sysref_mode", "pulsed");\
+        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    static int hdlr_rx_##ch##_jesd_pll_locked(const char *data, char *ret) {       \
+        uint32_t lock_status = 0;\
+        write_hps_reg("res_rw8", rx_jesd_pll_lock_num[INT(ch)]);\
+        read_hps_reg("res_ro20", &lock_status);\
+        lock_status = lock_status & 0x2;\
+        if(lock_status) {\
+            snprintf(ret, 10, "locked");\
+        } else {\
+            snprintf(ret, 10, "unlocked");\
+        }\
         \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -4395,6 +4426,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0", RP, #_c)         \
@@ -4462,6 +4494,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/set_var_link_lat_1" , hdlr_tx_##_c##_set_var_link_lat_1, RW, "-1", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/pll_locked"          , hdlr_tx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0", TP, #_c)         \

@@ -82,6 +82,8 @@
 
 static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
 
+static const int rx_jesd_pll_lock_num[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+
 //contains the registers used for rx_4 for each channel
 //most registers follow the pattern rxa0 for ch a, rxb0 for ch b
 //Unlike most channels rx_4 uses a different patttern
@@ -1296,6 +1298,20 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         \
         return RETURN_SUCCESS;                                                 \
     }\
+    \
+    static int hdlr_rx_##ch##_jesd_pll_locked(const char *data, char *ret) {       \
+        uint32_t lock_status = 0;\
+        write_hps_reg("res_rw8", rx_jesd_pll_lock_num[INT(ch)]);\
+        read_hps_reg("res_ro20", &lock_status);\
+        lock_status = lock_status & 0x2;\
+        if(lock_status) {\
+            snprintf(ret, 10, "locked");\
+        } else {\
+            snprintf(ret, 10, "unlocked");\
+        }\
+        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
     \
     static int hdlr_rx_##ch##_invert_devclk(const char *data, char *ret) {       \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
@@ -2957,6 +2973,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0", RP, #_c)         \
