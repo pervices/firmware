@@ -2986,8 +2986,10 @@ CHANNELS
         usleep(100000);\
         \
         /*enables responding to sysref*/\
-        strcpy(buf, "board -s 1\r");\
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
+        /*strcpy(buf, "board -s 1\r");*/\
+        /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
+        \
         /*Resets JESD on FPGA*/\
         usleep(300000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
@@ -2999,8 +3001,9 @@ CHANNELS
         usleep(300000);\
         \
         /*disable responding to sysref*/\
-        strcpy(buf, "board -s 0\r");\
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
+        /*strcpy(buf, "board -s 0\r");*/\
+        /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
         \
         usleep(300000);\
         /*Resets JESD on FPGA*/\
