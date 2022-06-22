@@ -192,7 +192,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 2;
+int max_attempts = 3;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
@@ -3074,6 +3074,8 @@ CHANNELS
             if(rx_power[INT(ch)] == PWR_OFF) {\
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
+            /* Sets board state to PWR_ON, jesd_reset_all will only attempt to reset boards that are set to on*/\
+            rx_power[INT(ch)] = PWR_ON;\
                                                                                \
             /* disable dsp */                                         \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
@@ -3099,14 +3101,13 @@ CHANNELS
             }\
                                                                     \
             /* reset JESD */                                              \
-            set_property("rx/" STR(ch) "/jesd/reset", "1");\
+            jesd_reset_all();\
                                                                                \
             /* Reset DSP */                    \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
             \
-            rx_power[INT(ch)] = PWR_ON;\
             /* power off & stream off */                                       \
         } else {                                                               \
             set_property("rx/" STR(ch) "/board/pwr_board", "0");\
@@ -5422,8 +5423,8 @@ void jesd_reset_all() {
     char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
     int attempts;
-    attempts = 0;
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        attempts = 0;
         //Skips empty boards, off boards, and boards that have not begun initialization
         //Note: make sure when this is called in pwr that the board being turned on is already set as on
         if(rx_power[chan]!=PWR_ON) {
