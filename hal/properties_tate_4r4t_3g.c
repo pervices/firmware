@@ -3042,12 +3042,10 @@ CHANNELS
         sscanf(data, "%i", &invert);                                           \
         if (invert) {\
             snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
-            PRINT(ERROR, "invert command: %s\n", buf);\
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
             usleep(1);\
         } else {\
             snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
-            PRINT(ERROR, "invert command: %s\n", buf);\
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
             usleep(1);\
         }\
@@ -3108,16 +3106,26 @@ CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
             \
+            /* Turns the power indicator light on */\
+            /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
+            snprintf(buf, 20, "board -w 1\r");\
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            \
             /* power off & stream off */                                       \
         } else {                                                               \
-            set_property("rx/" STR(ch) "/board/pwr_board", "0");\
+            /* Turn the power indicator light off but not the entire board if JESD is good */\
+            /* This is a temporary solution to the issue of JESD not restablishing after rebooting boards */\
+            if(property_good("rx/" STR(ch) "/jesd/status")) {\
+                snprintf(buf, 20, "board -w 0\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                rx_power[INT(ch)] = PWR_HALF_ON;\
+            } else {\
+                set_property("rx/" STR(ch) "/board/pwr_board", "0");\
+                rx_power[INT(ch)] = PWR_OFF;\
+            }\
                                                                                \
-            rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            /* kill the channel */                                             \
-            /*strcpy(buf, "board -k\r");                   */       \
-            /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  */          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
