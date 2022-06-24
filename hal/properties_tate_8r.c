@@ -122,7 +122,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 0;
+int max_attempts = 3;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xff;
 
@@ -3438,8 +3438,8 @@ void jesd_reset_all() {
     char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
     int attempts;
-    attempts = 0;
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        attempts = 0;
         //Skips empty boards, off boards, and boards that have not begun initialization
         //Note: make sure when this is called in pwr that the board being turned on is already set as on
         if(rx_power[chan]!=PWR_ON) {
