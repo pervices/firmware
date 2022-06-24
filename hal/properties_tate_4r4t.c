@@ -181,7 +181,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 0;
+int max_attempts = 3;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
@@ -2628,12 +2628,10 @@ CHANNELS
         sscanf(data, "%i", &invert);                                           \
         if (invert) {\
             snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
-            PRINT(ERROR, "invert command: %s\n", buf);\
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
             usleep(1);\
         } else {\
             snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
-            PRINT(ERROR, "invert command: %s\n", buf);\
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
             usleep(1);\
         }\
@@ -2660,6 +2658,8 @@ CHANNELS
             if(rx_power[INT(ch)] == PWR_OFF) {\
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
+            /* Sets board state to PWR_ON, jesd_reset_all will only attempt to reset boards that are set to on*/\
+            rx_power[INT(ch)] = PWR_ON;\
                                                                                \
             /* disable dsp */                                         \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
@@ -2685,24 +2685,33 @@ CHANNELS
             }\
                                                                     \
             /* reset JESD */                                              \
-            set_property("rx/" STR(ch) "/jesd/reset", "1");\
+            jesd_reset_all();\
                                                                                \
             /* Reset DSP */                    \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
             \
-            rx_power[INT(ch)] = PWR_ON;\
+            /* Turns the power indicator light on */\
+            /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
+            snprintf(buf, 20, "board -w 1\r");\
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            \
             /* power off & stream off */                                       \
         } else {                                                               \
-            set_property("rx/" STR(ch) "/board/pwr_board", "0");\
+            /* Turn the power indicator light off but not the entire board if JESD is good */\
+            /* This is a temporary solution to the issue of JESD not restablishing after rebooting boards */\
+            if(property_good("rx/" STR(ch) "/jesd/status")) {\
+                snprintf(buf, 20, "board -w 0\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                rx_power[INT(ch)] = PWR_HALF_ON;\
+            } else {\
+                set_property("rx/" STR(ch) "/board/pwr_board", "0");\
+                rx_power[INT(ch)] = PWR_OFF;\
+            }\
                                                                                \
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
-                                                                               \
-            /* kill the channel */                                             \
-            /*strcpy(buf, "board -k\r");                   */       \
-            /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  */          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
@@ -5003,8 +5012,8 @@ void jesd_reset_all() {
     char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
     int attempts;
-    attempts = 0;
-    for(chan = 0; chan < NUM_CHANNELS; chan++) {
+    for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        attempts = 0;
         //Skips empty boards, off boards, and boards that have not begun initialization
         //Note: make sure when this is called in pwr that the board being turned on is already set as on
         if(rx_power[chan]!=PWR_ON) {
@@ -5020,6 +5029,7 @@ void jesd_reset_all() {
             attempts++;
             set_property(reset_path, "1");
         }
+
     }
 }
 
