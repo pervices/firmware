@@ -3626,6 +3626,12 @@ static int hdlr_fpga_link_clear_tx_ports(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
+    int reboot = 0;
+    sscanf(data, "%i", &reboot);
+
+    if (reboot == 0) {
+        return RETURN_SUCCESS;
+    }
     strcpy(buf, "board -r\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     usleep(700000);
