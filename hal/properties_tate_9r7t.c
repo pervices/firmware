@@ -4154,23 +4154,24 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      * Writing 0 to the state tree will not trigger any reset
      */
     int reset_type = 0;
-    uint32_t tmp_reg = 0;
 
     sscanf(data, "%i", &reset_type);
 
-    read_hps_reg("res_rw7", &tmp_reg);
-
     if (reset_type == 1){       // global reset bit 30
-        write_hps_reg("res_rw7", (tmp_reg & (1 << 30)));
+        write_hps_reg_mask("res_rw7", (1 << 30), (1 << 30));
+        write_hps_reg_mask("res_rw7", 0, (1 << 30));
     }
     else if (reset_type == 2) { // 40G reset bit 29
-        write_hps_reg("res_rw7", (tmp_reg & (1 << 29)));
+        write_hps_reg_mask("res_rw7", (1 << 29), (1 << 29));
+        write_hps_reg_mask("res_rw7", 0, (1 << 29));
     }
     else if (reset_type == 3) { // JESD reset bit 28
-        write_hps_reg("res_rw7", (tmp_reg & (1 << 28)));
+        write_hps_reg_mask("res_rw7", (1 << 28), (1 << 28));
+        write_hps_reg_mask("res_rw7", 0, (1 << 28));
     }
     else if (reset_type == 4) { // DSP reset bit 27
-        write_hps_reg("res_rw7", (tmp_reg & (1 << 27)));
+        write_hps_reg_mask("res_rw7", (1 << 27), (1 << 27));
+        write_hps_reg_mask("res_rw7", 0, (1 << 27));
     }
     /* register sys[18] shows the reset status
      * the bits are [31:0] chanMode = {
@@ -4498,13 +4499,13 @@ GPIO_PINS
 
 //This performs the step that resets the master JESD IP, it must be done before initializing the boards
 #define DEFINE_FPGA_PRE()\
-    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "1", SP, NAC)    \
+    DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "0", SP, NAC)    \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/clear_tx_ports"            , hdlr_fpga_link_clear_tx_ports,             RW, "0", SP, NAC)
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
