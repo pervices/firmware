@@ -1288,15 +1288,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         /*strcpy(buf, "board -s 0\r");*/\
         /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
         \
-        usleep(300000);\
-        /*Resets JESD on FPGA*/\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
-        /*this wait is needed*/\
-        usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
-        /*this wait is need*/\
-        usleep(300000);\
-        \
         set_property("time/sync/sysref_mode", "pulsed");\
         \
         return RETURN_SUCCESS;                                                 \
