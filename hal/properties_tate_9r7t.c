@@ -2433,6 +2433,7 @@ TX_CHANNELS
         sscanf(data, "%i", &reset);                                           \
         if (!reset) return RETURN_SUCCESS;\
         \
+        PRINT(INFO, "Temporary debug message: setting sysref to continuous mode for JESD reset\n");\
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
         usleep(100000);\
@@ -2444,10 +2445,12 @@ TX_CHANNELS
         \
         /*Resets JESD on FPGA*/\
         usleep(300000);\
+        PRINT(INFO, "Temporary debug message: setting JESD reset for specific channel\n");\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg("res_rw7",  individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
+        PRINT(INFO, "Temporary debug message: unsetting JESD reset for specific channel\n");\
         write_hps_reg("res_rw7", 0);\
         /*this wait is need*/\
         usleep(300000);\
