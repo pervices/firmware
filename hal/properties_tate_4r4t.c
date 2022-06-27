@@ -1591,10 +1591,10 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
         }\
         set_property("time/sync/sysref_mode", "continuous");\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_TX);\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
+        write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
+        write_hps_reg_mask("res_rw7", 0, individual_reset_bit);\
         /*this wait is need*/\
         usleep(300000);\
         /*TODO: add check to send sysref pulse if not in continuous*/\
@@ -2579,10 +2579,10 @@ CHANNELS
         /*Resets JESD on FPGA*/\
         usleep(300000);\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
+        write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
+        write_hps_reg_mask("res_rw7", 0, individual_reset_bit);\
         /*this wait is need*/\
         usleep(300000);\
         \
@@ -3691,16 +3691,11 @@ static int hdlr_fpga_board_led(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_rstreq_all_dsp(const char *data, char *ret) {
-    uint32_t res_rw7;
     // assert reset
-    read_hps_reg("res_rw7", &res_rw7);
-    res_rw7 = res_rw7 | 0x80000000;
-    write_hps_reg("res_rw7", res_rw7);
+    write_hps_reg_mask("res_rw7", 0x80000000, 0x80000000);
 
     // de-assert reset
-    read_hps_reg("res_rw7", &res_rw7);
-    res_rw7 = res_rw7 & (~0x80000000);
-    write_hps_reg("res_rw7", res_rw7);
+    write_hps_reg_mask("res_rw7", 0, 0x80000000);
 
     return RETURN_SUCCESS;
 }
@@ -4984,8 +4979,8 @@ void sync_channels(uint8_t chan_mask) {
     while ((i_reset < max_attempts) && (jesd_good == false)) {
         i_reset++;
         // FPGA JESD IP reset
-        write_hps_reg("res_rw7",0x10000000);
-        write_hps_reg("res_rw7", 0);
+        write_hps_reg_mask("res_rw7", ~0, 0x10000000);
+        write_hps_reg_mask("res_rw7", 0, 0x10000000);
         usleep(400000); // Some wait time for MCUs to be ready
         /* Trigger a SYSREF pulse */
         strcpy(buf, "sync -k\r");
