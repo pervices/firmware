@@ -2017,7 +2017,6 @@ CHANNELS
         if (band == 0) {                                                       \
             char s_gain[50];\
             sprintf(s_gain, "%i", gain);\
-            PRINT(ERROR, "gain t1:% i\n", gain);\
             set_property("rx/" STR(ch) "/rf/gain/ampl",s_gain);                  \
             get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
             sscanf(s_gain, "%i", &gain);                                             \

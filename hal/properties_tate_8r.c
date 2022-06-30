@@ -706,7 +706,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         if (band == 0) {                                                       \
             char s_gain[50];\
             sprintf(s_gain, "%i", gain);\
-            PRINT(ERROR, "gain t1:% i\n", gain);\
             set_property("rx/" STR(ch) "/rf/gain/ampl",s_gain);                  \
             get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
             sscanf(s_gain, "%i", &gain);                                             \
