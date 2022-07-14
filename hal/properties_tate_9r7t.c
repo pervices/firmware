@@ -94,12 +94,11 @@
 #define LMH6401_MIN_GAIN -6
 #define LTC5586_MAX_GAIN 15
 #define LTC5586_MIN_GAIN 8
-#define LTC5586_MAX_ATTEN 31
-#define LTC5586_MIN_ATTEN 0
+// Maximum setting on the variable attenuator(s) in mid and high band
+#define MID_HIGH_MAX_ATTEN 31
 
 //used in rx gain calculations so that the user specifying a gain of 0 results in minimum gain
 #define RX_LOW_GAIN_OFFSET 6
-#define RX_MID_GAIN_OFFSET 23
 #define RX_HIGH_GAIN_OFFSET 23
 
 //used for rf freq val calc when in high band
@@ -1921,125 +1920,64 @@ TX_CHANNELS
     /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         const char fullpath[PROP_PATH_LEN] = "rx/" STR(ch) "/rf/freq/band";    \
-        int gain;                                                              \
-        int net_gain;                                                          \
-        int atten;                                                             \
-        int band;                                                              \
+        int target_gain = 0;                                                              \
+        int current_gain = 0;                                                          \
+        int atten = 0;                                                             \
+        int band = 0;                                                              \
         char band_read[3];                                                     \
                                                                                \
-        sscanf(data, "%i", &gain);                                             \
+        sscanf(data, "%i", &target_gain);                                             \
+        PRINT(INFO, "target_gain: %i\n", target_gain);\
+        \
         get_property(&fullpath[0],&band_read[0],3);                                  \
         sscanf(band_read, "%i", &band);                                        \
                                                                                \
         if (band == 0) {                                                       \
             char s_gain[50];\
-            sprintf(s_gain, "%i", gain);\
+            sprintf(s_gain, "%i", target_gain);\
             set_property("rx/" STR(ch) "/rf/gain/ampl",s_gain);                  \
             get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
-            sscanf(s_gain, "%i", &gain);                                             \
-            net_gain = gain;\
-        } else if (band == 1) {                                                \
-            gain-= RX_MID_GAIN_OFFSET;\
-            /*lna_bypass means bypass the lna (AM1081) */                      \
-            uint8_t lna_bypass;\
-            if (gain <= LTC5586_MIN_GAIN) {\
-                lna_bypass = 1;\
-                atten = LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= LTC5586_MAX_GAIN) {\
-                lna_bypass = 1;\
-                atten = 0;\
-            } else if (gain <= AM1081_GAIN + LTC5586_MIN_GAIN) {\
-                lna_bypass = 0;\
-                atten = AM1081_GAIN + LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= AM1081_GAIN + LTC5586_MAX_GAIN) {\
-                lna_bypass = 0;\
-                atten = 0;\
-                gain = gain - AM1081_GAIN;\
-            } else {\
-                lna_bypass = 0;\
-                atten = 0;\
-                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
-            }\
+            sscanf(s_gain, "%i", &current_gain);                                             \
+        } else if (band == 1 || band == 2) {                                                \
             \
-            /*Sets the property to enable/disable bypassing the fixed amplifier*/\
-            char s_lna[5];\
-            snprintf(s_lna, 5, "%u", lna_bypass);\
-            set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
-            \
-            /*Sets the variable amplifier*/\
+            /*Process: sets variable amplifiers, if the amplifiers weren't enough use the lna, then set the variable attenuator to handle overshoot from the lna*/\
             char s_gain[50];\
-            snprintf(s_gain, 50, "%i", gain - LTC5586_MIN_GAIN);\
+            sprintf(s_gain, "%i", target_gain);\
             set_property("rx/" STR(ch) "/rf/gain/ampl", s_gain);\
-            get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
-            sscanf(s_gain, "%i", &gain);                                             \
-            gain += LTC5586_MIN_GAIN;\
-            \
-            /*Sets the state tree property to handle the attenuation*/\
-            if(atten < LTC5586_MIN_ATTEN) {\
-                atten = LTC5586_MIN_ATTEN;\
-            } else if(atten > LTC5586_MAX_ATTEN) {\
-                atten = LTC5586_MAX_ATTEN;\
-            }\
-            char s_atten[25];\
-            snprintf(s_atten, 25, "%u", atten);\
-            set_property("rx/" STR(ch) "/rf/atten/val", s_atten);\
-            net_gain = gain + ((1-lna_bypass) * AM1081_GAIN) - atten + RX_MID_GAIN_OFFSET;\
-        } else if (band == 2) {                                                \
-            gain-= RX_HIGH_GAIN_OFFSET;\
-            uint8_t lna_bypass;\
-            if (gain <= LTC5586_MIN_GAIN) {\
-                lna_bypass = 1;\
-                atten = LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= LTC5586_MAX_GAIN) {\
-                lna_bypass = 1;\
-                atten = 0;\
-            } else if (gain <= AM1075_GAIN + LTC5586_MIN_GAIN) {\
-                lna_bypass = 0;\
-                atten = AM1075_GAIN + LTC5586_MIN_GAIN - gain;\
-                gain = LTC5586_MIN_GAIN;\
-            } else if (gain <= AM1075_GAIN + LTC5586_MAX_GAIN) {\
-                lna_bypass = 0;\
-                atten = 0;\
-                gain = gain - AM1075_GAIN;\
+            get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);\
+            sscanf(s_gain, "%i", &current_gain);\
+            if(current_gain < target_gain) {\
+                /*1 means bypass the lna*/\
+                set_property("rx/" STR(ch) "/rf/freq/lna", "0");\
+                if(band == 1) {\
+                    current_gain += AM1081_GAIN;\
+                } else if(band == 2) {\
+                    current_gain += AM1075_GAIN;\
+                } else {\
+                    PRINT(ERROR, "Band changed mid function. This code should be unreachable.\n");\
+                    set_property("rx/" STR(ch) "/rf/freq/lna", "1");\
+                }\
             } else {\
-                lna_bypass = 0;\
+                set_property("rx/" STR(ch) "/rf/freq/lna", "1");\
+            }\
+            if(current_gain > target_gain - MID_HIGH_MAX_ATTEN) {\
+                atten = current_gain - (target_gain - MID_HIGH_MAX_ATTEN) ;\
+            } else {\
                 atten = 0;\
-                /*gain deliberately unmodified, will be capped by rf/gain/ampl*/\
             }\
-            \
-            /*Sets the property to enable/disable bypassing the fixed amplifier*/\
-            char s_lna[5];\
-            snprintf(s_lna, 5, "%u", lna_bypass);\
-            set_property("rx/" STR(ch) "/rf/freq/lna", s_lna);\
-            \
-            /*Sets the variable amplifier*/\
-            char s_gain[50];\
-            snprintf(s_gain, 50, "%i", gain - LTC5586_MIN_GAIN);\
-            set_property("rx/" STR(ch) "/rf/gain/ampl", s_gain);\
-            get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
-            sscanf(s_gain, "%i", &gain);                                             \
-            gain += LTC5586_MIN_GAIN;\
-            \
-            /*Sets the state tree property to handle the attenuation*/\
-            if(atten < LTC5586_MIN_ATTEN) {\
-                atten = LTC5586_MIN_ATTEN;\
-            } else if(atten > LTC5586_MAX_ATTEN) {\
-                atten = LTC5586_MAX_ATTEN;\
-            }\
-            char s_atten[25];\
-            snprintf(s_atten, 25, "%u", atten);\
+            char s_atten[10];\
+            snprintf(s_atten, 10, "%u", atten);\
             set_property("rx/" STR(ch) "/rf/atten/val", s_atten);\
-            net_gain = gain + ((1-lna_bypass) * AM1075_GAIN) - atten + RX_HIGH_GAIN_OFFSET;\
-                                                                            \
-        } else {                                                               \
-            PRINT(ERROR,"band unexpected value while setting gain\n");         \
-            return RETURN_ERROR_GET_PROP;                                      \
-        }                                                                      \
+            get_property("rx/" STR(ch) "/rf/atten/val", s_atten, 10);\
+            sscanf(s_atten, "%i", &atten);\
+            current_gain+= MID_HIGH_MAX_ATTEN - atten;\
+            \
+        } else {\
+            PRINT(ERROR, "Invalid band: %i when setting gain\n");\
+            return RETURN_ERROR_PARAM;\
+        }\
                                                                                \
-        sprintf(ret, "%i", net_gain);                                              \
+        snprintf(ret, 10, "%i", current_gain);                                              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2048,8 +1986,8 @@ TX_CHANNELS
         int atten;                                                             \
         sscanf(data, "%i", &atten);                                            \
                                                                                \
-        if (atten > 31)                                                        \
-            atten = 31;                                                        \
+        if (atten > MID_HIGH_MAX_ATTEN)                                                        \
+            atten = MID_HIGH_MAX_ATTEN;                                                        \
         else if (atten < 0)                                                    \
             atten = 0;                                                         \
                                                                                \
