@@ -150,8 +150,7 @@
     #define BASE_DIR "/var/cyan"
     //state tree
     #define STATE_DIR "/var/cyan/state"
-    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
-    #define NUM_CHANNELS 9
+
     #define NUM_TX_CHANNELS 7
 
     #define NUM_RX_CHANNELS 9
@@ -195,8 +194,7 @@
     #define BASE_DIR "/var/cyan"
     //state tree
     #define STATE_DIR "/var/cyan/state"
-    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
-    #define NUM_CHANNELS 4
+
     #define NUM_TX_CHANNELS 4
 
     #define NUM_RX_CHANNELS 4

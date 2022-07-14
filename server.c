@@ -199,8 +199,8 @@ int main(int argc, char *argv[]) {
         abort();
     } 
 
-    int8_t rx_present[NUM_CHANNELS] = {0};
-    for(int n = 0; n < NUM_CHANNELS; n++) {
+    int8_t rx_present[NUM_RX_CHANNELS] = {0};
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         tmp_char = 'a' + n;
         sprintf(prop_path, "rx/%c/board/wait_async_pwr", tmp_char);
         char read[3];

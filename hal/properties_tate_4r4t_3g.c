@@ -142,34 +142,34 @@ static const int rx_jesd_pll_lock_num[NUM_RX_CHANNELS] = { 0, 1, 2, 3 };
 //Unlike most channels rx_4 uses a different patttern
 static const char *rx_reg4_map[4] = { "rxa4", "rxe4", "rxi4", "rxm4" };
 
-static const char *tx_reg4_map[4] = { "txa4", "txb4", "txc4", "txd4" };
+static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd4" };
 
 //registers used by trigger selected
 //note: this registers have multiple purposes, the code assumes bit 12:10 are used for trigger select
 //at time of writing it is per sfp, not per channel, hence the overlap
-static const char *rx_trig_sel_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
-static const char *rx_trig_sma_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
-static const char *rx_trig_ufl_mode_map[4] = { "rxa9", "rxb9", "rxc9", "rxd9"};
+static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
+static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
+static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 
-static const char *tx_trig_sel_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
-static const char *tx_trig_sma_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
-static const char *tx_trig_ufl_mode_map[NUM_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
 
-static const char *tx_nsamp_msw_map[NUM_CHANNELS] = { "txi7", "txj7", "txk7", "txl7" };
-static const char *tx_nsamp_lsw_map[NUM_CHANNELS] = { "txi8", "txj8", "txk8", "txl8" };
+static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txi7", "txj7", "txk7", "txl7" };
+static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txi8", "txj8", "txk8", "txl8" };
 
 //least significant 32 bits used to store underflow count
-static const char *tx_uflow_map_lsb[4] = { "flc6", "flc8", "flc10", "flc12" };
+static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12" };
 //most significant 32 bits used to store underflow count
-static const char *tx_uflow_map_msb[4] = { "flc7", "flc9", "flc11", "flc13" };
+static const char *tx_uflow_map_msb[NUM_TX_CHANNELS] = { "flc7", "flc9", "flc11", "flc13" };
 //least significant 32 bits used to store overflow count
-static const char *tx_oflow_map_lsb[4] = { "flc14", "flc16", "flc18", "flc20" };
+static const char *tx_oflow_map_lsb[NUM_TX_CHANNELS] = { "flc14", "flc16", "flc18", "flc20" };
 //most significant 32 bits used to store overflow count
-static const char *tx_oflow_map_msb[4] = { "flc15", "flc17", "flc19", "flc21" };
+static const char *tx_oflow_map_msb[NUM_TX_CHANNELS] = { "flc15", "flc17", "flc19", "flc21" };
 
 //used to figure out which register, and where in the register to set dsp gain
-static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
-static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
+static const char *rxg_map[NUM_RX_CHANNELS] = { "rxga", "rxge", "rxgi", "rxgm" };
+static const char *txg_map[NUM_TX_CHANNELS] = { "txga", "txge", "txgi", "txgm" };
 
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -196,15 +196,15 @@ int max_attempts = 3;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
-static uint8_t rx_stream[NUM_CHANNELS] = {0};
+static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 
-static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
-static pid_t tx_async_pwr_pid[NUM_CHANNELS] = {0};
+static pid_t rx_async_pwr_pid[NUM_RX_CHANNELS] = {0};
+static pid_t tx_async_pwr_pid[NUM_TX_CHANNELS] = {0};
 //the time async_pwr started running, used when calculating if it timed out
 //timeout is in seconds
 #define timeout 15
-static time_t rx_async_start_time[NUM_CHANNELS] = {0};
-static time_t tx_async_start_time[NUM_CHANNELS] = {0};
+static time_t rx_async_start_time[NUM_RX_CHANNELS] = {0};
+static time_t tx_async_start_time[NUM_TX_CHANNELS] = {0};
 
 uint8_t *_save_profile;
 uint8_t *_load_profile;
@@ -3297,7 +3297,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%d", atten);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -3346,7 +3346,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", gain);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -3396,7 +3396,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", gain);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
@@ -3464,7 +3464,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", freq);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -3490,7 +3490,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
@@ -3558,7 +3558,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", freq);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -3584,7 +3584,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;

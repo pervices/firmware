@@ -198,15 +198,15 @@ int max_attempts = 3;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
-static uint8_t rx_stream[NUM_CHANNELS] = {0};
+static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 
-static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
-static pid_t tx_async_pwr_pid[NUM_CHANNELS] = {0};
+static pid_t rx_async_pwr_pid[NUM_RX_CHANNELS] = {0};
+static pid_t tx_async_pwr_pid[NUM_TX_CHANNELS] = {0};
 //the time async_pwr started running, used when calculating if it timed out
 //timeout is in seconds
 #define timeout 15
-static time_t rx_async_start_time[NUM_CHANNELS] = {0};
-static time_t tx_async_start_time[NUM_CHANNELS] = {0};
+static time_t rx_async_start_time[NUM_RX_CHANNELS] = {0};
+static time_t tx_async_start_time[NUM_TX_CHANNELS] = {0};
 
 uint8_t *_save_profile;
 uint8_t *_load_profile;
@@ -2797,7 +2797,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%d", atten);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -2846,7 +2846,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", gain);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -2896,7 +2896,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", gain);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
@@ -2964,7 +2964,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", freq);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -2990,7 +2990,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
@@ -3058,7 +3058,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", freq);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -3084,7 +3084,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
