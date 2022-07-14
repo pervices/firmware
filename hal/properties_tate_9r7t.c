@@ -170,6 +170,9 @@ static const char *tx_oflow_map_msb[NUM_TX_CHANNELS] = { "flc15", "flc17", "flc1
 static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
 static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
 
+
+static uint_fast8_t jesd_enabled = 0;
+
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
 // TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -2476,7 +2479,6 @@ TX_CHANNELS
         sscanf(data, "%i", &reset);                                           \
         if (!reset) return RETURN_SUCCESS;\
         \
-        PRINT(INFO, "Temporary debug message: setting sysref to continuous mode for JESD reset\n");\
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
         usleep(100000);\
@@ -2488,12 +2490,10 @@ TX_CHANNELS
         \
         /*Resets JESD on FPGA*/\
         usleep(300000);\
-        PRINT(INFO, "Temporary debug message: setting JESD reset for specific channel\n");\
         uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
         write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);\
         /*this wait is needed*/\
         usleep(300000);\
-        PRINT(INFO, "Temporary debug message: unsetting JESD reset for specific channel\n");\
         write_hps_reg_mask("res_rw7", 0, individual_reset_bit);\
         /*this wait is need*/\
         usleep(300000);\
@@ -4174,6 +4174,18 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+//Only allows jesd_reset_all to work, something else must reset the JESDs after enabling them
+static int hdlr_fpga_enable_jesd(const char *data, char *ret) {
+    uint8_t enable_jesd = 0;
+    sscanf(data, "%hhu", &enable_jesd);
+    if(enable_jesd) {
+        jesd_enabled = 1;
+    } else {
+        jesd_enabled = 0;
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_reset(const char *data, char *ret) {
     /* The reset controllet is like a waterfall:
      * Global Reset -> 40G Reset -> JESD Reset -> DSP Reset
@@ -4587,6 +4599,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
 
+#define DEFINE_FPGA_POST()                                                                                                         \
+    DEFINE_FILE_PROP_P("fpga/link/enable_jesd"               , hdlr_fpga_enable_jesd,                      RW, "1", SP, NAC)               \
 
 #define DEFINE_GPIO(_p)                                                                                                        \
     DEFINE_FILE_PROP_P("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0", SP, NAC)
@@ -4628,6 +4642,7 @@ static prop_t property_table[] = {
 #undef X
 
     DEFINE_FPGA()
+
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
 #undef X
@@ -4636,6 +4651,7 @@ static prop_t property_table[] = {
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
     DEFINE_CM()
+    DEFINE_FPGA_POST()
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
@@ -4913,6 +4929,10 @@ void jesd_reset_all() {
     char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
     int attempts;
+    //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time on board is booted during the boot process
+    if(!jesd_enabled) {
+        return;
+    }
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         attempts = 0;
         //Skips empty boards, off boards, and boards that have not begun initialization
