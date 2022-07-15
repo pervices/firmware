@@ -55,8 +55,6 @@ int main(int argc, char *argv[]) {
 
     char load_profile_path[MAX_PROP_LEN];
     char save_profile_path[MAX_PROP_LEN];
-    char prop_path[PROP_PATH_LEN];
-    char tmp_char;
 
     const int port_nums[] = {
         /* UDP management port */
