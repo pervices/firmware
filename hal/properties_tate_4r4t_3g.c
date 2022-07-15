@@ -90,18 +90,17 @@
 //This are likely to change between variants, both thier values and how they are used
 #define AM1081_GAIN 17
 #define AM1075_GAIN 18
-#define LMH6401_MAX_GAIN 26
-#define LMH6401_MIN_GAIN -6
+//The actual range of the LMH6401 vga is -6 to 26, but teh MCU cannot accept negative numbers
+#define LMH6401_MAX_GAIN 32
+#define LMH6401_MIN_GAIN 0
 #define LTC5586_MAX_GAIN 15
 #define LTC5586_MIN_GAIN 8
-#define LTC5586_MAX_ATTEN 31
 // Maximum setting on the variable attenuator(s) in mid and high band
+// Currently it is the attenuation from the attenuator on LTC 5586
 #define MID_HIGH_MAX_ATTEN 31
 
 //used in rx gain calculations so that the user specifying a gain of 0 results in minimum gain
 #define RX_LOW_GAIN_OFFSET 6
-#define RX_MID_GAIN_OFFSET 23
-#define RX_HIGH_GAIN_OFFSET 23
 
 //used for rf freq val calc when in high band
 #define HB_STAGE2_MIXER_FREQ 1800000000
@@ -1979,7 +1978,7 @@ CHANNELS
                     gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;                 \
                 }                                                               \
                 else if (gain < 0) {                                            \
-                    vga_gain = gain;                                            \
+                    vga_gain = 0;\
                     gain = 0;                                                   \
                 }                                                               \
                                                                                 \
@@ -2015,7 +2014,6 @@ CHANNELS
         char band_read[3];                                                     \
                                                                                \
         sscanf(data, "%i", &target_gain);                                             \
-        PRINT(INFO, "target_gain: %i\n", target_gain);\
         \
         get_property(&fullpath[0],&band_read[0],3);                                  \
         sscanf(band_read, "%i", &band);                                        \
@@ -2027,13 +2025,20 @@ CHANNELS
             get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);                 \
             sscanf(s_gain, "%i", &current_gain);                                             \
         } else if (band == 1 || band == 2) {                                                \
+            /* Step 1: assume variable attentuators are at their minimum, note a current_gain of 0 is miminum gain maximum attenuation*/\
+            /* Step 2: attempt to set the variable amplifiers to the requested gain*/\
+            /* Step 3: if the variable amplifiers weren't enough, set the lna*/\
+            /* Step 3: if the lna + variable amplifiers caused overshoot, set the amplifier to be lower*/\
+            current_gain += MID_HIGH_MAX_ATTEN;\
             \
             /*Process: sets variable amplifiers, if the amplifiers weren't enough use the lna, then set the variable attenuator to handle overshoot from the lna*/\
             char s_gain[50];\
-            sprintf(s_gain, "%i", target_gain);\
+            sprintf(s_gain, "%i", target_gain - current_gain);\
             set_property("rx/" STR(ch) "/rf/gain/ampl", s_gain);\
             get_property("rx/" STR(ch) "/rf/gain/ampl", s_gain, 50);\
-            sscanf(s_gain, "%i", &current_gain);\
+            int ampl_gain = 0;\
+            sscanf(s_gain, "%i", &ampl_gain);\
+            current_gain+=ampl_gain;\
             if(current_gain < target_gain) {\
                 /*1 means bypass the lna*/\
                 set_property("rx/" STR(ch) "/rf/freq/lna", "0");\
@@ -2048,8 +2053,8 @@ CHANNELS
             } else {\
                 set_property("rx/" STR(ch) "/rf/freq/lna", "1");\
             }\
-            if(current_gain > target_gain - MID_HIGH_MAX_ATTEN) {\
-                atten = current_gain - (target_gain - MID_HIGH_MAX_ATTEN) ;\
+            if(current_gain > target_gain) {\
+                atten = current_gain - target_gain;\
             } else {\
                 atten = 0;\
             }\
@@ -2058,7 +2063,7 @@ CHANNELS
             set_property("rx/" STR(ch) "/rf/atten/val", s_atten);\
             get_property("rx/" STR(ch) "/rf/atten/val", s_atten, 10);\
             sscanf(s_atten, "%i", &atten);\
-            current_gain+= MID_HIGH_MAX_ATTEN - atten;\
+            current_gain-= atten;\
             \
         } else {\
             PRINT(ERROR, "Invalid band: %i when setting gain\n");\
