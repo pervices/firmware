@@ -635,8 +635,11 @@ static int valid_gating_mode(const char *data, bool *dsp) {
             \
         }\
         return r;                                                              \
-    }                                                                          \
-                                                                               \
+    }
+CHANNELS
+#undef X
+
+#define X(ch, io, crx, ctx)\
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
