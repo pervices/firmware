@@ -99,9 +99,6 @@
 // Currently it is the attenuation from the attenuator on LTC 5586
 #define MID_HIGH_MAX_ATTEN 31
 
-//used in rx gain calculations so that the user specifying a gain of 0 results in minimum gain
-#define RX_LOW_GAIN_OFFSET 6
-
 //used for rf freq val calc when in high band
 #define HB_STAGE2_MIXER_FREQ 1800000000
 
@@ -1947,7 +1944,6 @@ CHANNELS
                                                                                \
         /*Sets low band variable amplifer*/\
         if(band == 0) {\
-            gain-= RX_LOW_GAIN_OFFSET;\
             if (gain > LMH6401_MAX_GAIN) {                                     \
                 gain = LMH6401_MAX_GAIN;                                       \
             } else if (gain < LMH6401_MIN_GAIN) {                              \
@@ -1957,7 +1953,6 @@ CHANNELS
             /*Variable amplifer takes attenuation value instead of a gain*/ \
             sprintf(buf, "vga -a %i\r", atten);\
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
-            gain+= RX_LOW_GAIN_OFFSET;\
             sprintf(ret, "%i", gain);\
         /*Sets mid/high band variable amplifer*/\
         } else if(band == 1 || band == 2) {\
