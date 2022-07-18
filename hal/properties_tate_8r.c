@@ -130,8 +130,8 @@ static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PW
 
 static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
 //the time async_pwr started running, used when calculating if it timed out
-//timeout is in seconds
-#define timeout 15
+//pwr_board_timeout is in seconds
+#define pwr_board_timeout "15"
 static time_t rx_async_start_time[NUM_CHANNELS] = {0};
 
 uint8_t *_save_profile;
@@ -1160,8 +1160,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i, with error number: %i\n", INT(ch), errno);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, pwr_board_timeout, NULL);\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr rx ch: %i\n", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
             sprintf(ret, "%i", pid);\
@@ -1172,33 +1172,30 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     }                                                                          \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_rx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        time_t current_time;\
-        int8_t finished = -1;\
         int status = 0;\
         if(rx_async_pwr_pid[INT(ch)] <=0) {\
             PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
             return RETURN_ERROR;\
         }\
-        do {\
-            time(&current_time);\
-            finished = waitpid(rx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
-        } while(current_time < timeout + rx_async_start_time[INT(ch)] && finished == 0);\
-        if (finished == 0) {\
-            kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
-            /*collects the stalled pwr_on process*/\
-            waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
-            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
-            rx_power[INT(ch)] = PWR_NO_BOARD;\
-            strcpy(ret, "0");\
+        \
+        waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
+        if( WIFEXITED(status) ) {\
+            if(WEXITSTATUS(status)) {\
+                rx_power[INT(ch)] = PWR_NO_BOARD;\
+                PRINT(ERROR,"Error when powering on board %i, the slot will not be used\n", INT(ch));\
+            } else {\
+                rx_power[INT(ch)] = PWR_HALF_ON;\
+                PRINT(INFO,"Board %i powered on\n", INT(ch));\
+            }\
         } else {\
-            rx_power[INT(ch)] = PWR_HALF_ON;\
-            PRINT(INFO,"Board %i powered on\n", INT(ch));\
-            strcpy(ret, "1");\
+            rx_power[INT(ch)] = PWR_NO_BOARD;\
+            PRINT(ERROR,"Error in script controlling power for board %i, the slot will not be used\n", INT(ch));\
         }\
+        \
         rx_async_pwr_pid[INT(ch)] = 0;\
-        return RETURN_SUCCESS;                                                 \
+        return RETURN_SUCCESS;\
     }                                                                          \
-                                                                               \
+    \
     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\

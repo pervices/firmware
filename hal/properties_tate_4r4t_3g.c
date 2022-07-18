@@ -201,8 +201,8 @@ static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 static pid_t rx_async_pwr_pid[NUM_RX_CHANNELS] = {0};
 static pid_t tx_async_pwr_pid[NUM_TX_CHANNELS] = {0};
 //the time async_pwr started running, used when calculating if it timed out
-//timeout is in seconds
-#define timeout 15
+//pwr_board_timeout is in seconds
+#define pwr_board_timeout "15"
 static time_t rx_async_start_time[NUM_RX_CHANNELS] = {0};
 static time_t tx_async_start_time[NUM_TX_CHANNELS] = {0};
 
@@ -1579,6 +1579,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_async_pwr_board(const char *data, char *ret) {               \
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        set_property("time/sync/sysref_mode", "continuous");\
                                                                                \
         pid_t pid = fork();\
         if(pid==0) {\
@@ -1590,7 +1591,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, pwr_board_timeout, NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i\n", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
@@ -1603,31 +1604,28 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_tx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        time_t current_time;\
-        int8_t finished = -1;\
         int status = 0;\
         if(tx_async_pwr_pid[INT(ch)] <=0) {\
             PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
             return RETURN_ERROR;\
         }\
-        do {\
-            time(&current_time);\
-            finished = waitpid(tx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
-        } while(current_time < timeout + tx_async_start_time[INT(ch)] && finished == 0);\
-        if (finished == 0) {\
-            kill(tx_async_pwr_pid[INT(ch)], SIGTERM);\
-            /*collects the stalled pwr_on process*/\
-            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
-            waitpid(tx_async_pwr_pid[INT(ch)], &status, 0);\
-            tx_power[INT(ch)] = PWR_NO_BOARD;\
-            strcpy(ret, "0");\
+        \
+        waitpid(tx_async_pwr_pid[INT(ch)], &status, 0);\
+        if( WIFEXITED(status) ) {\
+            if(WEXITSTATUS(status)) {\
+                tx_power[INT(ch)] = PWR_NO_BOARD;\
+                PRINT(ERROR,"Error when powering on board %i, the slot will not be used\n", INT(ch));\
+            } else {\
+                tx_power[INT(ch)] = PWR_HALF_ON;\
+                PRINT(INFO,"Board %i powered on\n", INT(ch));\
+            }\
         } else {\
-            tx_power[INT(ch)] = PWR_HALF_ON;\
-            PRINT(INFO,"Board %i powered on\n", INT(ch));\
-            strcpy(ret, "1");\
+            tx_power[INT(ch)] = PWR_NO_BOARD;\
+            PRINT(ERROR,"Error in script controlling power for board %i, the slot will not be used\n", INT(ch));\
         }\
+        \
         tx_async_pwr_pid[INT(ch)] = 0;\
-        return RETURN_SUCCESS;                                                 \
+        return RETURN_SUCCESS;\
     }                                                                          \
     \
     static int hdlr_tx_##ch##_jesd_reset(const char *data, char *ret) {       \
@@ -2880,8 +2878,8 @@ CHANNELS
             } else {\
                 strcpy(str_pwr, "off");\
             }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr ch: %i\n", INT(ch));\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, pwr_board_timeout, NULL);\
+            PRINT(ERROR, "Failed to launch rfe_control in async pwr rx ch: %i\n", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
         } else {\
             sprintf(ret, "%i", pid);\
@@ -2892,31 +2890,28 @@ CHANNELS
     }                                                                          \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_rx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        time_t current_time;\
-        int8_t finished = -1;\
         int status = 0;\
         if(rx_async_pwr_pid[INT(ch)] <=0) {\
             PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
             return RETURN_ERROR;\
         }\
-        do {\
-            time(&current_time);\
-            finished = waitpid(rx_async_pwr_pid[INT(ch)], &status, WNOHANG);\
-        } while(current_time < timeout + rx_async_start_time[INT(ch)] && finished == 0);\
-        if (finished == 0) {\
-            kill(rx_async_pwr_pid[INT(ch)], SIGTERM);\
-            /*collects the stalled pwr_on process*/\
-            waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
-            PRINT(ERROR,"Board %i failed to boot, the slot will not be used\n", INT(ch));\
-            rx_power[INT(ch)] = PWR_NO_BOARD;\
-            strcpy(ret, "0");\
+        \
+        waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
+        if( WIFEXITED(status) ) {\
+            if(WEXITSTATUS(status)) {\
+                rx_power[INT(ch)] = PWR_NO_BOARD;\
+                PRINT(ERROR,"Error when powering on board %i, the slot will not be used\n", INT(ch));\
+            } else {\
+                rx_power[INT(ch)] = PWR_HALF_ON;\
+                PRINT(INFO,"Board %i powered on\n", INT(ch));\
+            }\
         } else {\
-            rx_power[INT(ch)] = PWR_HALF_ON;\
-            PRINT(INFO,"Board %i powered on\n", INT(ch));\
-            strcpy(ret, "1");\
+            rx_power[INT(ch)] = PWR_NO_BOARD;\
+            PRINT(ERROR,"Error in script controlling power for board %i, the slot will not be used\n", INT(ch));\
         }\
+        \
         rx_async_pwr_pid[INT(ch)] = 0;\
-        return RETURN_SUCCESS;                                                 \
+        return RETURN_SUCCESS;\
     }                                                                          \
     \
     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
