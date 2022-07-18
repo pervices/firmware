@@ -1563,7 +1563,6 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_TX(ch));                    \
             system(pwr_cmd);                                                   \
-            set_property("time/sync/sysref_mode", "pulsed");\
             tx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_TX(ch));                    \
@@ -2850,7 +2849,6 @@ CHANNELS
             set_property("time/sync/sysref_mode", "continuous");\
             sprintf(pwr_cmd, "rfe_control %d on", INT_RX(ch));                    \
             system(pwr_cmd);                                                   \
-            set_property("time/sync/sysref_mode", "pulsed");\
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
@@ -2945,8 +2943,6 @@ CHANNELS
         /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
         /*strcpy(buf, "board -s 0\r");*/\
         /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
-        \
-        set_property("time/sync/sysref_mode", "pulsed");\
         \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3732,7 +3728,7 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
             strcpy(buf, "sync -c 0\r");
             current_sysref_mode = pulsed;
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-            usleep(100000);
+            usleep(1100000);
             return RETURN_SUCCESS;
         }
     } else if ( (strcmp(data, "continuous") == 0) || (strcmp(data, "1") == 0) )  {
@@ -3744,7 +3740,7 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
             strcpy(buf, "sync -c 1\r");
             current_sysref_mode = continuous;
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-            usleep(100000);
+            usleep(1100000);
             return RETURN_SUCCESS;
         }
     } else {
