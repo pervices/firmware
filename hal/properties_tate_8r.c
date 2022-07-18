@@ -1210,7 +1210,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         \
         /*Using sysref pulses would be better, but the pulses have problems*/\
         set_property("time/sync/sysref_mode", "continuous");\
-        usleep(100000);\
         \
         /*enables responding to sysref*/\
         /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
@@ -1855,20 +1854,45 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+typedef enum {
+    pulsed = 0,
+    continuous = 1,
+    unspecified_sysref
+} sysref_modes;
+
+sysref_modes current_sysref_mode = unspecified_sysref;
+
 // choose pulsed or continuous SYSREF
 static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
     if ( (strcmp(data, "pulsed") == 0) || (strcmp(data, "0") == 0) ) {
-        PRINT(INFO, "SYSREF MODE 'pulsed' selected.\n");
-        strcpy(buf, "sync -c 0\r");
+        if(current_sysref_mode == pulsed) {
+            PRINT(INFO, "SYSREF MODE 'pulsed' already active.\n");
+            return RETURN_SUCCESS;
+        } else {
+            PRINT(INFO, "SYSREF MODE 'pulsed' selected.\n");
+            strcpy(buf, "sync -c 0\r");
+            current_sysref_mode = pulsed;
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+            usleep(100000);
+            return RETURN_SUCCESS;
+        }
     } else if ( (strcmp(data, "continuous") == 0) || (strcmp(data, "1") == 0) )  {
-        PRINT(INFO, "SYSREF MODE 'continuous' selected.\n");
-        strcpy(buf, "sync -c 1\r");
+        if(current_sysref_mode == continuous) {
+            PRINT(INFO, "SYSREF MODE 'continuous' already active.\n");
+            return RETURN_SUCCESS;
+        } else {
+            PRINT(INFO, "SYSREF MODE 'continuous' selected.\n");
+            strcpy(buf, "sync -c 1\r");
+            current_sysref_mode = continuous;
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+            usleep(100000);
+            return RETURN_SUCCESS;
+        }
     } else {
         PRINT(ERROR, "SYSREF MODE must be 'continuous' or 'pulsed'.\n");
+        current_sysref_mode = unspecified_sysref;
         return RETURN_ERROR;
     }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
 }
 
 // Toggle SPI Sync
