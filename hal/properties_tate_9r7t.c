@@ -1531,7 +1531,8 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             set_property("time/sync/sysref_mode", "pulsed");\
             tx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
-            sprintf(pwr_cmd, "rfe_control %d off", INT_TX(ch));                    \
+            /* This function is meant to block until after power is either on or off. However a hardware issue can cause unpopulated boards to never be detected as off*/\
+            sprintf(pwr_cmd, "rfe_control %d off" pwr_board_timeout, INT_TX(ch));                    \
             system(pwr_cmd);                                                   \
             tx_power[INT(ch)] = PWR_OFF;\
         }\
@@ -1569,7 +1570,6 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_tx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        time_t current_time;\
         int status = 0;\
         if(tx_async_pwr_pid[INT(ch)] <=0) {\
             PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
@@ -2353,7 +2353,8 @@ TX_CHANNELS
             set_property("time/sync/sysref_mode", "pulsed");\
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
-            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            /* This function is meant to block until after power is either on or off. However a hardware issue can cause unpopulated boards to never be detected as off*/\
+            sprintf(pwr_cmd, "rfe_control %d off" pwr_board_timeout, INT_RX(ch));\
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_OFF;\
         }\
@@ -2390,7 +2391,6 @@ TX_CHANNELS
     }                                                                          \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_rx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        time_t current_time;\
         int status = 0;\
         if(rx_async_pwr_pid[INT(ch)] <=0) {\
             PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
