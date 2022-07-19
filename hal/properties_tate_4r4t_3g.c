@@ -90,7 +90,7 @@
 //This are likely to change between variants, both thier values and how they are used
 #define AM1081_GAIN 17
 #define AM1075_GAIN 18
-//The actual range of the LMH6401 vga is -6 to 26, but teh MCU cannot accept negative numbers
+//The actual range of the LMH6401 vga is -6 to 26, but the MCU cannot accept negative numbers
 #define LMH6401_MAX_GAIN 32
 #define LMH6401_MIN_GAIN 0
 #define LTC5586_MAX_GAIN 15
@@ -1951,6 +1951,7 @@ CHANNELS
             }                                                                  \
             atten = LMH6401_MAX_GAIN - gain;                                   \
             /*Variable amplifer takes attenuation value instead of a gain*/ \
+            PRINT(INFO, "Setting variable amplifier to: %i\n", gain);\
             sprintf(buf, "vga -a %i\r", atten);\
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
             sprintf(ret, "%i", gain);\
@@ -1961,6 +1962,7 @@ CHANNELS
                 if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
                 else if (gain < 0) gain = 0;\
                 \
+                PRINT(INFO, "Setting mixer amplifier to: %i\n", gain);\
                 sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
                 sprintf(ret, "%i", gain);\
@@ -1970,7 +1972,7 @@ CHANNELS
                     gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;                 \
                 }                                                               \
                 else if (gain < 0) {                                            \
-                    vga_gain = 0;\
+                    vga_gain = gain;                                            \
                     gain = 0;                                                   \
                 }                                                               \
                                                                                 \
@@ -1981,9 +1983,11 @@ CHANNELS
                 }                                                               \
                 atten = LMH6401_MAX_GAIN - vga_gain;                            \
                 /*Variable amplifer takes attenuation value instead of a gain*/ \
+                PRINT(INFO, "Setting variable amplifier to: %i\n", vga_gain);\
                 sprintf(buf, "vga -a %i\r", atten);                             \
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 \
+                PRINT(INFO, "Setting mixer amplifier to: %i\n", gain);\
                 sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
                 sprintf(ret, "%i", gain+vga_gain);                              \
