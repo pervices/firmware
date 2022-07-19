@@ -2419,32 +2419,13 @@ TX_CHANNELS
         }\
         int reset;                                                            \
         sscanf(data, "%i", &reset);                                           \
-        if (!reset) return RETURN_SUCCESS;\
-        \
-        /*Using sysref pulses would be better, but the pulses have problems*/\
-        set_property("time/sync/sysref_mode", "continuous");\
-        \
-        /*enables responding to sysref*/\
-        /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
-        /*strcpy(buf, "board -s 1\r");*/\
-        /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
-        \
-        /*Resets JESD on FPGA*/\
-        usleep(300000);\
-        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);\
-        /*this wait is needed*/\
-        usleep(300000);\
-        write_hps_reg_mask("res_rw7", 0, individual_reset_bit);\
-        /*this wait is need*/\
-        usleep(300000);\
-        \
-        /*disable responding to sysref*/\
-        /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
-        /*strcpy(buf, "board -s 0\r");*/\
-        /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
-        \
-        return RETURN_SUCCESS;                                                 \
+        if (!reset){\
+            return RETURN_SUCCESS;\
+        }\
+        else {\
+            jesd_reset_all();\
+            return RETURN_SUCCESS;\
+        }\
     }                                                                          \
     \
     static int hdlr_rx_##ch##_jesd_pll_locked(const char *data, char *ret) {       \
@@ -2552,7 +2533,6 @@ TX_CHANNELS
                 rx_power[INT(ch)] = PWR_OFF;\
             }\
                                                                                \
-            rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* disable DSP core */                                             \
@@ -4887,35 +4867,86 @@ void sync_channels(uint8_t chan_mask) {
     return;
 }
 
-//tx not implemented yet
 void jesd_reset_all() {
     int chan;
-    char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
-    int attempts;
-    //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time on board is booted during the boot process
+
+    //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time a board is booted during the boot process
     if(!jesd_enabled) {
         return;
     }
+
+    set_property("time/sync/sysref_mode", "continuous");
+
+    //Takes rx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored.
+    //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-        attempts = 0;
-        //Skips empty boards, off boards, and boards that have not begun initialization
-        //Note: make sure when this is called in pwr that the board being turned on is already set as on
-        if(rx_power[chan]!=PWR_ON) {
-            continue;
+        if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+        } else {
+            write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
         }
-        sprintf(reset_path, "rx/%c/jesd/reset", chan+'a');
-        sprintf(status_path, "rx/%c/jesd/status", chan+'a');
-        while(property_good(status_path) != 1) {
-            if(attempts >= max_attempts) {
-                PRINT(ERROR, "JESD link for channel %c failed after %i attempts \n", chan+'a', max_attempts);
-                break;
+    }
+
+//     //Takes tx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored
+//     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
+//     for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+//         if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
+//             write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
+//         } else {
+//             write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+//         }
+//     }
+
+    int attempts = 0;
+    while ( attempts < max_attempts ) {
+        int is_bad_attempt = 0;
+
+        //Issue JESD master reset
+        set_property("fpga/reset", "3");
+
+        //Wait for links to re-establish
+        usleep(400000);
+
+        //Checks if all rx JESDs are working
+        for(chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
+            if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+                sprintf(status_path, "rx/%c/jesd/status", chan+'a');
+                if(property_good(status_path) != 1) {
+                    PRINT(ERROR, "JESD link for rx channel %c failed, re-attempting JESD reset\n", chan+'a', max_attempts);
+                    is_bad_attempt = 1;
+                }
             }
-            attempts++;
-            set_property(reset_path, "1");
         }
 
+//         //Checks if all tx JESDs are working
+//         for(chan = 0; chan < NUM_TX_CHANNELS && !is_bad_attempt; chan++) {
+//             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
+//                 sprintf(status_path, "tx/%c/jesd/status", chan+'a');
+//                 if(property_good(status_path) != 1) {
+//                     PRINT(ERROR, "JESD link for tx channel %c failed, re-attempting JESD reset\n", chan+'a', max_attempts);
+//                     is_bad_attempt = 1;
+//                 }
+//             }
+//         }
+
+        if(!is_bad_attempt) {
+            break;
+        }
+        attempts++;
     }
+    if(attempts > max_attempts) {
+        PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable. It is recommended that you reboot the unit\n", chan+'a', max_attempts);
+    }
+
+    //Puts rx channel dsp into reset if the board is on channels are in reset JESD sync is ignored
+    for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+    }
+//     //Puts tx channel dsp into reset if the board is on channels are in reset JESD sync is ignored
+//     for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+//         write_hps_reg_mask(tx_reg4_map[chan], 0x0, 0x2);
+//     }
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
