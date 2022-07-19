@@ -4879,6 +4879,9 @@ void sync_channels(uint8_t chan_mask) {
 void jesd_reset_all() {
     int chan;
     char status_path[PROP_PATH_LEN];
+    // Stores the original value for the dsp reset registers. The value at the end should match the value it started with
+    uint32_t original_rx4[NUM_RX_CHANNELS] = {0};
+    uint32_t original_tx4[NUM_TX_CHANNELS] = {0};
 
     //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time a board is booted during the boot process
     if(!jesd_enabled) {
@@ -4890,6 +4893,7 @@ void jesd_reset_all() {
     //Takes rx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored.
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
         if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
             write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
         } else {
@@ -4900,6 +4904,7 @@ void jesd_reset_all() {
     //Takes tx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
     for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+        read_hps_reg(tx_reg4_map[chan], &original_tx4[chan]);
         if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
             write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
         } else {
@@ -4948,13 +4953,13 @@ void jesd_reset_all() {
         PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable. It is recommended that you reboot the unit\n", chan+'a', max_attempts);
     }
 
-    //Puts rx channel dsp into reset if the board is on channels are in reset JESD sync is ignored
+    // Sets whether the dsp is in reset to what is was prior to this function
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-        write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+        write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
     }
-    //Puts tx channel dsp into reset if the board is on channels are in reset JESD sync is ignored
+    // Sets whether the dsp is in reset to what is was prior to this function
     for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
-        write_hps_reg_mask(tx_reg4_map[chan], 0x0, 0x2);
+        write_hps_reg_mask(tx_reg4_map[chan], original_tx4[chan], 0x2);
     }
 }
 
