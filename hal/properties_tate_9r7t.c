@@ -1646,7 +1646,11 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x100);                      \
             \
             /* reset JESD */                                              \
-            jesd_reset_all();\
+            if(jesd_enabled) {\
+                if(property_good("tx/" STR(ch) "/jesd/status") != 1) {\
+                    jesd_reset_all();\
+                }\
+            }\
                                                                                \
             /* Enables channel */                    \
             read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                           \
@@ -2509,7 +2513,11 @@ TX_CHANNELS
             }\
                                                                     \
             /* reset JESD */                                              \
-            jesd_reset_all();\
+            if(jesd_enabled) {\
+                if(property_good("rx/" STR(ch) "/jesd/status") != 1) {\
+                    jesd_reset_all();\
+                }\
+            }\
                                                                                \
             /* Reset DSP */                    \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
