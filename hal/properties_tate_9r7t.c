@@ -4296,8 +4296,10 @@ GPIO_PINS
 #define DEFINE_RX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
 
-#define DEFINE_RX_PWR_REBOOT(_c)    \
+#define DEFINE_RX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
+
+#define DEFINE_RX_PWR_REBOOT(_c)    \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/invert_devclk"     , hdlr_rx_##_c##_invert_devclk,             RW, "0", SP, #_c)\
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
@@ -4359,8 +4361,10 @@ GPIO_PINS
 #define DEFINE_TX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/wait_async_pwr", hdlr_tx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
 
-#define DEFINE_TX_PWR_REBOOT(_c)    \
+#define DEFINE_TX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/pwr_board"                , hdlr_tx_##_c##_pwr_board,                     RW, "0", SP, #_c)   \
+
+#define DEFINE_TX_PWR_REBOOT(_c)    \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
     DEFINE_FILE_PROP_P("tx/" #_c "/board/async_pwr"          , hdlr_tx_##_c##_async_pwr_board,      RW, "1", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0", SP, #_c)
@@ -4569,9 +4573,19 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
 static prop_t property_table[] = {
+// Turns off rx boards
+#define X(ch, rx, crx, ctx) DEFINE_RX_BOARD_PWR(ch)
+    RX_CHANNELS
+#undef X
+// Turns off tx boards
+#define X(ch, rx, crx, ctx) DEFINE_TX_BOARD_PWR(ch)
+    TX_CHANNELS
+#undef X
+// Initialize time boards
     DEFINE_TIME()
+// Initialize FPGA functions needed before setting up rfe boards
     DEFINE_FPGA_PRE()
-    //power off then on reboot rx/tx boards, but don't wait for them to finish booting
+// Power on rx/tx boards, but don't wait for them to finish booting
 #define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     RX_CHANNELS
 #undef X
@@ -4579,7 +4593,7 @@ static prop_t property_table[] = {
     TX_CHANNELS
 #undef X
 
-//waits for boards to finish booting
+// Waits for boards to finish booting
 #define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
     RX_CHANNELS
 #undef X
@@ -4587,6 +4601,7 @@ static prop_t property_table[] = {
     TX_CHANNELS
 #undef X
 
+// Initialize rx/tx boards
 #define X(ch, rx, crx, ctx) DEFINE_RX_CHANNEL(ch)
     RX_CHANNELS
 #undef X
@@ -4594,6 +4609,7 @@ static prop_t property_table[] = {
     TX_CHANNELS
 #undef X
 
+// Initialize FPGA properties
     DEFINE_FPGA()
 
 #define X(_p, io) DEFINE_GPIO(_p)
