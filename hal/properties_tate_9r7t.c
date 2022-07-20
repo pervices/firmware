@@ -4177,6 +4177,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     if (reset_type == 1){       // global reset bit 30
         write_hps_reg_mask("res_rw7", (1 << 30), (1 << 30));
         write_hps_reg_mask("res_rw7", 0, (1 << 30));
+        usleep(2000000);
     }
     else if (reset_type == 2) { // 40G reset bit 29
         write_hps_reg_mask("res_rw7", (1 << 29), (1 << 29));
