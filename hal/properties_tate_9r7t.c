@@ -1095,15 +1095,20 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* send the uart commands and read back the output and write to file   \
          */                                                                    \
                                                                                \
+        char dac_dump[MAX_PROP_LEN];\
+        char gpiox_dump[MAX_PROP_LEN];\
+        \
         /* DAC */                                                              \
-        strcpy(buf, "dump -c " STR(ch) " -d\r");                               \
+        strcpy(buf, "dac -D\r");                               \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);             \
+        snprintf(dac_dump, MAX_PROP_LEN, "[Board: tx_%s Chip: DAC] %s\n", STR(ch), uart_ret_buf);\
                                                                                \
         /* GPIOX */                                                            \
-        strcpy(buf, "dump -c " STR(ch) " -g\r");                               \
+        strcpy(buf, "dump -g\r");                               \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
+        snprintf(gpiox_dump, MAX_PROP_LEN, "[Board: tx_%s Chip: GPIOX] %s\n", STR(ch), uart_ret_buf);\
+        \
+        snprintf(ret, MAX_PROP_LEN, "%s%s", dac_dump, gpiox_dump);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2017,20 +2022,32 @@ TX_CHANNELS
         /* send the uart commands and read back the output and write to file   \
          */                                                                    \
                                                                                \
+        char adc_dump[MAX_PROP_LEN];\
+        char mixer_dump[MAX_PROP_LEN];\
+        char adc_driver_dump[MAX_PROP_LEN];\
+        \
         /* ADC */                                                              \
         strcpy(buf, "dump -a\r");                               \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);             \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        snprintf(adc_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: ADC] %s\n", STR(ch), (char *)uart_ret_buf);\
                                                                                \
-        /* GPIOX */                                                            \
-        strcpy(buf, "dump -g\r");                               \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);           \
+        /* Mixer */                                                            \
+        strcpy(buf, "dump -x\r");                               \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        snprintf(mixer_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: GPIOX] %s\n", STR(ch), (char *)uart_ret_buf);\
                                                                                \
-        /* ADC Driver */                                                       \
-        strcpy(buf, "dump -v\r");                               \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);      \
+        if( RTM_VER==3 || RTM_VER == 4 ) {\
+            snprintf(ret, MAX_PROP_LEN, "%s%s", adc_dump, mixer_dump);\
+            return RETURN_SUCCESS;\
+            /* Due to hardware issues the ADC driver cannot be read from on RTM 3 or 4*/\
+        } else {\
+            /* ADC Driver */                                                       \
+            strcpy(buf, "dump -v\r");                               \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(adc_driver_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: ADC Driver] %s\n", STR(ch), (char *)uart_ret_buf);\
+            snprintf(ret, MAX_PROP_LEN, "%s%s%s", adc_dump, mixer_dump, adc_driver_dump);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3396,7 +3413,8 @@ static int hdlr_time_board_dump(const char *data, char *ret) {
     // Diagnostic Dump of Clk Board
     strcpy(buf, "board -e\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    PRINT(DUMP, "[Board: Time Regdump] %s\n", uart_ret_buf);
+
+    snprintf(ret, MAX_PROP_LEN, "%s", (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -3480,13 +3498,15 @@ static int hdlr_time_about_hw_ver(const char *data, char *ret) {
 
 // Dumps all of the board logs for TX, RX, and TIME
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
-#define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
+    char data_buff[MAX_PROP_LEN];
+    char ret_buff[MAX_PROP_LEN];
+#define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_board_dump(data_buff, ret_buff);
     TX_CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
+#define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_board_dump(data_buff, ret_buff);
     RX_CHANNELS
 #undef X
-    hdlr_time_board_dump(NULL, NULL);
+    hdlr_time_board_dump(data_buff, ret_buff);
 
     return RETURN_SUCCESS;
 }
@@ -4331,7 +4351,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
@@ -4453,9 +4473,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
-//    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
 
 #define DEFINE_TIME()                                                                                                 \
@@ -4484,7 +4504,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/dump"                     , hdlr_time_board_dump,                   RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \

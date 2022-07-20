@@ -55,8 +55,8 @@
 // General purpose temp buffer size
 #define BUF_SIZE (1024)
 #define MAX_PATH_LEN (4096)
-#define MAX_PROP_LEN (1024)
-#define MAX_UART_LEN (8192)
+#define MAX_PROP_LEN (16384)
+#define MAX_UART_LEN (16384)
 //length for property path buffer
 #define PROP_PATH_LEN 50
 

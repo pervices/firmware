@@ -110,7 +110,7 @@ static void change_group_permissions_for_all(void) {
 
 // Helper function to make properties
 static void make_prop(prop_t *prop) {
-    char cmd[MAX_PATH_LEN];
+    char cmd[2*MAX_PATH_LEN + 100];
     char path[MAX_PATH_LEN];
 
     switch (prop->type) {

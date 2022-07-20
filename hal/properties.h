@@ -64,8 +64,8 @@ typedef enum {
 
 typedef struct prop {
     prop_type_t type;
-    char path[MAX_PROP_LEN];
-    char symlink_target[MAX_PROP_LEN];
+    char path[MAX_PATH_LEN];
+    char symlink_target[MAX_PATH_LEN];
     int (*handler)(const char *data, char *ret);
     perm_t permissions;
     char def_val[MAX_PROP_LEN]; // default value
