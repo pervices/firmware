@@ -161,7 +161,7 @@ if {$::argv0 eq [info script]} {
                     set duration [expr $curtime - $starttime]
                     if { $duration >= $timeout } {
                         puts "ERROR: Board $board_number is still powered on"
-                        exit
+                        exit 62
                     }
                 }
             }
@@ -175,7 +175,7 @@ if {$::argv0 eq [info script]} {
                     set duration [expr $curtime - $starttime]
                     if { $duration >= $timeout } {
                         puts "ERROR: Board $board_number is still powered off"
-                        exit
+                        exit 62
                     }
                 }
             }
