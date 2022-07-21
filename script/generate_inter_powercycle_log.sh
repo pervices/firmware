@@ -5,29 +5,30 @@
 #set -e
 
 #Get number of rx and tx channels from user, and how many times to run the cycle
-if [ "$#" -ne 3 ]; then
+if [ "$#" -ne 4 ]; then
     echo "This program records the state of various parts of the machine after power cycles and server restarts to determine reliability"
-    echo "Expected arguments: number of rx channels, number of tx channels, number of times to run the cycle"
+    echo "Expected arguments: directory to store results, number of rx channels, number of tx channels, number of times to run the cycle"
     exit
 fi
 
-num_rx_channels=$1
-num_tx_channels=$2
-num_power_cycles=$3
+results_dir=$1
+num_rx_channels=$2
+num_tx_channels=$3
+num_power_cycles=$4
 
-mkdir -p "results"
+mkdir -p "$1"
 
 num_system_restarts=0
 while [[ $num_system_restarts -lt $num_power_cycles ]]
 do
     echo "Issuing system reboot $num_system_restarts" | tee -a $result_path
     echo dev0 | ssh -o "ServerAliveInterval 2" -tt dev0@192.168.10.2 'sudo sh -c "systemctl reboot"'
-    echo "Issuing system reboot $num_system_restarts" | tee -a $result_path
+    echo "Waiting for system reboot $num_system_restarts" | tee -a $result_path
 
     sleep 120
     #Format: year, month, day, hour (24 hour clock), minute, second. Every part takes 2 digits
-    time=$(date +"%y%m%d%H%M")
-    result_path=results/powercycle_log_run_${run_num}_time_${time}.txt
+    time=$(date +"%y%m%d%H%M%S")
+    result_path=($results_dir/powercycle_log_run_${run_num}_time_${time}.txt)
 
     if test -f "$result_path"; then
         echo "A file with the current timestamp already exists, this should be impossible"
@@ -46,7 +47,6 @@ do
     while [ $num_server_restarts -lt 3 ]
     do
         echo "Server restart $num_server_restarts" | tee -a $result_path
-        #TODO: issue server restart command
         # Waits for server to come up
         sleep 120
         #sys18 is included since it contains useful info about the FPGA notably the sfp status
