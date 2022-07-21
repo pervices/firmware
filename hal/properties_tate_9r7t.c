@@ -191,7 +191,9 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 3;
+int jesd_max_attempts = 10;
+//Requireing 25 sfp reboot attempts is necessary because of unknown issues, this should be reduced once the root cause is fixed
+int sfp_max_attempts = 25;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
@@ -3617,13 +3619,41 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     int reset = 0;
     sscanf(data, "%i", &reset);
     if(!reset) return RETURN_SUCCESS;
-    uint32_t val;
-    read_hps_reg("res_rw7", &val);
-    val = val | (1 << 29);
-    write_hps_reg("res_rw7", val);
-    val = val & ~(1 << 29);
-    write_hps_reg("res_rw7", val);
-    return RETURN_SUCCESS;
+
+    for(int n = 0; n < sfp_max_attempts; n++) {
+        uint32_t sys18_val = 0;
+        uint32_t val = 0;
+        read_hps_reg("res_rw7", &val);
+        val = val | (1 << 29);
+        write_hps_reg("res_rw7", val);
+        val = val & ~(1 << 29);
+        write_hps_reg("res_rw7", val);
+
+        time_t start_time = 0;
+        time(&start_time);
+        time_t timeout_time = start_time + 2;
+        time_t current_time = timeout_time;
+        do {
+            read_hps_reg("sys18", &sys18_val);
+            //The bits checked using 0x1800 are used to say if DDR4 callibration is completed
+            //The sfp ports should be up when they're up
+            time(&current_time);
+            PRINT(INFO, "sys18: %x\n", sys18_val);
+        } while (((sys18_val & 0x1800) != 0x1800 || sys18_val&0xff0000) && current_time < timeout_time);
+
+        read_hps_reg("sys18", &sys18_val);
+        if(sys18_val == 0xff001800) {
+            //The sfp will often briefly go up before going down
+            usleep(1000000);
+            read_hps_reg("sys18", &sys18_val);
+            if(sys18_val == 0xff001800) {
+                return RETURN_SUCCESS;
+            }
+        }
+        PRINT(INFO, "SFP reset failed, re-attempting\n");
+    }
+    PRINT(ERROR, "Failed to establish sfp link after %i attempts\n", sfp_max_attempts);
+    return RETURN_ERROR;
 }
 
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
@@ -4213,7 +4243,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      */
     // Gives time for resets to settle
     // TODO: optimize this delay
-    usleep(1000000);
+    usleep(2000000);
     return RETURN_SUCCESS;
 }
 
@@ -4896,7 +4926,7 @@ void sync_channels(uint8_t chan_mask) {
 
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
 
-    while ((i_reset < max_attempts) && (jesd_good == false)) {
+    while ((i_reset < jesd_max_attempts) && (jesd_good == false)) {
         i_reset++;
         // FPGA JESD IP reset
         write_hps_reg_mask("res_rw7", ~0, 0x10000000);
@@ -4956,7 +4986,7 @@ void jesd_reset_all() {
     }
 
     int attempts = 0;
-    while ( attempts < max_attempts ) {
+    while ( attempts < jesd_max_attempts ) {
         int is_bad_attempt = 0;
 
         //Issue JESD master reset
@@ -4970,7 +5000,7 @@ void jesd_reset_all() {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 sprintf(status_path, "rx/%c/jesd/status", chan+'a');
                 if(property_good(status_path) != 1) {
-                    PRINT(ERROR, "JESD link for rx channel %c failed, re-attempting JESD reset\n", chan+'a', max_attempts);
+                    PRINT(ERROR, "JESD link for rx channel %c failed, re-attempting JESD reset\n", chan+'a', jesd_max_attempts);
                     is_bad_attempt = 1;
                 }
             }
@@ -4981,7 +5011,7 @@ void jesd_reset_all() {
             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
                 sprintf(status_path, "tx/%c/jesd/status", chan+'a');
                 if(property_good(status_path) != 1) {
-                    PRINT(ERROR, "JESD link for tx channel %c failed, re-attempting JESD reset\n", chan+'a', max_attempts);
+                    PRINT(ERROR, "JESD link for tx channel %c failed, re-attempting JESD reset\n", chan+'a', jesd_max_attempts);
                     is_bad_attempt = 1;
                 }
             }
@@ -4992,8 +5022,8 @@ void jesd_reset_all() {
         }
         attempts++;
     }
-    if(attempts > max_attempts) {
-        PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable. It is recommended that you reboot the unit\n", chan+'a', max_attempts);
+    if(attempts > jesd_max_attempts) {
+        PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable. It is recommended that you reboot the unit\n", chan+'a', jesd_max_attempts);
     }
 
     // Sets whether the dsp is in reset to what is was prior to this function
