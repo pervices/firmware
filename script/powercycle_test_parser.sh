@@ -101,13 +101,17 @@ then
 
         if [ $num_rx_jesd_good -ne $expected_rx_good ] || [ $num_tx_jesd_good -ne $expected_tx_good ]
         then
-            echo "Run: $result"
-            echo "Number times rx JESD established: $num_rx_jesd_good"
-            echo "Number times tx JESD established: $num_tx_jesd_good"
-            echo "Number times rx JESD failed: $num_rx_bad"
-            echo "Number times tx JESD failed: $num_tx_bad"
-            echo "Number times rx JESD status failed to reply: $num_rx_no_reply"
-            echo "Number times tx JESD status failed to reply: $num_tx_no_reply"
+            echo "Showing failed power cycle: $result"
+            echo "The expected number of channel JESD's established is <number of channel> * <3 (which is the number of sever reboots)>"
+            echo "If the number of failed runs is a multiple of the number of channels, it is likely all channels failed on a server boot"
+            echo "If the number of times rx and tx failed to reply is a multiple of the number of channels, it is likely the sever didn't finish booting"
+            echo "Number times an rx channel's JESD established: $num_rx_jesd_good"
+            echo "Number times a tx channel's JESD established: $num_tx_jesd_good"
+            echo "Number times an rx channel's JESD failed: $num_rx_bad"
+            echo "Number times a tx channel's JESD failed: $num_tx_bad"
+            echo "Number times an rx channel's JESD status failed to reply: $num_rx_no_reply"
+            echo "Number times a tx channel's JESD status failed to reply: $num_tx_no_reply"
+            echo ""
         fi
 
         if [ $num_rx_jesd_good == $expected_rx_good ]
@@ -131,13 +135,14 @@ then
 
     done
 
+    echo "JESD SUMMARY"
     echo "Rx JESD fully succeeded on every sever restart on $perfect_rx_jesd power cycles"
     echo "Tx JESD fully succeeded on every sever restart on $perfect_tx_jesd power cycles"
     echo "Rx JESD succeeded sometimes channels on $partial_rx_jesd power cycles"
     echo "Tx JESD succeeded sometimes channels on $partial_tx_jesd power cycles"
     echo "Rx JESD never worked on $failed_rx_jesd power cycles"
     echo "Tx JESD never worked on $failed_tx_jesd power cycles"
-    echo "There were $invalid_cycle tests with corrupted results"
+    echo "There were $invalid_cycle tests with corrupted results. Corrupted results are likely the result of issues with the test program and not the unit."
 fi
 
 if $show_sfp
