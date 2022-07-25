@@ -285,6 +285,25 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     return sample_factor;
 }
 
+// Waits for the FPGA to finish reseting
+/* register sys[18] shows the reset status
+    * the bits are [31:0] chanMode = {
+    * w_40gModulePresent,                                                         // 4-bits
+    * w_X40gStatusRxPcsReady & w_X40gStatusRxBlockLock & w_X40gStatusRxAmLock,    // 4-bits
+    * {2'b00, w_ResetSequencerState},                                             // 8-bits
+    * w_ResetSequencerUnknownStateError,                                          // 1-bit
+    * w_ResetSequencer40gResetSerialInterfaceTxWaitError,                         // 1-bit
+    * w_ResetSequencer40gResetSerialInterfaceRxWaitError,                         // 1-bit
+    * 13'b0
+    * };
+    */
+void wait_for_fpga_reset() {
+    uint32_t sys18_val;
+    do {
+        read_hps_reg("sys18", &sys18_val);
+    } while (sys18_val & 0x00ff0000);
+}
+
 // XXX
 // Statement Expressions are bad... but this code will be replaced soon anyway.
 #define set_reg_bits(name, shift, mask, val)                                   \
@@ -3629,9 +3648,7 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
         val = val & ~(1 << 29);
         write_hps_reg("res_rw7", val);
 
-        do {
-            read_hps_reg("sys18", &sys18_val);
-        } while (sys18_val & 0x00ff0000);
+        wait_for_fpga_reset();
 
         // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
         uint32_t sfp_link_established = sys18_val >> 24;
@@ -4234,10 +4251,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      * };
      */
     // Waits for the reset sequence to finish
-    uint32_t sys18_val = 0;
-    do {
-        read_hps_reg("sys18", &sys18_val);
-    } while (sys18_val & 0x00ff0000);
+    wait_for_fpga_reset();
 
     return RETURN_SUCCESS;
 }
