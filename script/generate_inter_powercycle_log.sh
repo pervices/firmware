@@ -18,6 +18,8 @@ num_power_cycles=$4
 
 mkdir -p "$1"
 
+uhd_usrp_info -v > "$1/config.txt"
+
 num_system_restarts=0
 while [[ $num_system_restarts -lt $num_power_cycles ]]
 do
