@@ -1576,7 +1576,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         }\
         snprintf(pwr_cmd, 30, "/usr/bin/rfe_control %i %s n", INT_TX(ch), str_state);\
         system(pwr_cmd);\
-        time(&rx_async_start_time[INT(ch)]);\
+        time(&tx_async_start_time[INT(ch)]);\
         \
         return RETURN_SUCCESS;\
     }                                                                          \
@@ -1608,6 +1608,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             if(WEXITSTATUS(status)) {\
                 tx_power[INT(ch)] = PWR_NO_BOARD;\
                 PRINT(ERROR,"Error when powering on board %i, the slot will not be used\n", INT(ch));\
+                PRINT(ERROR, "Exit status: %i\n", WEXITSTATUS(status));\
             } else {\
                 tx_power[INT(ch)] = PWR_HALF_ON;\
                 PRINT(INFO,"Board %i powered on\n", INT(ch));\
@@ -5031,7 +5032,7 @@ void jesd_reset_all() {
         }
         attempts++;
     }
-    if(attempts > jesd_max_attempts) {
+    if(attempts >= jesd_max_attempts) {
         PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable. It is recommended that you reboot the unit\n", chan+'a', jesd_max_attempts);
     }
 
