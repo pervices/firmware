@@ -29,31 +29,34 @@ do
     then
         print_help
         exit
-    fi
-    let tmp=$n+1
-    if [ "${!n}" = "-d" ] || [ "${!n}" = "--directory" ]
+
+    elif [ "${!n}" = "-d" ] || [ "${!n}" = "--directory" ]
     then
+        let tmp=$n+1
         result_directory=${!tmp}
-    fi
-    if [ "${!n}" = "-a" ] || [ "${!n}" = "--all" ]
+        n=$n+1
+    elif [ "${!n}" = "-a" ] || [ "${!n}" = "--all" ]
     then
         show_verbose=true
-    fi
-    if [ "${!n}" = "-j" ] || [ "${!n}" = "--jesd" ]
+    elif [ "${!n}" = "-j" ] || [ "${!n}" = "--jesd" ]
     then
         show_jesd=true
-    fi
-    if [ "${!n}" = "-s" ] || [ "${!n}" = "--sfp" ]
+    elif [ "${!n}" = "-s" ] || [ "${!n}" = "--sfp" ]
     then
         show_sfp=true
-    fi
-    if [ "${!n}" = "-r" ] || [ "${!n}" = "--rx_channels" ]
+    elif [ "${!n}" = "-r" ] || [ "${!n}" = "--rx_channels" ]
     then
+        let tmp=$n+1
         let num_rx=${!tmp}
-    fi
-    if [ "${!n}" = "-t" ] || [ "${!n}" = "--tx_channels" ]
+        n=$n+1
+    elif [ "${!n}" = "-t" ] || [ "${!n}" = "--tx_channels" ]
     then
+        let tmp=$n+1
         let num_tx=${!tmp}
+        n=$n+1
+    else
+        echo "Unrecongnized command: ${!n}"
+        exit
     fi
     let n=$n+1
 done
@@ -86,16 +89,17 @@ then
         num_tx_jesd_good=$(grep -A 3 "Tx board jesd status" $result | grep -c 'good')
         num_rx_bad=$(grep -A 3 "Rx board jesd status" $result | grep -c 'bad')
         num_tx_bad=$(grep -A 3 "Tx board jesd status" $result | grep -c 'bad')
-        num_rx_no_reply=$(grep -A 3 "Rx board jesd status" $result | grep -c '1')
-        num_tx_no_reply=$(grep -A 3 "Tx board jesd status" $result | grep -c '1')
 
-        let rx_jesd_checks=$num_rx_jesd_good+$num_rx_bad+$num_rx_no_reply
-        let tx_jesd_checks=$num_tx_jesd_good+$num_tx_bad+$num_tx_no_reply
+        rx_jesd_checks=$(grep -c "Rx board jesd status" $result)
+        tx_jesd_checks=$(grep -c "Tx board jesd status" $result)
+
+        let num_rx_no_reply=$rx_jesd_checks-$num_rx_jesd_good-$num_rx_bad
+        let num_tx_no_reply=$tx_jesd_checks-$num_tx_jesd_good-$num_tx_bad
 
         if [ $rx_jesd_checks -ne $expected_rx_good ] || [ $tx_jesd_checks -ne $expected_tx_good ]
         then
             let invalid_cycle=$invalid_cycle+1
-            echo "$result: this power cycle had an incorect number of JESD checks. This is usually sign of corruption in the test itself, skipping result"
+            echo "$result: this power cycle had an incorect number of JESD checks. Only $rx_jesd_checks rx and $tx_jesd_checks tx checks were detected. This is usually sign of corruption in the test itself, skipping result"
             continue
         fi
 
@@ -153,8 +157,8 @@ then
         grep -A 3 "sys18" $result_directory/*
     fi
 
-    sfp_good=$(grep -A 3 "sys18" $result_directory/* | grep -c 0xf7001800)
-    sfp_checks=$(grep -A 3 "sys18" ~/tmp/power_cycle_results/* | grep -c sys18)
+    sfp_good=$(grep -A 3 "sys18" $result_directory/* | grep -c 0xff001800)
+    sfp_checks=$(grep -A 3 "sys18" $result_directory/* | grep -c sys18)
     echo "The sfp port was good on $sfp_good server reboots out of $sfp_checks"
 
     # Number of times sfp ports came up after every server boot within a power cycle
