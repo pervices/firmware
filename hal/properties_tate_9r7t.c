@@ -1713,7 +1713,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
     static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
         strcpy(buf, "status -g\r");                                            \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -3629,30 +3629,22 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
         val = val & ~(1 << 29);
         write_hps_reg("res_rw7", val);
 
-        time_t start_time = 0;
-        time(&start_time);
-        time_t timeout_time = start_time + 2;
-        time_t current_time = timeout_time;
         do {
             read_hps_reg("sys18", &sys18_val);
-            //The bits checked using 0x1800 are used to say if DDR4 callibration is completed
-            //The sfp ports should be up when they're up
-            time(&current_time);
-            PRINT(INFO, "sys18: %x\n", sys18_val);
-        } while (((sys18_val & 0x1800) != 0x1800 || sys18_val&0xff0000) && current_time < timeout_time);
+        } while (sys18_val & 0x00ff0000);
 
-        read_hps_reg("sys18", &sys18_val);
-        if(sys18_val == 0xff001800) {
-            //The sfp will often briefly go up before going down
-            usleep(1000000);
-            read_hps_reg("sys18", &sys18_val);
-            if(sys18_val == 0xff001800) {
-                return RETURN_SUCCESS;
-            }
+        // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
+        uint32_t sfp_link_established = sys18_val >> 24;
+        uint32_t sfp_module_present = sys18_val >> 28;
+        uint32_t sfp_errors = sys18_val & 0xe000;
+
+        if(!sfp_errors && (sfp_link_established == sfp_module_present)) {
+            return RETURN_SUCCESS;
         }
-        PRINT(INFO, "SFP reset failed, re-attempting\n");
+        PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
     }
     PRINT(ERROR, "Failed to establish sfp link after %i attempts\n", sfp_max_attempts);
+
     return RETURN_ERROR;
 }
 
@@ -4241,9 +4233,12 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      * 13'b0
      * };
      */
-    // Gives time for resets to settle
-    // TODO: optimize this delay
-    usleep(2000000);
+    // Waits for the reset sequence to finish
+    uint32_t sys18_val = 0;
+    do {
+        read_hps_reg("sys18", &sys18_val);
+    } while (sys18_val & 0x00ff0000);
+
     return RETURN_SUCCESS;
 }
 
