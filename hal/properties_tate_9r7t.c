@@ -1552,7 +1552,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             tx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
             /* This function is meant to block until after power is either on or off. However a hardware issue can cause unpopulated boards to never be detected as off*/\
-            sprintf(pwr_cmd, "rfe_control %d off %i", INT_RX(ch), PWR_TIMEOUT);\
+            sprintf(pwr_cmd, "rfe_control %d off %i", INT_TX(ch), PWR_TIMEOUT);\
             system(pwr_cmd);                                                   \
             tx_power[INT(ch)] = PWR_OFF;\
         }\
