@@ -148,6 +148,12 @@ static void make_prop(prop_t *prop) {
             strcpy(cmd, "chmod 0222 ");
             strcat(cmd, get_abs_path(prop, path));
             system(cmd);
+        } else if (prop->permissions == RW) {
+            // TODO: @CF: use fchmodat(2)
+            // chmod a-r /home/root/state/*
+            strcpy(cmd, "chmod 0666 ");
+            strcat(cmd, get_abs_path(prop, path));
+            system(cmd);
         }
 
         break;
