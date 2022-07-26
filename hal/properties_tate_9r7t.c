@@ -191,8 +191,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int jesd_max_attempts = 10;
-//Requireing 25 sfp reboot attempts is necessary because of unknown issues, this should be reduced once the root cause is fixed
+int jesd_max_attempts = 25;
 int sfp_max_attempts = 25;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
@@ -5003,14 +5002,14 @@ void jesd_reset_all() {
         set_property("fpga/reset", "3");
 
         //Wait for links to re-establish
-        usleep(400000);
+        usleep(300000);
 
         //Checks if all rx JESDs are working
         for(chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 sprintf(status_path, "rx/%c/jesd/status", chan+'a');
                 if(property_good(status_path) != 1) {
-                    PRINT(ERROR, "JESD link for rx channel %c failed, re-attempting JESD reset\n", chan+'a', jesd_max_attempts);
+                    PRINT(ERROR, "JESD link for rx channel %c failed on attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
                     is_bad_attempt = 1;
                 }
             }
@@ -5021,7 +5020,7 @@ void jesd_reset_all() {
             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
                 sprintf(status_path, "tx/%c/jesd/status", chan+'a');
                 if(property_good(status_path) != 1) {
-                    PRINT(ERROR, "JESD link for tx channel %c failed, re-attempting JESD reset\n", chan+'a', jesd_max_attempts);
+                    PRINT(ERROR, "JESD link for tx channel %c failed on attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
                     is_bad_attempt = 1;
                 }
             }
