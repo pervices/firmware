@@ -21,6 +21,10 @@ mkdir -p "$1"
 uhd_usrp_info -v > "$1/config.txt"
 
 num_system_restarts=0
+
+# Sets server to turn on on boot
+echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "systemctl enable cyan-server"'
+
 while [[ $num_system_restarts -lt $num_power_cycles ]]
 do
     echo "Issuing system reboot $num_system_restarts" | tee -a $result_path
@@ -48,9 +52,15 @@ do
     num_server_restarts=0
     while [ $num_server_restarts -lt 3 ]
     do
-        echo "Server restart $num_server_restarts" | tee -a $result_path
-        # Waits for server to come up
-        sleep 120
+        echo "Server run $num_server_restarts" | tee -a $result_path
+        if [ $num_server_restarts -ne 0 ]
+        then
+            echo "Issuing server restart $num_server_restarts"
+            echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "systemctl restart cyan-server"'
+            # Waits for server to come up
+            sleep 120
+            echo "Finished server restart $num_server_restarts"
+        fi
         #sys18 is included since it contains useful info about the FPGA notably the sfp status
         echo "sys18" | tee -a $result_path
         echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "mem rr sys18"' >> $result_path
@@ -89,7 +99,6 @@ do
 
         let "num_server_restarts=$num_server_restarts+1"
     done
-    echo dev0 | ssh -tt dev0@192.168.10.2 'systemctl restart cyan-server'
     let "num_system_restarts=$num_system_restarts+1"
 done
 

@@ -85,6 +85,10 @@ then
     invalid_cycle=0
     for result in $result_directory/*;
     do
+        if [[ $result == "$result_directory/config.txt" ]]
+        then
+            continue
+        fi
         num_rx_jesd_good=$(grep -A 3 "Rx board jesd status" $result | grep -c 'good')
         num_tx_jesd_good=$(grep -A 3 "Tx board jesd status" $result | grep -c 'good')
         num_rx_bad=$(grep -A 3 "Rx board jesd status" $result | grep -c 'bad')
@@ -157,7 +161,7 @@ then
         grep -A 3 "sys18" $result_directory/*
     fi
 
-    sfp_good=$(grep -A 3 "sys18" $result_directory/* | grep -c 0xff001800)
+    sfp_good=$(grep -A 3 "sys18" $result_directory/* | grep -c 0xff)
     sfp_checks=$(grep -A 3 "sys18" $result_directory/* | grep -c sys18)
     echo "The sfp port was good on $sfp_good server reboots out of $sfp_checks"
 
@@ -175,15 +179,19 @@ then
 
     for result in $result_directory/*;
     do
-        sfp_good=$(grep -A 3 "sys18" $result* | grep -c 0xff)
-        sfp_checks=$(grep -A 3 "sys18" $result* | grep -c 0x)
+        if [[ $result == "$result_directory/config.txt" ]]
+        then
+            continue
+        fi
+        sfp_good=$(grep -A 3 "sys18" $result | grep -c 0xff)
+        sfp_checks=$(grep -A 3 "sys18" $result | grep -c 0x)
 
         invalid_cycle=0
 
         if [ $sfp_checks -ne 3 ]
         then
             let invalid_cycle=$invalid_cycle+1
-            echo "$result: this power cycle had an incorect number of JESD checks. This is usually sign of corruption in the test itself, skipping result"
+            echo "$result: this power cycle had an incorect number of SFP checks. This is usually sign of corruption in the test itself, skipping result"
             continue
         fi
 
@@ -203,7 +211,7 @@ then
             let partial_sfp=$partial_sfp+1
         fi
 
-    echo "The SFP always ports worked on $perfect_sfp, worked on some server boots on $partial_sfp, and never worked on $failed_sfp power cycles"
-
     done
+
+    echo "The SFP always ports worked on $perfect_sfp, worked on some server boots on $partial_sfp, and never worked on $failed_sfp power cycles"
 fi
