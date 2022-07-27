@@ -1670,6 +1670,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             if(tx_power[INT(ch)] == PWR_OFF) {\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
+            tx_power[INT(ch)] = PWR_ON;\
                                                                                \
             /* Disables channel */                                         \
             read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                               \
@@ -1691,14 +1692,27 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                     \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x2));                   \
                                                                                \
-            tx_power[INT(ch)] = PWR_ON;\
+            /* Turns the power indicator light on */\
+            /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
+            if(RTM_VER != 3) {\
+                snprintf(buf, 20, "board -w 1\r");\
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            }\
             /* power off */                                                    \
         } else {                                                               \
             /* kill the channel */                                             \
             strcpy(buf, "board -k\r");                          \
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
             \
-            set_property("tx/" STR(ch) "/board/pwr_board", "0");\
+            if(property_good("rx/" STR(ch) "/jesd/status")) {\
+                if(RTM_VER != 3) {\
+                    snprintf(buf, 20, "board -w 0\r");\
+                    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                }\
+                tx_power[INT(ch)] = PWR_HALF_ON;\
+            } else {\
+                set_property("tx/" STR(ch) "/board/pwr_board", "0");\
+            }\
                                                                                \
             /* disable DSP cores */                                            \
             read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
