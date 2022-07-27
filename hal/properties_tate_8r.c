@@ -1305,12 +1305,10 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sscanf(data, "%i", &invert);                                           \
         if (invert) {\
             snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
-            PRINT(ERROR, "invert command: %s\n", buf);\
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
             usleep(1);\
         } else {\
             snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
-            PRINT(ERROR, "invert command: %s\n", buf);\
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
             usleep(1);\
         }\
