@@ -39,6 +39,7 @@
 #include "channels.h"
 #include "gpio_pins.h"
 #include <sys/wait.h>
+#include <sys/stat.h>
 
 // Sample rates are in samples per second (SPS).
 #define RX_BASE_SAMPLE_RATE   1000000000.0
@@ -192,7 +193,9 @@ static int uart_synth_fd = 0;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 int jesd_max_attempts = 15;
-int sfp_max_attempts = 25;
+int jesd_max_server_restart_attempts = 10;
+int sfp_max_reset_attempts = 10;
+int sfp_max_reboot_attempts = 10;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
@@ -301,6 +304,47 @@ void wait_for_fpga_reset() {
     do {
         read_hps_reg("sys18", &sys18_val);
     } while (sys18_val & 0x00ff0000);
+}
+
+static void read_interboot_variable(char* data_filename, int64_t* value) {
+    struct stat sb;
+
+    char data_path[MAX_PROP_LEN];
+
+    snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
+
+    int file_missing = stat(data_path, &sb);
+
+    PRINT(INFO, "Reading from\n");
+
+    if(file_missing) {
+        value = 0;
+        return;
+    } else {
+        FILE *data_file = fopen( data_path, "r");
+        fscanf(data_file, "%li", value);
+        fclose(data_file);
+        return;
+    }
+}
+
+static void update_interboot_variable(char* data_filename, int64_t value) {
+    struct stat sb;
+
+    char data_path[MAX_PROP_LEN];
+
+    snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
+
+    int directory_missing = stat(INTERBOOT_DATA, &sb);
+
+    if(directory_missing) {
+        mkdir(INTERBOOT_DATA, 0644);
+    }
+
+    FILE *data_file = fopen( data_path, "w");
+
+    fprintf(data_file, "%li", value);
+    fclose(data_file);
 }
 
 // XXX
@@ -3665,7 +3709,7 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     sscanf(data, "%i", &reset);
     if(!reset) return RETURN_SUCCESS;
 
-    for(int n = 0; n < sfp_max_attempts; n++) {
+    for(int n = 0; n < sfp_max_reset_attempts; n++) {
         uint32_t sys18_val = 0;
         uint32_t val = 0;
         read_hps_reg("res_rw7", &val);
@@ -3679,16 +3723,29 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
         read_hps_reg("sys18", &sys18_val);
 
         // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
-        uint32_t sfp_link_established = sys18_val >> 24;
+        uint32_t sfp_link_established = (sys18_val >> 24 & 0xf);
         uint32_t sfp_module_present = sys18_val >> 28;
         uint32_t sfp_errors = sys18_val & 0xe000;
 
         if(!sfp_errors && (sfp_link_established == sfp_module_present)) {
+            // Reset counter for number of failed boots
+            update_interboot_variable("cons_sfp_fail_count", 0);
             return RETURN_SUCCESS;
         }
         PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
     }
-    PRINT(ERROR, "Failed to establish sfp link after %i attempts\n", sfp_max_attempts);
+    PRINT(ERROR, "Failed to establish sfp link after %i attempts rebooting\n", sfp_max_reset_attempts);
+
+    // TEMPORARY: reboot the server if unable to establish JESD links
+    int64_t failed_count = 0;
+    read_interboot_variable("cons_sfp_fail_count", &failed_count);
+    if(failed_count < sfp_max_reboot_attempts) {
+        update_interboot_variable("cons_sfp_fail_count", failed_count + 1);
+        system("systemctl reboot");
+    } else {
+        PRINT(ERROR, "Unable to establish SFP links despite multiple reboots. The system will not attempt another reboot to bring up SFP links until a successful attempt to establish links\n");
+    }
+
 
     return RETURN_ERROR;
 }
@@ -5060,7 +5117,24 @@ void jesd_reset_all() {
         attempts++;
     }
     if(attempts >= jesd_max_attempts) {
-        PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable. It is recommended that you reboot the unit\n", chan+'a', jesd_max_attempts);
+        PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable\n", chan+'a', jesd_max_attempts);
+        // TEMPORARY: reboot the server if unable to establish JESD links
+        int64_t failed_count = 0;
+        read_interboot_variable("cons_jesd_fail_count", &failed_count);
+        if(failed_count < jesd_max_server_restart_attempts) {
+            update_interboot_variable("cons_jesd_fail_count", failed_count + 1);
+            PRINT(ERROR, "Restarting server\n");
+            system("systemctl restart cyan-server");
+            // Waits for the server reboot command to restart the server
+            while(1) {
+                usleep(1000);
+            }
+        } else {
+            PRINT(ERROR, "Unable to establish JESD links despite multiple server restarts. The system will not attempt another server restart to bring up JESD links until a successful attempt to establish links\n");
+        }
+    } else {
+        // Resets the counter for the number of failed JESD after server boot
+        update_interboot_variable("cons_jesd_fail_count", 0);
     }
 
     // Sets whether the dsp is in reset to what is was prior to this function

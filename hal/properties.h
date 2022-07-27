@@ -41,6 +41,8 @@
     #error "This file must be compiled with a valid hardware revision (RTM3, RTM4)"
 #endif
 
+#define INTERBOOT_DATA "/var/lib/cyan-server/"
+
 typedef enum { RW, RO, WO } perm_t;
 typedef enum { POLL, NO_POLL } poll_t;
 
