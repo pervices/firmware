@@ -3676,6 +3676,8 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
 
         wait_for_fpga_reset();
 
+        read_hps_reg("sys18", &sys18_val);
+
         // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
         uint32_t sfp_link_established = sys18_val >> 24;
         uint32_t sfp_module_present = sys18_val >> 28;
@@ -4598,7 +4600,7 @@ GPIO_PINS
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/clear_tx_ports"            , hdlr_fpga_link_clear_tx_ports,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
