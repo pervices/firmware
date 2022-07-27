@@ -64,10 +64,6 @@ done
 if $show_jesd
 then
     echo "JESD status results. Each file is from one power cycle"
-    if $show_verbose
-    then
-        grep 'good\|bad\|System reboot\|Server restart\|Rx board dump ch\|Tx board dump ch' results/*
-    fi
 
     let expected_rx_good=3*$num_rx
     let expected_tx_good=3*$num_tx
@@ -110,6 +106,14 @@ then
         if [ $num_rx_jesd_good -ne $expected_rx_good ] || [ $num_tx_jesd_good -ne $expected_tx_good ]
         then
             echo "Showing failed power cycle: $result"
+            if $show_verbose && [ $num_rx_jesd_good -ne $expected_rx_good ]
+            then
+                grep -A 3 "Rx board jesd status" $result
+            fi
+            if $show_verbose && [ $num_tx_jesd_good -ne $expected_tx_good ]
+            then
+                grep -A 3 "Tx board jesd status" $result
+            fi
             echo "The expected number of channel JESD's established is <number of channel> * <3 (which is the number of sever reboots)>"
             echo "If the number of failed runs is a multiple of the number of channels, it is likely all channels failed on a server boot"
             echo "If the number of times rx and tx failed to reply is a multiple of the number of channels, it is likely the sever didn't finish booting"
@@ -156,14 +160,6 @@ fi
 if $show_sfp
 then
     echo "SFP status results. Each file is from one power cycle"
-    if $show_verbose
-    then
-        grep -A 3 "sys18" $result_directory/*
-    fi
-
-    sfp_good=$(grep -A 3 "sys18" $result_directory/* | grep -c 0xff)
-    sfp_checks=$(grep -A 3 "sys18" $result_directory/* | grep -c sys18)
-    echo "The sfp port was good on $sfp_good server reboots out of $sfp_checks"
 
     # Number of times sfp ports came up after every server boot within a power cycle
     perfect_sfp=0
@@ -198,6 +194,10 @@ then
         if [ $sfp_good -ne $sfp_checks ]
         then
             echo "Run: $result"
+            if $show_verbose
+            then
+                grep -A 3 "sys18" $result
+            fi
             echo "The sfp ports were good $sfp_good out of $sfp_checks within this power cycle"
         fi
 
