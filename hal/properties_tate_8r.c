@@ -124,6 +124,8 @@ static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 int jesd_max_attempts = 15;
 int jesd_max_server_restart_attempts = 10;
+int sfp_max_reset_attempts = 10;
+int sfp_max_reboot_attempts = 10;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xff;
 
@@ -212,6 +214,25 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
         sample_factor--;
     }
     return sample_factor;
+}
+
+// Waits for the FPGA to finish reseting
+/* register sys[18] shows the reset status
+    * the bits are [31:0] chanMode = {
+    * w_40gModulePresent,                                                         // 4-bits
+    * w_X40gStatusRxPcsReady & w_X40gStatusRxBlockLock & w_X40gStatusRxAmLock,    // 4-bits
+    * {2'b00, w_ResetSequencerState},                                             // 8-bits
+    * w_ResetSequencerUnknownStateError,                                          // 1-bit
+    * w_ResetSequencer40gResetSerialInterfaceTxWaitError,                         // 1-bit
+    * w_ResetSequencer40gResetSerialInterfaceRxWaitError,                         // 1-bit
+    * 13'b0
+    * };
+    */
+void wait_for_fpga_reset() {
+    uint32_t sys18_val;
+    do {
+        read_hps_reg("sys18", &sys18_val);
+    } while (sys18_val & 0x00ff0000);
 }
 
 static void read_interboot_variable(char* data_filename, int64_t* value) {
@@ -2275,13 +2296,46 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     int reset = 0;
     sscanf(data, "%i", &reset);
     if(!reset) return RETURN_SUCCESS;
-    uint32_t val;
-    read_hps_reg("res_rw7", &val);
-    val = val | (1 << 29);
-    write_hps_reg("res_rw7", val);
-    val = val & ~(1 << 29);
-    write_hps_reg("res_rw7", val);
-    return RETURN_SUCCESS;
+
+    for(int n = 0; n < sfp_max_reset_attempts; n++) {
+        uint32_t sys18_val = 0;
+        uint32_t val = 0;
+        read_hps_reg("res_rw7", &val);
+        val = val | (1 << 29);
+        write_hps_reg("res_rw7", val);
+        val = val & ~(1 << 29);
+        write_hps_reg("res_rw7", val);
+
+        wait_for_fpga_reset();
+
+        read_hps_reg("sys18", &sys18_val);
+
+        // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
+        uint32_t sfp_link_established = (sys18_val >> 24 & 0xf);
+        uint32_t sfp_module_present = sys18_val >> 28;
+        uint32_t sfp_errors = sys18_val & 0xe000;
+
+        if(!sfp_errors && (sfp_link_established == sfp_module_present)) {
+            // Reset counter for number of failed boots
+            update_interboot_variable("cons_sfp_fail_count", 0);
+            return RETURN_SUCCESS;
+        }
+        PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
+    }
+    PRINT(ERROR, "Failed to establish sfp link after %i attempts rebooting\n", sfp_max_reset_attempts);
+
+    // TEMPORARY: reboot the server if unable to establish JESD links
+    int64_t failed_count = 0;
+    read_interboot_variable("cons_sfp_fail_count", &failed_count);
+    if(failed_count < sfp_max_reboot_attempts) {
+        update_interboot_variable("cons_sfp_fail_count", failed_count + 1);
+        system("systemctl reboot");
+    } else {
+        PRINT(ERROR, "Unable to establish SFP links despite multiple reboots. The system will not attempt another reboot to bring up SFP links until a successful attempt to establish links\n");
+    }
+
+
+    return RETURN_ERROR;
 }
 
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
