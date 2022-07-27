@@ -3021,8 +3021,10 @@ GPIO_PINS
 #define DEFINE_RX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
 
-#define DEFINE_RX_PWR_REBOOT(_c)    \
+#define DEFINE_RX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
+
+#define DEFINE_RX_PWR_REBOOT(_c)    \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/invert_devclk"     , hdlr_rx_##_c##_invert_devclk,             RW, "0", SP, #_c)\
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
@@ -3119,13 +3121,10 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad", SP, NAC)
     //DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)
 
-//This performs the step that resets the master JESD IP, it must be done before initializing the boards
-#define DEFINE_FPGA_PRE()\
-    DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,                    RW, "1", SP, NAC)    \
-    DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)       \
-
 #define DEFINE_FPGA()                                                                                                         \
+    DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
@@ -3191,21 +3190,29 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
 static prop_t property_table[] = {
+// Turns off rx boards
+#define X(ch, rx, crx, ctx) DEFINE_RX_BOARD_PWR(ch)
+    CHANNELS
+#undef X
+// Initialize time boards
     DEFINE_TIME()
-    DEFINE_FPGA_PRE()
-    //power on then reboot rx boards
+// Initialize FPGA
+    DEFINE_FPGA()
+// Power on rx/tx boards, but don't wait for them to finish booting
 #define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
     CHANNELS
 #undef X
 
+// Waits for boards to finish booting
 #define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
     CHANNELS
 #undef X
 
+// Initialize rx/tx boards
 #define X(ch, rx, crx, ctx) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
-    DEFINE_FPGA()
+
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
 #undef X
