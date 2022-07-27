@@ -80,8 +80,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     }
 
     // Read content
-    //    assumes file can have at most 1024 characters in line
-    char single_line_buffer[1024];
+    char single_line_buffer[max_len];
     while ( fgets(single_line_buffer, max_len, fd) ) {
         strncat(data, single_line_buffer, max_len);
     }
@@ -89,7 +88,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 
     // How big is the file?
     size_t pos = 0;
-    while (data[pos] != '\0'){
+    while (data[pos] != '\0' && pos < max_len){
         pos++;
     }
 
