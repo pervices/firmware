@@ -191,7 +191,7 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int jesd_max_attempts = 25;
+int jesd_max_attempts = 15;
 int sfp_max_attempts = 25;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
@@ -1731,9 +1731,15 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
-        strcpy(buf, "status -g\r");                                            \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
+        if(tx_power[INT(ch)] == PWR_ON || tx_power[INT(ch)] == PWR_HALF_ON) {\
+            strcpy(buf, "status -g\r");                                            \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+            snprintf(ret, 10, (char *)uart_ret_buf);                                     \
+        } else if (tx_power[INT(ch)] == PWR_NO_BOARD) {\
+            snprintf(ret, 50, "No board detected in slot");\
+        } else {\
+            snprintf(ret, 50, "Board off");\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2682,15 +2688,21 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_jesd_status(const char *data, char *ret) {       \
         /* res_ro11 holds link data with bit 0 high indicating rx board 0 */   \
         /* link is up, bit 1 high indicating that rx board link 1 is up, etc */\
-        uint32_t reg_val = 0;                                                  \
-        read_hps_reg("res_ro11", &reg_val);                                    \
-        uint8_t shift = (int)(CHR(ch) - 'a');                                  \
-        uint32_t anded = reg_val & (1 << shift);                               \
-        if (anded > 0){                                                        \
-            strcpy(ret, "good");                                               \
-        } else {                                                               \
-            strcpy(ret, "bad");                                                \
-        }                                                                      \
+        if(rx_power[INT(ch)] == PWR_ON || rx_power[INT(ch)] == PWR_HALF_ON) {\
+            uint32_t reg_val = 0;                                                  \
+            read_hps_reg("res_ro11", &reg_val);                                    \
+            uint8_t shift = (int)(CHR(ch) - 'a');                                  \
+            uint32_t anded = reg_val & (1 << shift);                               \
+            if (anded > 0){                                                        \
+                snprintf(ret, sizeof("good"), "good");                             \
+            } else {                                                               \
+                snprintf(ret, sizeof("bad"), "bad");                               \
+            }                                                                      \
+        } else if (rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            snprintf(ret, 50, "No board detected in slot");\
+        } else {\
+            snprintf(ret, 50, "Board off");\
+        }\
         return RETURN_SUCCESS;                                                 \
     }
 RX_CHANNELS
@@ -5002,7 +5014,7 @@ void jesd_reset_all() {
         set_property("fpga/reset", "3");
 
         //Wait for links to re-establish
-        usleep(300000);
+        usleep(400000);
 
         //Checks if all rx JESDs are working
         for(chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
