@@ -131,10 +131,9 @@ int jesd_good_code = 0xff;
 
 static uint8_t rx_stream[NUM_CHANNELS] = {PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF, PWR_OFF};
 
-static pid_t rx_async_pwr_pid[NUM_CHANNELS] = {0};
 //the time async_pwr started running, used when calculating if it timed out
 //pwr_board_timeout is in seconds
-#define pwr_board_timeout "15"
+#define PWR_TIMEOUT 15
 static time_t rx_async_start_time[NUM_CHANNELS] = {0};
 
 uint8_t *_save_profile;
@@ -1199,7 +1198,8 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
-            sprintf(pwr_cmd, "rfe_control %d off", INT_RX(ch));                    \
+            /* This function is meant to block until after power is either on or off. However a hardware issue can cause unpopulated boards to never be detected as off*/\
+            sprintf(pwr_cmd, "rfe_control %d off %i", INT_RX(ch), PWR_TIMEOUT);\
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_OFF;\
         }\
@@ -1214,35 +1214,42 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         sscanf(data, "%" SCNd8 "", &power);                                    \
         set_property("time/sync/sysref_mode", "continuous");\
         \
+        char pwr_cmd[30];\
+        char str_state[25];\
+        if(power>=PWR_ON) {\
+            strcpy(str_state, "on");\
+        } else {\
+            strcpy(str_state, "off");\
+        }\
+        snprintf(pwr_cmd, 30, "/usr/bin/rfe_control %i %s n", INT_RX(ch), str_state);\
+        system(pwr_cmd);\
+        time(&rx_async_start_time[INT(ch)]);\
+        \
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    /*waits for the rx board to turn on with a timeout. If the timeout occurs, assume the board is not connected*/\
+    static int hdlr_rx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
+        int status = 0;\
+        \
+        time_t current_time=0;\
+        time(&current_time);\
+        int remaining_timeout;\
+        if(rx_async_start_time[INT(ch)] + PWR_TIMEOUT > current_time) {\
+            remaining_timeout = rx_async_start_time[INT(ch)] + PWR_TIMEOUT - current_time;\
+        } else {\
+            remaining_timeout = 0;\
+        }\
         pid_t pid = fork();\
         if(pid==0) {\
             char rfe_slot[10];                                                 \
             sprintf(rfe_slot, "%i", INT_RX(ch));                    \
-            char str_pwr[10];\
-            if(power>=PWR_ON) {\
-                strcpy(str_pwr, "on");\
-            } else {\
-                strcpy(str_pwr, "off");\
-            }\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, str_pwr, pwr_board_timeout, NULL);\
+            char str_timeout[10];\
+            snprintf(str_timeout, 10, "%i", remaining_timeout);\
+            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", str_timeout, NULL);\
             PRINT(ERROR, "Failed to launch rfe_control in async pwr rx ch: %i\n", INT(ch));\
             _Exit(EXIT_ERROR_RFE_CONTROL);\
-        } else {\
-            sprintf(ret, "%i", pid);\
-            time(&rx_async_start_time[INT(ch)]);\
-            rx_async_pwr_pid[INT(ch)]=pid;\
         }\
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-    /*waits for async_pwr_board to finished*/\
-    static int hdlr_rx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        int status = 0;\
-        if(rx_async_pwr_pid[INT(ch)] <=0) {\
-            PRINT(ERROR,"No async pwr to wait for, ch %i\n", INT(ch));\
-            return RETURN_ERROR;\
-        }\
-        \
-        waitpid(rx_async_pwr_pid[INT(ch)], &status, 0);\
+        waitpid(pid, &status, 0);\
         if( WIFEXITED(status) ) {\
             if(WEXITSTATUS(status)) {\
                 rx_power[INT(ch)] = PWR_NO_BOARD;\
@@ -1256,7 +1263,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
             PRINT(ERROR,"Error in script controlling power for board %i, the slot will not be used\n", INT(ch));\
         }\
         \
-        rx_async_pwr_pid[INT(ch)] = 0;\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
