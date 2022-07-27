@@ -40,6 +40,7 @@
 #include "gpio_pins.h"
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 
 // Sample rates are in samples per second (SPS).
 #define RX_BASE_SAMPLE_RATE   1000000000.0
@@ -98,6 +99,8 @@ static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", 
 static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
 static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
 
+static uint_fast8_t jesd_enabled = 0;
+
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
 // TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -119,7 +122,8 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int max_attempts = 3;
+int jesd_max_attempts = 15;
+int jesd_max_server_restart_attempts = 10;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xff;
 
@@ -208,6 +212,47 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
         sample_factor--;
     }
     return sample_factor;
+}
+
+static void read_interboot_variable(char* data_filename, int64_t* value) {
+    struct stat sb;
+
+    char data_path[MAX_PROP_LEN];
+
+    snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
+
+    int file_missing = stat(data_path, &sb);
+
+    PRINT(INFO, "Reading from\n");
+
+    if(file_missing) {
+        value = 0;
+        return;
+    } else {
+        FILE *data_file = fopen( data_path, "r");
+        fscanf(data_file, "%li", value);
+        fclose(data_file);
+        return;
+    }
+}
+
+static void update_interboot_variable(char* data_filename, int64_t value) {
+    struct stat sb;
+
+    char data_path[MAX_PROP_LEN];
+
+    snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
+
+    int directory_missing = stat(INTERBOOT_DATA, &sb);
+
+    if(directory_missing) {
+        mkdir(INTERBOOT_DATA, 0644);
+    }
+
+    FILE *data_file = fopen( data_path, "w");
+
+    fprintf(data_file, "%li", value);
+    fclose(data_file);
 }
 
 // XXX
@@ -1201,33 +1246,14 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         }\
         int reset;                                                            \
         sscanf(data, "%i", &reset);                                           \
-        if (!reset) return RETURN_SUCCESS;\
-        \
-        /*Using sysref pulses would be better, but the pulses have problems*/\
-        set_property("time/sync/sysref_mode", "continuous");\
-        \
-        /*enables responding to sysref*/\
-        /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
-        /*strcpy(buf, "board -s 1\r");*/\
-        /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
-        \
-        /*Resets JESD on FPGA*/\
-        usleep(300000);\
-        uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);\
-        write_hps_reg("res_rw7",  individual_reset_bit);\
-        /*this wait is needed*/\
-        usleep(300000);\
-        write_hps_reg("res_rw7", 0);\
-        /*this wait is need*/\
-        usleep(300000);\
-        \
-        /*disable responding to sysref*/\
-        /*By default responding to sysref is enabled. Masking sysref has been removed since it causes inconsistent behaviour*/\
-        /*strcpy(buf, "board -s 0\r");*/\
-        /*ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));*/\
-        \
-        return RETURN_SUCCESS;                                                 \
-    }\
+        if (!reset){\
+            return RETURN_SUCCESS;\
+        }\
+        else {\
+            jesd_reset_all();\
+            return RETURN_SUCCESS;\
+        }\
+    }                                                                          \
     \
     static int hdlr_rx_##ch##_jesd_pll_locked(const char *data, char *ret) {       \
         uint32_t lock_status = 0;\
@@ -1419,15 +1445,21 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
     static int hdlr_rx_##ch##_jesd_status(const char *data, char *ret) {       \
         /* res_ro11 holds link data with bit 0 high indicating rx board 0 */   \
         /* link is up, bit 1 high indicating that rx board link 1 is up, etc */\
-        uint32_t reg_val = 0;                                                  \
-        read_hps_reg("res_ro11", &reg_val);                                    \
-        uint8_t shift = (int)(CHR(ch) - 'a');                                  \
-        uint32_t anded = reg_val & (1 << shift);                               \
-        if (anded > 0){                                                        \
-            strcpy(ret, "good");                                               \
-        } else {                                                               \
-            strcpy(ret, "bad");                                                \
-        }                                                                      \
+        if(rx_power[INT(ch)] == PWR_ON || rx_power[INT(ch)] == PWR_HALF_ON) {\
+            uint32_t reg_val = 0;                                                  \
+            read_hps_reg("res_ro11", &reg_val);                                    \
+            uint8_t shift = (int)(CHR(ch) - 'a');                                  \
+            uint32_t anded = reg_val & (1 << shift);                               \
+            if (anded > 0){                                                        \
+                snprintf(ret, sizeof("good"), "good");                             \
+            } else {                                                               \
+                snprintf(ret, sizeof("bad"), "bad");                               \
+            }                                                                      \
+        } else if (rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            snprintf(ret, 50, "No board detected in slot");\
+        } else {\
+            snprintf(ret, 50, "Board off");\
+        }\
         return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
@@ -2768,6 +2800,18 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+//Only allows jesd_reset_all to work, something else must reset the JESDs after enabling them
+static int hdlr_fpga_enable_jesd(const char *data, char *ret) {
+    uint8_t enable_jesd = 0;
+    sscanf(data, "%hhu", &enable_jesd);
+    if(enable_jesd) {
+        jesd_enabled = 1;
+    } else {
+        jesd_enabled = 0;
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_reset(const char *data, char *ret) {
     /* The reset controllet is like a waterfall:
      * Global Reset -> 40G Reset -> JESD Reset -> DSP Reset
@@ -3078,6 +3122,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
 
+#define DEFINE_FPGA_POST()                                                                                                         \
+    DEFINE_FILE_PROP_P("fpga/link/enable_jesd"               , hdlr_fpga_enable_jesd,                      RW, "1", SP, NAC)               \
 
 #define DEFINE_GPIO(_p)                                                                                                        \
     DEFINE_FILE_PROP_P("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0", SP, NAC)
@@ -3114,6 +3160,7 @@ static prop_t property_table[] = {
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
     DEFINE_CM()
+    DEFINE_FPGA_POST()
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
@@ -3369,7 +3416,7 @@ void sync_channels(uint8_t chan_mask) {
 
     usleep(2000000); // Wait 2 seconds to allow jesd link to go down
     
-    while ((i_reset < max_attempts) && (jesd_good == false)) {
+    while ((i_reset < jesd_max_attempts) && (jesd_good == false)) {
         i_reset++;
         // FPGA JESD IP reset
         write_hps_reg("res_rw7",0x10000000);
@@ -3394,34 +3441,79 @@ void sync_channels(uint8_t chan_mask) {
 
 void jesd_reset_all() {
     int chan;
-    char reset_path[PROP_PATH_LEN];
     char status_path[PROP_PATH_LEN];
-    int attempts;
+    // Stores the original value for the dsp reset registers. The value at the end should match the value it started with
+    uint32_t original_rx4[NUM_RX_CHANNELS] = {0};
+
+    //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time a board is booted during the boot process
+    if(!jesd_enabled) {
+        return;
+    }
+
+    set_property("time/sync/sysref_mode", "continuous");
+
+    //Takes rx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored.
+    //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-        attempts = 0;
-        //Skips empty boards, off boards, and boards that have not begun initialization
-        //Note: make sure when this is called in pwr that the board being turned on is already set as on
-        if(rx_power[chan]!=PWR_ON) {
-            continue;
+        read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
+        if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+        } else {
+            write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
         }
-        sprintf(reset_path, "rx/%c/jesd/reset", chan+'a');
-        sprintf(status_path, "rx/%c/jesd/status", chan+'a');
-        while(property_good(status_path) != 1) {
-            if(attempts >= max_attempts) {
-                PRINT(ERROR, "JESD link for channel %c failed after %i attempts \n", chan+'a', max_attempts);
-                break;
+    }
+
+    int attempts = 0;
+    while ( attempts < jesd_max_attempts ) {
+        int is_bad_attempt = 0;
+
+        //Issue JESD master reset
+        set_property("fpga/reset", "3");
+
+        //Wait for links to re-establish
+        usleep(400000);
+
+        //Checks if all rx JESDs are working
+        for(chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
+            if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+                sprintf(status_path, "rx/%c/jesd/status", chan+'a');
+                if(property_good(status_path) != 1) {
+                    PRINT(ERROR, "JESD link for rx channel %c failed on attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
+                    is_bad_attempt = 1;
+                }
             }
-            attempts++;
-            set_property(reset_path, "1");
         }
 
+        if(!is_bad_attempt) {
+            break;
+        }
+        attempts++;
     }
-    //usleep(2000000);
-    write_hps_reg("res_rw7", RX_JESD_RESET_MASK);
-    //usleep(2000000);
-    write_hps_reg("res_rw7", 0);
-    //usleep(2000000);
-    set_property("time/sync/lmk_sync_tgl_jesd", "1");
+    if(attempts >= jesd_max_attempts) {
+        PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable\n", chan+'a', jesd_max_attempts);
+        // TEMPORARY: reboot the server if unable to establish JESD links
+        int64_t failed_count = 0;
+        read_interboot_variable("cons_jesd_fail_count", &failed_count);
+        if(failed_count < jesd_max_server_restart_attempts) {
+            update_interboot_variable("cons_jesd_fail_count", failed_count + 1);
+            PRINT(ERROR, "Restarting server\n");
+            system("systemctl restart cyan-server");
+            // Waits for the server reboot command to restart the server
+            while(1) {
+                usleep(1000);
+            }
+        } else {
+            PRINT(ERROR, "Unable to establish JESD links despite multiple server restarts. The system will not attempt another server restart to bring up JESD links until a successful attempt to establish links\n");
+        }
+    } else {
+        // Resets the counter for the number of failed JESD after server boot
+        update_interboot_variable("cons_jesd_fail_count", 0);
+    }
+
+    // Sets whether the dsp is in reset to what is was prior to this function
+    for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
+    }
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
