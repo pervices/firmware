@@ -742,7 +742,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 \
                 PRINT(INFO, "Setting mixer amplifier to: %i\n", gain);\
-                sprintf(buf, "rf -g %i\r", gain);\
+                sprintf(buf, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
                 sprintf(ret, "%i", gain+vga_gain);                              \
             }\
@@ -837,7 +837,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         strcpy(buf, "rf -a ");                                                 \
         sprintf(buf + strlen(buf), "%i", atten);                               \
         strcat(buf, "\r");                                                     \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));             \
                                                                                \
         sprintf(ret, "%i", atten);                                             \
                                                                                \
