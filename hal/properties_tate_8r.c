@@ -3522,9 +3522,9 @@ void jesd_reset_all() {
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
         if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
-            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
-        } else {
             write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+        } else {
+            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
         }
     }
 
@@ -3577,7 +3577,12 @@ void jesd_reset_all() {
 
     // Sets whether the dsp is in reset to what is was prior to this function
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-        write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
+        if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+            write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
+        } else {
+            // Leave dsp in reset if there is no board in that slot, note this line should be redundant since the dsp wil
+            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+        }
     }
 }
 
