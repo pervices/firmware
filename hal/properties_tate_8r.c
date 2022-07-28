@@ -1043,7 +1043,6 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
         \
-        /*sync_channels( 15 ); */\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2912,6 +2911,8 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      * 13'b0
      * };
      */
+    // Waits for the reset sequence to finish
+    wait_for_fpga_reset();
     return RETURN_SUCCESS;
 }
 
