@@ -197,6 +197,10 @@ then
             if $show_verbose
             then
                 grep -A 3 "sys18" $result
+                grep -A 5 "sfpa" $result
+                grep -A 5 "sfpb" $result
+                grep -A 5 "sfpc" $result
+                grep -A 5 "sfpd" $result
             fi
             echo "The sfp ports were good $sfp_good out of $sfp_checks within this power cycle"
         fi
