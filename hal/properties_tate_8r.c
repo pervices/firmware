@@ -80,6 +80,18 @@
 
 static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
 
+static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
+
+static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10" };
+
+static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1 };
+
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+#define TOTAL_NUM_PORTS 16
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+static const char *device_side_port_map[TOTAL_NUM_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+
 static const int rx_jesd_pll_lock_num[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
 //contains the registers used for rx_4 for each channel
@@ -1060,34 +1072,22 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                                                                                \
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
-        /* NOTE: This is strictly for tate 8r*/                                \
-        char channel = CHR(ch);                                                \
-        char port = 'a';                                                       \
-        if (channel == 'a') {                                                  \
-            port = 'a';                                                        \
-        } else if (channel == 'b') {                                           \
-            port = 'a';                                                        \
-        } else if (channel == 'c') {                                           \
-            port = 'b';                                                        \
-        } else if (channel == 'd') {                                           \
-            port = 'b';                                                        \
-        } else if (channel == 'e') {                                           \
-            port = 'c';                                                        \
-        } else if (channel == 'f') {                                           \
-            port = 'c';                                                        \
-        } else if (channel == 'g') {                                           \
-            port = 'd';                                                        \
-        } else if (channel == 'h') {                                           \
-            port = 'd';                                                        \
-        }                                                                      \
-        sprintf(ret, "%s%c", "sfp", port);                                     \
+        sprintf(ret, rx_sfp_map[INT(ch)]);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /* Destination UDP port for rx*/\
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
         write_hps_reg("rx" STR(ch) "8", port);                                 \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    static int hdlr_rx_##ch##_link_src_port(const char *data, char *ret) {         \
+        uint32_t port;                                                         \
+        sscanf(data, "%" SCNd32 "", &port);                                    \
+        write_hps_reg(device_side_port_map[rx_src_port_map[INT(ch)]], port);   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -3081,6 +3081,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/src_port"            , hdlr_rx_##_c##_link_src_port,           RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,    RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
@@ -3267,27 +3268,14 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42836;
 
-#define X(ch, rx, crx, ctx) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
+#define X(ch, io, crx, ctx) \
+    set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
+    set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
+    set_default_int("rx/" #ch "/link/src_port", base_port + rx_src_port_map[INT(ch)]*4); \
+    set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
+
     CHANNELS
 #undef X
-
-    set_default_str("rx/a/link/ip_dest","10.10.10.10");
-    set_default_str("rx/b/link/ip_dest","10.10.10.10");
-    set_default_str("rx/c/link/ip_dest","10.10.11.10");
-    set_default_str("rx/d/link/ip_dest","10.10.11.10");
-    set_default_str("rx/e/link/ip_dest","10.10.12.10");
-    set_default_str("rx/f/link/ip_dest","10.10.12.10");
-    set_default_str("rx/g/link/ip_dest","10.10.13.10");
-    set_default_str("rx/h/link/ip_dest","10.10.13.10");
-
-    set_default_int("rx/a/link/jesd_num",0);
-    set_default_int("rx/b/link/jesd_num",1);
-    set_default_int("rx/c/link/jesd_num",0);
-    set_default_int("rx/d/link/jesd_num",1);
-    set_default_int("rx/e/link/jesd_num",0);
-    set_default_int("rx/f/link/jesd_num",1);
-    set_default_int("rx/g/link/jesd_num",0);
-    set_default_int("rx/h/link/jesd_num",1);
 
 #if RTM_VER == 3 || RTM_VER == 4
     #define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
