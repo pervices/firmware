@@ -193,8 +193,10 @@ static int uart_synth_fd = 0;
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 int jesd_max_attempts = 10;
-int jesd_max_server_restart_attempts = 0;
+// The server restart max attempts should be set to 0 once a means of getting the JESD to come up without rebooting the server found
+int jesd_max_server_restart_attempts = 10;
 int sfp_max_reset_attempts = 10;
+// SFP always came up in 90/90 tests, so reboot on SFP fail has been disabled
 int sfp_max_reboot_attempts = 0;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
