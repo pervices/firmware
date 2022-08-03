@@ -197,7 +197,7 @@ int jesd_max_attempts = 10;
 int jesd_max_server_restart_attempts = 10;
 int sfp_max_reset_attempts = 10;
 // SFP always came up in 90/90 tests, so reboot on SFP fail has been disabled
-int sfp_max_reboot_attempts = 0;
+int sfp_max_reboot_attempts = 10;
 int max_brd_reboot_attempts = 5;
 int jesd_good_code = 0xf;
 
