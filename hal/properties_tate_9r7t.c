@@ -1062,11 +1062,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if (band == 0) {                       \
-            if(RTM_VER==3) {\
-                set_property("tx/" STR(ch) "/link/iq_swap", "1");\
-            } else {\
-                set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-            }\
+            set_property("tx/" STR(ch) "/link/iq_swap", "1");\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
@@ -1421,17 +1417,10 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         uint32_t old_val = 0;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
         /* There is an issue that results in an iq swap on the last 3 channels, temporary fix until a root cause can be found */\
-        if(INT(ch) != 4 && INT(ch) != 5 && INT(ch) !=6) {\
-            if ( swap == 1)                                            \
-                write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
-            else                                                                   \
-                write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
-        } else {\
-            if ( swap != 1)                                            \
-                write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
-            else                                                                   \
-                write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
-        }\
+        if ( swap == 1)                                            \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
+        else                                                                   \
+            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
