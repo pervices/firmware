@@ -1750,7 +1750,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             strcpy(buf, "board -k\r");                          \
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
             \
-            if(property_good("rx/" STR(ch) "/jesd/status")) {\
+            if(property_good("tx/" STR(ch) "/jesd/status")) {\
                 if(RTM_VER != 3) {\
                     snprintf(buf, 20, "board -w 0\r");\
                     ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
