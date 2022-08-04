@@ -192,9 +192,6 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int jesd_max_attempts = 10;
-// The server restart max attempts should be set to 0 once a means of getting the JESD to come up without rebooting the server found
-int jesd_max_server_restart_attempts = 10;
 int sfp_max_reset_attempts = 10;
 // SFP always came up in 90/90 tests, so reboot on SFP fail has been disabled
 int sfp_max_reboot_attempts = 10;
@@ -2312,8 +2309,6 @@ TX_CHANNELS
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 14));             \
                                                                                \
-        /*sync_channels( 15 ); */                                              \
-                                                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -3744,11 +3739,6 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     return RETURN_ERROR;
 }
 
-static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
-    sync_channels(15);
-    return RETURN_SUCCESS;
-}
-
 //In the current FPGA all possible tx ports are created, but only certain ones are used
 //This resets all ports to 0 at the stat of serfer boot, then the ports get set while initializing tx
 static int hdlr_fpga_link_clear_tx_ports(const char *data, char *ret) {
@@ -4652,7 +4642,6 @@ GPIO_PINS
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/clear_tx_ports"            , hdlr_fpga_link_clear_tx_ports,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
@@ -4975,68 +4964,9 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     _save_profile_path = save_path;
 }
 
-// XXX
-// Uses zeroth file descriptor for RX And TX for now until a way is found to
-// convert the channel mask into a integer.
-// This also needs to be extended to convert the chan_mask to a specific RFE
-// for tate.
-void sync_channels(uint8_t chan_mask) {
-    uint32_t reg_val;
-    int i_reset = 0;
-    bool jesd_good = false;
-    char str_chan_mask[MAX_PROP_LEN] = "";
-    sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
-    // usleep(300000); // Some wait time for the reset to be ready
-    /* Bring the ADCs & DACs into 'demo' mode for JESD */
-
-    //During init, we want to set the RFE to mute,
-    //So that the transient spurs that happen when
-    //you initialy turn on a channel or run a jesd sync
-    //don't make it to the SMA.
-
-    // // RX - ADCs
-    // strcpy(buf, "power -c ");
-    // strcat(buf, str_chan_mask);
-    // strcat(buf, " -a 1\r");
-    // ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-
-    // // TX - DACs
-    // strcpy(buf, "power -c ");
-    // strcat(buf, str_chan_mask);
-    // strcat(buf, " -d 1\r");
-    // ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-    /***********************************
-     * Start loop.
-     * Issue JESD, then read to see if
-     * bad
-     **********************************/
-
-    usleep(2000000); // Wait 2 seconds to allow jesd link to go down
-
-    while ((i_reset < jesd_max_attempts) && (jesd_good == false)) {
-        i_reset++;
-        // FPGA JESD IP reset
-        write_hps_reg_mask("res_rw7", ~0, 0x10000000);
-        write_hps_reg_mask("res_rw7", 0, 0x10000000);
-        usleep(400000); // Some wait time for MCUs to be ready
-        /* Trigger a SYSREF pulse */
-        strcpy(buf, "sync -k\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        usleep(200000); // Some wait time for MCUs to be ready
-        read_hps_reg("res_ro11", &reg_val);
-        if ((reg_val  & 0xff)== jesd_good_code) {
-            PRINT(INFO, "all JESD links good after %i JESD IP resets\n", i_reset);
-            jesd_good = true;
-        }
-    }
-    if (jesd_good != true) {
-        PRINT(ERROR, "some JESD links bad after %i JESD IP resets\n", i_reset);
-    }
-
-    return;
-}
-
+const int jesd_max_attempts = 3;
+const int jesd_max_individual_attempts = 3;
+const int jesd_max_server_restart_attempts = 3;
 void jesd_reset_all() {
     int chan;
     char status_path[PROP_PATH_LEN];
@@ -5069,7 +4999,7 @@ void jesd_reset_all() {
         if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
             write_hps_reg_mask(tx_reg4_map[chan], 0x0, 0x2);
         } else {
-            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+            write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
         }
     }
 
@@ -5088,7 +5018,7 @@ void jesd_reset_all() {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 sprintf(status_path, "rx/%c/jesd/status", chan+'a');
                 if(property_good(status_path) != 1) {
-                    PRINT(ERROR, "JESD link for rx channel %c failed on attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
+                    PRINT(ERROR, "JESD link for rx channel %c failed on master attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
                     is_bad_attempt = 1;
                 }
             }
@@ -5099,7 +5029,7 @@ void jesd_reset_all() {
             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
                 sprintf(status_path, "tx/%c/jesd/status", chan+'a');
                 if(property_good(status_path) != 1) {
-                    PRINT(ERROR, "JESD link for tx channel %c failed on attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
+                    PRINT(ERROR, "JESD link for tx channel %c failed on master attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
                     is_bad_attempt = 1;
                 }
             }
@@ -5110,25 +5040,87 @@ void jesd_reset_all() {
         }
         attempts++;
     }
+
+    // Attempt to reset channel  individually if the master reset failed
     if(attempts >= jesd_max_attempts) {
-        PRINT(ERROR, "Failed to establish JESD links. Any channel without a working JESD link will be unusable\n", chan+'a', jesd_max_attempts);
-        // TEMPORARY: reboot the server if unable to establish JESD links
-        int64_t failed_count = 0;
-        read_interboot_variable("cons_jesd_fail_count", &failed_count);
-        if(failed_count < jesd_max_server_restart_attempts) {
-            update_interboot_variable("cons_jesd_fail_count", failed_count + 1);
-            PRINT(ERROR, "Restarting server\n");
-            system("systemctl restart cyan-server");
-            // Waits for the server reboot command to restart the server
-            while(1) {
-                usleep(1000);
+        PRINT(ERROR, "Failed to establish JESD links when resetting all channels. Attempting to idividually reset the problematic channels. This will result in phase alignment issues.\n");
+        int any_ch_failed_individual = 0;
+
+        // Puts all channels into reset, when resetting individually only the active channel should be in reset
+        for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+        }
+        for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+            write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
+        }
+
+        for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+            if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+                int individual_reset_attempts = 0;
+                while(individual_reset_attempts < jesd_max_individual_attempts) {
+                    sprintf(status_path, "rx/%c/jesd/status", chan+'a');
+                    // If the JESD is up, skip/finish resetting
+                    if(property_good(status_path) != 1) {
+                        break;
+                    }
+                    PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n");
+                    uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);
+                    write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
+                    write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
+                    // Wait for reset to finish
+                    usleep(4000000);
+                    individual_reset_attempts++;
+                }
+                if(individual_reset_attempts >= jesd_max_individual_attempts) {
+                    PRINT(ERROR, "Failed to establish JESD link on rx channel %c, the channel will be unusable\n", chan+'a');
+                    any_ch_failed_individual = 1;
+                }
+            }
+        }
+
+        for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+            if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
+                int individual_reset_attempts = 0;
+                while(individual_reset_attempts < jesd_max_individual_attempts) {
+                    sprintf(status_path, "tx/%c/jesd/status", chan+'a');
+                    // If the JESD is up, skip/finish resetting
+                    if(property_good(status_path) != 1) {
+                        break;
+                    }
+                    PRINT(ERROR, "Attempting to individually reset tx %c JESD. This will cause phase alignment issues\n");
+                    uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_TX);
+                    write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
+                    write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
+                    // Wait for reset to finish
+                    usleep(4000000);
+                    individual_reset_attempts++;
+                }
+                if(individual_reset_attempts >= jesd_max_individual_attempts) {
+                    PRINT(ERROR, "Failed to establish JESD link on tx channel %c, the channel will be unusable\n", chan+'a');
+                    any_ch_failed_individual = 1;
+                }
+            }
+        }
+
+        // Restart server if individual reset were unable to bring up the baords
+        if(any_ch_failed_individual) {
+            int64_t failed_count = 0;
+            read_interboot_variable("cons_jesd_fail_count", &failed_count);
+            if(failed_count < jesd_max_server_restart_attempts) {
+                PRINT(ERROR, "Unable to establish JESD links despite individual resets. Attempting to restart the server\n");
+                update_interboot_variable("cons_jesd_fail_count", failed_count + 1);
+                PRINT(ERROR, "Restarting server\n");
+                system("systemctl restart cyan-server");
+                // Waits for the server reboot command to restart the server
+                while(1) {
+                    usleep(1000);
+                }
+            } else {
+                PRINT(ERROR, "Unable to establish JESD links despite multiple server restarts. The system will not attempt another server restart to bring up JESD links until a successful attempt to establish links\n");
             }
         } else {
-            PRINT(ERROR, "Unable to establish JESD links despite multiple server restarts. The system will not attempt another server restart to bring up JESD links until a successful attempt to establish links\n");
+            PRINT(ERROR, "JESD bring succeeded only after attempting to reset channels individually. This may cause phase alignment issues\n");
         }
-    } else {
-        // Resets the counter for the number of failed JESD after server boot
-        update_interboot_variable("cons_jesd_fail_count", 0);
     }
 
     // Sets whether the dsp is in reset to what is was prior to this function
@@ -5136,7 +5128,7 @@ void jesd_reset_all() {
         if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
             write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
         } else {
-            // Leave dsp in reset if there is no board in that slot, note this line should be redundant since the dsp wil
+            // Leave dsp in reset if there is no board in that slot, note this line should be redundant since the dsp will be left in reset
             write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
         }
     }
