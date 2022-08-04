@@ -1735,17 +1735,20 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             }\
             /* power off */                                                    \
         } else {                                                               \
-            /* kill the channel */                                             \
-            strcpy(buf, "board -k\r");                          \
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
             \
             if(property_good("tx/" STR(ch) "/jesd/status")) {\
+                /* mute the channel */                                             \
+                strcpy(buf, "rf -z\r");                          \
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                 if(RTM_VER != 3) {\
                     snprintf(buf, 20, "board -w 0\r");\
                     ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
                 tx_power[INT(ch)] = PWR_HALF_ON;\
             } else {\
+                /* kill the channel */                                             \
+                strcpy(buf, "board -k\r");                          \
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                 set_property("tx/" STR(ch) "/board/pwr_board", "0");\
             }\
                                                                                \
