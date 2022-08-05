@@ -300,6 +300,10 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     */
 void wait_for_fpga_reset() {
     uint32_t sys18_val;
+    // Immediatley trying to read a register after reseting the FPGA may cause Linux to freeze
+    // The freeze is to infrequent to be able to optimize this delay
+    // This delay is probably longer than it needs to be, but the reset should take longer than this to be ready anyway
+    usleep(500000);
     do {
         read_hps_reg("sys18", &sys18_val);
     } while (sys18_val & 0x00ff0000);
