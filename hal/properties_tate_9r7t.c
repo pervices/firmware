@@ -196,7 +196,6 @@ int sfp_max_reset_attempts = 10;
 // SFP always came up in 90/90 tests, so reboot on SFP fail has been disabled
 int sfp_max_reboot_attempts = 10;
 int max_brd_reboot_attempts = 5;
-int jesd_good_code = 0xf;
 
 static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 
