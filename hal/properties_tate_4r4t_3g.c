@@ -3825,11 +3825,29 @@ static int hdlr_time_source_sync(const char *data, char *ret) {
 // 10 MHz clock
 static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
+        PRINT(INFO, "Setting clock reference source to external\n");
         strcpy(buf, "clk -t 1\r");
     } else if (strcmp(data, "internal") == 0) {
+        PRINT(INFO, "Setting clock reference source to internal\n");
         strcpy(buf, "clk -t 0\r");
+    } else {
+        PRINT(ERROR, "Invalid clock source: %s\n", data);
+        strncpy(ret, "invalid_source", strlen("invalid_source"));
+        return RETURN_ERROR_PARAM;
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    // Waits for clock to stabilize
+    usleep(10000);
+    char data_buff[2] = "1";
+    char ret_buff[MAX_PROP_LEN];
+    hdlr_time_status_good(data_buff, ret_buff);
+    if(strncmp(ret_buff, "good", 4) != 0) {
+        PRINT(ERROR, "PLL loss of lock detected after changing clock reference source\n");
+        strncpy(ret, "pll_lock_failure", strlen("pll_lock_failure"));
+    } else {
+        // Leave the property as what is was set to. Included for clarity, should be redundant
+        snprintf(ret, MAX_PROP_LEN, "%s", data);
+    }
     return RETURN_SUCCESS;
 }
 
