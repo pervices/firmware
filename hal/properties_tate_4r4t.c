@@ -1109,7 +1109,11 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if (band == 0) {                       \
-            set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            if(RTM_VER==3) {\
+                set_property("tx/" STR(ch) "/link/iq_swap", "1");\
+            } else {\
+                set_property("tx/" STR(ch) "/link/iq_swap", "0");\
+            }\
             strcpy(buf, "rf -b ");                                             \
             sprintf(buf + strlen(buf),"%i", band);                             \
             strcat(buf, "\r");                                                 \
