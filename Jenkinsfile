@@ -10,7 +10,7 @@ pipeline {
 	stages {
 		stage('build') {
 			agent {
-				label 'citests'
+				label 'github_trigger'
 			}
 			steps {
 				build job: 'firmware-compile', parameters: [string(name: 'SERVER_TARGET', value: 'all')]
