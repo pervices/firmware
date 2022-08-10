@@ -13,7 +13,7 @@ pipeline {
 				label 'citests'
 			}
 			steps {
-				sh 'echo This is just a proxy for another Jenkins pipeline firmware-compile'
+				build job: 'firmware-compile', parameters: [string(name: 'SERVER_TARGET', value: 'all')]
 			}
 		}
 	}
