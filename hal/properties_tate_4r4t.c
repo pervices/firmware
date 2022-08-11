@@ -2307,6 +2307,18 @@ CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    static int hdlr_rx_##ch##_status_lna(const char *data, char *ret) {   \
+        if(RTM_VER > 3) {\
+            snprintf(buf, 10, "rf -S\r");\
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(ret, 50, (char *)uart_ret_buf);\
+        } else {\
+            snprintf(ret, 50, "lna status not implemented on RTM3 mcu\n");\
+        }\
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_led(const char *data, char *ret) {      \
         strcpy(buf, "board -l\r");                                             \
@@ -2742,21 +2754,22 @@ CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
             \
             /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
-            int num_lna_attempts = 0;\
-            while(!(RTM_VER==3)) {\
-                snprintf(buf, 10, "rf -S\r");\
-                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                if(strncmp((char *)uart_ret_buf, "LNA_RDY: 1", 10) == 0) {\
-                    PRINT(INFO, "LNA is good\n");\
-                    break;\
-                } else if(num_lna_attempts >= 10){\
-                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");\
-                    break;\
-                } else {\
-                    PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
-                    num_lna_attempts ++;\
-                    snprintf(buf, 20, "rf -L r\r");\
-                    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            if(RTM_VER > 3) {\
+                int num_lna_attempts = 0;\
+                while(1) {\
+                    hdlr_rx_##ch##_status_lna("1", buf);\
+                    if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
+                        PRINT(INFO, "LNA is good\n");\
+                        break;\
+                    } else if(num_lna_attempts >= 10){\
+                        PRINT(ERROR, "Failed to start lna after 10 attempts\n");\
+                        break;\
+                    } else {\
+                        PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
+                        num_lna_attempts ++;\
+                        snprintf(buf, 20, "rf -L r\r");\
+                        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                    }\
                 }\
             }\
                                                                     \
@@ -4636,6 +4649,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/lna"               , hdlr_rx_##_c##_status_lna,              RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20", RP, #_c)        \
