@@ -5103,7 +5103,7 @@ void jesd_reset_all() {
                     if(property_good(status_path) != 1) {
                         break;
                     }
-                    PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n");
+                    PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n", chan + 'a');
                     uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
@@ -5112,7 +5112,7 @@ void jesd_reset_all() {
                     individual_reset_attempts++;
                 }
                 if(individual_reset_attempts >= jesd_max_individual_attempts) {
-                    PRINT(ERROR, "Failed to establish JESD link on rx channel %c, the channel will be unusable\n", chan+'a');
+                    PRINT(ERROR, "Failed to establish JESD link on rx channel %c, the channel will be unusable\n", chan + 'a');
                     any_ch_failed_individual = 1;
                 }
             }
