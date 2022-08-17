@@ -126,7 +126,7 @@ int establish_udp_connection(udp_dev_t *udp, in_port_t port) {
     udp->si.sin_family = AF_INET;
     udp->si.sin_port = htons(port);
     //udp->si.sin_addr.s_addr = htonl(INADDR_ANY);
-    udp->si.sin_addr.s_addr = inet_addr("192.168.10.255");
+    udp->si.sin_addr.s_addr = inet_addr("192.168.10.2");
 
     // bind the settings to the socket
     if (bind(udp->sockfd, (struct sockaddr *)&(udp->si), sizeof(udp->si)) < 0) {

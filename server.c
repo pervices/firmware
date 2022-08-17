@@ -153,10 +153,10 @@ int main(int argc, char *argv[]) {
     socklen_t sa_len;
 
 
-     sa.sin_family = AF_INET;
-     sa.sin_port = htons(42799);
-     //udp->si.sin_addr.s_addr = htonl(INADDR_ANY);
-     sa.sin_addr.s_addr = inet_addr("192.168.10.255");
+//      sa.sin_family = AF_INET;
+//      sa.sin_port = htons(42799);
+//      //udp->si.sin_addr.s_addr = htonl(INADDR_ANY);
+//      sa.sin_addr.s_addr = inet_addr("192.168.10.255");
 
 
 
