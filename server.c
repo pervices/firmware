@@ -58,16 +58,7 @@ int main(int argc, char *argv[]) {
 
     const int port_nums[] = {
         /* UDP management port */
-        42799,
-        /* Crimson ports */
-        42800,
-        42801,
-        42802,
-        42803,
-        42804,
-        42805,
-        42806,
-        42807,
+        42799
     };
 
     int comm_fds[ARRAY_SIZE(port_nums)];
@@ -160,6 +151,14 @@ int main(int argc, char *argv[]) {
     int ret2;
     struct sockaddr_in sa;
     socklen_t sa_len;
+
+
+     sa.sin_family = AF_INET;
+     sa.sin_port = htons(42799);
+     //udp->si.sin_addr.s_addr = htonl(INADDR_ANY);
+     sa.sin_addr.s_addr = inet_addr("192.168.10.255");
+
+
 
     // Initialize the properties, which is implemented as a Linux file structure
     const int t0 = time_it();
