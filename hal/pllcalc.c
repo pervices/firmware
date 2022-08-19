@@ -32,11 +32,13 @@
 int main(void) {
     uint64_t reqFreq = 250e6;
     pllparam_t pll = pll_def_adf5355;
+//     pllparam_t pll = pll_def_lmx2595;
+//     pll.ref_freq = 5e6;
 
     // Debug parameters;
-    double max_diff = PLL_CORE_REF_FREQ_HZ / PLL1_R_FIXED;
-    double max_N = PLL1_N_MAX;
-    double max_R = PLL1_R_MAX;
+    double max_diff = (double)pll.ref_freq / pll.R;
+    double max_N = (double)pll.n_max;
+    double max_R = (double)pll.r_max;
     int printdebug = 0;
     uint64_t stepFreq = (1000000);
 
@@ -47,7 +49,7 @@ int main(void) {
         // This is the main function, everything after is for statistics
         setFreq(&reqFreq, &pll);
 
-        double actual_reference = (double)(uint64_t)PLL_CORE_REF_FREQ_HZ;
+        double actual_reference = (double)pll.ref_freq;
         double actual_output = (double)pll.vcoFreq / (double)pll.d;
 
         // if (pll.x2en)	actual_output *= 2.0;
