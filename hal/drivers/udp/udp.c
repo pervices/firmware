@@ -121,16 +121,32 @@ int establish_udp_connection(udp_dev_t *udp, in_port_t port) {
         return RETURN_ERROR_COMM_INIT;
     }
 
+    int z = 0; /* status code */
+    /* bind to specific interface */
+    /* NOTE: You may require the following sysctl to work;
+     *
+     * net.ipv4.conf.default.arp_filter = 1
+     * net.ipv4.conf.default.rp_filter = 2
+     * net.ipv4.conf.all.arp_filter = 1
+     * net.ipv4.conf.all.rp_filter = 2
+    */
+    const char *interface_name = "eth0";
+    z = setsockopt(udp->sockfd, SOL_SOCKET, SO_BINDTODEVICE, interface_name, strlen(interface_name));
+    if ( z ) {
+        PRINT(ERROR, "%s():%s, %s\n", __func__,__LINE__, strerror(errno));
+    }
+
     // zero out the structure and apply the configurations for the socket
     memset((char *)&(udp->si), 0, sizeof(udp->si));
+
     udp->si.sin_family = AF_INET;
-    udp->si.sin_port = htons(port);
-    //udp->si.sin_addr.s_addr = htonl(INADDR_ANY);
-    udp->si.sin_addr.s_addr = inet_addr("192.168.10.2");
+    udp->si.sin_port = htons(42799);
+    udp->si.sin_addr.s_addr = htonl(INADDR_ANY);
+    //udp->si.sin_addr.s_addr = inet_addr("192.168.10.2");
 
     // bind the settings to the socket
     if (bind(udp->sockfd, (struct sockaddr *)&(udp->si), sizeof(udp->si)) < 0) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+        PRINT(ERROR, "%s():%s, %s\n", __func__,__LINE__, strerror(errno));
         return RETURN_ERROR_COMM_INIT;
     }
     udp->slen = sizeof(udp->si);
