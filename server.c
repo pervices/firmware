@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 
     int comm_fds[ARRAY_SIZE(port_nums)];
 
-    const char *const enet_dev = "eth0";
+    const char *const enet_dev = "eth1";
 
     extern int verbose;
     verbose = 0;
@@ -141,6 +141,8 @@ int main(int argc, char *argv[]) {
             return RETURN_ERROR_COMM_INIT;
         }
     }
+
+    //Here is where it all get
 
     PRINT(INFO, "Network init done\n");
 

@@ -147,9 +147,9 @@
     };
 #elif defined (TATE_9R7T)
     //directory of the state tree
-    #define BASE_DIR "/var/cyan"
+    #define BASE_DIR "/var/cyan2"
     //state tree
-    #define STATE_DIR "/var/cyan/state"
+    #define STATE_DIR "/var/cyan2/state"
 
     #define NUM_TX_CHANNELS 7
 

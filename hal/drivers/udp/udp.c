@@ -130,7 +130,7 @@ int establish_udp_connection(udp_dev_t *udp, in_port_t port) {
      * net.ipv4.conf.all.arp_filter = 1
      * net.ipv4.conf.all.rp_filter = 2
     */
-    const char *interface_name = "eth0";
+    const char *interface_name = "eth1";
     z = setsockopt(udp->sockfd, SOL_SOCKET, SO_BINDTODEVICE, interface_name, strlen(interface_name));
     if ( z ) {
         PRINT(ERROR, "%s():%s, %s\n", __func__,__LINE__, strerror(errno));
