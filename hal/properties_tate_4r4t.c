@@ -248,7 +248,7 @@ static int read_uart(int uartfd) {
     const long t1 = time_it();
 
     printf("read uart %ld : %s\n", t1 - t0, buf);
-    strncpy((char *)uart_ret_buf, buf, MAX_UART_RET_LEN - 1);
+    snprintf((char *)uart_ret_buf, MAX_UART_RET_LEN, buf);
     return RETURN_SUCCESS;
 }
 
@@ -1227,7 +1227,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_rf_board_temp(const char *data, char *ret) {     \
         strcpy(buf, "board -t\r");                              \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1235,7 +1235,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
         strcpy(buf, "status -l\r");                             \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1243,7 +1243,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_status_dacld(const char *data, char *ret) {      \
         strcpy(buf, "status -p\r");                             \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1945,7 +1945,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1953,7 +1953,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_about_mcudevid(const char *data, char *ret) {    \
         strcpy(buf, "status -d\r");                                            \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1961,7 +1961,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_about_mcurev(const char *data, char *ret) {      \
         strcpy(buf, "status -v\r");                                            \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1969,7 +1969,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_about_mcufuses(const char *data, char *ret) {    \
         strcpy(buf, "status -f\r");                                            \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1977,7 +1977,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }\
@@ -1985,7 +1985,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_about_hw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -h\r");                                             \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }\
@@ -1994,7 +1994,7 @@ static void write_dac_reg(const int fd, int ch, int reg, int val) {
     static int hdlr_tx_##ch##_about_sw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }
@@ -2293,7 +2293,7 @@ CHANNELS
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
         strcpy(buf, "board -u\r");                              \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2301,7 +2301,7 @@ CHANNELS
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
         strcpy(buf, "status -l\r");                             \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2846,7 +2846,7 @@ CHANNELS
     static int hdlr_rx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2854,7 +2854,7 @@ CHANNELS
     static int hdlr_rx_##ch##_about_mcudevid(const char *data, char *ret) {    \
         strcpy(buf, "status -d\r");                                            \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2862,7 +2862,7 @@ CHANNELS
     static int hdlr_rx_##ch##_about_mcurev(const char *data, char *ret) {      \
         strcpy(buf, "status -v\r");                                            \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2870,7 +2870,7 @@ CHANNELS
     static int hdlr_rx_##ch##_about_mcufuses(const char *data, char *ret) {    \
         strcpy(buf, "status -f\r");                                            \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2878,7 +2878,7 @@ CHANNELS
     static int hdlr_rx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2886,7 +2886,7 @@ CHANNELS
     static int hdlr_rx_##ch##_about_hw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -h\r");                                             \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2895,7 +2895,7 @@ CHANNELS
     static int hdlr_rx_##ch##_about_sw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);                                     \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3433,7 +3433,7 @@ static int hdlr_time_clk_cmd(const char *data, char *ret) {
 static int hdlr_time_status_good(const char *data, char *ret) {
      strcpy(buf, "status -g\r");
      ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-     strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+     snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
      return RETURN_SUCCESS;
 }
@@ -3472,7 +3472,7 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
         strcpy(buf, "clk -t 0\r");
     } else {
         PRINT(ERROR, "Invalid clock source: %s\n", data);
-        strncpy(ret, "invalid_source", strlen("invalid_source"));
+        snprintf(ret, MAX_PROP_LEN, "invalid_source");
         return RETURN_ERROR_PARAM;
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -3483,7 +3483,7 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     hdlr_time_status_good(data_buff, ret_buff);
     if(strncmp(ret_buff, "good", 4) != 0) {
         PRINT(ERROR, "PLL loss of lock detected after changing clock reference source\n");
-        strncpy(ret, "pll_lock_failure", strlen("pll_lock_failure"));
+        snprintf(ret, MAX_PROP_LEN, "pll_lock_failure");
     } else {
         // Leave the property as what is was set to. Included for clarity, should be redundant
         snprintf(ret, MAX_PROP_LEN, "%s", data);
@@ -3588,98 +3588,98 @@ static int hdlr_time_source_pll(const char *data, char *ret) {
 static int hdlr_time_status_ld(const char *data, char *ret) {
     // strcpy(buf, "status -l\r");
     // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    // strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    // snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd0_pll1(const char *data, char *ret) {
     strcpy(buf, "status -l 11\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd0_pll2(const char *data, char *ret) {
     strcpy(buf, "status -l 12\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd1_pll1(const char *data, char *ret) {
     strcpy(buf, "status -l 21\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd1_pll2(const char *data, char *ret) {
     strcpy(buf, "status -l 22\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd2_pll1(const char *data, char *ret) {
     strcpy(buf, "status -l 31\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd2_pll2(const char *data, char *ret) {
     strcpy(buf, "status -l 32\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol(const char *data, char *ret) {
     // strcpy(buf, "status -o\r");
     // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    // strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    // snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd0_pll1(const char *data, char *ret) {
     strcpy(buf, "status -o 11\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd0_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 12\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd1_pll1(const char *data, char *ret) {
     strcpy(buf, "status -o 21\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd1_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 22\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd2_pll1(const char *data, char *ret) {
     strcpy(buf, "status -o 31\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd2_pll2(const char *data, char *ret) {
     strcpy(buf, "status -o 32\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
@@ -3702,7 +3702,7 @@ static int hdlr_time_board_test(const char *data, char *ret) {
 static int hdlr_time_board_temp(const char *data, char *ret) {
     strcpy(buf, "board -t\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -3722,7 +3722,7 @@ static int hdlr_time_about_id(const char *data, char *ret) {
 static int hdlr_time_about_serial(const char *data, char *ret) {
     strcpy(buf, "status -s\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -3730,7 +3730,7 @@ static int hdlr_time_about_serial(const char *data, char *ret) {
 static int hdlr_time_about_mcudevid(const char *data, char *ret) {
     strcpy(buf, "status -d\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -3738,7 +3738,7 @@ static int hdlr_time_about_mcudevid(const char *data, char *ret) {
 static int hdlr_time_about_mcurev(const char *data, char *ret) {
     strcpy(buf, "status -v\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -3746,7 +3746,7 @@ static int hdlr_time_about_mcurev(const char *data, char *ret) {
 static int hdlr_time_about_mcufuses(const char *data, char *ret) {
     strcpy(buf, "status -f\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -3754,7 +3754,7 @@ static int hdlr_time_about_mcufuses(const char *data, char *ret) {
 static int hdlr_time_about_fw_ver(const char *data, char *ret) {
     strcpy(buf, "board -v\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -3762,7 +3762,7 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 static int hdlr_time_about_hw_ver(const char *data, char *ret) {
     strcpy(buf, "board -h\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strncpy(ret, (char *)uart_ret_buf, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
     return RETURN_SUCCESS;
 }
@@ -4404,29 +4404,21 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
 
 static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
     uint32_t gps_time_lh = 0, gps_time_uh = 0;
-    char gps_split[MAX_PROP_LEN];
 
     read_hps_reg("sys5", &gps_time_lh);
     read_hps_reg("sys6", &gps_time_uh);
 
-    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
-    strncpy(ret, gps_split, MAX_PROP_LEN);
-    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
-    strncat(ret, gps_split, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, "%i%i", gps_time_uh, gps_time_lh);
 
     return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
     uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
-    char gps_split[MAX_PROP_LEN];
     read_hps_reg("sys7", &gps_frac_time_lh);
     read_hps_reg("sys8", &gps_frac_time_uh);
 
-    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
-    strncpy(ret, gps_split, MAX_PROP_LEN);
-    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
-    strncat(ret, gps_split, MAX_PROP_LEN);
+    snprintf(ret, MAX_PROP_LEN, "%i%i", gps_frac_time_uh, gps_frac_time_lh);
 
     return RETURN_SUCCESS;
 }

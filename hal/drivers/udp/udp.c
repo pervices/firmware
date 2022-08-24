@@ -28,7 +28,7 @@
 
         // MAC Address
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        snprintf(ifr.ifr_name, IF_NAMESIZE, eth->iface);
         if ((ioctl(sockfd, SIOCGIFHWADDR, &ifr)) == -1) {
             PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
             return RETURN_ERROR_COMM_INIT;
@@ -37,7 +37,7 @@
 
         // IP address
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        snprintf(ifr.ifr_name, IF_NAMESIZE, eth->iface);
         if ((ioctl(sockfd, SIOCGIFADDR, &ifr)) == -1) {
             PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
             return RETURN_ERROR_COMM_INIT;
@@ -46,7 +46,7 @@
 
         // Broadcast
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        snprintf(ifr.ifr_name, IF_NAMESIZE, eth->iface);
         if ((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1) {
             PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
             return RETURN_ERROR_COMM_INIT;
@@ -56,7 +56,7 @@
 
         // Gateway TODO
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        snprintf(ifr.ifr_name, IF_NAMESIZE, eth->iface);
         if ((ioctl(sockfd, SIOCGIFBRDADDR, &ifr)) == -1) {
             PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
             return RETURN_ERROR_COMM_INIT;
@@ -66,7 +66,7 @@
 
         // Netmask
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        snprintf(ifr.ifr_name, IF_NAMESIZE, eth->iface);
         if ((ioctl(sockfd, SIOCGIFNETMASK, &ifr)) == -1) {
             PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
             return RETURN_ERROR_COMM_INIT;
@@ -76,7 +76,7 @@
 
         // MTU
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, eth->iface, IF_NAMESIZE);
+        snprintf(ifr.ifr_name, IF_NAMESIZE, eth->iface);
         if ((ioctl(sockfd, SIOCGIFMTU, &ifr)) == -1) {
             PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
             return RETURN_ERROR_COMM_INIT;

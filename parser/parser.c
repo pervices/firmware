@@ -77,13 +77,11 @@ int parse_cmd(cmd_t *cmd, uint8_t *data) {
             break;
 
         case 2:
-            // strncpy
-            strncpy(cmd->prop, tok, sizeof(cmd->prop));
+            snprintf(cmd->prop, sizeof(cmd->prop), tok);
             break;
 
         case 3:
-            // strncpy
-            strncpy(cmd->data, tok, sizeof(cmd->data));
+            snprintf(cmd->data, sizeof(cmd->data), tok);
             /* no break */
         default:
             break;
