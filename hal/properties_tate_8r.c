@@ -3535,7 +3535,7 @@ void jesd_reset_all() {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 sprintf(status_path, "rx/%c/jesd/status", chan+'a');
                 if(property_good(status_path) != 1) {
-                    PRINT(ERROR, "JESD link for rx channel %c failed on master attempt %i, re-attempting JESD reset\n", chan+'a', attempts, jesd_max_attempts);
+                    PRINT(ERROR, "JESD link for rx channel %c failed on master attempt %i, re-attempting JESD reset\n", chan+'a', attempts);
                     is_bad_attempt = 1;
                 }
             }
