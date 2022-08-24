@@ -2007,6 +2007,10 @@ CHANNELS
 
 #define X(ch, io, crx, ctx)                                                               \
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
         char fullpath[PROP_PATH_LEN] = "rx/" STR(ch) "/rf/freq/band";     \
