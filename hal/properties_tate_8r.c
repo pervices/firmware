@@ -3567,7 +3567,7 @@ void jesd_reset_all() {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n", chan + 'a');
-                    uint32_t individual_reset_bit = 1 << (INT(ch) + INDIVIDUAL_RESET_BIT_OFFSET_RX);
+                    uint32_t individual_reset_bit = 1 << (chan + INDIVIDUAL_RESET_BIT_OFFSET_RX);
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
                     // Wait for reset to finish
