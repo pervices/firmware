@@ -75,8 +75,7 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
-#define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
-#define RX_JESD_RESET_MASK 0xff0
+#define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
 
 static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
 
@@ -3555,7 +3554,7 @@ void jesd_reset_all() {
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     sprintf(status_path, "rx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
-                    if(property_good(status_path) != 1) {
+                    if(property_good(status_path) == 1) {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n", chan + 'a');

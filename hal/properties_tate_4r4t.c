@@ -5250,7 +5250,7 @@ void jesd_reset_all() {
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     sprintf(status_path, "rx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
-                    if(property_good(status_path) != 1) {
+                    if(property_good(status_path) == 1) {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n", chan + 'a');
@@ -5274,7 +5274,7 @@ void jesd_reset_all() {
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     sprintf(status_path, "tx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
-                    if(property_good(status_path) != 1) {
+                    if(property_good(status_path) == 1) {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset tx %c JESD. This will cause phase alignment issues\n");

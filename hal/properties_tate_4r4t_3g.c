@@ -109,7 +109,7 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
-#define INDIVIDUAL_RESET_BIT_OFFSET_RX 8
+#define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
 #define INDIVIDUAL_RESET_BIT_OFFSET_TX 16
 
 // The FPGA is hard coded assuming each sample contains 16 bits, this unit uses 12 so the stream command needs to say 3/4 of the actual amount, since 12 is 3/4 of 16
@@ -5649,7 +5649,7 @@ void jesd_reset_all() {
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     sprintf(status_path, "rx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
-                    if(property_good(status_path) != 1) {
+                    if(property_good(status_path) == 1) {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n", chan + 'a');
@@ -5673,7 +5673,7 @@ void jesd_reset_all() {
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     sprintf(status_path, "tx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
-                    if(property_good(status_path) != 1) {
+                    if(property_good(status_path) == 1) {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset tx %c JESD. This will cause phase alignment issues\n");
