@@ -156,10 +156,44 @@
         #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
     #endif
 
-    // Configuration for 9R7T 1G
-    #if (MAX_SAMPLE_RATE == 1000 && NUM_RX_CHANNELS == 9 && NUM_TX_CHANNELS ==7)
+    #if (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS ==4)
+        //TODO generate this dynamically, used by the macro to create the functions for each channel
+        #define RX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d)
 
-        //TODO generate this dynamically
+        #define TX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d)
+
+        //RFE slots for each channel
+        #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+        #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
+
+    #elif (NUM_RX_CHANNELS == 8 && NUM_TX_CHANNELS == 0)
+        //TODO generate this dynamically, used by the macro to create the functions for each channel
+        #define RX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d) \
+            X(e) \
+            X(f) \
+            X(g) \
+            X(h)
+
+        #define TX_CHANNELS
+
+        //RFE slots for each channel
+        #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
+
+    // Configuration for 9R7T
+    #elif (NUM_RX_CHANNELS == 9 && NUM_TX_CHANNELS ==7)
+        //TODO generate this dynamically, used by the macro to create the functions for each channel
         #define RX_CHANNELS \
             X(a) \
             X(b) \
@@ -185,7 +219,7 @@
         #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
 
     #else
-        #error Invalid configuration, currently supported configurations for NRNT: R9 T7 S1000
+        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, 8R, 0T
     #endif
 
 #else

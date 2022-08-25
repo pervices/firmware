@@ -86,6 +86,18 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+static uint8_t rx_power[NUM_RX_CHANNELS];
+static uint8_t tx_power[NUM_TX_CHANNELS];
+
+//Registers used to store dsp gain
+//ch0 uses [7:0] of the map[0], ch1 uses [15:8] of map[0], ch4 uses [7:0] of map[1]
+#if NUM_RX_CHANNELS > 0
+    static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
+#endif
+#if NUM_TX_CHANNELS > 0
+    static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
+#endif
+
 static uint_fast8_t jesd_enabled = 0;
 
 // A typical VAUNT file descriptor layout may look something like this:
@@ -119,8 +131,12 @@ static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 //the time async_pwr started running, used when calculating if it timed out
 //pwr_board_timeout is in seconds
 #define PWR_TIMEOUT 15
-static time_t rx_async_start_time[NUM_RX_CHANNELS] = {0};
-static time_t tx_async_start_time[NUM_TX_CHANNELS] = {0};
+#if NUM_RX_CHANNELS > 0
+    static time_t rx_async_start_time[NUM_RX_CHANNELS];
+#endif
+#if NUM_TX_CHANNELS > 0
+    static time_t tx_async_start_time[NUM_TX_CHANNELS];
+#endif
 
 uint8_t *_save_profile;
 uint8_t *_load_profile;
@@ -306,16 +322,18 @@ static int hdlr_rx_sync(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_tx_sync(const char *data, char *ret) {
-    uint32_t old_val = 0;
+#if NUM_TX_CHANNELS > 0
+    static int hdlr_tx_sync(const char *data, char *ret) {
+        uint32_t old_val = 0;
 
-    // toggle the bit sys0[6]
-    read_hps_reg("sys0", &old_val);
-    write_hps_reg("sys0", old_val | 0x40);
-    write_hps_reg("sys0", old_val & (~0x40));
+        // toggle the bit sys0[6]
+        read_hps_reg("sys0", &old_val);
+        write_hps_reg("sys0", old_val | 0x40);
+        write_hps_reg("sys0", old_val & (~0x40));
 
-    return RETURN_SUCCESS;
-}
+        return RETURN_SUCCESS;
+    }
+#endif
 
 static int hdlr_save_config(const char *data, char *ret) {
     *_save_profile = 1;
@@ -368,26 +386,40 @@ RX_CHANNELS
 /* -------------------------------- GATE ------------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-static int set_gating_mode(const char *chan, bool dsp) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
-    return set_reg_bits(reg_name, 13, 1, dsp);
-}
-
-static int valid_trigger_mode(const char *data, bool *edge) {
-
-    if (false) {
-    } else if (0 == strncmp("edge", data, strlen("edge"))) {
-        *edge = true;
-    } else if (0 == strncmp("level", data, strlen("level"))) {
-        *edge = false;
-    } else {
-        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
-        return RETURN_ERROR_PARAM;
+#if NUM_TX_CHANNELS > 0
+    static int tx_set_gating_mode(const char *chan, bool dsp) {
+        char reg_name[8];
+        snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
+        return set_reg_bits(reg_name, 13, 1, dsp);
     }
 
-    return RETURN_SUCCESS;
-}
+    static int tx_valid_gating_mode(const char *data, bool *dsp) {
+        if (false) {
+        } else if (0 == strncmp("dsp", data, strlen("dsp"))) {
+            *dsp = true;
+        } else if (0 == strncmp("output", data, strlen("output"))) {
+            *dsp = false;
+        } else {
+            return RETURN_ERROR_PARAM;
+        }
+        return RETURN_SUCCESS;
+    }
+#endif
+
+    static int valid_trigger_mode(const char *data, bool *edge) {
+
+        if (false) {
+        } else if (0 == strncmp("edge", data, strlen("edge"))) {
+            *edge = true;
+        } else if (0 == strncmp("level", data, strlen("level"))) {
+            *edge = false;
+        } else {
+            PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+            return RETURN_ERROR_PARAM;
+        }
+
+        return RETURN_SUCCESS;
+    }
 
 static int valid_trigger_pol(const char *data, bool *positive) {
 
@@ -512,18 +544,6 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
         PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
-}
-
-static int valid_gating_mode(const char *data, bool *dsp) {
-    if (false) {
-    } else if (0 == strncmp("dsp", data, strlen("dsp"))) {
-        *dsp = true;
-    } else if (0 == strncmp("output", data, strlen("output"))) {
-        *dsp = false;
-    } else {
-        return RETURN_ERROR_PARAM;
-    }
-    return RETURN_SUCCESS;
 }
 
 #define X(ch)                                                              \
@@ -2705,10 +2725,10 @@ RX_CHANNELS
     static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
         int r;                                                                 \
         bool val = 0;                                                          \
-        r = valid_gating_mode(data, &val);\
+        r = tx_valid_gating_mode(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         else {\
-            r = set_gating_mode(#ch, val);        \
+            r = tx_set_gating_mode(#ch, val);        \
             \
         }\
         return r;                                                              \
@@ -4934,8 +4954,8 @@ void jesd_reset_all() {
     int chan;
     char status_path[PROP_PATH_LEN];
     // Stores the original value for the dsp reset registers. The value at the end should match the value it started with
-    uint32_t original_rx4[NUM_RX_CHANNELS] = {0};
-    uint32_t original_tx4[NUM_TX_CHANNELS] = {0};
+    uint32_t original_rx4[NUM_RX_CHANNELS];
+    uint32_t original_tx4[NUM_TX_CHANNELS];
 
     //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time a board is booted during the boot process
     if(!jesd_enabled) {
