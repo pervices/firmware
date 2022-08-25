@@ -136,7 +136,7 @@ static const char *device_side_port_map[TOTAL_NUM_PORTS] = { "txa15", "txa16", "
 static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 1, 2, 3 };
 static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3 };
 
-static const int tx_jesd_pll_lock_num[NUM_TX_CHANNELS] = { 12, 13, 14, 15 };
+static const int tx_jesd_pll_lock_num[NUM_TX_CHANNELS] = { 8, 9, 10, 11};
 static const int rx_jesd_pll_lock_num[NUM_RX_CHANNELS] = { 0, 1, 2, 3 };
 
 //contains the registers used for rx_4 for each channel
