@@ -58,6 +58,9 @@ CFLAGS+=" -DVERSIONDATE=\\\"`TZ=UTC date '+%F-%T'`\\\""
 
 CFLAGS+=" -D${PRODUCT}"
 CFLAGS+=" -D${HW_REV}"
+CFLAGS+=" -D${NRX}"
+CFLAGS+=" -D${NTX}"
+CFLAGS+=" -D${MAX_RATE}"
 
 LDFLAGS="${LDFLAGS}"
 LDFLAGS+=" -Wl,-no-undefined"

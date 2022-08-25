@@ -72,10 +72,11 @@ if [ $# -eq 1 ]; then
             CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
                     -march=armv8-a -mtune=cortex-a53 " \
             PRODUCT=$1 \
-            HW_REV="UNSPECIFIED"
-fi
-
-if [ $# -eq 2 ]; then
+            HW_REV="UNSPECIFIED" \
+            NRX="UNSPECIFIED" \
+            NTX="UNSPECIFIED" \
+            MAX_RATE="UNSPECIFIED"
+elif [ $# -eq 2 ]; then
     ./configure                         \
             --prefix=/usr                   \
             --host=x86_64                   \
@@ -88,7 +89,30 @@ if [ $# -eq 2 ]; then
             CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
                     -march=armv8-a -mtune=cortex-a53 " \
             PRODUCT=$1 \
-            HW_REV=$2
+            HW_REV=$2 \
+            NRX="UNSPECIFIED" \
+            NTX="UNSPECIFIED" \
+            MAX_RATE="UNSPECIFIED"
+elif [ $# -eq 5 ]; then
+    ./configure                         \
+            --prefix=/usr                   \
+            --host=x86_64                   \
+            CC=aarch64-linux-gnu-gcc        \
+            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+                    -march=armv8-a -mtune=cortex-a53 " \
+            CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+                    -march=armv8-a -mtune=cortex-a53 " \
+            CXX=aarch64-linux-gnu-g++       \
+            CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
+                    -march=armv8-a -mtune=cortex-a53 " \
+            PRODUCT=$1 \
+            HW_REV=$2 \
+            NRX=$3 \
+            NTX=$4 \
+            MAX_RATE=$5
+else
+    echo "No valid configuration specified"
+    exit 80
 fi
 
 make -j9

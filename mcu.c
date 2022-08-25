@@ -131,6 +131,15 @@ static int contains(const char *str, char letter, int size) {
             printf("%d\n", uart_cyan_synth_fd);
         }
         printf("%d\n", uart_cyan_rfe_fd[i]);
+    #elif defined(TATE_NRNT)
+        printf("%s\n", UART_CYAN_SN);
+        for (i = 0; i < 16; i++) {
+            printf("%s\n", UART_CYAN_RFE[i]);
+        }
+        for (i = 0; i < 16; i++) {
+            printf("%d\n", uart_cyan_synth_fd);
+        }
+        printf("%d\n", uart_cyan_rfe_fd[i]);
     #elif defined(VAUNT)
         printf("%s\n", UART_CRIMSON_SN);
         printf("%s\n", UART_CRIMSON_TX);
@@ -139,7 +148,7 @@ static int contains(const char *str, char letter, int size) {
         printf("%d\n", uart_crimson_tx_fd);
         printf("%d\n", uart_crimson_rx_fd);
     #else
-        #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+        #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT, VAUNT). Confirm spelling and spaces."
     #endif
         printf("%d\n", fwd);
         printf("%d\n", uart_comm_fd);
@@ -181,10 +190,12 @@ static void parse_args(int argc, char *argv[]) {
                 printf("Product: TATE_4R4T_3G\n");
             #elif defined(TATE_8R)
                 printf("Product: TATE_8R\n");
+            #elif defined(TATE_NRNT)
+                printf("Product: TATE_9R7T\n");
             #elif defined(VAUNT)
                 printf("Product: VAUNT\n");
             #else
-                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT, VAUNT). Confirm spelling and spaces."
             #endif
             exit(0);
             return;
@@ -308,6 +319,19 @@ int main(int argc, char *argv[]) {
             return RETURN_ERROR_COMM_INIT;
         }
     }
+
+#elif defined(TATE_NRNT)
+    if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
+        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_SN);
+        return RETURN_ERROR_COMM_INIT;
+    }
+    for (i = 0; i < 16; i++) {
+        if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
+            printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_RFE[i]);
+            return RETURN_ERROR_COMM_INIT;
+        }
+    }
+
 #elif defined(VAUNT)
     // initialize the comm port
     if (init_uart_comm(&uart_crimson_synth_fd, UART_CRIMSON_SN, 0) < 0) {
@@ -323,7 +347,7 @@ int main(int argc, char *argv[]) {
         return RETURN_ERROR_COMM_INIT;
     }
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT VAUNT). Confirm spelling and spaces."
 #endif
 
 

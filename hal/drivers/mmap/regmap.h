@@ -29,18 +29,20 @@
 
 #if defined(TATE)
     #define HPS2FPGA_GPR_OFST (0x80000000)
+#elif defined(TATE_8R)
+    #define HPS2FPGA_GPR_OFST (0x80000000)
 #elif defined(TATE_4R4T)
     #define HPS2FPGA_GPR_OFST (0x80000000)
 #elif defined(TATE_9R7T)
     #define HPS2FPGA_GPR_OFST (0x80000000)
 #elif defined(TATE_4R4T_3G)
     #define HPS2FPGA_GPR_OFST (0x80000000)
-#elif defined(TATE_8R)
+#elif defined(TATE_NRNT)
     #define HPS2FPGA_GPR_OFST (0x80000000)
 #elif defined(VAUNT)
     #define HPS2FPGA_GPR_OFST (0xFF200000)
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT, VAUNT). Confirm spelling and spaces."
 #endif
 
 typedef struct bits {
