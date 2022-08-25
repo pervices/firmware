@@ -49,56 +49,56 @@
 #elif defined(TATE_8R)
     //Will be only using the populated RF slots
     //Column 3 is for rx, 4 is for tx
-    #define CHANNELS   \
-        X(a, rx, a, c) \
-        X(b, rx, e, g) \
-        X(c, rx, i, k) \
-        X(d, rx, m, o) \
-        X(e, rx, b, d) \
-        X(f, rx, f, h) \
-        X(g, rx, j, l) \
-        X(h, rx, n, p)
+    #define CHANNELS \
+        X(a) \
+        X(b) \
+        X(c) \
+        X(d) \
+        X(e) \
+        X(f) \
+        X(g) \
+        X(h)
 
 #elif defined(TATE_4R4T)
     //Will be only using the populated RF slots
     //Column 3 is for rx, 4 is for tx
     #define CHANNELS \
-        X(a, io, a, c) \
-        X(b, io, e, g) \
-        X(c, io, i, k) \
-        X(d, io, m, o)
+        X(a) \
+        X(b) \
+        X(c) \
+        X(d)
 
 #elif defined(TATE_9R7T)
     //Will be only using the populated RF slots
     //Column 3 is for rx, 4 is for tx
     #define RX_CHANNELS \
-        X(a, io, a, g) \
-        X(b, io, e, k) \
-        X(c, io, i, o) \
-        X(d, io, m, d) \
-        X(e, io, b, h) \
-        X(f, io, f, l) \
-        X(g, io, j, o) \
-        X(h, rx, n, p) \
-        X(i, rx, c, q)
+        X(a) \
+        X(b) \
+        X(c) \
+        X(d) \
+        X(e) \
+        X(f) \
+        X(g) \
+        X(h) \
+        X(i)
         
     #define TX_CHANNELS \
-        X(a, io, a, g) \
-        X(b, io, e, k) \
-        X(c, io, i, o) \
-        X(d, io, m, d) \
-        X(e, io, b, h) \
-        X(f, io, f, l) \
-        X(g, io, j, o)
+        X(a) \
+        X(b) \
+        X(c) \
+        X(d) \
+        X(e) \
+        X(f) \
+        X(g)
 
 #elif defined(TATE_4R4T_3G)
     //Will be only using the populated RF slots
     //Column 3 is for rx, 4 is for tx
     #define CHANNELS \
-        X(a, io, a, c) \
-        X(b, io, e, g) \
-        X(c, io, i, k) \
-        X(d, io, m, o)
+        X(a) \
+        X(b) \
+        X(c) \
+        X(d)
 
 #elif defined(VAUNT)
     #define CHANNELS \
@@ -131,9 +131,6 @@
 
     #define NUM_RX_CHANNELS 4
 
-    #define STR_RX(crx) #crx
-    #define STR_TX(ctx) #ctx
-
     // Converts an expanded char into a runtime integer.
     #define INT(ch) ((int)(CHR(ch) - 'a'))
     #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
@@ -141,7 +138,7 @@
 
     //hps maps
     static const char* const channel_names[] = {
-    #define X(ch, io, crx, ctx) STR(ch),
+    #define X(ch) STR(ch),
         CHANNELS
     #undef X
     };
@@ -154,9 +151,6 @@
     #define NUM_TX_CHANNELS 7
 
     #define NUM_RX_CHANNELS 9
-
-    #define STR_RX(crx) #crx
-    #define STR_TX(ctx) #ctx
 
     // Converts an expanded char into a runtime integer.
     #define INT(ch) ((int)(CHR(ch) - 'a'))
@@ -174,17 +168,12 @@
 
     #define NUM_RX_CHANNELS 8
 
-    #define STR_RX(crx) #crx
-    #define STR_TX(ctx) #ctx
-    #define CHR_RX(crx) #crx[0]
-
     //rfe port mapping
     #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
-    #define INT_TX(ch) ((int)(4*(CHR_RX(ch) - 'a')) + 2)
 
     //hps maps
     static const char* const channel_names[] = {
-    #define X(ch, io, crx, ctx) STR(ch),
+    #define X(ch) STR(ch),
         CHANNELS
     #undef X
     };
@@ -199,9 +188,6 @@
 
     #define NUM_RX_CHANNELS 4
 
-    #define STR_RX(crx) #crx
-    #define STR_TX(ctx) #ctx
-
     // Converts an expanded char into a runtime integer.
     #define INT(ch) ((int)(CHR(ch) - 'a'))
     #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
@@ -209,7 +195,7 @@
 
     //hps maps
     static const char* const channel_names[] = {
-    #define X(ch, io, crx, ctx) STR(ch),
+    #define X(ch) STR(ch),
         CHANNELS
     #undef X
     };

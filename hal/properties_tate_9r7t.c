@@ -440,7 +440,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     return r;
 }
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
     }
@@ -609,7 +609,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     return RETURN_SUCCESS;
 }
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
@@ -718,7 +718,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
 TX_CHANNELS
 #undef X
 
-#define X(ch, io, crx, ctx)\
+#define X(ch)\
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val = 0;                                                          \
@@ -857,7 +857,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     static int hdlr_tx_##ch##_dac_nco_dac0freq(const char *data, char *ret) {  \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
@@ -1864,7 +1864,7 @@ TX_CHANNELS
 /* --------------------------------- RX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
 
-#define X(ch, io, crx, ctx)                                                               \
+#define X(ch)                                                               \
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
@@ -2784,7 +2784,7 @@ TX_CHANNELS
 RX_CHANNELS
 #undef X
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
         int r;                                                                 \
         bool val = 0;                                                          \
@@ -2866,7 +2866,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
         if (0 == (mask_rx & (1 << i))) {
             continue;
         }
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
         RX_CHANNELS
@@ -2916,7 +2916,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         RX_CHANNELS
@@ -2966,7 +2966,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_gain_val;
         TX_CHANNELS
@@ -3034,7 +3034,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
         RX_CHANNELS
@@ -3060,7 +3060,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_lo_freq;
         TX_CHANNELS
@@ -3128,7 +3128,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
             continue;
         }
 
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_fpga_nco;
         RX_CHANNELS
@@ -3153,7 +3153,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
         if (0 == (mask_tx & (1 << i))) {
             continue;
         }
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     if (i == INT_TX(ch))                                                          \
         hdlr = hdlr_tx_##ch##_dsp_ch0fpga_nco;                                 \
         hdlr = hdlr_tx_##ch##_dsp_ch1fpga_nco;                                 \
@@ -3637,10 +3637,10 @@ static int hdlr_time_about_hw_ver(const char *data, char *ret) {
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
     char data_buff[MAX_PROP_LEN];
     char ret_buff[MAX_PROP_LEN];
-#define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_board_dump(data_buff, ret_buff);
+#define X(ch) hdlr_tx_##ch##_rf_board_dump(data_buff, ret_buff);
     TX_CHANNELS
 #undef X
-#define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_board_dump(data_buff, ret_buff);
+#define X(ch) hdlr_rx_##ch##_rf_board_dump(data_buff, ret_buff);
     RX_CHANNELS
 #undef X
     hdlr_time_board_dump(data_buff, ret_buff);
@@ -3660,13 +3660,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
         usleep(50000);
 
         strcpy(buf, "board -g 1\r");
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         RX_CHANNELS
 #undef X
 
         strcpy(buf, "board -g 1\r");
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         TX_CHANNELS
 #undef X
@@ -3677,13 +3677,13 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
         usleep(50000);
 
         strcpy(buf, "board -g 2\r");
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         RX_CHANNELS
 #undef X
 
         strcpy(buf, "board -g 2\r");
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
         TX_CHANNELS
 #undef X
@@ -3807,13 +3807,13 @@ static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
     usleep(700000);
 
     strcpy(buf, "board -r\r");
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
     RX_CHANNELS
 #undef X
 
     strcpy(buf, "board -r\r");
-#define X(ch, io, crx, ctx)                                                              \
+#define X(ch)                                                              \
     ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)), usleep(50000);
     TX_CHANNELS
 #undef X
@@ -4751,11 +4751,11 @@ GPIO_PINS
 
 static prop_t property_table[] = {
 // Turns off rx boards
-#define X(ch, rx, crx, ctx) DEFINE_RX_BOARD_PWR(ch)
+#define X(ch) DEFINE_RX_BOARD_PWR(ch)
     RX_CHANNELS
 #undef X
 // Turns off tx boards
-#define X(ch, rx, crx, ctx) DEFINE_TX_BOARD_PWR(ch)
+#define X(ch) DEFINE_TX_BOARD_PWR(ch)
     TX_CHANNELS
 #undef X
 // Initialize time boards
@@ -4763,26 +4763,26 @@ static prop_t property_table[] = {
 // Initialize FPGA
     DEFINE_FPGA()
 // Power on rx/tx boards, but don't wait for them to finish booting
-#define X(ch, rx, crx, ctx) DEFINE_RX_PWR_REBOOT(ch)
+#define X(ch) DEFINE_RX_PWR_REBOOT(ch)
     RX_CHANNELS
 #undef X
-#define X(ch, tx, crx, ctx) DEFINE_TX_PWR_REBOOT(ch)
+#define X(ch) DEFINE_TX_PWR_REBOOT(ch)
     TX_CHANNELS
 #undef X
 
 // Waits for boards to finish booting
-#define X(ch, rx, crx, ctx) DEFINE_RX_WAIT_PWR(ch)
+#define X(ch) DEFINE_RX_WAIT_PWR(ch)
     RX_CHANNELS
 #undef X
-#define X(ch, tx, crx, ctx) DEFINE_TX_WAIT_PWR(ch)
+#define X(ch) DEFINE_TX_WAIT_PWR(ch)
     TX_CHANNELS
 #undef X
 
 // Initialize rx/tx boards
-#define X(ch, rx, crx, ctx) DEFINE_RX_CHANNEL(ch)
+#define X(ch) DEFINE_RX_CHANNEL(ch)
     RX_CHANNELS
 #undef X
-#define X(ch, tx, crx, ctx) DEFINE_TX_CHANNEL(ch)
+#define X(ch) DEFINE_TX_CHANNEL(ch)
     TX_CHANNELS
 #undef X
 
@@ -4835,7 +4835,7 @@ void dump_tree(void) {
 void patch_tree(void) {
     const int base_port = 42836;
 
-#define X(ch, io, crx, ctx) \
+#define X(ch) \
     set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
     set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
     set_default_int("rx/" #ch "/link/src_port", base_port + rx_src_port_map[INT(ch)]*4); \
@@ -4845,12 +4845,12 @@ void patch_tree(void) {
 #undef X
 
 #if RTM_VER == 3 || RTM_VER == 4
-    #define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
+    #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
 
         RX_CHANNELS
     #undef X
 #elif RTM_VER == 5
-    #define X(ch, io, crx, ctx) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
+    #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
 
         RX_CHANNELS
     #undef X
@@ -4858,7 +4858,7 @@ void patch_tree(void) {
     #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
 #endif
 
-#define X(ch, io, crx, ctx) \
+#define X(ch) \
     set_default_int("tx/" #ch "/link/port", base_port + tx_dst_port_map[INT(ch)]*4);
 
     TX_CHANNELS
@@ -5345,13 +5345,13 @@ int set_freq_internal(const bool tx, const unsigned channel,
     typedef int (*fp_t)(const char *, char *);
 
     static const fp_t rx_fp[] = {
-#define X(ch, io, crx, ctx) hdlr_rx_##ch##_rf_freq_val,
+#define X(ch) hdlr_rx_##ch##_rf_freq_val,
         RX_CHANNELS
 #undef X
     };
 
     static const fp_t tx_fp[] = {
-#define X(ch, io, crx, ctx) hdlr_tx_##ch##_rf_lo_freq,
+#define X(ch) hdlr_tx_##ch##_rf_lo_freq,
         TX_CHANNELS
 #undef X
     };
