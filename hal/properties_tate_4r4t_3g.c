@@ -110,7 +110,7 @@
 #define STREAM_OFF 0
 
 #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
-#define INDIVIDUAL_RESET_BIT_OFFSET_TX 16
+#define INDIVIDUAL_RESET_BIT_OFFSET_TX 12
 
 // The FPGA is hard coded assuming each sample contains 16 bits, this unit uses 12 so the stream command needs to say 3/4 of the actual amount, since 12 is 3/4 of 16
 // Equivalents of these also need to be changed in UHD
