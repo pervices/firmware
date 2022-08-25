@@ -43,6 +43,11 @@
 
 #define INTERBOOT_DATA "/var/lib/cyan-server/"
 
+//directory of the state tree
+#define BASE_DIR "/var/cyan"
+//state tree
+#define STATE_DIR "/var/cyan/state"
+
 typedef enum { RW, RO, WO } perm_t;
 typedef enum { POLL, NO_POLL } poll_t;
 

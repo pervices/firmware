@@ -36,39 +36,16 @@
 #endif
 
 #include <signal.h>
-#include "channels.h"
 #include "gpio_pins.h"
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include "variant_config/sample_rate_config.h"
+#include "variant_config/channel_config.h"
 
-// Sample rates are in samples per second (SPS).
-#define RX_BASE_SAMPLE_RATE   1000000000.0
-#define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
-#define TX_BASE_SAMPLE_RATE   1000000000.0
-#define TX_DSP_SAMPLE_RATE   500000000.0
-#define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
-// (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
-#define RX_DSP_NCO_CONST \
-    ((double)8.589934592)
-
-//Remember to adjust hdlr_tx_##ch##_trigger_edge_sample_num when changing the sample rate
-
-// TX_DSP_NCO_CONST = (2 ^ 32) / (TX_DSP_SAMPLE_RATE)
-#define TX_DSP_NCO_CONST \
-    ((double)4.294967296)
-
-#define MAX_DSP_NCO (TX_BASE_SAMPLE_RATE / 2.0)
-//max nco of the AD9176, higher nco's result in errors in the board
-//the nco cna probably be rasied if those errors are fixed
-#define MAX_DAC_NCO 4000000000
-
-//TX sample rate factor must be less than thist
-#define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
-#define MIN_TX_SAMPLE_RATE (TX_DSP_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR)
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
 #define RATE_ROUND_BIAS 0.75
 
-//The nco in the dac of the AD9176 must be non 0
+// Minimum NCO for the NCO on the DAC (not the FPGA)
 #define MIN_DAC_NCO 0
 
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
@@ -108,66 +85,6 @@
 
 #define STREAM_ON  1
 #define STREAM_OFF 0
-
-#define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
-#define INDIVIDUAL_RESET_BIT_OFFSET_TX 13
-
-static uint8_t tx_power[NUM_TX_CHANNELS] = {0};
-static uint8_t rx_power[NUM_RX_CHANNELS] = {0};
-
-static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd", "sfpd" };
-static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
-
-static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10", "10.10.13.10" };
-
-static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1, 2 };
-
-// Registers contianing the src port for rx and dst port for tx overlap but are not identical
-#define TOTAL_NUM_PORTS 16
-// Registers contianing the src port for rx and dst port for tx overlap but are not identical
-static const char *device_side_port_map[TOTAL_NUM_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
-static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4, 5, 8, 9, 12, 13};
-static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-
-static const int tx_jesd_pll_lock_num[NUM_TX_CHANNELS] = { 9, 10, 11, 12, 13, 14, 15};
-static const int rx_jesd_pll_lock_num[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-
-//contains the registers used for rx_4 for each channel
-//most registers follow the pattern rxa0 for ch a, rxb0 for ch b
-//Unlike most channels rx_4 uses a different patttern
-static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4", "rxo4" };
-
-static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4" };
-
-//registers used by trigger selected
-//note: this registers have multiple purposes, the code assumes bit 12:10 are used for trigger select
-//at time of writing it is per sfp, not per channel, hence the overlap
-static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
-static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
-static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
-
-static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
-static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
-static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
-
-static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7"};
-static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8"};
-
-//least significant 32 bits used to store underflow count
-static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12", "flc44", "flc46", "flc48" };
-//most significant 32 bits used to store underflow count
-static const char *tx_uflow_map_msb[NUM_TX_CHANNELS] = { "flc7", "flc9", "flc11", "flc13", "flc45", "flc47", "flc49" };
-//least significant 32 bits used to store overflow count
-static const char *tx_oflow_map_lsb[NUM_TX_CHANNELS] = { "flc14", "flc16", "flc18", "flc20", "flc52", "flc54", "flc56" };
-//most significant 32 bits used to store overflow count
-static const char *tx_oflow_map_msb[NUM_TX_CHANNELS] = { "flc15", "flc17", "flc19", "flc21", "flc53", "flc55", "flc57" };
-
-//used to figure out which register, and where in the register to set dsp gain
-//ch0 uses [7:0] of the map[0], ch1 uses [15:8] of map[0], ch4 uses [7:0] of map[1]
-//most variant do not use all registers in this map
-static const char *rxg_map[4] = { "rxga", "rxge", "rxgi", "rxgm" };
-static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
-
 
 static uint_fast8_t jesd_enabled = 0;
 
@@ -1678,7 +1595,7 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     \
     static int hdlr_tx_##ch##_jesd_pll_locked(const char *data, char *ret) {       \
         uint32_t lock_status = 0;\
-        write_hps_reg("res_rw8", tx_jesd_pll_lock_num[INT(ch)]);\
+        write_hps_reg("res_rw8", LR_NUM_TX(ch));\
         read_hps_reg("res_ro20", &lock_status);\
         lock_status = lock_status & 0x2;\
         if(lock_status) {\
@@ -2560,7 +2477,7 @@ TX_CHANNELS
     \
     static int hdlr_rx_##ch##_jesd_pll_locked(const char *data, char *ret) {       \
         uint32_t lock_status = 0;\
-        write_hps_reg("res_rw8", rx_jesd_pll_lock_num[INT(ch)]);\
+        write_hps_reg("res_rw8", LR_NUM_RX(ch));\
         read_hps_reg("res_ro20", &lock_status);\
         lock_status = lock_status & 0x2;\
         if(lock_status) {\
@@ -3789,7 +3706,7 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
 //In the current FPGA all possible tx ports are created, but only certain ones are used
 //This resets all ports to 0 at the stat of serfer boot, then the ports get set while initializing tx
 static int hdlr_fpga_link_clear_tx_ports(const char *data, char *ret) {
-    for(int n = 0; n < TOTAL_NUM_PORTS; n++) {
+    for(int n = 0; n < NUM_DEVICE_SIDE_PORTS; n++) {
         write_hps_reg(device_side_port_map[n], 0);
     }
     return RETURN_SUCCESS;
@@ -4749,6 +4666,11 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
+#define DEFINE_SYSTEM_INFO()\
+    DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)            \
+    DEFINE_FILE_PROP_P("system/num_tx"                   , hdlr_invalid,                           RO, S_NUM_TX, SP, NAC)            \
+    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAT_RATE, SP, NAC)          \
+
 static prop_t property_table[] = {
 // Turns off rx boards
 #define X(ch) DEFINE_RX_BOARD_PWR(ch)
@@ -4795,6 +4717,7 @@ static prop_t property_table[] = {
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
     DEFINE_CM()
     DEFINE_FPGA_POST()
+    DEFINE_SYSTEM_INFO()
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);

@@ -104,12 +104,14 @@ int main(int argc, char *argv[]) {
                 printf("Product: TATE_4R4T\n");
             #elif defined(TATE_9R7T)
                 printf("Product: TATE_9R7T\n");
-            #elif defined(TATE_NRNT)
-                printf("Product: TATE_NRNT\n");
             #elif defined(TATE_4R4T_3G)
                 printf("Product: TATE_4R4T_3G\n");
             #elif defined(TATE_8R)
                 printf("Product: TATE_8R\n");
+            #elif defined(TATE_NRNT)
+                printf("Product: TATE_NRNT\n");
+                printf("Rx: %i\n", NUM_RX_CHANNELS);
+                printf("Tx: %i\n", NUM_TX_CHANNELS);
             #elif defined(VAUNT)
                 printf("Product: VAUNT\n");
             #else

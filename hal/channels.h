@@ -116,10 +116,6 @@
         X(c, io) \
         X(d, io)
 #elif defined(TATE_NRNT)
-    //directory of the state tree
-    #define BASE_DIR "/var/cyan"
-    //state tree
-    #define STATE_DIR "/var/cyan/state"
 
     #if defined (S1000)
         #define MAX_SAMPLE_RATE 1000
@@ -163,6 +159,7 @@
     // Configuration for 9R7T 1G
     #if (MAX_SAMPLE_RATE == 1000 && NUM_RX_CHANNELS == 9 && NUM_TX_CHANNELS ==7)
 
+        //TODO generate this dynamically
         #define RX_CHANNELS \
             X(a) \
             X(b) \
@@ -186,6 +183,7 @@
         //RFE slots for each channel
         #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
         #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
+
     #else
         #error Invalid configuration, currently supported configurations for NRNT: R9 T7 S1000
     #endif
