@@ -578,28 +578,36 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
         r = valid_edge_sample_num(data, &val);\
         if(r != RETURN_SUCCESS) return r;\
         \
-        char s_rate[100];\
-        get_property("tx/" STR(ch) "/dsp/rate", s_rate, 100);\
-        double rate = 0;\
-        sscanf(s_rate, "%lf", &rate);\
-        /* Adjustment to number of samples requested, the FPGA will stop sending samples a deterministic amount of time after send the number written to this register */\
+        /* Adjustment to number of samples requested,the number written to the register and the actual number will be different */\
         /* This adjustment will result in the correct final number */\
-        if( rate == 1000000000 ) {\
-            val = (uint64_t)(val/4)*4;\
+        if(MAX_SAMPLE_RATE == 1000) {\
+            char s_rate[100];\
+            get_property("tx/" STR(ch) "/dsp/rate", s_rate, 100);\
+            double rate = 0;\
+            sscanf(s_rate, "%lf", &rate);\
+            if( rate == 1000000000 ) {\
+                val = (uint64_t)(val/4)*4;\
+                sprintf(ret, "%lu", val);\
+                val -= 20;\
+            } else if (rate >= 500000000 ) {\
+                val = (uint64_t)(val/2)*2;\
+                sprintf(ret, "%lu", val);\
+                val -= 10;\
+            } else if (rate >= 250000000) {\
+                val = (uint64_t)(val/2)*2;\
+                sprintf(ret, "%lu", val);\
+                val -= 4; \
+            } else if (rate >= 100000000) {\
+                val = (uint64_t)(val/2)*2;\
+                sprintf(ret, "%lu", val);\
+                val -= 2;\
+            }\
+        } else if(MAX_SAMPLE_RATE == 3000) {\
+            val = (uint64_t)(val/8)*8;\
             sprintf(ret, "%lu", val);\
-            val -= 20;\
-        } else if (rate >= 500000000 ) {\
-            val = (uint64_t)(val/2)*2;\
-            sprintf(ret, "%lu", val);\
-            val -= 10;\
-        } else if (rate >= 250000000) {\
-            val = (uint64_t)(val/2)*2;\
-            sprintf(ret, "%lu", val);\
-            val -= 4; \
-        } else if (rate >= 100000000) {\
-            val = (uint64_t)(val/2)*2;\
-            sprintf(ret, "%lu", val);\
-            val -= 2;\
+            val -= 48;\
+        } else {\
+            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
         }\
         r = set_edge_sample_num(true, #ch, val);        \
         return r;                                                              \
@@ -686,6 +694,10 @@ TX_CHANNELS
         int r;                                                                 \
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
+        val = val * NSAMPS_NUM_RX / NSAMPS_DEM_RX;\
+        val = (val / NSAMPS_MULTIPLE_RX) * NSAMPS_MULTIPLE_RX;\
+        uint64_t actual_nsamps = val * NSAMPS_DEM_RX / NSAMPS_NUM_RX;\
+        sprintf(ret, "%lu", actual_nsamps);                                             \
         if(r != RETURN_SUCCESS) return r;\
         else {\
             r = set_edge_sample_num(false, #ch, val);        \
@@ -762,7 +774,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 }
 //ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
 //ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
-static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
+static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     //tmp debug, check if inconsistent behaviour result of race condition in mcu
     usleep(500000);
     if(rx_power[ch] != PWR_NO_BOARD) {
@@ -772,12 +784,14 @@ static void ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
             rx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
+        return error_code;
     //empties the uart return buffer
     } else {
         uart_ret_buf[0] = 0;
+        return 0;
     }
 }
-static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
+static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
@@ -785,9 +799,11 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             tx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
+        return error_code;
     //empties the uart return buffer
     } else {
         uart_ret_buf[0] = 0;
+        return 0;
     }
 }
 /* -------------------------------------------------------------------------- */
@@ -804,6 +820,11 @@ static void ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /*Currently this function only takes positive values*/\
         if(freq < MIN_DAC_NCO) freq = MIN_DAC_NCO;\
         else if (freq > MAX_DAC_NCO) freq = MAX_DAC_NCO;\
+        \
+        if(freq != 0 && MAX_SAMPLE_RATE == 3000) {\
+            freq = 0;\
+            PRINT(ERROR, "The DAC can only to be set to 0 when operating at 3Gsps");\
+        }\
                                                                                \
         /* split the frequency into MHz + Hz */                                \
         if (freq < 1000000){                                                   \
@@ -2165,6 +2186,9 @@ TX_CHANNELS
         /*Bypasses dsp and half band filer 2. Bypasses dsp when 1*/\
         uint32_t bypass = 0;\
         \
+        /* Keeps the sample rate within the allowable range*/\
+        if(rate < MIN_RX_SAMPLE_RATE) rate = MIN_RX_SAMPLE_RATE;\
+        if(rate > RX_BASE_SAMPLE_RATE) rate = RX_BASE_SAMPLE_RATE;\
         /*If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff*/\
         if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
             rate = RX_BASE_SAMPLE_RATE;\
@@ -4689,7 +4713,7 @@ GPIO_PINS
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)            \
     DEFINE_FILE_PROP_P("system/num_tx"                   , hdlr_invalid,                           RO, S_NUM_TX, SP, NAC)            \
-    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAT_RATE, SP, NAC)          \
+    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)          \
 
 static prop_t property_table[] = {
 // Turns off rx boards
@@ -4787,18 +4811,37 @@ void patch_tree(void) {
     RX_CHANNELS
 #undef X
 
-#if RTM_VER == 3 || RTM_VER == 4
-    #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
+#ifdef S1000
+    #if RTM_VER == 3 || RTM_VER == 4
+        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
 
-        RX_CHANNELS
-    #undef X
-#elif RTM_VER == 5
-    #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
+            RX_CHANNELS
+        #undef X
+    #elif RTM_VER == 5
+        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
 
-        RX_CHANNELS
-    #undef X
+            RX_CHANNELS
+        #undef X
+    #else
+        #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
+    #endif
+    
+#elif defined S3000
+    #if RTM_VER == 5
+        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
+
+            RX_CHANNELS
+        #undef X
+    #elif RTM_VER == 3 || RTM_VER ==4
+        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
+
+            RX_CHANNELS
+        #undef X
+    #else
+        #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
+    #endif
 #else
-    #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
+    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
 #endif
 
 #define X(ch) \
