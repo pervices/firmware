@@ -93,7 +93,7 @@
     #define NUM_DEVICE_SIDE_PORTS 16
     static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
     static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4, 8, 12 };
-    static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 4, 8, 12 };
+    static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3 };
 
     //contains the registers used for the general purpose register for each channel
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
