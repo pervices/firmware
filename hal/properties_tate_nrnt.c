@@ -4325,6 +4325,22 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_system_get_max_buffer_level(const char *data, char *ret) {
+    uint32_t max_buffer_level = 0;
+    read_hps_reg("res_ro14", &max_buffer_level);
+    snprintf(ret, MAX_PROP_LEN, "%u", max_buffer_level);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_system_get_buffer_level_multiple(const char *data, char *ret) {
+    uint32_t buffer_level_multiple = 0;
+    read_hps_reg("res_ro15", &buffer_level_multiple);
+    snprintf(ret, MAX_PROP_LEN, "%u", buffer_level_multiple);
+
+    return RETURN_SUCCESS;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -4714,6 +4730,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)            \
     DEFINE_FILE_PROP_P("system/num_tx"                   , hdlr_invalid,                           RO, S_NUM_TX, SP, NAC)            \
     DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)          \
+    DEFINE_FILE_PROP_P("system/get_max_buffer_level"     , hdlr_system_get_max_buffer_level,       RW, "1", SP, NAC)          \
+    DEFINE_FILE_PROP_P("system/get_buffer_level_multiple", hdlr_system_get_buffer_level_multiple,  RW, "1", SP, NAC)
 
 static prop_t property_table[] = {
 // Turns off rx boards
