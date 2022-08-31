@@ -5172,7 +5172,7 @@ void jesd_reset_all() {
                     if(property_good(status_path) == 1) {
                         break;
                     }
-                    PRINT(ERROR, "Attempting to individually reset tx %c JESD. This will cause phase alignment issues\n");
+                    PRINT(ERROR, "Attempting to individually reset tx %c JESD. This will cause phase alignment issues\n", chan + 'a');
                     uint32_t individual_reset_bit = 1 << (chan + INDIVIDUAL_RESET_BIT_OFFSET_TX);
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
