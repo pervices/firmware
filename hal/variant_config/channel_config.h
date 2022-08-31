@@ -41,12 +41,9 @@
 
     static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1 };
 
-    // Registers contianing the src port for rx and dst port for tx overlap but are not identical
-    // In the furture they should be entirely seperate
-    #define NUM_DEVICE_SIDE_PORTS 16
-    static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+    // Register (in device_side_port_map) for desination port for tx, only applies when using DDR
+    // See the comment for device_side_port_map in properties_tate_nrnt.c for a more detailed explaination
     static const int tx_dst_port_map[NUM_TX_CHANNELS] = { };
-    static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
     //contains the registers used for the general purpose register for each channel
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
@@ -82,18 +79,16 @@
 
 
     static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpb", "sfpc", "sfpd" };
+
     static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb", "sfpc", "sfpd" };
 
     static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.11.10", "10.10.12.10", "10.10.13.10" };
 
     static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 0, 0, 0 };
 
-    // Registers contianing the src port for rx and dst port for tx overlap but are not identical
-    // In the furture they should be entirely seperate
-    #define NUM_DEVICE_SIDE_PORTS 16
-    static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+    // Register (in device_side_port_map) for desination port for tx, only applies when using DDR
+    // See the comment for device_side_port_map in properties_tate_nrnt.c for a more detailed explaination
     static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4, 8, 12 };
-    static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3 };
 
     //contains the registers used for the general purpose register for each channel
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
@@ -143,12 +138,9 @@
 
     static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1, 2 };
 
-    // Registers contianing the src port for rx and dst port for tx overlap but are not identical
-    // In the furture they should be entirely seperate
-    #define NUM_DEVICE_SIDE_PORTS 16
-    static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+    // Register (in device_side_port_map) for desination port for tx, only applies when using DDR
+    // See the comment for device_side_port_map in properties_tate_nrnt.c for a more detailed explaination
     static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4, 5, 8, 9, 12, 13};
-    static const int rx_src_port_map[NUM_RX_CHANNELS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
     //contains the registers used for the general purpose register for each channel
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not

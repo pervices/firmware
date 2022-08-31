@@ -98,6 +98,15 @@ static uint8_t tx_power[NUM_TX_CHANNELS];
     static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
 #endif
 
+// Registers contianing the src port for rx and dst port for tx overlap but are not identical
+// In the furture they should be entirely seperate
+// When using DDR, tx will use ports txa15-txa18 for sfp a, txb15-18 for sfp b...
+// When not using DDR tx destination ports will be locaiton 0 in the following array for ch 0, location 1 for ch1, location 2 for ch2...
+// Rx will always be location 0 for ch 0, location 1 for ch1...
+// Currently the code assumes DDR is used for 40G and never used for 100G
+#define NUM_DEVICE_SIDE_PORTS 16
+static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
+
 static uint_fast8_t jesd_enabled = 0;
 
 // A typical VAUNT file descriptor layout may look something like this:
@@ -281,6 +290,34 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
     fprintf(data_file, "%li", value);
     fclose(data_file);
 }
+
+#if NUM_TX_CHANNELS > 0
+    int network_speed_cache = 0;
+    int is_network_speed_cached = 0;
+    static int get_network_speed() {
+        if(is_network_speed_cached) {
+            return network_speed_cache;
+        } else {
+            uint32_t network_config = 0;
+            read_hps_reg("res_ro12", &network_config);
+            network_speed_cache = (network_config >> 4) & 0xff;
+            is_network_speed_cached = 1;
+            return network_speed_cache;
+        }
+    }
+
+    static int get_tx_dst_port_map_loc(int chan) {
+        int network_speed = get_network_speed();
+        if(network_speed == 40) {
+            return tx_dst_port_map[chan];
+        } else if (network_speed == 100) {
+            return chan;
+        } else {
+            PRINT(ERROR, "Unrecongnized network configuration, tx destination ports will be set as if the unit if 40G\n");
+            return tx_dst_port_map[chan];
+        }
+    }
+#endif
 
 // XXX
 // Statement Expressions are bad... but this code will be replaced soon anyway.
@@ -1371,7 +1408,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     static int hdlr_tx_##ch##_link_port(const char *data, char *ret) {      \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg(device_side_port_map[tx_dst_port_map[INT(ch)]], port);   \
+        write_hps_reg(device_side_port_map[get_tx_dst_port_map_loc(INT(ch))], port);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2325,7 +2362,7 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_link_src_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg(device_side_port_map[rx_src_port_map[INT(ch)]], port);   \
+        write_hps_reg(device_side_port_map[INT(ch)], port);   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -4823,7 +4860,7 @@ void patch_tree(void) {
 #define X(ch) \
     set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
     set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
-    set_default_int("rx/" #ch "/link/src_port", base_port + rx_src_port_map[INT(ch)]*4); \
+    set_default_int("rx/" #ch "/link/src_port", base_port + (INT(ch)*4)); \
     set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
 
     RX_CHANNELS
@@ -4862,11 +4899,15 @@ void patch_tree(void) {
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
 #endif
 
-#define X(ch) \
-    set_default_int("tx/" #ch "/link/port", base_port + tx_dst_port_map[INT(ch)]*4);
+#if NUM_TX_CHANNELS > 0
+    int tx_dsp_port_map_loc;
+    #define X(ch) \
+        tx_dsp_port_map_loc = get_tx_dst_port_map_loc(INT(ch));\
+        set_default_int("tx/" #ch "/link/port", base_port + tx_dsp_port_map_loc*4);
 
-    TX_CHANNELS
-#undef X
+        TX_CHANNELS
+    #undef X
+#endif
 
 }
 
