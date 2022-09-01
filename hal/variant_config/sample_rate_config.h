@@ -19,7 +19,7 @@
 
 #ifdef S1000
 
-    #define S_MAX_RATE "1000"
+    #define S_MAX_RATE "1000000000"
 
     // Sample rates are in samples per second (SPS).
     #define RX_BASE_SAMPLE_RATE   1000000000.0
@@ -49,18 +49,20 @@
     //TX sample rate factor must be less than this
     #define MAX_TX_SAMPLE_FACTOR 65535.0 //2^16-1
     #define MIN_TX_SAMPLE_RATE (TX_DSP_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR)
-        
-    //Restriction on the number of samples for rx trigger
-    //It must be a whole number after being multiplied by NSAMPS_NUM_RX/NSAMPS_DEM_RX
-    #define NSAMPS_NUM_RX 1
-    #define NSAMPS_DEM_RX 1
-    
+
+    // Over the wire format, number bits per half of the iq pair
+    // Note: the FPGA was hardcoded to assume sc16 in several places. If you see any values multiplied by OWT / 16 its because the actual value needs to be scales to produce a result giving the same number of bits as would occur with sc16
+    #define OTW_RX 16
+    #define S_OTW_RX "16"
+    #define OTW_TX 16
+    #define S_OTW_TX "16"
+
     // Number of samples request by rx trigger must be a multiple of this
     #define NSAMPS_MULTIPLE_RX 1
 
 #elif defined(S3000)
-    
-    #define S_MAX_RATE "1000"
+
+    #define S_MAX_RATE "3000000000"
 
     // Sample rates are in samples per second (SPS).
     #define RX_BASE_SAMPLE_RATE   3000000000.0
@@ -82,7 +84,7 @@
     //max nco of the AD9176, higher nco's result in errors in the board
     //the nco cna probably be rasied if those errors are fixed
     #define MAX_DAC_NCO 4000000000
-        
+
     //RX sample rate factor must be less than this
     #define MAX_RX_SAMPLE_FACTOR 65535.0 //2^16-1
     //#define MIN_RX_SAMPLE_RATE (RX_DSP_SAMPLE_RATE/MAX_RX_SAMPLE_FACTOR)
@@ -94,15 +96,17 @@
     //#define MIN_TX_SAMPLE_RATE (TX_DSP_SAMPLE_RATE/MAX_TX_SAMPLE_FACTOR)
     //Currently 3G does not use the dsp, so it can only run at max rate
     #define MIN_TX_SAMPLE_RATE TX_BASE_SAMPLE_RATE
-        
-    //Restriction on the number of samples for rx trigger
-    //It must be a whole number after being multiplied by NSAMPS_NUM_RX/NSAMPS_DEM_RX
-    #define NSAMPS_NUM_RX 3
-    #define NSAMPS_DEM_RX 4
-    
+
+    // Over the wire format, number bits per half of the iq pair
+    // Note: the FPGA was hardcoded to assume sc16 in several places. If you see any values multiplied by OWT / 16 its because the actual value needs to be scales to produce a result giving the same number of bits as would occur with sc16
+    #define OTW_RX 12
+    #define OTW_RX "12"
+    #define OTW_TX 16
+    #define OTW_TX "16"
+
     // Number of samples request by rx trigger must be a multiple of this
     #define NSAMPS_MULTIPLE_RX 2208
-        
+
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
 #endif

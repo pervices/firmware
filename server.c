@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
                 printf("Product: TATE_NRNT\n");
                 printf("Rx: %i\n", NUM_RX_CHANNELS);
                 printf("Tx: %i\n", NUM_TX_CHANNELS);
+                printf("Rate: %i\n", MAX_SAMPLE_RATE);
             #elif defined(VAUNT)
                 printf("Product: VAUNT\n");
             #else

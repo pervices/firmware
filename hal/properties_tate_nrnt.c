@@ -731,9 +731,9 @@ TX_CHANNELS
         int r;                                                                 \
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
-        val = val * NSAMPS_NUM_RX / NSAMPS_DEM_RX;\
+        val = val * OTW_RX / 16;\
         val = (val / NSAMPS_MULTIPLE_RX) * NSAMPS_MULTIPLE_RX;\
-        uint64_t actual_nsamps = val * NSAMPS_DEM_RX / NSAMPS_NUM_RX;\
+        uint64_t actual_nsamps = val * OTW_RX / 16;\
         sprintf(ret, "%lu", actual_nsamps);                                             \
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -4764,11 +4764,13 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
 #define DEFINE_SYSTEM_INFO()\
-    DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)            \
-    DEFINE_FILE_PROP_P("system/num_tx"                   , hdlr_invalid,                           RO, S_NUM_TX, SP, NAC)            \
-    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)          \
-    DEFINE_FILE_PROP_P("system/get_max_buffer_level"     , hdlr_system_get_max_buffer_level,       RW, "1", SP, NAC)          \
-    DEFINE_FILE_PROP_P("system/get_buffer_level_multiple", hdlr_system_get_buffer_level_multiple,  RW, "1", SP, NAC)
+    DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/num_tx"                   , hdlr_invalid,                           RO, S_NUM_TX, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/get_max_buffer_level"     , hdlr_system_get_max_buffer_level,       RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("system/get_buffer_level_multiple", hdlr_system_get_buffer_level_multiple,  RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("system/otw_rx"                   , hdlr_invalid,                           RO, S_OTW_RX, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
 
 static prop_t property_table[] = {
 // Turns off rx boards
