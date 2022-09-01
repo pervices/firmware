@@ -682,7 +682,6 @@ int property_good(char *path) {
     strcat(&fullpath[0], path);
     // need to write to the property to force an update
     set_property(&fullpath[0],"0");
-    usleep(500000);
     // then read from the property
     get_property(&fullpath[0],property_read,5);
     
