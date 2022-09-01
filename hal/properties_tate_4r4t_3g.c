@@ -5645,6 +5645,9 @@ void jesd_reset_all() {
 
         for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+                // Takes dsp of the channel whose JESD is being reset out of reset
+                // Note: if all dsps are in reset that it will always report good
+                write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
                 int individual_reset_attempts = 0;
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     sprintf(status_path, "rx/%c/jesd/status", chan+'a');
@@ -5660,6 +5663,9 @@ void jesd_reset_all() {
                     usleep(4000000);
                     individual_reset_attempts++;
                 }
+                // Takes dsp of the channel whose JESD is being reset into reset
+                // Note: if a channel's dsp is not in reset and JESD failed, every rx channel may be detected as bad
+                write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
                 if(individual_reset_attempts >= jesd_max_individual_attempts) {
                     PRINT(ERROR, "Failed to establish JESD link on rx channel %c, the channel will be unusable\n", chan + 'a');
                     any_ch_failed_individual = 1;
@@ -5670,6 +5676,8 @@ void jesd_reset_all() {
         for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
                 int individual_reset_attempts = 0;
+                // Takes dsp of the channel whose JESD is being reset out of reset
+                write_hps_reg_mask(tx_reg4_map[chan], 0x0, 0x2);
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     sprintf(status_path, "tx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
@@ -5684,6 +5692,8 @@ void jesd_reset_all() {
                     usleep(4000000);
                     individual_reset_attempts++;
                 }
+                // Takes dsp of the channel whose JESD is being reset into reset
+                write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
                 if(individual_reset_attempts >= jesd_max_individual_attempts) {
                     PRINT(ERROR, "Failed to establish JESD link on tx channel %c, the channel will be unusable\n", chan+'a');
                     any_ch_failed_individual = 1;
