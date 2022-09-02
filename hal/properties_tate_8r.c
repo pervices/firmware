@@ -1337,7 +1337,7 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
                 ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
                 usleep(1);\
             } else {\
-                snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
+                snprintf(buf, 40, "clk -r %i -p 0\r", INT_RX(ch));\
                 ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
                 usleep(1);\
             }\
