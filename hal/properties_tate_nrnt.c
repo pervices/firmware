@@ -173,25 +173,23 @@ static int contains(const char *str, char letter, int size) {
 }
 
 static int read_uart(int uartfd) {
-    char buf[MAX_UART_LEN] = {};
-    memset(buf, 0, MAX_UART_LEN);
 
     uint16_t total_bytes = 0, cur_bytes = 0;
 
     const long t0 = time_it();
 
-    while (contains(buf, '>', total_bytes) < 1) {
-        if (recv_uart_comm(uartfd, ((uint8_t *)buf) + total_bytes, &cur_bytes, MAX_UART_LEN - total_bytes)) {
-            strcpy((char *)uart_ret_buf, "");
+    while (contains((char *)uart_ret_buf, '>', total_bytes) < 1) {
+        if (recv_uart_comm(uartfd, (uint8_t *)(uart_ret_buf + total_bytes), &cur_bytes, MAX_UART_LEN - total_bytes)) {
 
+            // Add null terminator to the start of uart_ret_buf (effectively emptying it) in the event of an error
+            uart_ret_buf[0] = 0;
             return RETURN_ERROR;
         }
         total_bytes += cur_bytes;
     }
     const long t1 = time_it();
 
-    printf("read uart %ld : %s\n", t1 - t0, buf);
-    snprintf((char *)uart_ret_buf, MAX_UART_RET_LEN, buf);
+    PRINT(INFO, "read uart %ld : %s\n", t1 - t0, uart_ret_buf);
     return RETURN_SUCCESS;
 }
 

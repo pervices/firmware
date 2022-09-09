@@ -126,11 +126,20 @@ int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
 
     int rd_len = 0;
     while (!rd_len && !timeout(&tstart, TIMEOUT)) {
-        rd_len += read(fd, data, max_size);
+        rd_len += read(fd, data, max_size-1);
     }
 
-    if (rd_len < 0)
+    // Adds null terminator to the value read + sets rd_len to 0 in case of error
+    if (rd_len < 0) {
         rd_len = 0;
+        *data = 0;
+    } else if(rd_len == 0) {
+        *data = 0;
+    } else {
+        //remember to have read use max_size - 1 to leave space for the null terminator
+        *(data+rd_len) = 0;
+    }
+
 
     if (timeout(&tstart, TIMEOUT)) {
         PRINT(ERROR, "%s(), timedout\n", __func__);
