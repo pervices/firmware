@@ -70,6 +70,7 @@ static void write_to_file(const char *path, const char *data) {
 }
 
 // Helper function to read to property
+// It is important that this makes sure the buffer null terminates, otherwise data from previously read properties will be used
 static void read_from_file(const char *path, char *data, size_t max_len) {
     FILE *fd;
 
@@ -80,17 +81,16 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     }
 
     // Read content
-    char single_line_buffer[max_len];
-    while ( fgets(single_line_buffer, max_len, fd) ) {
-        strncat(data, single_line_buffer, max_len);
+    data[0] = '\0';
+    int data_read = 0;
+    // -1 to leave space for null terminator
+    while ( fgets(data + data_read, max_len - data_read, fd) ) {
+        data_read += strnlen(data, max_len);
     }
     fclose(fd);
 
     // How big is the file?
-    size_t pos = 0;
-    while (data[pos] != '\0' && pos < max_len){
-        pos++;
-    }
+    size_t pos = data_read;
 
     // Ignore any new lines found at the end of the file
     while ( pos > 0 && data[pos - 1] == '\n'){
@@ -424,13 +424,9 @@ void check_property_inotifies(void) {
             // PRINT( VERBOSE,"Property located at %s has been modified,
             // executing handler\n", prop -> path);
 
-            // empty out the buffers
-            memset(prop_data, 0, MAX_PROP_LEN);
-            memset(prop_ret, 0, MAX_PROP_LEN);
-
             // read the change from the file
             read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
-            strcpy(prop_ret, prop_data);
+            snprintf(prop_ret, MAX_PROP_LEN, prop_data);
 
             PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__,
                   prop->path, prop_data);
@@ -684,7 +680,7 @@ int property_good(char *path) {
     set_property(&fullpath[0],"0");
     // then read from the property
     get_property(&fullpath[0],property_read,5);
-    
+
     if(strstr(&property_read[0],"good") == NULL){
         return 5;
     }
