@@ -201,7 +201,6 @@ static void add_prop_to_inotify(prop_t *prop) {
 // Helper function to call power-on reset values
 static void init_prop_val(prop_t *prop) {
     char path[MAX_PATH_LEN];
-    memset(path, 0, MAX_PATH_LEN);
 
     // exceptions for values that must persist through hard resets
     if (strcmp(prop->path, "fpga/link/net/hostname") == 0 ||
@@ -438,8 +437,7 @@ void check_property_inotifies(void) {
             PRINT(INFO, "%s :: %s -> %s :: %d\n", path, prop_data, prop_ret, t1 - t0);
 
             if (prop->permissions == RO) {
-                memset(prop_ret, 0, sizeof(prop_ret));
-                sprintf(prop_ret, "%s", prop->def_val);
+                snprintf(prop_ret, MAX_PROP_LEN, "%s", prop->def_val);
             }
 
             // if the return value didn't change, don't write to file again
@@ -550,7 +548,6 @@ int load_properties(const char *file) {
 
 // Standard get property
 int get_property(const char *prop, char *data, size_t max_len) {
-    memset(data, 0, max_len);
     char path[MAX_PATH_LEN];
     prop_t *temp = get_prop_from_cmd(prop);
 
@@ -566,8 +563,6 @@ int get_property(const char *prop, char *data, size_t max_len) {
     }
 
     read_from_file(get_abs_path(temp, path), data, max_len);
-
-    //PRINT(VERBOSE, "get_property( %s ) => %s\n", prop, data);
 
     return RETURN_SUCCESS;
 }
