@@ -5429,9 +5429,6 @@ int set_freq_internal(const bool tx, const unsigned channel,
 
     const fp_t *fp = tx ? tx_fp : rx_fp;
 
-    memset(req_buf, '\0', sizeof(req_buf));
-    memset(rsp_buf, '\0', sizeof(rsp_buf));
-
     // N.B. the print formatter in this case must be equal to the one in
     // hdlr_XX_X_rf_freq_val
     snprintf(req_buf, sizeof(req_buf), "%lf", freq);
