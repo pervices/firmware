@@ -157,7 +157,4 @@ void PRINT_WRAPPER(print_t priority, const char *format, ...);
         }                                                                      \
     } while (0)
 
-#define LOG_FILE ("/var/crimson/crimson.log")
-#define DUMP_FILE ("/var/crimson/dump.log")
-
 #endif /* COMMON_H_ */
