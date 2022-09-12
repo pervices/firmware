@@ -1759,6 +1759,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                 strcpy(buf, "board -k\r");                          \
                 ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                 set_property("tx/" STR(ch) "/board/pwr_board", "0");\
+                tx_power[INT(ch)] = PWR_OFF;\
             }\
                                                                                \
             /* disable DSP cores */                                            \
