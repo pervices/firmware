@@ -236,15 +236,16 @@ static int contains(const char *str, char letter, int size) {
 }
 
 static int read_uart(int uartfd) {
-    char buf[MAX_UART_LEN] = {};
-    memset(buf, 0, MAX_UART_LEN);
+    char buf[MAX_UART_SEND_LEN] = {};
+    memset(buf, 0, MAX_UART_SEND_LEN);
 
-    uint16_t total_bytes = 0, cur_bytes = 0;
+    int32_t total_bytes = 0;
+    uint32_t cur_bytes = 0;
 
     const long t0 = time_it();
 
     while (contains(buf, '>', total_bytes) < 1) {
-        if (recv_uart_comm(uartfd, ((uint8_t *)buf) + total_bytes, &cur_bytes, MAX_UART_LEN - total_bytes)) {
+        if (recv_uart_comm(uartfd, ((uint8_t *)buf) + total_bytes, &cur_bytes, MAX_UART_SEND_LEN - total_bytes)) {
             strcpy((char *)uart_ret_buf, "");
 
             return RETURN_ERROR;

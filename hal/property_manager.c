@@ -395,6 +395,7 @@ void check_property_inotifies(void) {
     char path[MAX_PATH_LEN];
     int n;
 
+
     // returns if inotify_fd has no bytes to read to prevent server from hanging
     ioctl(inotify_fd, FIONREAD, &n);
     if (n == 0) {

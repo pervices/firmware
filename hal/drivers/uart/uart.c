@@ -104,12 +104,18 @@ void set_uart_blocking(int fd, int should_block) {
     return;
 }
 
-int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
+int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
 
     if(fd == 0 || fd == 1 || fd == 2)
     {
         puts("cannot write to standard devices");
         exit(1);
+    }
+
+    if(max_size < 0) {
+        *size = 0;
+        PRINT(ERROR, "must request a positive number of bytes to read\n");
+        return RETURN_ERROR_PARAM;
     }
 
     //
@@ -126,7 +132,7 @@ int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
 
     int rd_len = 0;
     while (!rd_len && !timeout(&tstart, TIMEOUT)) {
-        rd_len += read(fd, data, max_size-1);
+        rd_len += read(fd, data+rd_len, (max_size - 1));
     }
 
     // Adds null terminator to the value read + sets rd_len to 0 in case of error
@@ -139,7 +145,6 @@ int recv_uart(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
         //remember to have read use max_size - 1 to leave space for the null terminator
         *(data+rd_len) = 0;
     }
-
 
     if (timeout(&tstart, TIMEOUT)) {
         PRINT(ERROR, "%s(), timedout\n", __func__);

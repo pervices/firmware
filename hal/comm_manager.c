@@ -125,7 +125,7 @@ int close_uart_comm(int fd) {
     return RETURN_SUCCESS;
 }
 
-int recv_uart_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size) {
+int recv_uart_comm(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
     PRINT(DEBUG ,"recv %d\n", fd);

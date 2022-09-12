@@ -36,7 +36,7 @@
 //#define DEBUG_OUTPUTS
 
 static int uart_comm_fd = 0;
-static char buf[MAX_UART_LEN] = {};
+static char buf[MAX_UART_SEND_LEN] = {};
 static boolean silent = FALSE;
 static boolean console = FALSE;
 static boolean fwd = FALSE;
@@ -357,10 +357,10 @@ int main(int argc, char *argv[]) {
         if (fwd == TRUE) {
             // strcpy(buf, "fwd -b   -m '");
             // buf[7] = fwd_board;
-            fgets(buf, MAX_UART_LEN, stdin);
+            fgets(buf, MAX_UART_SEND_LEN, stdin);
             strcat(buf, "'\r");
         } else {
-            fgets(buf, MAX_UART_LEN, stdin);
+            fgets(buf, MAX_UART_SEND_LEN, stdin);
             strcat(buf, "\r");
         }
 
@@ -368,12 +368,13 @@ int main(int argc, char *argv[]) {
 
         // if not silent, read the output
         if (!silent) {
-            memset(buf, 0, MAX_UART_LEN);
-            uint16_t total_bytes = 0, cur_bytes = 0;
+            memset(buf, 0, MAX_UART_SEND_LEN);
+            int32_t total_bytes = 0;
+            uint32_t cur_bytes = 0;
 
             while (contains(buf, '>', total_bytes) < 1) {
                 if (recv_uart_comm(uart_comm_fd, ((uint8_t *)buf) + total_bytes,
-                                   &cur_bytes, MAX_UART_LEN - total_bytes)) {
+                                   &cur_bytes, MAX_UART_SEND_LEN - total_bytes)) {
                     return 0;
                 }
                 total_bytes += cur_bytes;
@@ -386,7 +387,7 @@ int main(int argc, char *argv[]) {
             //				pos++;
             //				real_size = total_bytes - pos;
             //				memcpy(buf, buf + pos, real_size);
-            //				memset(buf + real_size, 0, MAX_UART_LEN
+            //				memset(buf + real_size, 0, MAX_UART_SEND_LEN
             //- real_size);
             //			}
 
