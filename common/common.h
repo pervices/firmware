@@ -71,36 +71,6 @@
 #define PWR_HALF_ON 3
 #define PWR_ON 1
 
-// macro for string comparison
-#define EQUAL_STR(VAR, STR) (strncmp(VAR, STR, strlen(STR)) == 0)
-
-// macro for mallocing space and filling it up with STR
-#define MALLOC_SET_STR(VAR, STR)                                               \
-    do {                                                                       \
-        VAR = malloc(sizeof(STR));                                             \
-        memcpy(VAR, STR, sizeof(STR));                                         \
-    } while (0)
-
-// Macro to make a folder of properties
-#define MAKE_DIR(BUF, PROP_PATH, ROOT_PATH)                                    \
-    do {                                                                       \
-        memset(BUF, '\0', BUF_SIZE);                                           \
-        memcpy(BUF, "mkdir -p ", sizeof("mkdir -p "));                         \
-        strcat(BUF, path);                                                     \
-        strcat(BUF, PROP_PATH);                                                \
-        system(BUF);                                                           \
-    } while (0)
-
-// Macro to make a file for saving property
-#define MAKE_PROP(BUF, PROP_PATH, ROOT_PATH)                                   \
-    do {                                                                       \
-        memset(BUF, '\0', BUF_SIZE);                                           \
-        memcpy(BUF, "touch ", sizeof("touch "));                               \
-        strcat(BUF, path);                                                     \
-        strcat(BUF, PROP_PATH);                                                \
-        system(BUF);                                                           \
-    } while (0)
-
 // Output data structure
 typedef struct outdata {
     uint8_t status; // status of the operation
