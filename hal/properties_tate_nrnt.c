@@ -1382,7 +1382,6 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val = 0;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
-        PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__, toupper(CHR(ch)));    \
         write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                        \
         write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
@@ -1399,9 +1398,11 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /*Bit 14 enables*/\
         if (strcmp(data, "1") == 0) {                                          \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 14));\
-            /*Resets dsp to get rid of false underflows, since when vita is low the system is always trying to stream*/\
+            /*Resets dsp to get rid of false underflows of dsp not already in reset, since when vita is low the system is always trying to stream*/\
             /*And detects underflows since it is not being sent any data*/\
-            set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
+            if(old_val & 0x2) {\
+                set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
+            }\
         } else                                                                   \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 14));         \
                                                                                \
@@ -1709,17 +1710,12 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
-            set_property("tx/" STR(ch) "/dsp/rstreq", "1");\
             \
             if(tx_power[INT(ch)] == PWR_OFF) {\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
             tx_power[INT(ch)] = PWR_ON;\
                                                                                \
-            /* Disables channel */                                         \
-            read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                               \
-            write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x100);                      \
-            \
             /* reset JESD */                                              \
             if(jesd_enabled) {\
                 if(property_good("tx/" STR(ch) "/jesd/status") != 1) {\
@@ -1731,7 +1727,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                           \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x100);                   \
             \
-            /*Takes dsp out of reset*/\
+            /* Puts dsp in reset to clear uflow/oflow count, then takes it out of reset*/\
             read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                           \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                     \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x2));                   \
