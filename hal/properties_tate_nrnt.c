@@ -4553,6 +4553,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
+    /* Note: the registers for rx src port and tx dst port overlap but don't match perfectly*/\
+    /* This property exists to make sure the rx src port is not 0, do not expose it in UHD until a solution to the above problem is implemented */\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/src_port"            , hdlr_rx_##_c##_link_src_port,           RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
@@ -4818,7 +4820,7 @@ static prop_t property_table[] = {
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
 #undef X
-    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")                 \
+    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")
     DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
