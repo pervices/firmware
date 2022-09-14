@@ -4831,13 +4831,6 @@ static prop_t property_table[] = {
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
 
-static char *tostr(const int num)
-{
-    char* str = calloc(32, sizeof(*str));
-    sprintf(str, "%d", num);
-    return str;
-}
-
 static int set_default_str(const char* const path, const char* const str)
 {
     prop_t* prop = get_prop_from_cmd(path);
@@ -4852,9 +4845,9 @@ static int set_default_str(const char* const path, const char* const str)
 
 static void set_default_int(const char* const path, const int value)
 {
-    char* str = tostr(value);
+    char str[32];
+    snprintf(str, 32, "%i", value);
     set_default_str(path, str);
-    free(str);
 }
 
 /* clang-format on */
