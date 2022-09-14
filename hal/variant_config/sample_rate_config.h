@@ -100,9 +100,9 @@
     // Over the wire format, number bits per half of the iq pair
     // Note: the FPGA was hardcoded to assume sc16 in several places. If you see any values multiplied by OWT / 16 its because the actual value needs to be scales to produce a result giving the same number of bits as would occur with sc16
     #define OTW_RX 12
-    #define OTW_RX "12"
+    #define S_OTW_RX "12"
     #define OTW_TX 16
-    #define OTW_TX "16"
+    #define S_OTW_TX "16"
 
     // Number of samples request by rx trigger must be a multiple of this
     #define NSAMPS_MULTIPLE_RX 2208
