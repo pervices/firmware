@@ -135,6 +135,8 @@
             #define NUM_TX_CHANNELS 4
         #elif defined(T7)
             #define NUM_TX_CHANNELS 7
+        #elif defined(T8)
+            #define NUM_TX_CHANNELS 8
         #else
             #error Invalid number of tx channels specified for 1G, must be: T0, T4, T9
         #endif
@@ -217,9 +219,36 @@
         //RFE slots for each channel
         #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
         #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
+            
+    // Configuration for 8R8T
+    #elif (NUM_RX_CHANNELS == 8 && NUM_TX_CHANNELS ==8)
+        //TODO generate this dynamically, used by the macro to create the functions for each channel
+        #define RX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d) \
+            X(e) \
+            X(f) \
+            X(g) \
+            X(h)
+
+        #define TX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d) \
+            X(e) \
+            X(f) \
+            X(g) \
+            X(h)
+
+        //RFE slots for each channel
+        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+        #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
 
     #else
-        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, 8R, 0T
+        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, R8 T0, R8 T8
     #endif
 
 #else

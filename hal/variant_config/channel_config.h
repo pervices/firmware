@@ -169,7 +169,60 @@
     static const char *tx_oflow_map_lsb[NUM_TX_CHANNELS] = { "flc14", "flc16", "flc18", "flc20", "flc52", "flc54", "flc56" };
     //most significant 32 bits used to store overflow count
     static const char *tx_oflow_map_msb[NUM_TX_CHANNELS] = { "flc15", "flc17", "flc19", "flc21", "flc53", "flc55", "flc57" };
+    
+#elif defined(R8) && defined(T8)
+
+    #define S_NUM_RX "8"
+    #define S_NUM_TX "8"
+
+    #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
+    #define INDIVIDUAL_RESET_BIT_OFFSET_TX 12
+
+    // LR (left right) slot number for channel (using numbering where the number increases left to right first, before going down, different from RFE slot number)
+    // Special case: 4R4T 3G uses the same numbering as 4R4T 1G even though the physical row is lower
+    #define LR_NUM_RX(ch) (INT(ch))
+    #define LR_NUM_TX(ch) (INT(ch) + 8)
+
+    static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
+    static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
+
+    static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10" };
+
+    static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 1, 0, 1, 0, 1, 0, 1 };
+
+    // Register (in device_side_port_map) for desination port for tx, only applies when using DDR
+    // See the comment for device_side_port_map in properties_tate_nrnt.c for a more detailed explaination
+    // Only applies in 40G
+    static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 1, 4, 5, 8, 9, 12, 13};
+
+    //contains the registers used for the general purpose register for each channel
+    //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
+    static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
+    static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4", "txh4" };
+
+    //registers used for trigger streaming
+    //note: these registers have multiple purposes and only masked writes should be done to them
+    //at time of writing it is per sfp, not per channel, hence the overlap
+    static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9" };
+    static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9" };
+    static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9" };
+
+    static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
+    static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
+    static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
+
+    static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txi7", "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7"};
+    static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txi8", "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8"};
+
+    //least significant 32 bits used to store underflow count
+    static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8", "flc10", "flc12", "flc44", "flc46", "flc48", "flc50" };
+    //most significant 32 bits used to store underflow count
+    static const char *tx_uflow_map_msb[NUM_TX_CHANNELS] = { "flc7", "flc9", "flc11", "flc13", "flc45", "flc47", "flc49", "flc51" };
+    //least significant 32 bits used to store overflow count
+    static const char *tx_oflow_map_lsb[NUM_TX_CHANNELS] = { "flc14", "flc16", "flc18", "flc20", "flc52", "flc54", "flc56", "flc58" };
+    //most significant 32 bits used to store overflow count
+    static const char *tx_oflow_map_msb[NUM_TX_CHANNELS] = { "flc15", "flc17", "flc19", "flc21", "flc53", "flc55", "flc57", "flc59" };
 
 #else
-    #error Invalid channel config, only 4R4T, 9R7T, and 8R0T have been implemented
+    #error Invalid channel config, only 4R4T, 9R7T, 8R0T, 8R8T have been implemented
 #endif
