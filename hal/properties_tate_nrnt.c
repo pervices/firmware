@@ -2782,6 +2782,25 @@ TX_CHANNELS
             snprintf(ret, 50, "Board off");\
         }\
         return RETURN_SUCCESS;                                                 \
+    }\
+    /*-1 indicates do nothing, 1 indicates respond to sysref, 0 indicates do not respond to sysref*/\
+    static int hdlr_rx_##ch##_jesd_mask(const char *data, char *ret) {\
+        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        int mask = 0;\
+        sscanf(data, "%i", &mask);\
+        if(mask < 0) {\
+            return RETURN_SUCCESS;\
+        } else if(mask > 0) {\
+            snprintf(buf, MAX_PROP_LEN, "board -s 1\r");\
+        } else {\
+            snprintf(buf, MAX_PROP_LEN, "board -s 0\r");\
+        }\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
+        return RETURN_SUCCESS;\
     }
 RX_CHANNELS
 #undef X
@@ -4507,6 +4526,7 @@ GPIO_PINS
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/mask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
@@ -5084,7 +5104,7 @@ const int jesd_max_individual_attempts = 3;
 const int jesd_max_server_restart_attempts = 3;
 void jesd_reset_all() {
     int chan;
-    char status_path[PROP_PATH_LEN];
+    char prop_path[PROP_PATH_LEN];
     // Stores the original value for the dsp reset registers. The value at the end should match the value it started with
     uint32_t original_rx4[NUM_RX_CHANNELS];
     uint32_t original_tx4[NUM_TX_CHANNELS];
@@ -5102,10 +5122,14 @@ void jesd_reset_all() {
         read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
         if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
             write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+            snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+            set_property(prop_path, "1");
         } else {
             write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
         }
     }
+    // Gives time for sysref unmask to update
+    usleep(300000);
 
     //Takes tx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
@@ -5131,8 +5155,8 @@ void jesd_reset_all() {
         //Checks if all rx JESDs are working
         for(chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
-                sprintf(status_path, "rx/%c/jesd/status", chan+'a');
-                if(property_good(status_path) != 1) {
+                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/status", chan+'a');
+                if(property_good(prop_path) != 1) {
                     PRINT(ERROR, "JESD link for rx channel %c failed on master attempt %i, re-attempting JESD reset\n", chan+'a', attempts);
                     is_bad_attempt = 1;
                 }
@@ -5142,8 +5166,8 @@ void jesd_reset_all() {
         //Checks if all tx JESDs are working
         for(chan = 0; chan < NUM_TX_CHANNELS && !is_bad_attempt; chan++) {
             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
-                sprintf(status_path, "tx/%c/jesd/status", chan+'a');
-                if(property_good(status_path) != 1) {
+                snprintf(prop_path, PROP_PATH_LEN, "tx/%c/jesd/status", chan+'a');
+                if(property_good(prop_path) != 1) {
                     PRINT(ERROR, "JESD link for tx channel %c failed on master attempt %i, re-attempting JESD reset\n", chan+'a', attempts);
                     is_bad_attempt = 1;
                 }
@@ -5164,6 +5188,8 @@ void jesd_reset_all() {
         // Puts all channels into reset, when resetting individually only the active channel should be in reset
         for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
             write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+            snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+            set_property(prop_path, "0");
         }
         for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
             write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
@@ -5174,11 +5200,15 @@ void jesd_reset_all() {
                 // Takes dsp of the channel whose JESD is being reset out of reset
                 // Note: if all dsps are in reset that it will always report good
                 write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+                set_property(prop_path, "1");
+                // Gives time for sysref unmask to update
+                usleep(300000);
                 int individual_reset_attempts = 0;
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
-                    sprintf(status_path, "rx/%c/jesd/status", chan+'a');
+                    snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
-                    if(property_good(status_path) == 1) {
+                    if(property_good(prop_path) == 1) {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n", chan + 'a');
@@ -5192,6 +5222,8 @@ void jesd_reset_all() {
                 // Takes dsp of the channel whose JESD is being reset into reset
                 // Note: if a channel's dsp is not in reset and JESD failed, every rx channel may be detected as bad
                 write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+                set_property(prop_path, "0");
                 if(individual_reset_attempts >= jesd_max_individual_attempts) {
                     PRINT(ERROR, "Failed to establish JESD link on rx channel %c, the channel will be unusable\n", chan + 'a');
                     any_ch_failed_individual = 1;
@@ -5205,9 +5237,9 @@ void jesd_reset_all() {
                 // Takes dsp of the channel whose JESD is being reset out of reset
                 write_hps_reg_mask(tx_reg4_map[chan], 0x0, 0x2);
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
-                    sprintf(status_path, "tx/%c/jesd/status", chan+'a');
+                    snprintf(prop_path, PROP_PATH_LEN, "tx/%c/jesd/status", chan+'a');
                     // If the JESD is up, skip/finish resetting
-                    if(property_good(status_path) == 1) {
+                    if(property_good(prop_path) == 1) {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset tx %c JESD. This will cause phase alignment issues\n", chan + 'a');
@@ -5254,6 +5286,8 @@ void jesd_reset_all() {
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
             write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
+            snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+            set_property(prop_path, "0");
         } else {
             // Leave dsp in reset if there is no board in that slot, note this line should be redundant since the dsp will be left in reset
             write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
@@ -5263,6 +5297,7 @@ void jesd_reset_all() {
     for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
         write_hps_reg_mask(tx_reg4_map[chan], original_tx4[chan], 0x2);
     }
+    set_property("time/sync/sysref_mode", "pulsed");\
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
