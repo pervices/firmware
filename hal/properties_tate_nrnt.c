@@ -1693,14 +1693,26 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    /* Negative: pretend there's no board there and turn the board off */\
+    /* 0: disable the board but to not turn it off (use pwr_board if you actually want to turn it off) */\
+    /* Positive: enable the board/finish power on process */\
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
         if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
         uint32_t old_val = 0;                                                  \
-        uint8_t power = 0;                                                     \
+        int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        \
+        /* Pretend the slot is empty*/\
+        if(power < 0) {\
+            rx_power[INT(ch)] = PWR_NO_BOARD;\
+            write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x2, 0x2);\
+            snprintf(buf, MAX_PROP_LEN, "rfe_control %d off", INT_TX(ch));\
+            system(buf);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                \
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && tx_power[INT(ch)] == PWR_ON)                    \
@@ -2598,14 +2610,26 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    /* Negative: pretend there's no board there and turn the board off */\
+    /* 0: disable the board but to not turn it off (use pwr_board if you actually want to turn it off) */\
+    /* Positive: enable the board/finish power on process */\
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
         uint32_t old_val = 0;                                                  \
-        uint8_t power = 0;                                                     \
+        int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        \
+        /* Pretend the slot is empty*/\
+        if(power < 0) {\
+            rx_power[INT(ch)] = PWR_NO_BOARD;\
+            write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x2, 0x2);\
+            snprintf(buf, MAX_PROP_LEN, "rfe_control %d off", INT_RX(ch));\
+            system(buf);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                \
         /* check if power is already enabled */                                \
         if (power >= PWR_ON && rx_power[INT(ch)] == PWR_ON)                    \
