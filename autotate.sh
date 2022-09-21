@@ -94,6 +94,11 @@ elif [ $# -eq 2 ]; then
             NTX="UNSPECIFIED" \
             MAX_RATE="UNSPECIFIED"
 elif [ $# -eq 5 ]; then
+    if [ "$1" != "TATE_NRNT" ]; then
+        echo "Parameters for NRNT specified but product is not NRNT"
+        exit 80
+    fi
+
     ./configure                         \
             --prefix=/usr                   \
             --host=x86_64                   \
