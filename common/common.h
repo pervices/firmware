@@ -54,13 +54,16 @@
 #define SERVER_RESVD_OPT (1 << 1)
 
 // General purpose temp buffer size
-#define BUF_SIZE (1024)
-#define MAX_PATH_LEN (4096)
+#define BUF_SIZE (16384)
+#define MAX_PATH_LEN (128)
 #define MAX_PROP_LEN (16384)
+// Having the buffer containing default properties be large results in the server file size being very large
+// Since the only time large buffers are needed is for dumps, the max size of default values is set to be very low
+#define MAX_DEFAULT_PROP_LEN (128)
 #define MAX_UART_SEND_LEN (16384)
 #define MAX_UART_RET_LEN (16384)
 //length for property path buffer
-#define PROP_PATH_LEN 50
+#define PROP_PATH_LEN MAX_PATH_LEN
 
 //Of the following PWR, only PWR_OFF and PWR_ON are valid inputs to pwr, the rest are used internally to check the status of things
 //indicates that no board is present

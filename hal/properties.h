@@ -75,7 +75,7 @@ typedef struct prop {
     char symlink_target[MAX_PATH_LEN];
     int (*handler)(const char *data, char *ret);
     perm_t permissions;
-    char def_val[MAX_PROP_LEN]; // default value
+    char def_val[MAX_DEFAULT_PROP_LEN]; // default value
     int wd;                     // inotify watch descriptor
     prop_pwr_t pwr_en; //stores wether or not to make sure a board is on before setting the property
     char *ch;//channel number, only relevant for rx and tx (it is a string because of the way macros work, in practice it should only be used as a char)
