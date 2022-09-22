@@ -94,6 +94,8 @@ int main(int argc, char *argv[]) {
                 printf("RTM: 3\n");
             #elif RTM4
                 printf("RTM: 4\n");
+            #elif RTM5
+                printf("RTM: 5\n");
             #else
                 #error "This file must be compiled with a valid hardware revision (RTM3, RTM4)"
             #endif
