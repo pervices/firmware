@@ -119,40 +119,46 @@
 
     #if defined (S1000)
         #define MAX_SAMPLE_RATE 1000
-        #if defined(R4)
+        #if defined(R4) && defined(T4)
             #define NUM_RX_CHANNELS 4
-        #elif defined(R8)
-            #define NUM_RX_CHANNELS 8
-        #elif defined(R9)
-            #define NUM_RX_CHANNELS 9
-        #else
-            #error Invalid number of rx channels specified for 1G, must be: R4, R8, R9
-        #endif
-
-        #if defined(T0)
-            #define NUM_TX_CHANNELS 0
-        #elif defined(T4)
             #define NUM_TX_CHANNELS 4
-        #elif defined(T7)
-            #define NUM_TX_CHANNELS 7
-        #elif defined(T8)
+            //RFE slots for each channel
+            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
+
+        #elif defined(R8) && defined(T0)
+            #define NUM_RX_CHANNELS 8
+            #define NUM_TX_CHANNELS 0
+            //RFE slots for each channel
+            #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
+
+        #elif defined(R8) && defined(T8)
+            #define NUM_RX_CHANNELS 8
             #define NUM_TX_CHANNELS 8
+            //RFE slots for each channel
+            #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+            #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
+
+        #elif defined(R9) && defined(T7)
+            #define NUM_RX_CHANNELS 9
+            #define NUM_TX_CHANNELS 7
+            //RFE slots for each channel
+            #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+            #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
         #else
-            #error Invalid number of tx channels specified for 1G, must be: T0, T4, T9
+            #error Invalid number of channels specified for 1G, must be: R4 T4, R8 T0, R9 T7, R8 T8
         #endif
 
     #elif defined (S3000)
         #define MAX_SAMPLE_RATE 3000
-        #if defined(R4)
+        #if defined(R4) && defined(T4)
             #define NUM_RX_CHANNELS 4
-        #else
-            #error Invalid number of rx channels specified for 3G, must be: R4
-        #endif
-
-        #if defined(T4)
             #define NUM_TX_CHANNELS 4
+            //RFE slots for each channel
+            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 3)
         #else
-            #error Invalid number of tx channels specified for 3G, must be: T4
+            #error Invalid number of rx channels specified for 3G, must be: R4 T4
         #endif
     #else
         #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
@@ -172,10 +178,6 @@
             X(c) \
             X(d)
 
-        //RFE slots for each channel
-        #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
-        #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
-
     #elif (NUM_RX_CHANNELS == 8 && NUM_TX_CHANNELS == 0)
         //TODO generate this dynamically, used by the macro to create the functions for each channel
         #define RX_CHANNELS \
@@ -189,9 +191,6 @@
             X(h)
 
         #define TX_CHANNELS
-
-        //RFE slots for each channel
-        #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
 
     // Configuration for 9R7T
     #elif (NUM_RX_CHANNELS == 9 && NUM_TX_CHANNELS ==7)
@@ -215,10 +214,6 @@
             X(e) \
             X(f) \
             X(g)
-
-        //RFE slots for each channel
-        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
-        #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
             
     // Configuration for 8R8T
     #elif (NUM_RX_CHANNELS == 8 && NUM_TX_CHANNELS ==8)
@@ -242,10 +237,6 @@
             X(f) \
             X(g) \
             X(h)
-
-        //RFE slots for each channel
-        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
-        #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
 
     #else
         #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, R8 T0, R8 T8
