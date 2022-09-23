@@ -3963,13 +3963,22 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
-    uint32_t old_val1;
-    uint32_t old_val2;
-    read_hps_reg("sys16", &old_val1);
-    read_hps_reg("sys17", &old_val2);
+    uint32_t chip_id_msb = 0;
+    uint32_t chip_id_lsb = 0;
+
+    // Load the chip ID
+    write_hps_reg_mask("res_rw7", ~0, 1 << 24);
+    write_hps_reg_mask("res_rw7", 0, 1 << 24);
+
+    // Read the chip ID with 100ms timeout (1000 * 100us)
+    for(int n = 0; n < 1000 && (!chip_id_msb || !chip_id_lsb); n++) {
+        usleep(100);
+        read_hps_reg("sys16", &chip_id_lsb);
+        read_hps_reg("sys17", &chip_id_msb);
+    }
 
     // Append values
-    sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
+    sprintf(ret, "0x%02x%02x \n", chip_id_msb, chip_id_lsb);
 
     return RETURN_SUCCESS;
 }
