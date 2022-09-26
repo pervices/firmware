@@ -4544,7 +4544,8 @@ GPIO_PINS
     },
 
 #define DEFINE_RX_WAIT_PWR(_c) \
-    DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)\
+        DEFINE_FILE_PROP_P("rx/" #_c "/jesd/mask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)
 
 #define DEFINE_RX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
@@ -4554,7 +4555,6 @@ GPIO_PINS
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
     /* Mask sysref whenever not resetting JESD or powering on */\
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/mask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP, #_c)
 
 
