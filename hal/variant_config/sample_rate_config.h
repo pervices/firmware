@@ -21,6 +21,8 @@
 
     #define S_MAX_RATE "1000000000"
 
+    #define S_MAX_RATE_MHZ "1000"
+
     // Sample rates are in samples per second (SPS).
     #define RX_BASE_SAMPLE_RATE   1000000000.0
     #define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
@@ -63,6 +65,8 @@
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
+
+    #define S_MAX_RATE_MHZ "3000"
 
     // Sample rates are in samples per second (SPS).
     #define RX_BASE_SAMPLE_RATE   3000000000.0
