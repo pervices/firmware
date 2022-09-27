@@ -5187,6 +5187,16 @@ void jesd_reset_all() {
         //Wait for links to re-establish
         usleep(400000);
 
+        //Immediately mask all channels.
+        for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+            read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
+            if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+                set_property(prop_path, "0");
+            } else {
+            }
+        }
+
         //Checks if all rx JESDs are working
         for(chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
@@ -5213,6 +5223,15 @@ void jesd_reset_all() {
             break;
         }
         attempts++;
+        //Unmask all channels for next attempt
+        for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+            read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
+            if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+                set_property(prop_path, "1");
+            } else {
+            }
+        }
     }
 
     // Attempt to reset channel  individually if the master reset failed
