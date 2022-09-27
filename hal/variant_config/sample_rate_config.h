@@ -109,7 +109,7 @@
     #define S_OTW_TX "16"
 
     // Number of samples request by rx trigger must be a multiple of this
-    #define NSAMPS_MULTIPLE_RX 2208
+    #define NSAMPS_MULTIPLE_RX 2944
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000

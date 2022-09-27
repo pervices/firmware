@@ -740,8 +740,8 @@ TX_CHANNELS
         int r;                                                                 \
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
-        val = val * OTW_RX / 16;\
         val = (val / NSAMPS_MULTIPLE_RX) * NSAMPS_MULTIPLE_RX;\
+        val = val * OTW_RX / 16;\
         uint64_t actual_nsamps = val * 16 / OTW_RX;\
         sprintf(ret, "%lu", actual_nsamps);                                             \
         if(r != RETURN_SUCCESS) return r;\
