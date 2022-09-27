@@ -5148,6 +5148,9 @@ void jesd_reset_all() {
         return;
     }
 
+    // Sysref pulses and the start of sysref continuous mode have a bad output. Mask sysref to mitigate the issue
+    set_property("time/sync/sysref_mode", "continuous");
+
     //Takes rx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored.
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
     for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
@@ -5173,9 +5176,6 @@ void jesd_reset_all() {
             write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
         }
     }
-
-    // Sysref pulses and the start of sysref continuous mode have a bad output. Mask sysref to mitigate the issue
-    set_property("time/sync/sysref_mode", "continuous");
 
     int attempts = 0;
     while ( attempts < jesd_max_attempts ) {
