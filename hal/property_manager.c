@@ -407,7 +407,6 @@ void check_property_inotifies(void) {
 
     ssize_t i = 0;
     while (i < len) {
-        PRINT(VERBOSE, "%ld / %ld \n", i, len);
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
