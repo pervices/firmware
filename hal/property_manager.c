@@ -77,7 +77,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     int data_read = 0;
     // -1 to leave space for null terminator
     while ( fgets(data + data_read, max_len - data_read, fd) ) {
-        data_read += strnlen(data, max_len);
+        data_read = strnlen(data, max_len);
     }
     fclose(fd);
 
