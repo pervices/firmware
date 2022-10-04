@@ -2319,8 +2319,10 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val = 0;                                                  \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
-        write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                        \
-        write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x2);                       \
+        /* Leaves dsp in reset if it already was in reset*/\
+        if(!(old_val & 2)) {\
+            write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x2);                       \
+        }\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2675,10 +2677,9 @@ TX_CHANNELS
                 }\
             }\
                                                                                \
-            /* Reset DSP */                    \
+            /* Puts DSP in reset (should be in reset whenever not stream, use the stream property to take it out of reset */\
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                     \
-            write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x2));                   \
             \
             /* Turns the power indicator light on */\
             /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
@@ -5190,7 +5191,6 @@ void jesd_reset_all() {
 
         //Immediately mask all channels.
         for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-            read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
                 set_property(prop_path, "0");
