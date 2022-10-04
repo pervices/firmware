@@ -5187,7 +5187,7 @@ void jesd_reset_all() {
         set_property("fpga/reset", "3");
 
         //Wait for links to re-establish
-        usleep(400000);
+        usleep(100000);
 
         //Immediately mask all channels.
         for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
@@ -5271,7 +5271,7 @@ void jesd_reset_all() {
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
                     // Wait for reset to finish
-                    usleep(4000000);
+                    usleep(1000000);
                     individual_reset_attempts++;
                 }
                 // Takes dsp of the channel whose JESD is being reset into reset
