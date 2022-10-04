@@ -5335,6 +5335,8 @@ void jesd_reset_all() {
         } else {
             PRINT(ERROR, "JESD bring succeeded only after attempting to reset channels individually. This may cause phase alignment issues\n");
         }
+    } else {
+        update_interboot_variable("cons_jesd_fail_count", 0);
     }
 
     // Sets whether the dsp is in reset to what is was prior to this function
