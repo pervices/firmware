@@ -5137,6 +5137,7 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     _save_profile_path = save_path;
 }
 
+const int jesd_reset_delay = 400000;
 const int jesd_max_attempts = 3;
 const int jesd_max_individual_attempts = 3;
 const int jesd_max_server_restart_attempts = 3;
@@ -5189,7 +5190,7 @@ void jesd_reset_all() {
         set_property("fpga/reset", "3");
 
         //Wait for links to re-establish
-        usleep(100000);
+        usleep(jesd_reset_delay);
 
         //Immediately mask all channels.
         for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
@@ -5273,7 +5274,7 @@ void jesd_reset_all() {
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
                     // Wait for reset to finish
-                    usleep(1000000);
+                    usleep(jesd_reset_delay);
                     individual_reset_attempts++;
                 }
                 // Takes dsp of the channel whose JESD is being reset into reset
@@ -5304,7 +5305,7 @@ void jesd_reset_all() {
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
                     // Wait for reset to finish
-                    usleep(4000000);
+                    usleep(jesd_reset_delay);
                     individual_reset_attempts++;
                     // Takes dsp of the channel whose JESD is being reset into reset
                     write_hps_reg_mask(tx_reg4_map[chan], 0x2, 0x2);
