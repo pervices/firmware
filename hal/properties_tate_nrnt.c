@@ -5137,7 +5137,8 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     _save_profile_path = save_path;
 }
 
-const int jesd_reset_delay = 400000;
+const int jesd_reset_delay = 100000;
+const int jesd_mask_delay = 200000;
 const int jesd_max_attempts = 3;
 const int jesd_max_individual_attempts = 3;
 const int jesd_max_server_restart_attempts = 3;
@@ -5169,7 +5170,7 @@ void jesd_reset_all() {
         }
     }
     // Gives time for sysref unmask to update
-    usleep(300000);
+    usleep(jesd_mask_delay);
 
     //Takes tx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
@@ -5261,7 +5262,7 @@ void jesd_reset_all() {
                 snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
                 set_property(prop_path, "1");
                 // Gives time for sysref unmask to update
-                usleep(300000);
+                usleep(jesd_mask_delay);
                 int individual_reset_attempts = 0;
                 while(individual_reset_attempts < jesd_max_individual_attempts) {
                     snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/status", chan+'a');
