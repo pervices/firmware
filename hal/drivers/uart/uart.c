@@ -174,9 +174,6 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
     if(fd == -1)
         return RETURN_SUCCESS;
 
-    if (_options & SERVER_DEBUG_OPT)
-        PRINT(DEBUG, "%s(): %s\n", __func__, data);
-
     flush_uart(fd);
 
     gettimeofday(&tstart, NULL);

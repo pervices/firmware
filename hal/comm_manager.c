@@ -88,12 +88,11 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
     if (get_next_uart_fd(fd) < 0)
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
 
-    PRINT(DEBUG, "Found file descriptor %i\n", *fd);
+    PRINT(VERBOSE, "Found file descriptor %i\n", *fd);
     used_uart_devices[*fd] = USED_DEVICE;
-    PRINT(DEBUG, "Opening UART port: %s\n", dev);
 
     // Allocate space for uart device
-    PRINT(DEBUG, "Opening %s as %d\n", dev, *fd);
+    PRINT(VERBOSE, "Opening %s as %d\n", dev, *fd);
 
     uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
     if (uart_devices[*fd] < 0) {
@@ -102,7 +101,7 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
     }
     int mydev = uart_devices[*fd];
 
-    PRINT(DEBUG, "Configuring UART\n");
+    PRINT(VERBOSE, "Configuring UART\n");
 
     set_uart_interface_attribs(mydev, B115200,
                                0); // set speed to 115,200 bps, 8n1 (no parity)
@@ -128,7 +127,6 @@ int close_uart_comm(int fd) {
 int recv_uart_comm(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
-    PRINT(DEBUG ,"recv %d\n", fd);
     int mydev = uart_devices[fd];
     return recv_uart(mydev, data, size, max_size);
 }
@@ -136,7 +134,6 @@ int recv_uart_comm(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
 int send_uart_comm(int fd, uint8_t *data, uint16_t size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
-    PRINT(DEBUG ,"send %d\n", fd);
     int mydev = uart_devices[fd];
     return send_uart(mydev, data, size);
 }

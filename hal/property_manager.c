@@ -237,7 +237,7 @@ static void build_tree(void) {
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
         prop = get_prop(i);
-        PRINT(DEBUG, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
+        PRINT(VERBOSE, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
         make_prop(prop);
         if (PROP_TYPE_SYMLINK != prop->type) {
             add_prop_to_inotify(prop);
@@ -497,7 +497,7 @@ int save_properties(const char *file) {
 
 // Load properties from file
 int load_properties(const char *file) {
-    PRINT(DEBUG, "loading properties from %s!\n", file);
+    PRINT(VERBOSE, "loading properties from %s!\n", file);
 
     // open the file for reading
     FILE *fin = fopen(file, "r");
