@@ -5229,7 +5229,6 @@ void jesd_reset_all() {
         attempts++;
         //Unmask all channels for next attempt
         for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
-            read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
                 set_property(prop_path, "1");
