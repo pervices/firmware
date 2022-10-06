@@ -5145,6 +5145,10 @@ const int jesd_max_attempts = 3;
 const int jesd_max_individual_attempts = 3;
 const int jesd_max_server_restart_attempts = 3;
 void jesd_reset_all() {
+    // Set when indiviudal JESD resets were required to get JESD to establish
+    int any_ch_required_individual = 0;
+    // Set if any channel's JESD failed to come up
+    int any_ch_failed_individual = 0;
     int chan;
     char prop_path[PROP_PATH_LEN];
     // Stores the original value for the dsp reset registers. The value at the end should match the value it started with
@@ -5244,7 +5248,6 @@ void jesd_reset_all() {
     // Attempt to reset channel  individually if the master reset failed
     if(attempts >= jesd_max_attempts) {
         PRINT(ERROR, "Failed to establish JESD links when resetting all channels. Attempting to idividually reset the problematic channels. This will result in phase alignment issues.\n");
-        int any_ch_failed_individual = 0;
 
         // Puts all channels into reset, when resetting individually only the active channel should be in reset
         for(chan = 0; chan < NUM_RX_CHANNELS; chan++) {
@@ -5273,6 +5276,7 @@ void jesd_reset_all() {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset rx %c JESD. This will cause phase alignment issues\n", chan + 'a');
+                    any_ch_required_individual = 1;
                     uint32_t individual_reset_bit = 1 << (chan + INDIVIDUAL_RESET_BIT_OFFSET_RX);
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
@@ -5304,6 +5308,7 @@ void jesd_reset_all() {
                         break;
                     }
                     PRINT(ERROR, "Attempting to individually reset tx %c JESD. This will cause phase alignment issues\n", chan + 'a');
+                    any_ch_required_individual = 1;
                     uint32_t individual_reset_bit = 1 << (chan + INDIVIDUAL_RESET_BIT_OFFSET_TX);
                     write_hps_reg_mask("res_rw7",  ~0, individual_reset_bit);
                     write_hps_reg_mask("res_rw7", 0, individual_reset_bit);
@@ -5360,7 +5365,16 @@ void jesd_reset_all() {
     for(chan = 0; chan < NUM_TX_CHANNELS; chan++) {
         write_hps_reg_mask(tx_reg4_map[chan], original_tx4[chan], 0x2);
     }
-    set_property("time/sync/sysref_mode", "pulsed");\
+    set_property("time/sync/sysref_mode", "pulsed");
+
+    if(any_ch_failed_individual) {
+        PRINT(ERROR, "Some JESD links never established\n");
+    }
+    else if(any_ch_required_individual) {
+        PRINT(ERROR, "Some JESD links required individual resets in order to establish. This may impact phase coherency\n");
+    } else {
+        PRINT(INFO, "All JESD successfully established\n");
+    }
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
