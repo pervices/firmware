@@ -132,7 +132,13 @@ int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
 
     int rd_len = 0;
     while (!rd_len && !timeout(&tstart, TIMEOUT)) {
-        rd_len += read(fd, data+rd_len, (max_size - 1));
+        int read_return = read(fd, data+rd_len, (max_size - 1));
+        if(read_return < 0) {
+            data[read_return] = 0;
+            PRINT(ERROR, "UART read failed with error code %s\n", strerror(errno));
+            return RETURN_ERROR_UART_IO;
+        }
+        rd_len += read_return;
     }
 
     // Adds null terminator to the value read + sets rd_len to 0 in case of error
@@ -180,13 +186,18 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
 
     int wr_len = 0;
     while (wr_len != size && !timeout(&tstart, TIMEOUT)) {
-        wr_len += write(fd, data + wr_len, size - wr_len);
+        int write_return = write(fd, data + wr_len, size - wr_len);
+        if(write_return < 0) {
+            PRINT(ERROR, "UART write failed with error code %s\n", strerror(errno));
+            return RETURN_ERROR_UART_IO;
+        }
+        wr_len+=write_return;
     }
 
     gettimeofday(&tprev, NULL);
 
     if (timeout(&tstart, TIMEOUT)) {
-        PRINT(ERROR, "%s(): timedout\n", __func__);
+        PRINT(ERROR, "timedout\n");
         return RETURN_ERROR_UART_TIMEOUT;
     }
 

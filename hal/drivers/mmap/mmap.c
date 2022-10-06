@@ -92,12 +92,13 @@ int write_hps_reg(const char *reg, uint32_t data) {
 
     //PRINT(VERBOSE, "%s(): %s: 0x%08x\n", __func__, reg, data);
 
-
     const reg_t *temp = get_reg_from_name(reg);
-    if (temp)
+    if (temp) {
         return reg_write(temp->addr, &data);
-    else
+    }
+    else {
         return RETURN_ERROR_INVALID_REGISTER;
+    }
 }
 
 int write_hps_reg_mask(const char *reg, uint32_t data, uint32_t mask) {

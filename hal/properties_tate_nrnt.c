@@ -4996,6 +4996,8 @@ void patch_tree(void) {
         fclose(alternate_tree_defaults_file);
     } else {
         PRINT(INFO, "No alternate default file found\n");
+        // Clears errno (which will be set to file not found). Not necessary but makes spotting error flags at unknown points easier
+        errno = 0;
     }
 }
 
