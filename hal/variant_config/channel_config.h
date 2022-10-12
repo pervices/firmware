@@ -53,13 +53,9 @@
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
     //at time of writing it is per sfp, not per channel, hence the overlap
-    static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
-    static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
-    static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
+    static const char *rx_trig_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9"};
 
-    static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = {  };
-    static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = {  };
-    static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = {  };
+    static const char *tx_trig_map[NUM_TX_CHANNELS] = {  };
 
     static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = {  };
     static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = {  };
@@ -98,13 +94,9 @@
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
     //at time of writing it is per sfp, not per channel, hence the overlap
-    static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
-    static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
-    static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
+    static const char *rx_trig_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
 
-    static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
-    static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
-    static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
+    static const char *tx_trig_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6" };
 
     static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txi7", "txj7", "txk7", "txl7" };
     static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txi8", "txj8", "txk8", "txl8" };
@@ -150,13 +142,9 @@
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
     //at time of writing it is per sfp, not per channel, hence the overlap
-    static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
-    static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
-    static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
+    static const char *rx_trig_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9", "rxd9"};
 
-    static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
-    static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
-    static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
+    static const char *tx_trig_map[NUM_TX_CHANNELS] = { "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
 
     static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7"};
     static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8"};
@@ -203,13 +191,9 @@
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
     //at time of writing it is per sfp, not per channel, hence the overlap
-    static const char *rx_trig_sel_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9" };
-    static const char *rx_trig_sma_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9" };
-    static const char *rx_trig_ufl_mode_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9" };
+    static const char *rx_trig_map[NUM_RX_CHANNELS] = { "rxa9", "rxa9", "rxb9", "rxb9", "rxc9", "rxc9", "rxd9", "rxd9" };
 
-    static const char *tx_trig_sel_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
-    static const char *tx_trig_sma_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
-    static const char *tx_trig_ufl_mode_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
+    static const char *tx_trig_map[NUM_TX_CHANNELS] = { "txi6", "txj6", "txk6", "txl6", "txm6", "txn6", "txo6", "txp6" };
 
     static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txi7", "txj7", "txk7", "txl7", "txm7", "txn7", "txo7", "txp7"};
     static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txi8", "txj8", "txk8", "txl8", "txm8", "txn8", "txo8", "txp8"};
