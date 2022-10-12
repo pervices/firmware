@@ -2454,6 +2454,22 @@ static int hdlr_time_sync_lmk_resync_all(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Resync output edges with Ref
+static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
+    if (strcmp(data, "pulsed") == 0) {
+        strcpy(buf, "sync -c 0\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    } else if (strcmp(data, "continuous") == 0) {
+        strcpy(buf, "sync -c 1\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    } else {
+        strcpy(buf, "sync -c 0\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        strcpy(ret, "pulsed");
+    }
+    return RETURN_SUCCESS;
+}
+
 #if 0
 // TODO: Enable DevClock Output
 static int hdlr_time_source_devclk(const char *data, char *ret) {
@@ -3366,6 +3382,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_sync_resync_pll"       , hdlr_time_sync_lmk_resync_pll,          WO, "0")         \
     DEFINE_FILE_PROP("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0")         \
+    DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,          WO, "pulsed")    \
     DEFINE_FILE_PROP("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0")         \
     DEFINE_FILE_PROP("time/board/test"                     , hdlr_time_board_test,                   WO, "0")         \
     DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
