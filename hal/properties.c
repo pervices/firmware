@@ -1041,6 +1041,11 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         if (power >= PWR_ON && tx_power[INT(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
+        /* Continuous Sysref Mode */                                           \
+        strcpy(buf, "sync -c 1\r");                                            \
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                      \
+        usleep(300); /* Wait for Sysref to stabilize and bias around zero.*/   \
+                                                                               \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             tx_power[INT(ch)] = PWR_ON;                                        \
@@ -1095,6 +1100,10 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
                                                                                \
+            /* Pulsed Sysref Mode */                                           \
+            strcpy(buf, "sync -c 0\r");                                        \
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                  \
+            usleep(300); /* Wait Sysref to stabilize and bias around zero.*/   \
             tx_power[INT(ch)] = PWR_OFF;                                       \
         }                                                                      \
                                                                                \
@@ -1473,7 +1482,6 @@ CHANNELS
         else                                                                   \
             write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 14));             \
                                                                                \
-        /*sync_channels( 15 ); */                                              \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1574,7 +1582,7 @@ CHANNELS
                                                                                \
             /* board command */                                                \
             strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
