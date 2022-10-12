@@ -2493,10 +2493,6 @@ static int hdlr_fpga_board_led(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_board_rstreq(const char *data, char *ret) {
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_fpga_board_reboot(const char *data, char *ret) {
     if (strcmp(data, "1") == 0) {
         uint32_t reboot;
@@ -2516,24 +2512,19 @@ static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
-    strcpy(buf, "board -r\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    usleep(700000);
-
-    strcpy(buf, "board -r\r");
-#define X(ch)                                                                  \
-    ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
-        usleep(50000);
-    CHANNELS
-#undef X
-
-    strcpy(buf, "board -r\r");
-#define X(ch)                                                                  \
-    ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
-        usleep(50000);
-    CHANNELS
-#undef X
-
+    if (strcmp(data, "0") != 0) {
+        strcpy(buf, "board -r\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        usleep(1000000);
+        
+        strcpy(buf, "board -r\r");
+        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+        usleep(500000);
+        
+        strcpy(buf, "board -r\r");
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+        usleep(500000);
+    }
     return RETURN_SUCCESS;
 }
 
@@ -2578,11 +2569,13 @@ static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data,
 }
 
 static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
-    uint32_t old_val;
+    uint32_t old_val=0;
 
-    read_hps_reg("sys0", &old_val);
-    write_hps_reg("sys0", old_val | 0x10);
-    write_hps_reg("sys0", old_val & (~0x10));
+    if (strcmp(data, "0") != 0) {
+        read_hps_reg("sys0", &old_val);
+        write_hps_reg("sys0", old_val | 0x10);
+        write_hps_reg("sys0", old_val & (~0x10));
+    }
 
     return RETURN_SUCCESS;
 }
@@ -3191,7 +3184,6 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/rstreq"                   , hdlr_fpga_board_rstreq,                 WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0")                 \
     DEFINE_FILE_PROP("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0")                 \
     DEFINE_FILE_PROP("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0")                 \
