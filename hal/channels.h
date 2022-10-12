@@ -119,7 +119,15 @@
 
     #if defined (S1000)
         #define MAX_SAMPLE_RATE 1000
-        #if defined(R4) && defined(T4)
+        // Note: 4R2T uses the 4R4T FPGA
+        #if defined(R4) && defined(T2)
+            #define NUM_RX_CHANNELS 4
+            #define NUM_TX_CHANNELS 2
+            //RFE slots for each channel
+            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
+
+        #elif defined(R4) && defined(T4)
             #define NUM_RX_CHANNELS 4
             #define NUM_TX_CHANNELS 4
             //RFE slots for each channel
@@ -146,7 +154,7 @@
             #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
             #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
         #else
-            #error Invalid number of channels specified for 1G, must be: R4 T4, R8 T0, R9 T7, R8 T8
+            #error Invalid number of channels specified for 1G, must be: R4 T4, R8 T0, R9 T7, R8 T8, R4 T2
         #endif
 
     #elif defined (S3000)
@@ -177,6 +185,18 @@
             X(b) \
             X(c) \
             X(d)
+
+    #elif (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS == 2)
+        //TODO generate this dynamically, used by the macro to create the functions for each channel
+        #define RX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d)
+
+        #define TX_CHANNELS \
+            X(a) \
+            X(b)
 
     #elif (NUM_RX_CHANNELS == 8 && NUM_TX_CHANNELS == 0)
         //TODO generate this dynamically, used by the macro to create the functions for each channel

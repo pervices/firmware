@@ -60,6 +60,57 @@
     static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = {  };
     static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = {  };
 
+// Note: 4R2T uses the 4R4T FPGA
+#elif defined(R4) && defined(T2)
+
+    #define S_NUM_RX "4"
+    #define S_NUM_TX "2"
+
+    #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
+    #define INDIVIDUAL_RESET_BIT_OFFSET_TX 12
+
+    // LR (left right) slot number for channel (using numbering where the number increases left to right first, before going down, different from RFE slot number)
+    // Special case: 4R4T 3G uses the same numbering as 4R4T 1G even though the physical row is lower
+    #define LR_NUM_RX(ch) (INT(ch))
+    #define LR_NUM_TX(ch) (INT(ch) + 8)
+
+
+    static const char *rx_sfp_map[NUM_RX_CHANNELS] = { "sfpa", "sfpb", "sfpc", "sfpd" };
+
+    static const char *tx_sfp_map[NUM_TX_CHANNELS] = { "sfpa", "sfpb" };
+
+    static const char *rx_ip_dst[NUM_RX_CHANNELS] = { "10.10.10.10", "10.10.11.10", "10.10.12.10", "10.10.13.10" };
+
+    static const int rx_jesd_map[NUM_RX_CHANNELS] = { 0, 0, 0, 0 };
+
+    // Register (in device_side_port_map) for desination port for tx, only applies when using DDR
+    // See the comment for device_side_port_map in properties_tate_nrnt.c for a more detailed explaination
+    static const int tx_dst_port_map[NUM_TX_CHANNELS] = { 0, 4 };
+
+    //contains the registers used for the general purpose register for each channel
+    //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
+    static const char *rx_reg4_map[NUM_RX_CHANNELS] = { "rxa4", "rxe4", "rxi4", "rxm4" };
+    static const char *tx_reg4_map[NUM_TX_CHANNELS] = { "txa4", "txb4" };
+
+    //registers used for trigger streaming
+    //note: these registers have multiple purposes and only masked writes should be done to them
+    //at time of writing it is per sfp, not per channel, hence the overlap
+    static const char *rx_trig_map[NUM_RX_CHANNELS] = { "rxa9", "rxb9", "rxc9", "rxd9"};
+
+    static const char *tx_trig_map[NUM_TX_CHANNELS] = { "txi6", "txj6" };
+
+    static const char *tx_nsamp_msw_map[NUM_TX_CHANNELS] = { "txi7", "txj7" };
+    static const char *tx_nsamp_lsw_map[NUM_TX_CHANNELS] = { "txi8", "txj8" };
+
+    //least significant 32 bits used to store underflow count
+    static const char *tx_uflow_map_lsb[NUM_TX_CHANNELS] = { "flc6", "flc8" };
+    //most significant 32 bits used to store underflow count
+    static const char *tx_uflow_map_msb[NUM_TX_CHANNELS] = { "flc7", "flc9" };
+    //least significant 32 bits used to store overflow count
+    static const char *tx_oflow_map_lsb[NUM_TX_CHANNELS] = { "flc14", "flc16" };
+    //most significant 32 bits used to store overflow count
+    static const char *tx_oflow_map_msb[NUM_TX_CHANNELS] = { "flc15", "flc17" };
+
 #elif defined(R4) && defined(T4)
 
     #define S_NUM_RX "4"
