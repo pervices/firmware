@@ -2507,7 +2507,9 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
-    sync_channels(15);
+    if (strcmp(data, "0") != 0) {
+        sync_channels(15);
+    }
     return RETURN_SUCCESS;
 }
 
