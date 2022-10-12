@@ -100,6 +100,10 @@ static uint8_t tx_power[NUM_TX_CHANNELS];
     static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
 #endif
 
+#define MAX_POSSIBLE_CHANNELS 16
+static const char *rx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "rxa4", "rxb4", "rxc4", "rxd4", "rxe4", "rxf4", "rxg4", "rxh4", "rxi4", "rxj4", "rxk4", "rxl4", "rxm4", "rxn4", "rxo4", "rxp4" };
+static const char *tx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4", "txh4", "txi4", "txj4", "txk4", "txl4", "txm4", "txn4", "txo4", "txp4" };
+
 // Registers contianing the src port for rx and dst port for tx overlap but are not identical
 // In the furture they should be entirely seperate
 // When using DDR, tx will use ports txa15-txa18 for sfp a, txb15-18 for sfp b...
@@ -3834,12 +3838,22 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     return RETURN_ERROR;
 }
 
-//In the current FPGA all possible tx ports are created, but only certain ones are used
-//This resets all ports to 0 at the stat of serfer boot, then the ports get set while initializing tx
-static int hdlr_fpga_link_clear_tx_ports(const char *data, char *ret) {
+static int hdlr_fpga_clear_regs(const char *data, char *ret) {
+    // Clears the ports for tx regs, the ones in use will be set later in the boot process
     for(int n = 0; n < NUM_DEVICE_SIDE_PORTS; n++) {
         write_hps_reg(device_side_port_map[n], 0);
     }
+
+    // Puts all possible DSPs in reset, the ones in use will be set later
+    // Required when using a variant of the server with a lower channel count than the FPGA
+    // On most FPGA variants, the DSP related to any JESD not in use must be in reset for any JESD links to establish
+    for(int n = 0; n < MAX_POSSIBLE_CHANNELS; n++) {
+        write_hps_reg(rx_possible_reg4_map[n], 0x2);
+    }
+    for(int n = 0; n < MAX_POSSIBLE_CHANNELS; n++) {
+        write_hps_reg(tx_possible_reg4_map[n], 0x2);
+    }
+
     return RETURN_SUCCESS;
 }
 
@@ -4759,7 +4773,7 @@ GPIO_PINS
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/clear_tx_ports"            , hdlr_fpga_link_clear_tx_ports,          RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
