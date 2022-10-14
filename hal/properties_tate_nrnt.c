@@ -40,7 +40,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include "variant_config/sample_rate_config.h"
-#include "variant_config/channel_config.h"
+#include "variant_config/fpga_config.h"
 
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 

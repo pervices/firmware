@@ -121,36 +121,51 @@
         #define MAX_SAMPLE_RATE 1000
         // Note: 4R2T uses the 4R4T FPGA
         #if defined(R4) && defined(T2)
+            #define FPGA_4R4T_1G
             #define NUM_RX_CHANNELS 4
             #define NUM_TX_CHANNELS 2
-            //RFE slots for each channel
+            #define S_NUM_RX "4"
+            #define S_NUM_TX "2"
+            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
             #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
         #elif defined(R4) && defined(T4)
+            #define FPGA_4R4T_1G
             #define NUM_RX_CHANNELS 4
             #define NUM_TX_CHANNELS 4
-            //RFE slots for each channel
+            #define S_NUM_RX "4"
+            #define S_NUM_TX "4"
+            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
             #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
         #elif defined(R8) && defined(T0)
+            #define FPGA_8R0T_1G
             #define NUM_RX_CHANNELS 8
             #define NUM_TX_CHANNELS 0
-            //RFE slots for each channel
+            #define S_NUM_RX "8"
+            #define S_NUM_TX "0"
+            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
 
         #elif defined(R8) && defined(T8)
+            #define FPGA_8R8T_1G
             #define NUM_RX_CHANNELS 8
             #define NUM_TX_CHANNELS 8
-            //RFE slots for each channel
+            #define S_NUM_RX "8"
+            #define S_NUM_TX "8"
+            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
             #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
 
         #elif defined(R9) && defined(T7)
+            #define FPGA_9R7T_1G
             #define NUM_RX_CHANNELS 9
             #define NUM_TX_CHANNELS 7
-            //RFE slots for each channel
+            #define S_NUM_RX "9"
+            #define S_NUM_TX "7"
+            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
             #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
         #else
@@ -160,9 +175,12 @@
     #elif defined (S3000)
         #define MAX_SAMPLE_RATE 3000
         #if defined(R4) && defined(T4)
+            #define FPGA_4R4T_3G
             #define NUM_RX_CHANNELS 4
             #define NUM_TX_CHANNELS 4
-            //RFE slots for each channel
+            #define S_NUM_RX "4"
+            #define S_NUM_TX "4"
+            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
             #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 3)
         #else
