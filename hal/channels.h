@@ -119,8 +119,20 @@
 
     #if defined (S1000)
         #define MAX_SAMPLE_RATE 1000
+
+        // Note: 14R1T uses the 4R4T FPGA
+        #if defined(R1) && defined(T1)
+            #define FPGA_4R4T_1G
+            #define NUM_RX_CHANNELS 1
+            #define NUM_TX_CHANNELS 1
+            #define S_NUM_RX "1"
+            #define S_NUM_TX "1"
+            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
+
         // Note: 4R2T uses the 4R4T FPGA
-        #if defined(R4) && defined(T2)
+        #elif defined(R4) && defined(T2)
             #define FPGA_4R4T_1G
             #define NUM_RX_CHANNELS 4
             #define NUM_TX_CHANNELS 2
@@ -204,6 +216,14 @@
             X(c) \
             X(d)
 
+    #elif (NUM_RX_CHANNELS == 1 && NUM_TX_CHANNELS == 1)
+        //TODO generate this dynamically, used by the macro to create the functions for each channel
+        #define RX_CHANNELS \
+            X(a)
+
+        #define TX_CHANNELS \
+            X(a)
+
     #elif (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS == 2)
         //TODO generate this dynamically, used by the macro to create the functions for each channel
         #define RX_CHANNELS \
@@ -277,7 +297,7 @@
             X(h)
 
     #else
-        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, R8 T0, R8 T8
+        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, R8 T0, R8 T8, R1 T1
     #endif
 
 #else
