@@ -3813,9 +3813,8 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
         uint32_t sfp_module_present = sys18_val >> 28;
         // The bits used to detect which SFPs are inserted is flipped compared to which SFPs are working
         sfp_module_present = ((sfp_module_present & 0x1) << 3) | ((sfp_module_present & 0x2) << 1) | ((sfp_module_present & 0x4) >> 1) | ((sfp_module_present & 0x8) >> 3);
-        uint32_t sfp_errors = sys18_val & 0xe000;
 
-        if(!sfp_errors && (sfp_link_established == sfp_module_present)) {
+        if(sfp_link_established == sfp_module_present) {
             // Reset counter for number of failed boots
             update_interboot_variable("cons_sfp_fail_count", 0);
             return RETURN_SUCCESS;
