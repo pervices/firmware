@@ -1653,15 +1653,15 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         if( WIFEXITED(status) ) {\
             if(WEXITSTATUS(status)) {\
                 tx_power[INT(ch)] = PWR_NO_BOARD;\
-                PRINT(ERROR,"Error when powering on board %i, the slot will not be used\n", INT(ch));\
+                PRINT(ERROR,"Error when powering on tx board %i, the slot will not be used\n", INT(ch));\
                 PRINT(ERROR, "Exit status: %i\n", WEXITSTATUS(status));\
             } else {\
                 tx_power[INT(ch)] = PWR_HALF_ON;\
-                PRINT(INFO,"Board %i powered on\n", INT(ch));\
+                PRINT(INFO,"Tx board %i powered on\n", INT(ch));\
             }\
         } else {\
             tx_power[INT(ch)] = PWR_NO_BOARD;\
-            PRINT(ERROR,"Error in script controlling power for board %i, the slot will not be used\n", INT(ch));\
+            PRINT(ERROR,"Error in script controlling power for tx board %i, the slot will not be used\n", INT(ch));\
         }\
         \
         return RETURN_SUCCESS;\
@@ -2549,14 +2549,14 @@ TX_CHANNELS
         if( WIFEXITED(status) ) {\
             if(WEXITSTATUS(status)) {\
                 rx_power[INT(ch)] = PWR_NO_BOARD;\
-                PRINT(ERROR,"Error when powering on board %i, the slot will not be used\n", INT(ch));\
+                PRINT(ERROR,"Error when powering on rx board %i, the slot will not be used\n", INT(ch));\
             } else {\
                 rx_power[INT(ch)] = PWR_HALF_ON;\
-                PRINT(INFO,"Board %i powered on\n", INT(ch));\
+                PRINT(INFO,"Rx board %i powered on\n", INT(ch));\
             }\
         } else {\
             rx_power[INT(ch)] = PWR_NO_BOARD;\
-            PRINT(ERROR,"Error in script controlling power for board %i, the slot will not be used\n", INT(ch));\
+            PRINT(ERROR,"Error in script controlling power for rx board %i, the slot will not be used\n", INT(ch));\
         }\
         \
         return RETURN_SUCCESS;\
