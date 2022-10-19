@@ -322,29 +322,24 @@ int main(int argc, char *argv[]) {
 
 #elif defined(TATE_NRNT)
     if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_SN);
-        return RETURN_ERROR_COMM_INIT;
+        PRINT(ERROR, "Cannot initialize uart %s. The time board will not work\n", UART_CYAN_SN);
     }
     for (i = 0; i < 16; i++) {
         if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
-            printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CYAN_RFE[i]);
-            return RETURN_ERROR_COMM_INIT;
+            PRINT(ERROR, "Failed to initialize UART %s, any board in this slot will not work\n", UART_CYAN_RFE[i]);
         }
     }
 
 #elif defined(VAUNT)
     // initialize the comm port
     if (init_uart_comm(&uart_crimson_synth_fd, UART_CRIMSON_SN, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_SN);
-        return RETURN_ERROR_COMM_INIT;
+        PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_SN);
     }
     if (init_uart_comm(&uart_crimson_tx_fd, UART_CRIMSON_TX, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_TX);
-        return RETURN_ERROR_COMM_INIT;
+        PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_TX);
     }
     if (init_uart_comm(&uart_crimson_rx_fd, UART_CRIMSON_RX, 0) < 0) {
-        printf("ERROR: %s, cannot initialize uart %s\n", __func__, UART_CRIMSON_RX);
-        return RETURN_ERROR_COMM_INIT;
+        PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_RX);
     }
 #else
     #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT VAUNT). Confirm spelling and spaces."
