@@ -2515,7 +2515,7 @@ static int hdlr_fpga_about_serial(const char *data, char *ret) {
     read_hps_reg("sys17", &old_val2);
 
     // Append values
-    sprintf(ret, "serial number 0x%02x%02x \n", old_val2, old_val1);
+    sprintf(ret, "%08x%08x\n", old_val2, old_val1);
 
     return RETURN_SUCCESS;
 }
