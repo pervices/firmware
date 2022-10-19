@@ -4000,7 +4000,7 @@ static int hdlr_fpga_about_serial(const char *data, char *ret) {
     }
 
     // Append values
-    sprintf(ret, "0x%02x%02x \n", chip_id_msb, chip_id_lsb);
+    sprintf(ret, "%02x%02x\n", chip_id_msb, chip_id_lsb);
 
     return RETURN_SUCCESS;
 }
