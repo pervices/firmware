@@ -186,7 +186,8 @@ static int read_uart(int uartfd) {
     const long t0 = time_it();
 
     while (contains((char *)uart_ret_buf, '>', total_bytes) < 1) {
-        int recv_error_code = recv_uart_comm(uartfd, (uint8_t *)(uart_ret_buf + total_bytes), &cur_bytes, MAX_UART_RET_LEN - total_bytes);
+        int recv_error_code = recv_uart_comm(uartfd, (uint8_t *)(uart_ret_buf + total_bytes), &cur_bytes, MAX_UART_RET_LEN -
+        total_bytes);
         if(recv_error_code == RETURN_ERROR_PARAM) {
             PRINT(ERROR, "UART return buffer to small, some data was lost\n");
             return RETURN_ERROR_INSUFFICIENT_BUFFER;
@@ -195,7 +196,12 @@ static int read_uart(int uartfd) {
             PRINT(ERROR, "UART read request timed out\n");
             uart_ret_buf[0] = 0;
             return RETURN_ERROR_UART_TIMEOUT;
-        } else if(recv_error_code) {
+        } else if(recv_error_code == RETURN_ERROR_UART_INVALID_FD) {
+            // Add null terminator to the start of uart_ret_buf (effectively emptying it) in the event of an error
+            PRINT(ERROR, "UART invalid file descriptor\n");
+            uart_ret_buf[0] = 0;
+            return RETURN_ERROR_UART_INVALID_FD;
+        }else if(recv_error_code) {
             PRINT(ERROR, "unrecongnized error\n");
             // Add null terminator to the start of uart_ret_buf (effectively emptying it) in the event of an error
             uart_ret_buf[0] = 0;
@@ -828,7 +834,7 @@ static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(rx_power[ch] != PWR_NO_BOARD) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
-        if(error_code == RETURN_ERROR_UART_TIMEOUT) {
+        if(error_code) {
             rx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
@@ -843,7 +849,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     if(tx_power[ch] != PWR_NO_BOARD) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
-        if(error_code == RETURN_ERROR_UART_TIMEOUT) {
+        if(error_code) {
             tx_power[ch] = PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }

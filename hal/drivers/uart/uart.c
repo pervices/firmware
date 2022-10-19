@@ -118,15 +118,8 @@ int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
         return RETURN_ERROR_PARAM;
     }
 
-    //
-    // NOTE:
-    // All UART FDS are set to -1 at startup.
-    // Writing with a -1 FD will do nothing.
-    // This was done to preserve legacy Crimson UART READ / WRITES while porting to TATE.
-    //
-
     if(fd == -1)
-        return RETURN_SUCCESS;
+        return RETURN_ERROR_UART_INVALID_FD;
 
     gettimeofday(&tstart, NULL);
 
@@ -159,6 +152,7 @@ int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
     }
 
     *size = rd_len;
+
     return RETURN_SUCCESS;
 }
 
