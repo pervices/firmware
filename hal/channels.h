@@ -120,7 +120,7 @@
     #if defined (S1000)
         #define MAX_SAMPLE_RATE 1000
 
-        // Note: 14R1T uses the 4R4T FPGA
+        // Note: 1R1T uses the 4R4T FPGA
         #if defined(R1) && defined(T1)
             #define FPGA_4R4T_1G
             #define NUM_RX_CHANNELS 1
