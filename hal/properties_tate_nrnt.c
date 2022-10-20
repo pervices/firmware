@@ -1707,21 +1707,17 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     /* 0: disable the board but to not turn it off (use pwr_board if you actually want to turn it off) */\
     /* Positive: enable the board/finish power on process */\
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
-        if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
-            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
-            return RETURN_SUCCESS;\
-        }\
         uint32_t old_val = 0;                                                  \
         int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
         \
-        /* Pretend the slot is empty*/\
+        /* Pretend the slot is empty, then act like power off was requested*/\
         if(power < 0) {\
-            rx_power[INT(ch)] = PWR_NO_BOARD;\
+            tx_power[INT(ch)] = PWR_NO_BOARD;\
             write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x2, 0x2);\
             snprintf(buf, MAX_PROP_LEN, "rfe_control %d off", INT_TX(ch));\
             system(buf);\
-            return RETURN_SUCCESS;\
+            power = 0;\
         }\
                                                                                \
         /* check if power is already enabled */                                \
@@ -1734,7 +1730,9 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             if(tx_power[INT(ch)] == PWR_OFF) {\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
-            tx_power[INT(ch)] = PWR_ON;\
+            if(tx_power[INT(ch)] != PWR_NO_BOARD) {\
+                tx_power[INT(ch)] = PWR_ON;\
+            }\
                                                                                \
             /* reset JESD */                                              \
             if(jesd_enabled) {\
@@ -1769,13 +1767,17 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                     snprintf(buf, 20, "board -w 0\r");\
                     ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
-                tx_power[INT(ch)] = PWR_HALF_ON;\
+                if(tx_power[INT(ch)] != PWR_NO_BOARD) {\
+                    tx_power[INT(ch)] = PWR_HALF_ON;\
+                }\
             } else {\
                 /* kill the channel */                                             \
                 strcpy(buf, "board -k\r");                          \
                 ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                 set_property("tx/" STR(ch) "/board/pwr_board", "0");\
-                tx_power[INT(ch)] = PWR_OFF;\
+                if(tx_power[INT(ch)] != PWR_NO_BOARD) {\
+                    tx_power[INT(ch)] = PWR_OFF;\
+                }\
             }\
                                                                                \
             /* disable DSP cores */                                            \
