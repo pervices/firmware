@@ -1214,6 +1214,18 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    static int hdlr_tx_##ch##_status_lna(const char *data, char *ret) {   \
+        if(RTM_VER > 3) {\
+            snprintf(buf, 10, "rf -S\r");\
+            ping_rx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(ret, 50, (char *)uart_ret_buf);\
+        } else {\
+            snprintf(ret, 50, "lna status not implemented on RTM3 mcu\n");\
+        }\
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_board_led(const char *data, char *ret) {      \
         strcpy(buf, "board -l\r");                                             \
@@ -1738,6 +1750,25 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             if(jesd_enabled) {\
                 if(property_good("tx/" STR(ch) "/jesd/status") != 1) {\
                     jesd_reset_all();\
+                }\
+            }\
+            /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
+            if(RTM_VER > 3) {\
+                int num_lna_attempts = 0;\
+                while(1) {\
+                    hdlr_tx_##ch##_status_lna("1", buf);\
+                    if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
+                        PRINT(INFO, "LNA is good\n");\
+                        break;\
+                    } else if(num_lna_attempts >= 10){\
+                        PRINT(ERROR, "Failed to start lna after 10 attempts\n");\
+                        break;\
+                    } else {\
+                        PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
+                        num_lna_attempts ++;\
+                        snprintf(buf, 20, "rf -L r\r");\
+                        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                    }\
                 }\
             }\
                                                                                \
