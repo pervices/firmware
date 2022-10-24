@@ -1218,7 +1218,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     static int hdlr_tx_##ch##_status_lna(const char *data, char *ret) {   \
         if(RTM_VER > 3) {\
             snprintf(buf, 10, "rf -S\r");\
-            ping_rx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
             snprintf(ret, 50, (char *)uart_ret_buf);\
         } else {\
             snprintf(ret, 50, "lna status not implemented on RTM3 mcu\n");\
