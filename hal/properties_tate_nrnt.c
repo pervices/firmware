@@ -831,11 +831,11 @@ static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
 //ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
 //ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
 static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(rx_power[ch] != PWR_NO_BOARD) {
+    if(!(rx_power[ch] & PWR_NO_BOARD)) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
         if(error_code) {
-            rx_power[ch] = PWR_NO_BOARD;
+            rx_power[ch] = rx_power[ch] | PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
         return error_code;
@@ -846,11 +846,11 @@ static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }
 }
 static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(tx_power[ch] != PWR_NO_BOARD) {
+    if(!(tx_power[ch] & PWR_NO_BOARD)) {
         int error_code = ping(fd, buf, len);
         //Due to hardware issues some boards will report as on even when the slot is empty
         if(error_code) {
-            tx_power[ch] = PWR_NO_BOARD;
+            tx_power[ch] = tx_power[ch] | PWR_NO_BOARD;
             PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
         }
         return error_code;
@@ -1601,7 +1601,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     static int hdlr_tx_##ch##_pwr_board(const char *data, char *ret) {               \
-        if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
+        if(tx_power[INT(ch)] & PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -1686,7 +1686,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
     \
     static int hdlr_tx_##ch##_jesd_reset(const char *data, char *ret) {       \
-        if(tx_power[INT(ch)] == PWR_NO_BOARD) {\
+        if(tx_power[INT(ch)] & PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -1733,17 +1733,19 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         }\
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && tx_power[INT(ch)] == PWR_ON)                    \
+        if (power >= PWR_ON && (tx_power[INT(ch)] & PWR_ON))                   \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             \
-            if(tx_power[INT(ch)] == PWR_OFF) {\
+            if(tx_power[INT(ch)] == PWR_OFF & ~PWR_NO_BOARD) {\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
-            if(tx_power[INT(ch)] != PWR_NO_BOARD) {\
+            if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                 tx_power[INT(ch)] = PWR_ON;\
+            } else {\
+                tx_power[INT(ch)] = PWR_ON | PWR_NO_BOARD;\
             }\
                                                                                \
             /* reset JESD */                                              \
@@ -1753,7 +1755,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                 }\
             }\
             /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
-            if(RTM_VER > 3) {\
+            if(RTM_VER > 3 && !(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                 int num_lna_attempts = 0;\
                 while(1) {\
                     hdlr_tx_##ch##_status_lna("1", buf);\
@@ -1798,16 +1800,20 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                     snprintf(buf, 20, "board -w 0\r");\
                     ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
-                if(tx_power[INT(ch)] != PWR_NO_BOARD) {\
+                if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                     tx_power[INT(ch)] = PWR_HALF_ON;\
+                } else {\
+                    tx_power[INT(ch)] = PWR_OFF | PWR_NO_BOARD;\
                 }\
             } else {\
                 /* kill the channel */                                             \
                 strcpy(buf, "board -k\r");                          \
                 ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
                 set_property("tx/" STR(ch) "/board/pwr_board", "0");\
-                if(tx_power[INT(ch)] != PWR_NO_BOARD) {\
+                if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                     tx_power[INT(ch)] = PWR_OFF;\
+                } else {\
+                    tx_power[INT(ch)] = PWR_OFF | PWR_NO_BOARD;\
                 }\
             }\
                                                                                \
