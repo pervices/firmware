@@ -1739,7 +1739,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             \
-            if(tx_power[INT(ch)] == PWR_OFF & ~PWR_NO_BOARD) {\
+            if(tx_power[INT(ch)] == (PWR_OFF & (~PWR_NO_BOARD))) {\
                 set_property("tx/" STR(ch) "/board/pwr_board", "1");\
             }\
             if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
