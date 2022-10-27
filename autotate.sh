@@ -104,7 +104,8 @@ elif [ $# -eq 5 ]; then
             --host=x86_64                   \
             CC=aarch64-linux-gnu-gcc        \
             CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                    -march=armv8-a -mtune=cortex-a53 " \
+                    -march=armv8-a -mtune=cortex-a53 \
+                    -Werror -lm" \
             CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
                     -march=armv8-a -mtune=cortex-a53 " \
             CXX=aarch64-linux-gnu-g++       \
