@@ -430,7 +430,7 @@ void check_property_inotifies(void) {
             read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
             snprintf(prop_ret, MAX_PROP_LEN, prop_data);
 
-            PRINT(VERBOSE, "%s(): set_property( %s, %s )\n", __func__,
+            PRINT(INFO, "%s(): set_property( %s, %s )\n", __func__,
                   prop->path, prop_data);
 
             const int t0 = time_it();

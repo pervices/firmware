@@ -212,7 +212,7 @@ static int read_uart(int uartfd) {
     }
     const long t1 = time_it();
 
-    PRINT(INFO, "read uart %ld : %s\n", t1 - t0, uart_ret_buf);
+    PRINT(DEBUG, "read uart %ld : %s\n", t1 - t0, uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
