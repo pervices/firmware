@@ -1926,7 +1926,7 @@ TX_CHANNELS
 
 #define X(ch)                                                               \
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+        if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -2494,7 +2494,7 @@ TX_CHANNELS
                                                                                \
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
-            if (rx_power[INT(ch)] == PWR_ON) {                                 \
+            if (rx_power[INT(ch)] & PWR_ON) {                                 \
                 read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                         \
                 write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x100);                 \
                                                                                \
@@ -2525,12 +2525,18 @@ TX_CHANNELS
     /*Turns the board on or off, and performs none of the other steps in the turn on/off process*/\
     /*pwr must be used to complete the power on process*/\
     static int hdlr_rx_##ch##_pwr_board(const char *data, char *ret) {               \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
-            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
-            return RETURN_SUCCESS;\
-        }\
         uint8_t power;                                                         \
         sscanf(data, "%" SCNd8 "", &power);                                    \
+        \
+        if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            if(power>=PWR_ON) {\
+                rx_power[INT(ch)] = PWR_HALF_ON | PWR_NO_BOARD;\
+            } else {\
+                rx_power[INT(ch)] = PWR_HALF_ON | PWR_NO_BOARD;\
+            }\
+            return RETURN_SUCCESS;\
+        }\
                                                                                \
         char pwr_cmd [40];                                                 \
         if(power>=PWR_ON) {\
@@ -2608,7 +2614,7 @@ TX_CHANNELS
     }                                                                          \
     \
     static int hdlr_rx_##ch##_jesd_reset(const char *data, char *ret) {       \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+        if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -2639,7 +2645,7 @@ TX_CHANNELS
     \
     static int hdlr_rx_##ch##_invert_devclk(const char *data, char *ret) {       \
         if(RTM_VER >= 4) {\
-            if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+            if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
                 /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
                 return RETURN_SUCCESS;\
             }\
@@ -2665,7 +2671,7 @@ TX_CHANNELS
     /* 0: disable the board but to not turn it off (use pwr_board if you actually want to turn it off) */\
     /* Positive: enable the board/finish power on process */\
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+        if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -2683,13 +2689,13 @@ TX_CHANNELS
         }\
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && rx_power[INT(ch)] == PWR_ON)                    \
+        if (power >= PWR_ON && (rx_power[INT(ch)] | PWR_ON))                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             /*Avoids attempting to turn on a  board if its off or already turned on but not initialized*/\
-            if(rx_power[INT(ch)] == PWR_OFF) {\
+            if((rx_power[INT(ch)] & ~PWR_NO_BOARD) == PWR_OFF) {\
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
             /* Sets board state to PWR_ON, jesd_reset_all will only attempt to reset boards that are set to on*/\
@@ -2763,7 +2769,7 @@ TX_CHANNELS
                                                                                \
     /*Reboot the board, performing minimal initialization*/\
     static int hdlr_rx_##ch##_reboot(const char *data, char *ret) {            \
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
+        if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
@@ -2840,7 +2846,10 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_jesd_status(const char *data, char *ret) {       \
         /* res_ro11 holds link data with bit 0 high indicating rx board 0 */   \
         /* link is up, bit 1 high indicating that rx board link 1 is up, etc */\
-        if(rx_power[INT(ch)] == PWR_ON || rx_power[INT(ch)] == PWR_HALF_ON) {\
+        if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
+            snprintf(ret, 50, "No board detected in slot");\
+        }\
+        else if((rx_power[INT(ch)] & PWR_ON) || (rx_power[INT(ch)] & PWR_HALF_ON)) {\
             uint32_t reg_val = 0;                                                  \
             read_hps_reg("res_ro11", &reg_val);                                    \
             uint8_t shift = (int)(CHR(ch) - 'a');                                  \
@@ -2850,8 +2859,6 @@ TX_CHANNELS
             } else {                                                               \
                 snprintf(ret, sizeof("bad"), "bad");                               \
             }                                                                      \
-        } else if (rx_power[INT(ch)] == PWR_NO_BOARD) {\
-            snprintf(ret, 50, "No board detected in slot");\
         } else {\
             snprintf(ret, 50, "Board off");\
         }\
@@ -2859,10 +2866,6 @@ TX_CHANNELS
     }\
     /*-1 indicates do nothing, 1 indicates respond to sysref, 0 indicates do not respond to sysref*/\
     static int hdlr_rx_##ch##_jesd_mask(const char *data, char *ret) {\
-        if(rx_power[INT(ch)] == PWR_NO_BOARD) {\
-            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
-            return RETURN_SUCCESS;\
-        }\
         int mask = 0;\
         sscanf(data, "%i", &mask);\
         if(mask < 0) {\
