@@ -2689,7 +2689,7 @@ TX_CHANNELS
         }\
                                                                                \
         /* check if power is already enabled */                                \
-        if (power >= PWR_ON && (rx_power[INT(ch)] | PWR_ON))                    \
+        if (power >= PWR_ON && (rx_power[INT(ch)] & PWR_ON))                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* power on */                                                         \
@@ -2699,7 +2699,7 @@ TX_CHANNELS
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
             /* Sets board state to PWR_ON, jesd_reset_all will only attempt to reset boards that are set to on*/\
-            rx_power[INT(ch)] = PWR_ON;\
+            rx_power[INT(ch)] = PWR_ON | (rx_power[INT(ch)] & PWR_NO_BOARD);\
                                                                                \
             /* disable dsp */                                         \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
@@ -2748,10 +2748,10 @@ TX_CHANNELS
             if(property_good("rx/" STR(ch) "/jesd/status")) {\
                 snprintf(buf, 20, "board -w 0\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                rx_power[INT(ch)] = PWR_HALF_ON;\
+                rx_power[INT(ch)] = PWR_HALF_ON | (rx_power[INT(ch)] & PWR_NO_BOARD);\
             } else {\
                 set_property("rx/" STR(ch) "/board/pwr_board", "0");\
-                rx_power[INT(ch)] = PWR_OFF;\
+                rx_power[INT(ch)] = PWR_OFF | (rx_power[INT(ch)] & PWR_NO_BOARD);\
             }\
                                                                                \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
