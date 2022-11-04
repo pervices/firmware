@@ -5315,7 +5315,7 @@ void jesd_reset_all() {
             if(!jesd_master_error) {
                 break;
             }
-            PRINT(INFO, "Attempt to bring up JESD with a sysref delay of %i failed\n", digital_sysref_delay);
+            PRINT(ERROR, "Attempt to bring up JESD with a sysref delay of %i failed\n", digital_sysref_delay);
         }
     }
 
