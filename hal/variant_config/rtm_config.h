@@ -25,8 +25,7 @@
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 1
 
     // Default phase shift of sysref in VCO clock cycles
-    // TODO set this to the old effective value
-    #define DEFAULT_SYSREF_DELAY 0
+    #define DEFAULT_DIGITAL_SYSREF_DELAY 24
 
 #elif RTM4
     #define RTM_VER 4
@@ -36,8 +35,7 @@
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 1
 
     // Default phase shift of sysref in VCO clock cycles
-    // TODO set this to the old effective value
-    #define DEFAULT_SYSREF_DELAY 0
+    #define DEFAULT_DIGITAL_SYSREF_DELAY 24
 
 #elif RTM5
     #define RTM_VER 5
@@ -47,8 +45,7 @@
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 0
 
     // Default phase shift of sysref in VCO clock cycles
-    // TODO set this to a value that works
-    #define DEFAULT_SYSREF_DELAY 0
+    #define DEFAULT_DIGITAL_SYSREF_DELAY 24
 
 #else
     #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"

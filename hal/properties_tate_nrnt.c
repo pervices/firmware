@@ -5180,9 +5180,6 @@ const int jesd_reset_delay = 100000;
 const int jesd_mask_delay = 200000;
 const int jesd_max_attempts = 3;
 const int jesd_max_server_restart_attempts = 3;
-// Sysref delays to try if the default fails
-#define NUM_SYSREF_DELAYS 1
-const int possible_sysref_delays[NUM_SYSREF_DELAYS] = {1};
 
 // Performs a master JESD reset up to 3 times
 // Returns 0 for success, not 0 for failure. This is to enable bit flags for specific error codes in the future
@@ -5278,6 +5275,16 @@ int jesd_master_reset() {
     else return 0;
 }
 
+//sets sysref delay in VCO clock cycles
+void set_digital_sysref_delay(int digital_sysref_delay) {
+    snprintf(buf, MAX_PROP_LEN, "ddly -l 7 -s %i\r", digital_sysref_delay);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // Board -c (use by hdlr_time_clk_dev_clk_freq) is required to update the delay after setting it
+    snprintf(buf, MAX_PROP_LEN, "board -c " S_MAX_RATE_MHZ "\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+}
+
 void jesd_reset_all() {
     //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time a board is booted during the boot process
     if(!jesd_enabled) {
@@ -5286,28 +5293,29 @@ void jesd_reset_all() {
 
     set_property("time/sync/sysref_mode", "continuous");
 
-    int64_t sysref_delay = 0;
-    if(read_interboot_variable("sysref_delay", &sysref_delay)) {
-        sysref_delay = DEFAULT_SYSREF_DELAY;
+    int64_t digital_sysref_delay = 0;
+    if(read_interboot_variable("digital_sysref_delay", &digital_sysref_delay)) {
+        digital_sysref_delay = DEFAULT_DIGITAL_SYSREF_DELAY;
     }
 
-    // TODO Set sysref to sysref_delay
+    set_digital_sysref_delay(digital_sysref_delay);
 
     // Note this is set to 0 for success, any other value for failure
     int jesd_master_error = jesd_master_reset();
 
     // Test all possible values of sysref delay until one works if the previously save/default failed
     if(jesd_master_error) {
-        PRINT(INFO, "Attempt to bring up JESD with a sysref delay of %i failed\n", sysref_delay);
-        for(int n = 0; n < NUM_SYSREF_DELAYS; n++) {
-            // TODO Set sysref to sysref_delay from possible_sysref_delays
-            sysref_delay = possible_sysref_delays[n];
-            PRINT(INFO, "Attempting to bring up JESD with a sysref delay of %i\n", sysref_delay);
+        PRINT(ERROR, "Attempt to bring up JESD with a sysref delay of %i failed\n", digital_sysref_delay);
+        for(int n = 0; n < NUM_DIGITAL_SYSREF_DELAYS; n++) {
+            digital_sysref_delay = possible_digital_sysref_delays[n];
+            set_digital_sysref_delay(digital_sysref_delay);
+
+            PRINT(ERROR, "Attempting to bring up JESD with a sysref delay of %i\n", digital_sysref_delay);
             jesd_master_error = jesd_master_reset();
             if(!jesd_master_error) {
                 break;
             }
-            PRINT(INFO, "Attempt to bring up JESD with a sysref delay of %i failed\n", sysref_delay);
+            PRINT(INFO, "Attempt to bring up JESD with a sysref delay of %i failed\n", digital_sysref_delay);
         }
     }
 
@@ -5315,7 +5323,7 @@ void jesd_reset_all() {
 
     if(!jesd_master_error) {
         update_interboot_variable("cons_jesd_fail_count", 0);
-        update_interboot_variable("sysref_delay", sysref_delay);
+        update_interboot_variable("digital_sysref_delay", digital_sysref_delay);
     } else {
         int64_t failed_count = 0;
         read_interboot_variable("cons_jesd_fail_count", &failed_count);

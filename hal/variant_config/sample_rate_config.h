@@ -67,6 +67,10 @@
     // Most of the system activates on the rising edge of devclk
     #define RX_SYSREF_FALLING_EDGE 1
 
+    // Sysref delays to try if the default fails
+    #define NUM_DIGITAL_SYSREF_DELAYS 3
+    const int possible_digital_sysref_delays[NUM_DIGITAL_SYSREF_DELAYS] = {24, 25, 26};
+
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
@@ -120,6 +124,10 @@
     // On 3Gsps sysref is sampled on the falling edge of devclk
     // Most of the system activates on the rising edge of devclk
     #define RX_SYSREF_FALLING_EDGE 0
+
+    // Sysref delays to try if the default fails
+    #define NUM_DIGITAL_SYSREF_DELAYS 1
+    const int possible_digital_sysref_delays[NUM_DIGITAL_SYSREF_DELAYS] = {24};
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
