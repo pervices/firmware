@@ -279,7 +279,7 @@ static int read_interboot_variable(char* data_filename, int64_t* value) {
 
     int file_missing = stat(data_path, &sb);
 
-    PRINT(INFO, "Reading from\n");
+    PRINT(INFO, "Reading from %s\n", data_path);
 
     if(file_missing) {
         *value = 0;
