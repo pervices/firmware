@@ -41,6 +41,7 @@
 #include <sys/stat.h>
 #include "variant_config/sample_rate_config.h"
 #include "variant_config/fpga_config.h"
+#include "variant_config/rtm_config.h"
 
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 
@@ -269,7 +270,7 @@ void wait_for_fpga_reset() {
     } while (sys18_val & 0x00ff0000);
 }
 
-static void read_interboot_variable(char* data_filename, int64_t* value) {
+static int read_interboot_variable(char* data_filename, int64_t* value) {
     struct stat sb;
 
     char data_path[MAX_PROP_LEN];
@@ -281,13 +282,13 @@ static void read_interboot_variable(char* data_filename, int64_t* value) {
     PRINT(INFO, "Reading from\n");
 
     if(file_missing) {
-        value = 0;
-        return;
+        *value = 0;
+        return file_missing;
     } else {
         FILE *data_file = fopen( data_path, "r");
         fscanf(data_file, "%li", value);
         fclose(data_file);
-        return;
+        return 0;
     }
 }
 
@@ -4992,38 +4993,13 @@ void patch_tree(void) {
     RX_CHANNELS
 #undef X
 
-#ifdef S1000
-    #if RTM_VER == 3 || RTM_VER == 4
-        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
+    // Sysref should effectively be  read on the rising edge of devclock
+    // This can invert devclock for rx boards to effectively turn a falling edge into a rising edge
+    #define X(ch) \
+        set_default_int("rx/" #ch "/jesd/invert_devclk", RX_SYSREF_FALLING_EDGE^INVERT_DEV_CLOCK_HARDWARE_SWAP);
 
-            RX_CHANNELS
-        #undef X
-    #elif RTM_VER == 5
-        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
-
-            RX_CHANNELS
-        #undef X
-    #else
-        #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
-    #endif
-    
-#elif defined S3000
-    #if RTM_VER == 5
-        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 0);
-
-            RX_CHANNELS
-        #undef X
-    #elif RTM_VER == 3 || RTM_VER ==4
-        #define X(ch) set_default_int("rx/" #ch "/jesd/invert_devclk", 1);
-
-            RX_CHANNELS
-        #undef X
-    #else
-        #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
-    #endif
-#else
-    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
-#endif
+        RX_CHANNELS
+    #undef X
 
 #if NUM_TX_CHANNELS > 0
     int tx_dsp_port_map_loc;

@@ -63,6 +63,10 @@
     #define NSAMPS_MULTIPLE_RX 1
     #define S_NSAMPS_MULTIPLE_RX "1"
 
+    // On 1Gsps sysref is sampled on the falling edge of devclk
+    // Most of the system activates on the rising edge of devclk
+    #define RX_SYSREF_FALLING_EDGE 1
+
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
@@ -112,6 +116,10 @@
     // Number of samples requested from rx must be a multiple of this, applies to both trigger and nsamps mode
     #define NSAMPS_MULTIPLE_RX 2944
     #define S_NSAMPS_MULTIPLE_RX "2944"
+
+    // On 3Gsps sysref is sampled on the falling edge of devclk
+    // Most of the system activates on the rising edge of devclk
+    #define RX_SYSREF_FALLING_EDGE 0
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000

@@ -33,16 +33,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#ifdef RTM3
-    #define RTM_VER 3
-#elif RTM4
-    #define RTM_VER 4
-#elif RTM5
-    #define RTM_VER 5
-#else
-    #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
-#endif
-
 #define INTERBOOT_DATA "/var/lib/cyan-server/"
 
 //directory of the state tree
