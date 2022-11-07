@@ -1601,6 +1601,29 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_rx_##ch##_prime_trigger_stream(const char *data, char *ret) {     \
+        /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
+        uint32_t val = 0;\
+        read_hps_reg(reg4[INT(ch)], &val);\
+        val = val & ~(0x6002 | 0x2100);\
+        if(data[0]=='0') {\
+            /*puts the dsp in reset*/\
+            val = val | 0x6002;\
+            write_hps_reg(reg4[INT(ch)], val);\
+            rx_stream[INT(ch)] = STREAM_OFF;\
+            /*Ignores sma (enabling normal stream command)*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
+        } else {\
+            rx_stream[INT(ch)] = STREAM_ON;\
+            /*Stream when sma trigger (has the side effect of disabling normal stream commands)*/\
+            set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
+            /*takes the dsp out of reset*/\
+            val = val | 0x2100;\
+            write_hps_reg(reg4[INT(ch)], val);\
+        }\
+        return RETURN_SUCCESS;                                                 \
+    } \
+    \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
         uint32_t old_val;                                                      \
         uint8_t stream;                                                        \
@@ -2154,6 +2177,52 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
+    return RETURN_SUCCESS;
+}
+
+//makes all rx begin streaming data in phase with each other, using an sma trigger
+//0 stops all fore streaming. To start streaming set this using a value where each bit corresponds to ech channel
+//ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
+//using -1 for streaming all
+static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
+    int64_t stream = 0;
+    sscanf(data, "%li", &stream);
+    char path_buffer[MAX_PATH_LEN];
+    if(stream != 0) {
+        for(int n = 0; n < NUM_CHANNELS; n++) {
+            //stops any existing force streaming
+            sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
+            set_property(path_buffer, "0");
+        }
+        //sets the sma trigger to act as an input
+        set_property("fpga/trigger/sma_dir", "input");
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
+        for(int n = 0; n < NUM_CHANNELS; n++) {
+            if(stream & 1 << n) {
+                sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
+                set_property(path_buffer, "1");
+                sprintf(path_buffer, "rx/%c/trigger/sma_mode", n+'a');
+                set_property(path_buffer, "level");
+            } else {
+                sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
+                set_property(path_buffer, "0");
+            }
+        }
+        //sets the sma to activate when high (there is a pullup resistor so not connected is high)
+        set_property("fpga/trigger/sma_pol", "positive");
+    } else {
+        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //the sma trigger should be inactive from here until the end of the function
+        set_property("fpga/trigger/sma_pol", "negative");
+        //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
+        for(int n = 0; n < NUM_CHANNELS; n++) {
+            //stops any existing force streaming
+            sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
+            set_property(path_buffer, "0");
+        }
+    }
     return RETURN_SUCCESS;
 }
 
@@ -3221,6 +3290,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
+    DEFINE_FILE_PROP("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,  RW, "0")\
     DEFINE_FILE_PROP("rx/" #_c "/link/endian_swap"       , hdlr_rx_##_c##_endian_swap,            RW, "0")
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
@@ -3357,7 +3427,8 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0")
+    DEFINE_FILE_PROP("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0") \
+    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
 static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_CHANNEL(ch)
