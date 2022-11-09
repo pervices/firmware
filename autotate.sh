@@ -13,86 +13,60 @@ if [ $# -eq 0 ]; then
 fi
 
 if [ "$1" == "ALL" ]; then
-    ./$0 TATE_4R4T RTM3
-    if [ ! -f "server" ]; then
-        echo "TATE_4R4T RTM3 failed"
-        exit 80
-    fi
-    ./$0 TATE_9R7T RTM3
-    if [ ! -f "server" ]; then
-        echo "TATE_9R7T RTM3 failed"
-        exit 80
-    fi
-    ./$0 TATE_8R RTM3
-    if [ ! -f "server" ]; then
-        echo "TATE_8R RTM3 failed"
-        exit 80
-    fi
-    ./$0 TATE_4R4T_3G RTM3
-    if [ ! -f "server" ]; then
-        echo "TATE_4R4T_3G RTM3 failed"
-        exit 80
-    fi
-    ./$0 TATE_4R4T RTM4
-    if [ ! -f "server" ]; then
-        echo "TATE_4R4T RTM4 failed"
-        exit 80
-    fi
-    ./$0 TATE_9R7T RTM4
-    if [ ! -f "server" ]; then
-        echo "TATE_9R7T RTM4 failed"
-        exit 80
-    fi
-    ./$0 TATE_8R RTM4
-    if [ ! -f "server" ]; then
-        echo "TATE_8R RTM4 failed"
-        exit 80
-    fi
-    ./$0 TATE_4R4T_3G RTM4
-    if [ ! -f "server" ]; then
-        echo "TATE_4R4T_3G RTM4 failed"
-        exit 80
-    fi
-    exit 0
+#     ./$0 TATE_4R4T RTM3
+#     if [ ! -f "server" ]; then
+#         echo "TATE_4R4T RTM3 failed"
+#         exit 80
+#     fi
+#     ./$0 TATE_9R7T RTM3
+#     if [ ! -f "server" ]; then
+#         echo "TATE_9R7T RTM3 failed"
+#         exit 80
+#     fi
+#     ./$0 TATE_8R RTM3
+#     if [ ! -f "server" ]; then
+#         echo "TATE_8R RTM3 failed"
+#         exit 80
+#     fi
+#     ./$0 TATE_4R4T_3G RTM3
+#     if [ ! -f "server" ]; then
+#         echo "TATE_4R4T_3G RTM3 failed"
+#         exit 80
+#     fi
+#     ./$0 TATE_4R4T RTM4
+#     if [ ! -f "server" ]; then
+#         echo "TATE_4R4T RTM4 failed"
+#         exit 80
+#     fi
+#     ./$0 TATE_9R7T RTM4
+#     if [ ! -f "server" ]; then
+#         echo "TATE_9R7T RTM4 failed"
+#         exit 80
+#     fi
+#     ./$0 TATE_8R RTM4
+#     if [ ! -f "server" ]; then
+#         echo "TATE_8R RTM4 failed"
+#         exit 80
+#     fi
+#     ./$0 TATE_4R4T_3G RTM4
+#     if [ ! -f "server" ]; then
+#         echo "TATE_4R4T_3G RTM4 failed"
+#         exit 80
+#     fi
+    echo "All not supported yet"
+    exit 80
 fi
 
 ./autogen.sh clean
 ./autogen.sh
 
 if [ $# -eq 1 ]; then
-    ./configure                         \
-            --prefix=/usr                   \
-            --host=x86_64                   \
-            CC=aarch64-linux-gnu-gcc        \
-            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            CXX=aarch64-linux-gnu-g++       \
-            CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            PRODUCT=$1 \
-            HW_REV="UNSPECIFIED" \
-            NRX="UNSPECIFIED" \
-            NTX="UNSPECIFIED" \
-            MAX_RATE="UNSPECIFIED"
+    echo "This mode is no longer supported, use NRNT mode"
+    echo "Example: ./autotate TATE_NRNT RTM5 R4 T4 S1000 for TATE_4R4T"
+    exit 80
 elif [ $# -eq 2 ]; then
-    ./configure                         \
-            --prefix=/usr                   \
-            --host=x86_64                   \
-            CC=aarch64-linux-gnu-gcc        \
-            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            CXX=aarch64-linux-gnu-g++       \
-            CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            PRODUCT=$1 \
-            HW_REV=$2 \
-            NRX="UNSPECIFIED" \
-            NTX="UNSPECIFIED" \
-            MAX_RATE="UNSPECIFIED"
+    echo "This mode is no longer supported, use NRNT mode"
+    exit 80
 elif [ $# -eq 5 ]; then
     if [ "$1" != "TATE_NRNT" ]; then
         echo "Parameters for NRNT specified but product is not NRNT"
