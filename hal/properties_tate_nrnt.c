@@ -5271,6 +5271,23 @@ int jesd_master_reset() {
         attempts++;
     }
 
+    // Sets whether the dsp is in reset to what is was prior to this function
+    for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+            write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
+            snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+            set_property(prop_path, "0");
+        } else {
+            // Leave dsp in reset if there is no board in that slot, note this line should be redundant since the dsp will be left in reset
+            write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
+        }
+    }
+
+    // Sets whether the dsp is in reset to what is was prior to this function
+    for(int chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+        write_hps_reg_mask(tx_reg4_map[chan], original_tx4[chan], 0x2);
+    }
+
     if(attempts >= jesd_max_attempts) return 1;
     else return 0;
 }
