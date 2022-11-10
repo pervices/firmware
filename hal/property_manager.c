@@ -670,6 +670,7 @@ void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
 }
 
 int property_good(char *path) {
+    // returns 1 if property is good else returns 0
     char property_read[5];
     char fullpath[200] = STATE_DIR "/";
     
@@ -680,7 +681,7 @@ int property_good(char *path) {
     get_property(&fullpath[0],property_read,5);
 
     if(strstr(&property_read[0],"good") == NULL){
-        return 5;
+        return 0;
     }
     return 1;
 }
