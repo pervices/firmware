@@ -3088,6 +3088,24 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Enables streaming at a target buffer level, instead of relying on start and end of burst commands
+// Dummy function, force stream is a mode set in the FPGA at compile time. This is for the future when it is enabled by a register command
+static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
+    int request = 0;
+    sscanf(data, "%i", &request);
+
+    // Enable tx force stream
+    if(request > 0) {
+    // Disables tx force stream
+    } else if (request == 0) {
+
+    // Do nothing
+    } else {
+
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     int r;
 
@@ -4884,6 +4902,7 @@ GPIO_PINS
     DEFINE_FILE_PROP("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0") \
     DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
     DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
+    DEFINE_FILE_PROP("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "-1") \
     DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
     DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
