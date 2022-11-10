@@ -4627,17 +4627,6 @@ GPIO_PINS
 
 #define PROJECT_NAME "cyan_nrnt"
 
-#define DEFINE_FILE_PROP(n, h, p, v) \
-    {                                \
-        .type = PROP_TYPE_FILE,      \
-        .path = n,                   \
-        .handler = h,                \
-        .permissions = p,            \
-        .def_val = v,                \
-        .pwr_en = UP,\
-        .ch = "-1",\
-    },
-
 //defines the file prop using the new (2021-10-19) method of deciding whether or not to turn the board on first
 //everything using DEFINE_FILE_PROP will set rx/pwr or tx/pwr to 1 for anything contianing rx or tx in the path
 //Things using this will only turn on rx or tx if specified in the define
@@ -4932,15 +4921,15 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0", SP, NAC)
 
 #define DEFINE_CM()                                                    \
-    DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
-    DEFINE_FILE_PROP("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0") \
-    DEFINE_FILE_PROP("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
-    DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
-    DEFINE_FILE_PROP("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "-1") \
-    DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0")\
-    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
+    DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "-1", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0", SP, NAC)\
+    DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
 
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)\
@@ -4992,10 +4981,10 @@ static prop_t property_table[] = {
 #define X(_p, io) DEFINE_GPIO(_p)
     GPIO_PINS
 #undef X
-    DEFINE_FILE_PROP("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0")
-    DEFINE_FILE_PROP("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0")
-    DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
-    DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
+    DEFINE_FILE_PROP_P("gpio/override_en"                    , hdlr_gpio_override_en,                  RW, "0", SP, NAC)
+    DEFINE_FILE_PROP_P("gpio/gpio_all"                       , hdlr_gpio_gpio_all,                     RW, "0", SP, NAC)
+    DEFINE_FILE_PROP_P("save_config", hdlr_save_config, RW, "/home/root/profile.cfg", SP, NAC)
+    DEFINE_FILE_PROP_P("load_config", hdlr_load_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_CM()
     DEFINE_FPGA_POST()
     DEFINE_SYSTEM_INFO()
