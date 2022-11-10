@@ -3887,6 +3887,8 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
             return RETURN_SUCCESS;
         }
         PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
+        PRINT(ERROR, "SFP established: %x\n", sfp_link_established);
+        PRINT(ERROR, "SFP present: %x\n", sfp_module_present);
     }
     PRINT(ERROR, "Failed to establish sfp link after %i attempts rebooting\n", sfp_max_reset_attempts);
 
