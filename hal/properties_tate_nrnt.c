@@ -164,6 +164,8 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
+int jesd_master_reset();
+
 void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 
@@ -1752,7 +1754,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             /* reset JESD */                                              \
             if(jesd_enabled) {\
                 if(property_good("tx/" STR(ch) "/jesd/status") != 1) {\
-                    jesd_reset_all();\
+                    jesd_master_reset();\
                 }\
             }\
             /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
@@ -2729,7 +2731,8 @@ TX_CHANNELS
             /* reset JESD */                                              \
             if(jesd_enabled) {\
                 if(property_good("rx/" STR(ch) "/jesd/status") != 1) {\
-                    jesd_reset_all();\
+                    /* Attempts to reset JESD if it is down, but does not attempt to reboot the unit or reconfigure sysref delays*/\
+                    jesd_master_reset();\
                 }\
             }\
                                                                                \
