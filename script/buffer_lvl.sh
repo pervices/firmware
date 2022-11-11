@@ -13,10 +13,15 @@ if [ $# -eq 1 ]; then
     mem_location="res_ro${mem_reg}"
 fi
 
+buff_limit=$(mem rr res_ro14)
+buff_limit=$(($buff_limit))
+buff_multiple=$(mem rr res_ro15)
+buff_multiple=$(($buff_multiple))
+
 while true; do
         buff_lvl=$(mem rr $mem_location);
-        buff_lvl=$(($buff_lvl));
-        high=2*32767;
+        buff_lvl=$(($buff_lvl))*$buff_multiple;
+        high=$buff_limit;
 
         if [[ "$buff_lvl" > "$max" ]]
         then
@@ -33,6 +38,6 @@ while true; do
         buff_ap=$((100-buff_percent));
         v=$(printf "%-${buff_percent}s" "");
         vv=$(printf "%-${buff_ap}s" " ");
-        echo -ne "Buff Lvl= $buff_lvl \tMax= $max \tFilled= $buff_percent% \tMax= $maxperc%    \t //${v// /#} ${vv// / } // \r" 
+        echo -ne "Buff Lvl= $buff_lvl \tMax= $max \tFilled= $buff_percent% \tMax= $maxperc%    \t //${v// /#} ${vv// / } // \r"
 
 done
