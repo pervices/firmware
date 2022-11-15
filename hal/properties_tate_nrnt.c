@@ -1752,7 +1752,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             }\
                                                                                \
             /* reset JESD */                                              \
-            if(jesd_enabled) {\
+            if(jesd_enabled && !(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                 if(property_good("tx/" STR(ch) "/jesd/status") != 1) {\
                     jesd_master_reset();\
                 }\
@@ -2729,7 +2729,7 @@ TX_CHANNELS
             }\
                                                                     \
             /* reset JESD */                                              \
-            if(jesd_enabled) {\
+            if(jesd_enabled && !(rx_power[INT(ch)] & PWR_NO_BOARD)) {\
                 if(property_good("rx/" STR(ch) "/jesd/status") != 1) {\
                     /* Attempts to reset JESD if it is down, but does not attempt to reboot the unit or reconfigure sysref delays*/\
                     jesd_master_reset();\
