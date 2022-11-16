@@ -27,6 +27,11 @@
     // Default phase shift of sysref in VCO clock cycles
     #define DEFAULT_DIGITAL_SYSREF_DELAY 24
 
+    // Default analog delay
+    // 0 = 0
+    // Otherwise delay = n * 300ps + 300ps
+    #define DEFAULT_ANALOG_SYSREF_DELAY 0
+
 #elif RTM4
     #define RTM_VER 4
 
@@ -37,6 +42,11 @@
     // Default phase shift of sysref in VCO clock cycles
     #define DEFAULT_DIGITAL_SYSREF_DELAY 24
 
+    // Default analog delay
+    // 0 = 0
+    // Otherwise delay = n * 300ps + 300ps
+    #define DEFAULT_ANALOG_SYSREF_DELAY 0
+
 #elif RTM5
     #define RTM_VER 5
 
@@ -46,6 +56,11 @@
 
     // Default phase shift of sysref in VCO clock cycles
     #define DEFAULT_DIGITAL_SYSREF_DELAY 24
+
+    // Default analog delay
+    // 0 = 0
+    // Otherwise delay = n * 300ps + 300ps
+    #define DEFAULT_ANALOG_SYSREF_DELAY 0
 
 #else
     #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"

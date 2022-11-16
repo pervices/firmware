@@ -71,6 +71,11 @@
     #define NUM_DIGITAL_SYSREF_DELAYS 3
     const int possible_digital_sysref_delays[NUM_DIGITAL_SYSREF_DELAYS] = {24, 25, 26};
 
+    #define NUM_ANALOG_SYSREF_DELAYS 10
+    //0 means delay of 0, 1 = delay of 600ps, 2 = 900ps, 3=1200ps...
+    //Multiples of 1000ps are meaningless at 1G
+    const int possible_analog_sysref_delays[NUM_ANALOG_SYSREF_DELAYS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
+
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
@@ -128,6 +133,11 @@
     // Sysref delays to try if the default fails
     #define NUM_DIGITAL_SYSREF_DELAYS 1
     const int possible_digital_sysref_delays[NUM_DIGITAL_SYSREF_DELAYS] = {24};
+
+    #define NUM_ANALOG_SYSREF_DELAYS 10
+    //0 means delay of 0, 1 = delay of 600ps, 2 = 900ps, 3=1200ps...
+    //Multiples of 1000ps are meaningless at 1G
+    const int possible_analog_sysref_delays[NUM_ANALOG_SYSREF_DELAYS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
