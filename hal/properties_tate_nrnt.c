@@ -3092,20 +3092,21 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 }
 
 // Enables streaming at a target buffer level, instead of relying on start and end of burst commands
-// Dummy function, force stream is a mode set in the FPGA at compile time. This is for the future when it is enabled by a register command
+// 0 stops all fore streaming. To start streaming set this using a value where each bit corresponds to ech channel
+// ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
+// using -1 for streaming all
 static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
-    int request = 0;
+    int32_t request = 0;
     sscanf(data, "%i", &request);
 
-    // Enable tx force stream
-    if(request > 0) {
-    // Disables tx force stream
-    } else if (request == 0) {
+    //Negative values indicate do nothing, positive indicate which channels to use
+        for(int n = 0; n < NUM_TX_CHANNELS; n++) {
+            int32_t request_bit = (request >> n) & 1;
+            request_bit = request_bit << 16;
+            // Setting bit 16 to high enables this modes, low sets it to normal
+            write_hps_reg_mask(tx_reg4_map[n], request_bit, 1 << 16);
+        }
 
-    // Do nothing
-    } else {
-
-    }
     return RETURN_SUCCESS;
 }
 
@@ -3302,7 +3303,7 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
 }
 
 //makes all rx begin streaming data in phase with each other, using an sma trigger
-//0 stops all fore streaming. To start streaming set this using a value where each bit corresponds to ech channel
+//0 stops all force streaming. To start streaming set this using a value where each bit corresponds to ech channel
 //ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
 //using -1 for streaming all
 static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
@@ -4929,7 +4930,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "-1", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0", SP, NAC)\
     DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
