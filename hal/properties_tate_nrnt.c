@@ -894,10 +894,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
         /*command format:*/\
         /*nco -t (type) -n (number) -a (?) -h (6 least significant digits of freq) -m freq in megahertz rounded down*/\
-        strcpy(buf, "nco -t d -n 0 -a 0 -h ");                                 \
-        sprintf(buf + strlen(buf),"%" PRIu32 "", freq_hz);                     \
-        sprintf(buf + strlen(buf)," -m %" PRIu32 "", freq_mhz);                \
-        strcat(buf, " -s\r");                                                  \
+        snprintf(buf, MAX_PROP_LEN, "nco -t d -n 0 -a 0 -h %" PRIu32 " -m %" PRIu32 " -s\r", freq_hz, freq_mhz);\
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         snprintf(ret, MAX_PROP_LEN, "%lu", (uint64_t)(freq_mhz * 1000000 + freq_hz));\
                                                                                \
@@ -1085,7 +1082,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);\
         } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-            snprintf(buf, "rf -b %i\r", band);\
+            snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);\
         }                                                                      \
         else {  /* otherwise mute the tx board */                              \
             strcpy(buf, "rf -z\r");                                            \
@@ -1156,9 +1153,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
 	    if(atten > MAX_RF_ATTEN_TX_AB) atten = MAX_RF_ATTEN_TX_AB;\
         float codef = atten / (float)(RF_ATTEN_STEP_TX);\
         uint16_t codei = roundf(codef);\
-	    strcpy(buf, "rf -a ");						\
-	    snprintf(buf + strlen(buf), MAX_PROP_LEN - strlen(buf), "%hu", codei);				\
-	    strcat(buf, "\r");							\
+	    snprintf(buf, MAX_PROP_LEN, "rf -a %hu\r", codei);\
 	    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));		\
 	    atten = codei * RF_ATTEN_STEP_TX;\
 	    snprintf(ret, MAX_PROP_LEN, "%f", atten);                                     \
@@ -1225,9 +1220,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_board_led(const char *data, char *ret) {      \
-        strcpy(buf, "board -l\r");                                             \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
+        snprintf(buf, MAX_PROP_LEN, "board -l %s\r", data);\
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1982,9 +1975,7 @@ TX_CHANNELS
                                                                                                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_lna(const char *data, char *ret) {       \
-        strcpy(buf, "rf -l ");                                  \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
+        snprintf(buf, MAX_PROP_LEN, "rf -l %s\r", data);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1993,9 +1984,7 @@ TX_CHANNELS
         uint8_t band = 0;                                                          \
         sscanf(data, "%hhu", &band);                                             \
                                                                                \
-        strcpy(buf, "rf -b ");                                  \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
+        snprintf(buf, MAX_PROP_LEN, "rf -b %s\r", data);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         /* if mid or high band swap iq to address RTM3 layout issue */         \
@@ -2157,9 +2146,7 @@ TX_CHANNELS
         else if (atten < 0)                                                    \
             atten = 0;                                                         \
                                                                                \
-        strcpy(buf, "rf -a ");                                                 \
-        snprintf(buf + strlen(buf), MAX_PROP_LEN - strlen(buf), "%i", atten);                               \
-        strcat(buf, "\r");                                                     \
+        snprintf(buf, MAX_PROP_LEN, "rf -a %i\r", atten);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));             \
                                                                                \
         snprintf(ret, MAX_PROP_LEN, "%i", atten);                                             \
@@ -2241,9 +2228,7 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_led(const char *data, char *ret) {      \
-        strcpy(buf, "board -l\r");                                             \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
+        snprintf(buf, MAX_PROP_LEN, "board -l %s\r", data);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3717,9 +3702,7 @@ static int hdlr_time_board_temp(const char *data, char *ret) {
 }
 
 static int hdlr_time_board_led(const char *data, char *ret) {
-    strcpy(buf, "board -l ");
-    strcat(buf, data);
-    strcat(buf, "\r");
+    snprintf(buf, MAX_PROP_LEN, "board -l %s\r", data);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
@@ -4406,9 +4389,7 @@ static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
     char command[MAX_PROP_LEN] = {0};
     sscanf(data, "%s", name);
 
-    strcpy(command, "echo ");
-    strcat(command, name);
-    strcat(command, " > /etc/hostname");
+    snprintf(command, MAX_PROP_LEN, "echo %s > /etc/hostname", name);
     system(command);
 
     return RETURN_SUCCESS;
@@ -4426,9 +4407,7 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     }
 
     // Write to the file
-    strcpy(command, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/");
-    strcat(command, ip_address);
-    strcat(command, "/ /etc/init.d/mcu_init.sh");
+    snprintf(command, MAX_PROP_LEN, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/%s/ /etc/init.d/mcu_init.sh", ip_address);
     system(command);
     return RETURN_SUCCESS;
 }
