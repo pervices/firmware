@@ -3822,6 +3822,24 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_qa_ecc_a_errors(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("ecc0", &val);
+
+    snprintf(ret, MAX_PROP_LEN, "0x%x\n", val);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_qa_ecc_b_errors(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("ecc1", &val);
+
+    snprintf(ret, MAX_PROP_LEN, "0x%x\n", val);
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_temp(const char *data, char *ret) {
     uint32_t old_val = 0;
     read_hps_reg("sys14", &old_val);
@@ -4871,6 +4889,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20", SP, NAC)                \
     DEFINE_FILE_PROP_P("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/qa/ecc_a_errors"                , hdlr_fpga_qa_ecc_a_errors,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/qa/ecc_a_errors"                , hdlr_fpga_qa_ecc_b_errors,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "5000000000", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00", SP, NAC) \
