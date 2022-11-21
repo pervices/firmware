@@ -67,7 +67,7 @@ if [ $# -eq 1 ]; then
 elif [ $# -eq 2 ]; then
     echo "This mode is no longer supported, use NRNT mode"
     exit 80
-elif [ $# -eq 5 ]; then
+elif [ $# -ge 5 ]; then
     if [ "$1" != "TATE_NRNT" ]; then
         echo "Parameters for NRNT specified but product is not NRNT"
         exit 80
@@ -96,3 +96,7 @@ else
 fi
 
 make -j9
+
+if [ $# -ge 6 ]; then
+    mv server $6
+fi
