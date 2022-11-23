@@ -5171,29 +5171,31 @@ void pass_uart_tx_fd(int *fd) { uart_tx_fd = fd; }
 
 void pass_uart_rx_fd(int *fd) { uart_rx_fd = fd; }
 
-char *get_abs_path(prop_t *prop, char *path) {
-    strcpy(path, STATE_DIR "/");
-    strcat(path, prop->path);
+char *get_abs_path(prop_t *prop, char *path, int max_len) {
+    snprintf(path, max_len, STATE_DIR "/%s", prop->path);
     return path;
 }
 
-char *get_abs_dir(prop_t *prop, char *path) {
-    size_t len = 0;
+char *get_abs_dir(prop_t *prop, char *path, int max_length) {
+    size_t dir_path_len = 0;
     size_t i = 0;
     while (prop->path[i]) {
         if (prop->path[i] == '/')
-            len = i;
+            dir_path_len = i;
         i++;
     }
 
-    strcpy(path, STATE_DIR "/");
+    snprintf(path, max_length, STATE_DIR "/");
 
-    size_t temp_len = 0;
-
-    if (len != 0) {
-        temp_len = strlen(path);
-        memcpy(path + temp_len, prop->path, len);
-        path[temp_len + len] = '\0';
+    if (dir_path_len != 0) {
+        int state_path_len = strnlen(path, max_length);
+        if(max_length > dir_path_len + state_path_len + 1) {
+            // The + +1 is space for the null terminator
+            snprintf(path + state_path_len, dir_path_len + 1, prop->path);
+        } else {
+            PRINT(ERROR, "path buffer is to small for path\n");
+            abort();
+        }
     }
 
     return path;

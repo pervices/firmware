@@ -353,10 +353,12 @@ int main(int argc, char *argv[]) {
             // strcpy(buf, "fwd -b   -m '");
             // buf[7] = fwd_board;
             fgets(buf, MAX_UART_SEND_LEN, stdin);
-            strcat(buf, "'\r");
+            int read_in_n = strnlen(buf, MAX_UART_SEND_LEN);
+            snprintf(buf + read_in_n, MAX_UART_SEND_LEN - read_in_n, "'\r");
         } else {
             fgets(buf, MAX_UART_SEND_LEN, stdin);
-            strcat(buf, "\r");
+            int read_in_n = strnlen(buf, MAX_UART_SEND_LEN);
+            snprintf(buf + read_in_n, MAX_UART_SEND_LEN - read_in_n, "'\r");
         }
 
         send_uart_comm(uart_comm_fd, (uint8_t *)buf, strlen(buf));

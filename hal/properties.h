@@ -80,8 +80,8 @@ prop_t *get_prop(size_t idx);
 prop_t *get_prop_from_wd(int wd);
 prop_t *get_prop_from_hdlr(int (*hdlr)(const char *, char *));
 prop_t *get_prop_from_cmd(const char *cmd);
-char *get_abs_path(prop_t *prop, char *path);
-char *get_abs_dir(prop_t *prop, char *path);
+char *get_abs_path(prop_t *prop, char *path, int max_length);
+char *get_abs_dir(prop_t *prop, char *path, int max_length);
 char *get_root(prop_t *prop, char *root);
 
 void pass_uart_synth_fd(int fd);
