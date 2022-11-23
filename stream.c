@@ -17,7 +17,7 @@ int main(void)
     for(int i = 0; 1; i++)
     {
         char message[512] = { 0 };
-        sprintf(message, "The quick brown fox jumps over the lazy dog and fell into a puddle of rubble, next to home sweet home: %d\r\n", i);
+        snprintf(message, 512, "The quick brown fox jumps over the lazy dog and fell into a puddle of rubble, next to home sweet home: %d\r\n", i);
 
         send_uart(fd, (uint8_t*) message, strlen(message));
 
