@@ -2247,18 +2247,11 @@ TX_CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_dsp_gain(const char *data, char *ret) {          \
         uint32_t gain;\
-        uint32_t clear_util = 0xff;\
+        uint32_t gain_mask = 0xff<< (8*(INT(ch)%4));\
         sscanf(data, "%i", &gain);                                            \
         if(gain > 0xff) gain = 0xff;\
-        gain = gain << (8*(INT(ch)%4));\
-        clear_util = clear_util << (8*(INT(ch)%4));\
-        uint32_t reg_val;\
-        read_hps_reg(rxg_map[(int)(INT(ch)/4)], &reg_val);                                  \
-        /*Clears the bits used in the reg for this channel's dsp gain*/\
-        reg_val = reg_val & ~clear_util;\
-        /*Sets the bits used in the reg for this channel's dsp gain*/\
-        reg_val = reg_val | gain;\
-        write_hps_reg(rxg_map[(int)(INT(ch)/4)], reg_val);            \
+        uint32_t gain_bits = gain << (8*(INT(ch)%4));\
+        write_hps_reg_mask(rxg_map[(int)(INT(ch)/4)], gain_bits, gain_mask);            \
         snprintf(ret, MAX_PROP_LEN, "%i", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
