@@ -4540,6 +4540,26 @@ static int hdlr_system_get_buffer_level_multiple(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Performs self calibration, not required by most versions
+// Note: may also require UHD to perform tasks
+// Intended flow:
+// UHD checks this property, if non-zero skip self calibration since it has already been done
+// UHD performs the self calibration process, and this property gets set to 1
+// Currently, UHD controls the entire self-calibration process and this just stores whether or not it has been performed
+static int hdlr_system_self_calibration(const char *data, char *ret) {
+    int self_calibration_request = 0;
+    sscanf(data, "%i", &self_calibration_request);
+
+    if(self_calibration_request) {
+        snprintf(ret, MAX_PROP_LEN, "%i", 1);
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "%i", 1);
+    }
+
+    return RETURN_SUCCESS;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -4931,6 +4951,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/otw_rx"                   , hdlr_invalid,                           RO, S_OTW_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "-1", SP, NAC)\
 
 static prop_t property_table[] = {
 // Turns off rx boards
@@ -5043,6 +5064,13 @@ void patch_tree(void) {
 
         TX_CHANNELS
     #undef X
+#endif
+
+#if RTM_VER == 3 || RTM_VER == 4
+    set_default_int("system/self_calibration", -1);
+
+#elif RTM_VER == 5
+    set_default_int("system/self_calibration", -1);
 #endif
 
     // Read a configuration file to overrid default values of the state tree. Must be done at adjusting the default state tree values
