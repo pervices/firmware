@@ -314,7 +314,6 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
     fclose(data_file);
 }
 
-#if NUM_TX_CHANNELS > 0
     int network_speed_cache = 0;
     int is_network_speed_cached = 0;
     static int get_network_speed() {
@@ -329,6 +328,7 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
         }
     }
 
+#if NUM_TX_CHANNELS > 0
     static int get_tx_dst_port_map_loc(int chan) {
         int network_speed = get_network_speed();
         if(network_speed == 40) {
@@ -4559,6 +4559,11 @@ static int hdlr_system_self_calibration(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_system_get_link_speed(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%i", get_network_speed());
+    return RETURN_SUCCESS;
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
@@ -4942,6 +4947,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0", SP, NAC)\
     DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
 
+// Contians information baout the configuration
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/num_tx"                   , hdlr_invalid,                           RO, S_NUM_TX, SP, NAC)\
@@ -4952,6 +4958,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "-1", SP, NAC)\
+    DEFINE_FILE_PROP_P("system/get_link_speed"           , hdlr_system_get_link_speed,             RW, "-1", SP, NAC)
 
 static prop_t property_table[] = {
 // Turns off rx boards
