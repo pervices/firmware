@@ -1982,10 +1982,14 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        uint8_t band = 0;                                                          \
-        sscanf(data, "%hhu", &band);                                             \
+        int16_t band = 0;                                                          \
+        sscanf(data, "%hi", &band);                                             \
                                                                                \
-        snprintf(buf, MAX_PROP_LEN, "rf -b %s\r", data);\
+        /* mcu only accepts 8 bit unsigned ints */\
+        if(band < 0 || band > 0xff) band = 0xff;\
+        \
+        snprintf(buf, MAX_PROP_LEN, "rf -b %hhx\r", (uint8_t) band);\
+        PRINT(ERROR, "%s", buf);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         /* if mid or high band swap iq to address RTM3 layout issue */         \
