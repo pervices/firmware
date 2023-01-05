@@ -5090,7 +5090,7 @@ GPIO_PINS
 
 #define DEFINE_RX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)\
-        DEFINE_FILE_PROP_P("rx/" #_c "/jesd/mask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)
+        DEFINE_FILE_PROP_P("rx/" #_c "/jesd/unmask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)
 
 #define DEFINE_RX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
@@ -5738,7 +5738,7 @@ int jesd_master_reset() {
         //Unmask all channels for next attempt
         for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
-                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/unmask", chan+'a');
                 set_property(prop_path, "1");
             } else {
             }
@@ -5753,7 +5753,7 @@ int jesd_master_reset() {
         //Immediately mask all channels.
         for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
-                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+                snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/unmask", chan+'a');
                 set_property(prop_path, "0");
             } else {
             }
@@ -5791,7 +5791,7 @@ int jesd_master_reset() {
     for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
             write_hps_reg_mask(rx_reg4_map[chan], original_rx4[chan], 0x2);
-            snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/mask", chan+'a');
+            snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/unmask", chan+'a');
             set_property(prop_path, "0");
         } else {
             // Leave dsp in reset if there is no board in that slot, note this line should be redundant since the dsp will be left in reset
