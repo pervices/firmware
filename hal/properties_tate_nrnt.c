@@ -164,10 +164,22 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
+const int jesd_reset_delay = 100000;
+const int jesd_mask_delay = 200000;
+
 int jesd_master_reset();
+static int hdlr_jesd_reset_master(const char *data, char *ret);
 
 void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+
+typedef enum {
+    pulsed = 0,
+    continuous = 1,
+    unspecified_sysref
+} sysref_modes;
+
+sysref_modes current_sysref_mode = unspecified_sysref;
 
 /* clang-format on */
 
@@ -1681,13 +1693,23 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        int reset;                                                            \
+        int reset = 0;                                                            \
         sscanf(data, "%i", &reset);                                           \
-        if (!reset){\
+        if (reset){\
+            set_property("tx/" STR(ch) "/jesd/unmask", "1");\
+            /* Gives time for sysref unmask to update, can probably be shorted */\
+            usleep(jesd_mask_delay);\
+            write_hps_reg_mask("res_rw7", 1 << (INDIVIDUAL_RESET_BIT_OFFSET_TX + INT(ch)), 1 << (INDIVIDUAL_RESET_BIT_OFFSET_TX + INT(ch)));\
+            write_hps_reg_mask("res_rw7", 0, 1 << (INDIVIDUAL_RESET_BIT_OFFSET_TX + INT(ch)));\
+            /* Issues sysref pulse if not in continuous */\
+            if(current_sysref_mode != continuous) {\
+                set_property("time/sync/lmk_sync_tgl_jesd", "1");\
+            };\
+            usleep(jesd_reset_delay);\
+            set_property("tx/" STR(ch) "/jesd/unmask", "0");\
             return RETURN_SUCCESS;\
         }\
         else {\
-            jesd_reset_all();\
             return RETURN_SUCCESS;\
         }\
     }\
@@ -1742,7 +1764,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             /* reset JESD */                                              \
             if(jesd_enabled && !(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                 if(property_good("tx/" STR(ch) "/jesd/status") != 1) {\
-                    jesd_master_reset();\
+                    set_property("tx/" STR(ch) "/jesd/reset", "1");\
                 }\
             }\
             /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
@@ -3019,13 +3041,23 @@ TX_CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
-        int reset;                                                            \
+        int reset = 0;                                                            \
         sscanf(data, "%i", &reset);                                           \
-        if (!reset){\
+        if (reset){\
+            set_property("rx/" STR(ch) "/jesd/unmask", "1");\
+            /* Gives time for sysref unmask to update, can probably be shorted */\
+            usleep(jesd_mask_delay);\
+            write_hps_reg_mask("res_rw7", 1 << (INDIVIDUAL_RESET_BIT_OFFSET_RX + INT(ch)), 1 << (INDIVIDUAL_RESET_BIT_OFFSET_RX + INT(ch)));\
+            write_hps_reg_mask("res_rw7", 1 << (INDIVIDUAL_RESET_BIT_OFFSET_RX + INT(ch)), 1 << (INDIVIDUAL_RESET_BIT_OFFSET_RX + INT(ch)));\
+            /* Issues sysref pulse if not in continuous */\
+            if(current_sysref_mode != continuous) {\
+                set_property("time/sync/lmk_sync_tgl_jesd", "1");\
+            };\
+            usleep(jesd_reset_delay);\
+            set_property("rx/" STR(ch) "/jesd/unmask", "0");\
             return RETURN_SUCCESS;\
         }\
         else {\
-            jesd_reset_all();\
             return RETURN_SUCCESS;\
         }\
     }                                                                          \
@@ -3130,7 +3162,7 @@ TX_CHANNELS
             if(jesd_enabled && !(rx_power[INT(ch)] & PWR_NO_BOARD)) {\
                 if(property_good("rx/" STR(ch) "/jesd/status") != 1) {\
                     /* Attempts to reset JESD if it is down, but does not attempt to reboot the unit or reconfigure sysref delays*/\
-                    jesd_master_reset();\
+                    set_property("rx/" STR(ch) "/jesd/reset", "1");\
                 }\
             }\
                                                                                \
@@ -3903,14 +3935,6 @@ static int hdlr_time_source_freq(const char *data, char *ret) {
     snprintf(ret, MAX_PROP_LEN, "%u", freq);
     return RETURN_SUCCESS;
 }
-
-typedef enum {
-    pulsed = 0,
-    continuous = 1,
-    unspecified_sysref
-} sysref_modes;
-
-sysref_modes current_sysref_mode = unspecified_sysref;
 
 // choose pulsed or continuous SYSREF
 static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
@@ -4889,18 +4913,6 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-//Only allows jesd_reset_all to work, something else must reset the JESDs after enabling them
-static int hdlr_fpga_enable_jesd(const char *data, char *ret) {
-    uint8_t enable_jesd = 0;
-    sscanf(data, "%hhu", &enable_jesd);
-    if(enable_jesd) {
-        jesd_enabled = 1;
-    } else {
-        jesd_enabled = 0;
-    }
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_fpga_reset(const char *data, char *ret) {
     /* The reset controllet is like a waterfall:
      * Global Reset -> 40G Reset -> JESD Reset -> DSP Reset
@@ -5376,7 +5388,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
 
 #define DEFINE_FPGA_POST()                                                                                                         \
-    DEFINE_FILE_PROP_P("fpga/link/enable_jesd"               , hdlr_fpga_enable_jesd,                      RW, "1", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"            , hdlr_jesd_reset_master,                      RW, "1", SP, NAC)               \
 
 #define DEFINE_GPIO(_p)                                                                                                        \
     DEFINE_FILE_PROP_P("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0", SP, NAC)
@@ -5692,8 +5704,6 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     _save_profile_path = save_path;
 }
 
-const int jesd_reset_delay = 100000;
-const int jesd_mask_delay = 200000;
 const int jesd_max_attempts = 3;
 const int jesd_max_server_restart_attempts = 3;
 
@@ -5824,11 +5834,17 @@ void set_analog_sysref_delay(int analog_sysref_delay) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 }
 
-void jesd_reset_all() {
-    //jesd_enabled is set after every board has been powered on and prepared. This avoids having to reset every board every time a board is booted during the boot process
-    if(!jesd_enabled) {
-        return;
+// Returns 1 is jesd links come up, 1 if any links fail
+static int hdlr_jesd_reset_master(const char *data, char *ret) {
+    //Do nothing is 0 is provided, reset all if everything else is provided
+    int reset = 0;
+    sscanf(data, "%i", &reset);
+    if (!reset){
+        return RETURN_SUCCESS;
     }
+
+    // Enables individual resets (primarily used to prevent individual resets from being triggered until all JESD is up
+    jesd_enabled = 1;
 
     set_property("time/sync/sysref_mode", "continuous");
 
@@ -5888,12 +5904,17 @@ void jesd_reset_all() {
             }
         } else {
             PRINT(ERROR, "Unable to establish JESD links despite multiple server restarts. The system will not attempt another server restart to bring up JESD links until a successful attempt to establish links\n");
+            snprintf(ret, MAX_PROP_LEN, "1");
         }
     }
 
     // This print message is down here instead of in jesd_master_reset in order to make it closer to the end of server boot to make it easier to spot
     if(!jesd_master_error) {
         PRINT(INFO, "All JESD successfully established\n");
+        snprintf(ret, MAX_PROP_LEN, "0");
+        return RETURN_SUCCESS;
+    } else {
+        return RETURN_ERROR;
     }
 }
 
