@@ -5754,6 +5754,15 @@ int jesd_master_reset() {
             }
         }
 
+        // TODO: add function on tx board instead of using register write
+        snprintf(buf, MAX_PROP_LEN, "dac -r 03a -w 2\r");
+#define X(ch)                                                              \
+        if(tx_power[INT(ch)]==PWR_HALF_ON || tx_power[INT(ch)]==PWR_ON) {\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        }
+        TX_CHANNELS
+#undef X
+
         //Issue JESD master reset
         set_property("fpga/reset", "3");
 
