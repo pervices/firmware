@@ -5766,6 +5766,10 @@ int jesd_master_reset() {
         //Issue JESD master reset
         set_property("fpga/reset", "3");
 
+        //Wait for links to go down
+        usleep(jesd_reset_delay);
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");
+
         //Wait for links to re-establish
         usleep(jesd_reset_delay);
 
@@ -5855,7 +5859,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     // Enables individual resets (primarily used to prevent individual resets from being triggered until all JESD is up
     jesd_enabled = 1;
 
-    set_property("time/sync/sysref_mode", "continuous");
+    set_property("time/sync/sysref_mode", "pulsed");
 
     int64_t digital_sysref_delay = 0;
     if(read_interboot_variable("digital_sysref_delay", &digital_sysref_delay)) {
@@ -5892,8 +5896,6 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
             }
         }
     }
-
-    set_property("time/sync/sysref_mode", "pulsed");
 
     if(!jesd_master_error) {
         update_interboot_variable("cons_jesd_fail_count", 0);
