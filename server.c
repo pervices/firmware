@@ -204,8 +204,10 @@ int main(int argc, char *argv[]) {
         abort();
     } 
 
+    //JESD is brought up as part of the property tree in Cyan, jesd_Reset_all is required for Crimson
+    //TODO: add ifdef to call jesd_reset_all for Crimson here if the repositories ever get merged
     //Resets/brings up all JESDs
-    jesd_reset_all();
+    //jesd_reset_all();
     
     // Let the user know the server is ready to receive commands
     PRINT(INFO, "Cyan server is up\n");

@@ -112,7 +112,8 @@ static void change_group_permissions_for_all(void) {
 
 // Helper function to make properties
 static void make_prop(prop_t *prop) {
-    char cmd[2*MAX_PATH_LEN + 100];
+    const int CMD_LENGTH = 2*MAX_PATH_LEN + 100;
+    char cmd[CMD_LENGTH];
     char path[MAX_PATH_LEN];
 
     switch (prop->type) {
@@ -125,15 +126,13 @@ static void make_prop(prop_t *prop) {
 
         // TODO: @CF: use mkdir(2)
         // mkdir -p /home/root/state/*
-        strcpy(cmd, "mkdir -p ");
-        strcat(cmd, get_abs_dir(prop, path));
+        snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
         // TODO: replace with openat(2)
         // touch /home/root/state/*
-        strcpy(cmd, "touch ");
-        strcat(cmd, get_abs_path(prop, path));
+        snprintf(cmd, CMD_LENGTH, "touch %s", get_abs_path(prop, path, MAX_PATH_LEN));
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
@@ -141,20 +140,17 @@ static void make_prop(prop_t *prop) {
         // if read only property, change permissions
         if (prop->permissions == RO) {
             // chmod a-w /home/root/state/*
-            strcpy(cmd, "chmod 0444 ");
-            strcat(cmd, get_abs_path(prop, path));
+            snprintf(cmd, CMD_LENGTH, "chmod 0444 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
             system(cmd);
         } else if (prop->permissions == WO) {
             // TODO: @CF: use fchmodat(2)
             // chmod a-r /home/root/state/*
-            strcpy(cmd, "chmod 0222 ");
-            strcat(cmd, get_abs_path(prop, path));
+            snprintf(cmd, CMD_LENGTH, "chmod 0222 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
             system(cmd);
         } else if (prop->permissions == RW) {
             // TODO: @CF: use fchmodat(2)
             // chmod a-r /home/root/state/*
-            strcpy(cmd, "chmod 0666 ");
-            strcat(cmd, get_abs_path(prop, path));
+            snprintf(cmd, CMD_LENGTH, "chmod 0666 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
             system(cmd);
         }
 
@@ -168,8 +164,7 @@ static void make_prop(prop_t *prop) {
 
         // TODO: @CF: use mkdir(2)
         // mkdir -p /home/root/state/*
-        strcpy(cmd, "mkdir -p ");
-        strcat(cmd, get_abs_dir(prop, path));
+        snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
@@ -193,7 +188,7 @@ static void add_prop_to_inotify(prop_t *prop) {
 
     // check if RO property
     if (prop->permissions != RO) {
-        prop->wd = inotify_add_watch(inotify_fd, get_abs_path(prop, path),
+        prop->wd = inotify_add_watch(inotify_fd, get_abs_path(prop, path, MAX_PATH_LEN),
                                      IN_CLOSE_WRITE);
     }
 
@@ -215,7 +210,7 @@ static void init_prop_val(prop_t *prop) {
 
     // if not WO property
     if (prop->permissions != WO) {
-        write_to_file(get_abs_path(prop, path), prop->def_val);
+        write_to_file(get_abs_path(prop, path, MAX_PATH_LEN), prop->def_val);
     }
 }
 
@@ -285,7 +280,7 @@ int init_property(uint8_t options) {
     static char name[512];
     #define X(ch, io)                                                              \
         const int chan_##ch = INT(ch);                                             \
-        sprintf(name, UART_CYAN_RFE "%d", chan_##ch);                               \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_##ch);                               \
         init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
     CHANNELS
     #undef X
@@ -293,7 +288,7 @@ int init_property(uint8_t options) {
     static char name[512];
     #define X(ch)                                                              \
         const int chan_rx_##ch = INT_RX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
         init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);
     CHANNELS
     #undef X
@@ -301,10 +296,10 @@ int init_property(uint8_t options) {
     static char name[512];
     #define X(ch)                                                              \
         const int chan_rx_##ch = INT_RX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
         init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);                      \
         const int chan_tx_##ch = INT_TX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);                      
     CHANNELS
     #undef X
@@ -312,13 +307,13 @@ int init_property(uint8_t options) {
     static char name[512];
     #define X(ch)\
         const int chan_rx_##ch = INT_RX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
         init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);
     RX_CHANNELS
     #undef X
     #define X(ch)\
         const int chan_tx_##ch = INT_TX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);                      
     TX_CHANNELS
     #undef X
@@ -326,10 +321,10 @@ int init_property(uint8_t options) {
     static char name[512];
     #define X(ch)                                                              \
         const int chan_rx_##ch = INT_RX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
         init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);                      \
         const int chan_tx_##ch = INT_TX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);
     CHANNELS
     #undef X
@@ -337,13 +332,13 @@ int init_property(uint8_t options) {
     static char name[512];
     #define X(ch)\
         const int chan_rx_##ch = INT_RX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
         init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);
     RX_CHANNELS
     #undef X
     #define X(ch)\
         const int chan_tx_##ch = INT_TX(ch);                                          \
-        sprintf(name, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
+        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);
     TX_CHANNELS
     #undef X
@@ -427,7 +422,7 @@ void check_property_inotifies(void) {
             // executing handler\n", prop -> path);
 
             // read the change from the file
-            read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
+            read_from_file(get_abs_path(prop, path, MAX_PATH_LEN), prop_data, MAX_PROP_LEN);
             snprintf(prop_ret, MAX_PROP_LEN, prop_data);
 
             PRINT(INFO, "%s(): set_property( %s, %s )\n", __func__,
@@ -453,11 +448,11 @@ void check_property_inotifies(void) {
                 PRINT(VERBOSE, "Removed inotify, wd: %i\n", prop->wd);
 
                 // write output of handler to property
-                write_to_file(get_abs_path(prop, path), prop_ret);
+                write_to_file(get_abs_path(prop, path, MAX_PATH_LEN), prop_ret);
 
                 // re-add property to inotify
                 prop->wd = inotify_add_watch(
-                    inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
+                    inotify_fd, get_abs_path(prop, path, MAX_PATH_LEN), IN_CLOSE_WRITE);
                 if (prop->wd < 0) {
                     PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 }
@@ -565,7 +560,7 @@ int get_property(const char *prop, char *data, size_t max_len) {
         return RETURN_ERROR_GET_PROP;
     }
 
-    read_from_file(get_abs_path(temp, path), data, max_len);
+    read_from_file(get_abs_path(temp, path, MAX_PATH_LEN), data, max_len);
 
     return RETURN_SUCCESS;
 }
@@ -605,7 +600,7 @@ void power_on_channel(bool is_tx, char channel) {
         PRINT(ERROR, "Cannot find prop for command '%s', channel: %i\n", buf, channel);
         return;
     }
-    write_to_file(get_abs_path(prop, buf), "1");
+    write_to_file(get_abs_path(prop, buf, MAX_PATH_LEN), "1");
 }
 
 void power_on_channel_fixup(char *path) {
@@ -656,7 +651,7 @@ int set_property(const char *prop, const char *data) {
         power_on_channel(1, *(temp->ch));
     }
 
-    write_to_file(get_abs_path(temp, path), data);
+    write_to_file(get_abs_path(temp, path, MAX_PATH_LEN), data);
 
     check_property_inotifies();
 
@@ -674,7 +669,7 @@ int property_good(char *path) {
     char property_read[5];
     char fullpath[200] = STATE_DIR "/";
     
-    strcat(&fullpath[0], path);
+    snprintf(&fullpath[0], 200, path);
     // need to write to the property to force an update
     set_property(&fullpath[0],"0");
     // then read from the property

@@ -338,7 +338,7 @@ static void flow_request_process(struct flow_context *fc) {
     if (r >= sizeof(flow_buffer)) {
         errno = ENOMEM;
         r = errno;
-        E("sprintf(3) requires a buffer of %d bytes, but only %d are available",
+        E("snprintf(3) requires a buffer of %d bytes, but only %d are available",
           r, sizeof(flow_buffer));
         goto out;
     }
