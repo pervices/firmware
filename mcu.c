@@ -191,7 +191,7 @@ static void parse_args(int argc, char *argv[]) {
             #elif defined(TATE_8R)
                 printf("Product: TATE_8R\n");
             #elif defined(TATE_NRNT)
-                printf("Product: TATE_9R7T\n");
+                printf("Product: TATE_NRNT\n");
             #elif defined(VAUNT)
                 printf("Product: VAUNT\n");
             #else

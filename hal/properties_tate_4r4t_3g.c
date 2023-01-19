@@ -2593,6 +2593,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd2_iy(const char *data, char *ret) {                  \
@@ -2611,6 +2612,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qx(const char *data, char *ret) {                  \
@@ -2629,6 +2631,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qy(const char *data, char *ret) {                  \
@@ -2647,6 +2650,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_ix(const char *data, char *ret) {                      \
@@ -2665,6 +2669,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd3_iy(const char *data, char *ret) {                  \
@@ -2683,6 +2688,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qx(const char *data, char *ret) {                  \
@@ -2701,6 +2707,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qy(const char *data, char *ret) {                  \
@@ -2719,6 +2726,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) harmonic_distortion);                           \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_ix(const char *data, char *ret) {                  \
@@ -2737,6 +2745,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) im_input);                                      \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_qx(const char *data, char *ret) {                  \
@@ -2755,6 +2764,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) im_input);                                      \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_ix(const char *data, char *ret) {                      \
@@ -2773,6 +2783,7 @@ CHANNELS
             sprintf(buf + strlen(buf),"%x",im_input);                       \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) im_input);                                      \
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_im3_iy(const char *data, char *ret) {                  \
@@ -2791,6 +2802,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) im_input);                                      \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qx(const char *data, char *ret) {                  \
@@ -2809,6 +2821,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) im_input);                                      \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qy(const char *data, char *ret) {                  \
@@ -2827,6 +2840,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) im_input);                                      \
             return RETURN_SUCCESS;                                                     \
     }                                                                                  \
     static int hdlr_rx_##ch##_iq_ip3cc(const char *data, char *ret) {                  \
@@ -2845,6 +2859,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",cc_adj);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) cc_adj);                                        \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_ip3ic(const char *data, char *ret) {                  \
@@ -2863,6 +2878,7 @@ CHANNELS
             sprintf(buf+ strlen(buf),"%x",ic_adj);                             \
             strcat(buf, "\r");                                                         \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));     \
+            sprintf(ret,"%d",(uint8_t) ic_adj);                                        \
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
                                                                                \
