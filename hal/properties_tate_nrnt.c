@@ -1272,6 +1272,9 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
         if(rate > TX_BASE_SAMPLE_RATE) rate = TX_BASE_SAMPLE_RATE;\
+        /*TMP: Always set rate to 1Gsps but tell property tree it was set to desired amount */\
+        double fake_rate = rate;\
+        rate = 1000000000;\
         \
         /* bypasses dsp when at the full sample rate*/\
         if(rate > ((TX_BASE_SAMPLE_RATE-TX_DSP_SAMPLE_RATE)*(1-RATE_ROUND_BIAS))+TX_DSP_SAMPLE_RATE) {\
@@ -1290,7 +1293,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
-        snprintf(ret, MAX_PROP_LEN, "%lf", rate);\
+        snprintf(ret, MAX_PROP_LEN, "%lf", fake_rate);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3827,18 +3830,6 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_time_clk_dev_clk_freq(const char *data, char *ret) {
-    uint16_t freq;
-    sscanf(data, "%hu", &freq);
-    snprintf(buf, MAX_PROP_LEN, "board -c %hu\r", freq);
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    int32_t ret_freq = -1;
-    sscanf((char *) uart_ret_buf, "%i", &ret_freq);
-    if(ret_freq==freq) strcpy(ret, "good");
-    else snprintf(ret, MAX_PROP_LEN, "%i", ret_freq);
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_time_clk_cmd(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -5296,7 +5287,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/clk/pps_dir"                    , hdlr_time_clk_pps_direction,            RW, "internal", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
-    DEFINE_FILE_PROP_P("time/clk/dev_clk_freq"               , hdlr_time_clk_dev_clk_freq,              RW, S_MAX_RATE_MHZ, SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked", SP, NAC)  \
@@ -5832,16 +5822,6 @@ int jesd_master_reset() {
 }
 
 //sets sysref delay in VCO clock cycles
-void set_digital_sysref_delay(int digital_sysref_delay) {
-    snprintf(buf, MAX_PROP_LEN, "ddly -l 7 -s %i\r", digital_sysref_delay);
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
-    // Board -c (use by hdlr_time_clk_dev_clk_freq) is required to update the delay after setting it
-    snprintf(buf, MAX_PROP_LEN, "board -c " S_MAX_RATE_MHZ "\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-}
-
-//sets sysref delay in VCO clock cycles
 void set_analog_sysref_delay(int analog_sysref_delay) {
     snprintf(buf, MAX_PROP_LEN, "adly -l 7 -c a -s %i\r", analog_sysref_delay);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -5861,17 +5841,11 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
     set_property("time/sync/sysref_mode", "pulsed");
 
-    int64_t digital_sysref_delay = 0;
-    if(read_interboot_variable("digital_sysref_delay", &digital_sysref_delay)) {
-        digital_sysref_delay = DEFAULT_DIGITAL_SYSREF_DELAY;
-    }
-
     int64_t analog_sysref_delay = 0;
     if(read_interboot_variable("analog_sysref_delay", &analog_sysref_delay)) {
         analog_sysref_delay = DEFAULT_ANALOG_SYSREF_DELAY;
     }
 
-    set_digital_sysref_delay(digital_sysref_delay);
     set_analog_sysref_delay(analog_sysref_delay);
 
     // Note this is set to 0 for success, any other value for failure
@@ -5879,27 +5853,22 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
     // Test all possible values of sysref delay until one works if the previously save/default failed
     if(jesd_master_error) {
-        PRINT(ERROR, "Attempt to bring up JESD with a digital sysref delay of %i and analog sysref delay of %i failed\n", digital_sysref_delay, analog_sysref_delay);
-        for(int n = 0; n < NUM_DIGITAL_SYSREF_DELAYS; n++) {
-            digital_sysref_delay = possible_digital_sysref_delays[n];
-            set_digital_sysref_delay(digital_sysref_delay);
+        PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
 
-            for(int n = 0; n < NUM_ANALOG_SYSREF_DELAYS; n++) {
-                analog_sysref_delay = possible_analog_sysref_delays[n];
-                set_analog_sysref_delay(analog_sysref_delay);
-                PRINT(ERROR, "Attempting to bring up JESD with a digital sysref delay of %i and analog sysref delay of %i\n", digital_sysref_delay, analog_sysref_delay);
-                jesd_master_error = jesd_master_reset();
-                if(!jesd_master_error) {
-                    break;
-                }
-                PRINT(ERROR, "Attempt to bring up JESD with a digital sysref delay of %i and analog sysref delay of %i failed\n", digital_sysref_delay, analog_sysref_delay);
+        for(int n = 0; n < NUM_ANALOG_SYSREF_DELAYS; n++) {
+            analog_sysref_delay = possible_analog_sysref_delays[n];
+            set_analog_sysref_delay(analog_sysref_delay);
+            PRINT(ERROR, "Attempting to bring up JESD with an analog sysref delay of %i\n", analog_sysref_delay);
+            jesd_master_error = jesd_master_reset();
+            if(!jesd_master_error) {
+                break;
             }
+            PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
         }
     }
 
     if(!jesd_master_error) {
         update_interboot_variable("cons_jesd_fail_count", 0);
-        update_interboot_variable("digital_sysref_delay", digital_sysref_delay);
         update_interboot_variable("analog_sysref_delay", analog_sysref_delay);
     } else {
         int64_t failed_count = 0;

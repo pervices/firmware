@@ -24,9 +24,6 @@
     // To compensate for this some revisions swapped dev clk on hardware
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 1
 
-    // Default phase shift of sysref in VCO clock cycles
-    #define DEFAULT_DIGITAL_SYSREF_DELAY 24
-
     // Default analog delay
     // 0 = 0
     // Otherwise delay = n * 300ps + 300ps
@@ -39,9 +36,6 @@
     // To compensate for this some revisions swapped dev clk on hardware
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 1
 
-    // Default phase shift of sysref in VCO clock cycles
-    #define DEFAULT_DIGITAL_SYSREF_DELAY 24
-
     // Default analog delay
     // 0 = 0
     // Otherwise delay = n * 300ps + 300ps
@@ -53,9 +47,6 @@
     // On 1Gsps sysref is activated on the falling edge of sysref, other stuff is active on the rising edge
     // To compensate for this some revisions swapped dev clk on hardware
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 0
-
-    // Default phase shift of sysref in VCO clock cycles
-    #define DEFAULT_DIGITAL_SYSREF_DELAY 24
 
     // Default analog delay
     // 0 = 0
