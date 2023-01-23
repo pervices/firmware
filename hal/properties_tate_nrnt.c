@@ -1272,9 +1272,6 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
         if(rate > TX_BASE_SAMPLE_RATE) rate = TX_BASE_SAMPLE_RATE;\
-        /*TMP: Always set rate to 1Gsps but tell property tree it was set to desired amount */\
-        double fake_rate = rate;\
-        rate = 1000000000;\
         \
         /* bypasses dsp when at the full sample rate*/\
         if(rate > ((TX_BASE_SAMPLE_RATE-TX_DSP_SAMPLE_RATE)*(1-RATE_ROUND_BIAS))+TX_DSP_SAMPLE_RATE) {\
@@ -1293,7 +1290,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
-        snprintf(ret, MAX_PROP_LEN, "%lf", fake_rate);\
+        snprintf(ret, MAX_PROP_LEN, "%lf", rate);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
