@@ -5888,9 +5888,10 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     // This print message is down here instead of in jesd_master_reset in order to make it closer to the end of server boot to make it easier to spot
     if(!jesd_master_error) {
         PRINT(INFO, "All JESD successfully established\n");
-        snprintf(ret, MAX_PROP_LEN, "0");
+        snprintf(ret, MAX_PROP_LEN, "good");
         return RETURN_SUCCESS;
     } else {
+        snprintf(ret, MAX_PROP_LEN, "good");
         return RETURN_ERROR;
     }
 }
