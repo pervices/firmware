@@ -4575,7 +4575,7 @@ static int hdlr_fpga_about_hps_only(const char *data, char *ret) {
 // if 1 DDR is used in this FPGA build, 0 indicates FIFO only
 // FIFO is used when DDR can't keep up, but has very little space
 // This is for FPGA versioning only, use system/get_max_buffer_level to get the maximum buffer level (which is what matters to external programs)
-static int hdlr_fpga_about_hps_ddr_used(const char *data, char *ret) {
+static int hdlr_fpga_about_ddr_used(const char *data, char *ret) {
     uint32_t val = 0;
     read_hps_reg("res_ro12", &val);
     val = (val >> 31) & 0x1;
@@ -5407,7 +5407,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/rtm"                      , hdlr_fpga_about_rtm,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/backplane_pinout"         , hdlr_fpga_about_backplane_pinout,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/hps_only"                 , hdlr_fpga_about_hps_only,              RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/about/ddr_used"                 , hdlr_fpga_about_hps_ddr_used,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/ddr_used"                 , hdlr_fpga_about_ddr_used,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
