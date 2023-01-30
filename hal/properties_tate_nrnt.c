@@ -4684,11 +4684,9 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_rate(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%li", get_network_speed()*(int64_t)1000000000);
     return RETURN_SUCCESS;
 }
-
-
-
 
 static int hdlr_fpga_link_sfpa_ip_addr(const char *data, char *ret) {
     uint32_t ip[4];
@@ -5059,12 +5057,6 @@ static int hdlr_system_self_calibration(const char *data, char *ret) {
 
     return RETURN_SUCCESS;
 }
-
-static int hdlr_system_get_link_speed(const char *data, char *ret) {
-    snprintf(ret, MAX_PROP_LEN, "%i", get_network_speed());
-    return RETURN_SUCCESS;
-}
-
 
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
@@ -5484,7 +5476,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "-1", SP, NAC)\
-    DEFINE_FILE_PROP_P("system/get_link_speed"           , hdlr_system_get_link_speed,             RW, "-1", SP, NAC)
 
 static prop_t property_table[] = {
 // Turns off rx boards
