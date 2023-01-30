@@ -4509,6 +4509,82 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Note: this is a count of how many rx channels the FPGA build has, not the number of rx channels available
+// See system/num_rx for the number of rx channels available
+// This property exists for FPGA versioning, and because the same FPGA build is used for different configurations
+static int hdlr_fpga_about_num_rx(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 16) & 0xf;
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Note: this is a count of how many tx channels the FPGA build has, not the number of rx channels available
+// See system/num_rx for the number of rx channels available
+// This property exists for FPGA versioning, and because the same FPGA build is used for different configurations
+static int hdlr_fpga_about_num_tx(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 20) & 0xf;
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Note: this is the rtm the FPGA was compiled for not the server
+// This is for checking the FPGA version only, the server will act based on the RTM set at its compile time
+static int hdlr_fpga_about_rtm(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 24) & 0xf;
+    if(val != RTM_VER) {
+        PRINT(ERROR, "RTM version mismatch. Server was compiled for RTM %i but the FPGA was compiled for RTM %u\n", RTM_VER, val);
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Whether the FPGA is compiled for a 1G or 3G backplane
+// Usually 1G uses a 1G backplane or 3G uses a 3G backplane, but it is possible to modify 3G to be used as 1G
+static int hdlr_fpga_about_backplane_pinout(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 28) & 0x3;
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Indicates if FPGA is hps only. hps only mode is only used for development or in the main image fails
+// HPS builds are a minimal build meant to be able to boot into Linux and nother else
+static int hdlr_fpga_about_hps_only(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 30) & 0x1;
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// if 1 DDR is used in this FPGA build, 0 indicates FIFO only
+// FIFO is used when DDR can't keep up, but has very little space
+// This is for FPGA versioning only, use system/get_max_buffer_level to get the maximum buffer level (which is what matters to external programs)
+static int hdlr_fpga_about_hps_ddr_used(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 31) & 0x1;
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
     uint32_t chip_id_msb = 0;
     uint32_t chip_id_lsb = 0;
@@ -5334,6 +5410,12 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
     DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/num_rx"                   , hdlr_fpga_about_num_rx,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/num_tx"                   , hdlr_fpga_about_num_tx,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/rtm"                      , hdlr_fpga_about_rtm,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/backplane_pinout"         , hdlr_fpga_about_backplane_pinout,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/hps_only"                 , hdlr_fpga_about_hps_only,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/ddr_used"                 , hdlr_fpga_about_hps_ddr_used,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
@@ -5891,7 +5973,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
         snprintf(ret, MAX_PROP_LEN, "good");
         return RETURN_SUCCESS;
     } else {
-        snprintf(ret, MAX_PROP_LEN, "good");
+        snprintf(ret, MAX_PROP_LEN, "bad");
         return RETURN_ERROR;
     }
 }
