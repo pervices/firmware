@@ -383,30 +383,6 @@ static int hdlr_invalid(const char *data, char *ret) {
     return RETURN_ERROR_SET_PROP;
 }
 
-static int hdlr_rx_sync(const char *data, char *ret) {
-    uint32_t old_val = 0;
-
-    // toggle the bit sys0[5]
-    read_hps_reg("sys0", &old_val);
-    write_hps_reg("sys0", old_val | 0x20);
-    write_hps_reg("sys0", old_val & (~0x20));
-
-    return RETURN_SUCCESS;
-}
-
-#if NUM_TX_CHANNELS > 0
-    static int hdlr_tx_sync(const char *data, char *ret) {
-        uint32_t old_val = 0;
-
-        // toggle the bit sys0[6]
-        read_hps_reg("sys0", &old_val);
-        write_hps_reg("sys0", old_val | 0x40);
-        write_hps_reg("sys0", old_val & (~0x40));
-
-        return RETURN_SUCCESS;
-    }
-#endif
-
 static int hdlr_save_config(const char *data, char *ret) {
     *_save_profile = 1;
     strcpy(_save_profile_path, data);
@@ -5184,7 +5160,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", RP, #_c)  \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
@@ -5296,7 +5271,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch4uflow"              , hdlr_tx_##_c##_qa_ch4uflow,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch5uflow"              , hdlr_tx_##_c##_qa_ch5uflow,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "127", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/ch0fpga_nco"          , hdlr_tx_##_c##_dsp_ch0fpga_nco,         RW, "0", TP, #_c)         \
