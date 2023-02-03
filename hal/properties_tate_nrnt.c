@@ -1385,7 +1385,34 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    static int hdlr_tx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
+        int i_delay = 0;\
+        int q_delay = 0;\
+        sscanf(data, "%i,%i", &i_delay, &q_delay);\
+        if(i_delay < 0) {\
+            PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
+            i_delay = 0;\
+        } else if(i_delay > 63 ) {\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+            i_delay = 63;\
+        }\
+        if(q_delay < 0) {\
+            PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
+            q_delay = 0;\
+        } else if(q_delay > 63) {\
+            q_delay = 63;\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+        }\
+        int32_t ch_select = 1 << (INT(ch) + 16);\
+        int32_t reg_val = (q_delay << 6) | i_delay;\
+        write_hps_reg("res_rw12", ch_select);\
+        write_hps_reg("res_rw13", reg_val | 0x1000);\
+        write_hps_reg("res_rw13", reg_val);\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
     static int hdlr_tx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
@@ -2361,7 +2388,34 @@ TX_CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    static int hdlr_rx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
+        int i_delay = 0;\
+        int q_delay = 0;\
+        sscanf(data, "%i,%i", &i_delay, &q_delay);\
+        if(i_delay < 0) {\
+            PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
+            i_delay = 0;\
+        } else if(i_delay > 63 ) {\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+            i_delay = 63;\
+        }\
+        if(q_delay < 0) {\
+            PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
+            q_delay = 0;\
+        } else if(q_delay > 63) {\
+            q_delay = 63;\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+        }\
+        int32_t ch_select = 1 << INT(ch);\
+        int32_t reg_val = (q_delay << 6) | i_delay;\
+        write_hps_reg("res_rw12", ch_select);\
+        write_hps_reg("res_rw13", reg_val | 0x1000);\
+        write_hps_reg("res_rw13", reg_val);\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
     static int hdlr_rx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
@@ -5218,7 +5272,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
 
 #define DEFINE_TX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/wait_async_pwr", hdlr_tx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
@@ -5315,7 +5370,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"            , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
 
