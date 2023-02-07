@@ -134,6 +134,12 @@ int main(int argc, char *argv[]) {
             verbose++;
         }
     }
+    
+    // Linux will freeze if attempting to boot an hps only image
+    if(is_hps_only()) {
+        PRINT(ERROR, "HPS only FPGA image detected. Cancelling server boot. The unit will not run\n");
+        return 1;
+    }
 
     PRINT(INFO, "Starting Cyan server\n");
 

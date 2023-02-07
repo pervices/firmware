@@ -92,6 +92,7 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
                             char *save_path);
 void sync_channels(uint8_t chan_mask);
 void jesd_reset_all();
+uint32_t is_hps_only();
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
 

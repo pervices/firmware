@@ -340,6 +340,14 @@ static int get_network_speed() {
     }
 }
 
+uint32_t is_hps_only() {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 30) & 0x1;
+
+    return val;
+}
+
 #if NUM_TX_CHANNELS > 0
     static int get_tx_dst_port_map_loc(int chan) {
         int network_speed = get_network_speed();
@@ -4592,12 +4600,7 @@ static int hdlr_fpga_about_backplane_pinout(const char *data, char *ret) {
 // Indicates if FPGA is hps only. hps only mode is only used for development or in the main image fails
 // HPS builds are a minimal build meant to be able to boot into Linux and nother else
 static int hdlr_fpga_about_hps_only(const char *data, char *ret) {
-    uint32_t val = 0;
-    read_hps_reg("res_ro12", &val);
-    val = (val >> 30) & 0x1;
-
-    snprintf(ret, MAX_PROP_LEN, "%u", val);
-
+    snprintf(ret, MAX_PROP_LEN, "%u", is_hps_only());
     return RETURN_SUCCESS;
 }
 
