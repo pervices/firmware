@@ -326,19 +326,19 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
     fclose(data_file);
 }
 
-    int network_speed_cache = 0;
-    int is_network_speed_cached = 0;
-    static int get_network_speed() {
-        if(is_network_speed_cached) {
-            return network_speed_cache;
-        } else {
-            uint32_t network_config = 0;
-            read_hps_reg("res_ro12", &network_config);
-            network_speed_cache = (network_config >> 4) & 0xff;
-            is_network_speed_cached = 1;
-            return network_speed_cache;
-        }
+int network_speed_cache = 0;
+int is_network_speed_cached = 0;
+static int get_network_speed() {
+    if(is_network_speed_cached) {
+        return network_speed_cache;
+    } else {
+        uint32_t network_config = 0;
+        read_hps_reg("res_ro12", &network_config);
+        network_speed_cache = (network_config >> 4) & 0xff;
+        is_network_speed_cached = 1;
+        return network_speed_cache;
     }
+}
 
 #if NUM_TX_CHANNELS > 0
     static int get_tx_dst_port_map_loc(int chan) {
