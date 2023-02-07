@@ -4546,6 +4546,17 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Note: this is the rate the FPGA build has, not what the server has
+// This property exists for FPGA versioning, actual behaviour will depend on what the server was compiled with
+static int hdlr_fpga_about_rate(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 12) & 0xf;
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
 // Note: this is a count of how many rx channels the FPGA build has, not the number of rx channels available
 // See system/num_rx for the number of rx channels available
 // This property exists for FPGA versioning, and because the same FPGA build is used for different configurations
@@ -5434,12 +5445,13 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
     DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/about/num_rx"                   , hdlr_fpga_about_num_rx,              RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/about/num_tx"                   , hdlr_fpga_about_num_tx,              RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/about/rtm"                      , hdlr_fpga_about_rtm,              RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/about/backplane_pinout"         , hdlr_fpga_about_backplane_pinout,              RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/about/hps_only"                 , hdlr_fpga_about_hps_only,              RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/about/ddr_used"                 , hdlr_fpga_about_ddr_used,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/rate"            , hdlr_fpga_about_rate,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/num_rx"          , hdlr_fpga_about_num_rx,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/num_tx"          , hdlr_fpga_about_num_tx,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/rtm"             , hdlr_fpga_about_rtm,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/backplane_pinout", hdlr_fpga_about_backplane_pinout,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/hps_only"        , hdlr_fpga_about_hps_only,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/ddr_used"        , hdlr_fpga_about_ddr_used,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
