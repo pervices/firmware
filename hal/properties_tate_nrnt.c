@@ -326,19 +326,27 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
     fclose(data_file);
 }
 
-    int network_speed_cache = 0;
-    int is_network_speed_cached = 0;
-    static int get_network_speed() {
-        if(is_network_speed_cached) {
-            return network_speed_cache;
-        } else {
-            uint32_t network_config = 0;
-            read_hps_reg("res_ro12", &network_config);
-            network_speed_cache = (network_config >> 4) & 0xff;
-            is_network_speed_cached = 1;
-            return network_speed_cache;
-        }
+int network_speed_cache = 0;
+int is_network_speed_cached = 0;
+static int get_network_speed() {
+    if(is_network_speed_cached) {
+        return network_speed_cache;
+    } else {
+        uint32_t network_config = 0;
+        read_hps_reg("res_ro12", &network_config);
+        network_speed_cache = (network_config >> 4) & 0xff;
+        is_network_speed_cached = 1;
+        return network_speed_cache;
     }
+}
+
+uint32_t is_hps_only() {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 30) & 0x1;
+
+    return val;
+}
 
 #if NUM_TX_CHANNELS > 0
     static int get_tx_dst_port_map_loc(int chan) {
@@ -382,30 +390,6 @@ static int hdlr_invalid(const char *data, char *ret) {
     PRINT(ERROR, "Cannot invoke a set on this property\n");
     return RETURN_ERROR_SET_PROP;
 }
-
-static int hdlr_rx_sync(const char *data, char *ret) {
-    uint32_t old_val = 0;
-
-    // toggle the bit sys0[5]
-    read_hps_reg("sys0", &old_val);
-    write_hps_reg("sys0", old_val | 0x20);
-    write_hps_reg("sys0", old_val & (~0x20));
-
-    return RETURN_SUCCESS;
-}
-
-#if NUM_TX_CHANNELS > 0
-    static int hdlr_tx_sync(const char *data, char *ret) {
-        uint32_t old_val = 0;
-
-        // toggle the bit sys0[6]
-        read_hps_reg("sys0", &old_val);
-        write_hps_reg("sys0", old_val | 0x40);
-        write_hps_reg("sys0", old_val & (~0x40));
-
-        return RETURN_SUCCESS;
-    }
-#endif
 
 static int hdlr_save_config(const char *data, char *ret) {
     *_save_profile = 1;
@@ -1409,7 +1393,34 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    static int hdlr_tx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
+        int i_delay = 0;\
+        int q_delay = 0;\
+        sscanf(data, "%i,%i", &i_delay, &q_delay);\
+        if(i_delay < 0) {\
+            PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
+            i_delay = 0;\
+        } else if(i_delay > 63 ) {\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+            i_delay = 63;\
+        }\
+        if(q_delay < 0) {\
+            PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
+            q_delay = 0;\
+        } else if(q_delay > 63) {\
+            q_delay = 63;\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+        }\
+        int32_t ch_select = 1 << (INT(ch) + 16);\
+        int32_t reg_val = (q_delay << 6) | i_delay;\
+        write_hps_reg("res_rw12", ch_select);\
+        write_hps_reg("res_rw13", reg_val | 0x1000);\
+        write_hps_reg("res_rw13", reg_val);\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
     static int hdlr_tx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
@@ -2011,7 +2022,6 @@ TX_CHANNELS
         if(band < 0 || band > 0xff) band = 0xff;\
         \
         snprintf(buf, MAX_PROP_LEN, "rf -b %hhx\r", (uint8_t) band);\
-        PRINT(ERROR, "%s", buf);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
         /* if mid or high band swap iq to address RTM3 layout issue */         \
@@ -2386,7 +2396,34 @@ TX_CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    static int hdlr_rx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
+        int i_delay = 0;\
+        int q_delay = 0;\
+        sscanf(data, "%i,%i", &i_delay, &q_delay);\
+        if(i_delay < 0) {\
+            PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
+            i_delay = 0;\
+        } else if(i_delay > 63 ) {\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+            i_delay = 63;\
+        }\
+        if(q_delay < 0) {\
+            PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
+            q_delay = 0;\
+        } else if(q_delay > 63) {\
+            q_delay = 63;\
+            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+        }\
+        int32_t ch_select = 1 << INT(ch);\
+        int32_t reg_val = (q_delay << 6) | i_delay;\
+        write_hps_reg("res_rw12", ch_select);\
+        write_hps_reg("res_rw13", reg_val | 0x1000);\
+        write_hps_reg("res_rw13", reg_val);\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
     static int hdlr_rx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
@@ -4509,6 +4546,88 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Note: this is the rate the FPGA build has, not what the server has
+// This property exists for FPGA versioning, actual behaviour will depend on what the server was compiled with
+static int hdlr_fpga_about_rate(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 12) & 0xf;
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Note: this is a count of how many rx channels the FPGA build has, not the number of rx channels available
+// See system/num_rx for the number of rx channels available
+// This property exists for FPGA versioning, and because the same FPGA build is used for different configurations
+static int hdlr_fpga_about_num_rx(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 16) & 0xf;
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Note: this is a count of how many tx channels the FPGA build has, not the number of rx channels available
+// See system/num_rx for the number of rx channels available
+// This property exists for FPGA versioning, and because the same FPGA build is used for different configurations
+static int hdlr_fpga_about_num_tx(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 20) & 0xf;
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Note: this is the rtm the FPGA was compiled for not the server
+// This is for checking the FPGA version only, the server will act based on the RTM set at its compile time
+static int hdlr_fpga_about_rtm(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 24) & 0xf;
+    if(val != RTM_VER) {
+        PRINT(ERROR, "RTM version mismatch. Server was compiled for RTM %i but the FPGA was compiled for RTM %u\n", RTM_VER, val);
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Whether the FPGA is compiled for a 1G or 3G backplane
+// Usually 1G uses a 1G backplane or 3G uses a 3G backplane, but it is possible to modify 3G to be used as 1G
+static int hdlr_fpga_about_backplane_pinout(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 28) & 0x3;
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
+// Indicates if FPGA is hps only. hps only mode is only used for development or in the main image fails
+// HPS builds are a minimal build meant to be able to boot into Linux and nother else
+static int hdlr_fpga_about_hps_only(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u", is_hps_only());
+    return RETURN_SUCCESS;
+}
+
+// if 1 DDR is used in this FPGA build, 0 indicates FIFO only
+// FIFO is used when DDR can't keep up, but has very little space
+// This is for FPGA versioning only, use system/get_max_buffer_level to get the maximum buffer level (which is what matters to external programs)
+static int hdlr_fpga_about_ddr_used(const char *data, char *ret) {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 31) & 0x1;
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
     uint32_t chip_id_msb = 0;
     uint32_t chip_id_lsb = 0;
@@ -4608,11 +4727,9 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_rate(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%li", get_network_speed()*(int64_t)1000000000);
     return RETURN_SUCCESS;
 }
-
-
-
 
 static int hdlr_fpga_link_sfpa_ip_addr(const char *data, char *ret) {
     uint32_t ip[4];
@@ -4984,12 +5101,6 @@ static int hdlr_system_self_calibration(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_system_get_link_speed(const char *data, char *ret) {
-    snprintf(ret, MAX_PROP_LEN, "%i", get_network_speed());
-    return RETURN_SUCCESS;
-}
-
-
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- GPIO ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -5117,12 +5228,11 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", RP, #_c)  \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "-1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
@@ -5176,7 +5286,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
 
 #define DEFINE_TX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/wait_async_pwr", hdlr_tx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
@@ -5229,7 +5340,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch4uflow"              , hdlr_tx_##_c##_qa_ch4uflow,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/ch5uflow"              , hdlr_tx_##_c##_qa_ch5uflow,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "127", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/ch0fpga_nco"          , hdlr_tx_##_c##_dsp_ch0fpga_nco,         RW, "0", TP, #_c)         \
@@ -5274,7 +5384,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"            , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
 
@@ -5334,6 +5445,13 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
     DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/rate"            , hdlr_fpga_about_rate,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/num_rx"          , hdlr_fpga_about_num_rx,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/num_tx"          , hdlr_fpga_about_num_tx,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/rtm"             , hdlr_fpga_about_rtm,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/backplane_pinout", hdlr_fpga_about_backplane_pinout,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/hps_only"        , hdlr_fpga_about_hps_only,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/ddr_used"        , hdlr_fpga_about_ddr_used,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
@@ -5402,7 +5520,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "-1", SP, NAC)\
-    DEFINE_FILE_PROP_P("system/get_link_speed"           , hdlr_system_get_link_speed,             RW, "-1", SP, NAC)
 
 static prop_t property_table[] = {
 // Turns off rx boards
@@ -5888,9 +6005,10 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     // This print message is down here instead of in jesd_master_reset in order to make it closer to the end of server boot to make it easier to spot
     if(!jesd_master_error) {
         PRINT(INFO, "All JESD successfully established\n");
-        snprintf(ret, MAX_PROP_LEN, "0");
+        snprintf(ret, MAX_PROP_LEN, "good");
         return RETURN_SUCCESS;
     } else {
+        snprintf(ret, MAX_PROP_LEN, "bad");
         return RETURN_ERROR;
     }
 }
