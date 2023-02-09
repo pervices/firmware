@@ -341,11 +341,21 @@ static int get_network_speed() {
 }
 
 uint32_t is_hps_only() {
-    uint32_t val = 0;
-    read_hps_reg("res_ro12", &val);
-    val = (val >> 30) & 0x1;
+    // The flag is always high in old versions of the FPGA
+    // Assume the build is not HPS only if it was compiled before that flag was introduced
+    // sys15 stores the compile time, see hdlr_fpga_about_cmp_time for a detailed breakdown of the register
+    uint32_t compile_time = 0;
+    read_hps_reg("sys15", &compile_time);
+    if(compile_time < 0x7e71d000) {
+        return 0;
+    }
 
-    return val;
+
+    uint32_t flag = 0;
+    read_hps_reg("res_ro12", &flag);
+    flag = (flag >> 30) & 0x1;
+    return flag;
+
 }
 
 #if NUM_TX_CHANNELS > 0
