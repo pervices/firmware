@@ -232,7 +232,7 @@ static void build_tree(void) {
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
         prop = get_prop(i);
-        PRINT(VERBOSE, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
+        PRINT(INFO, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
         make_prop(prop);
         if (PROP_TYPE_SYMLINK != prop->type) {
             add_prop_to_inotify(prop);
@@ -445,7 +445,7 @@ void check_property_inotifies(void) {
                 if (inotify_rm_watch(inotify_fd, prop->wd) < 0) {
                     PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 }
-                PRINT(VERBOSE, "Removed inotify, wd: %i\n", prop->wd);
+                //PRINT(VERBOSE, "Removed inotify, wd: %i\n", prop->wd);
 
                 // write output of handler to property
                 write_to_file(get_abs_path(prop, path, MAX_PATH_LEN), prop_ret);
@@ -456,7 +456,7 @@ void check_property_inotifies(void) {
                 if (prop->wd < 0) {
                     PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 }
-                PRINT(VERBOSE, "Re-added to inotify, wd: %i\n", prop->wd);
+                //PRINT(VERBOSE, "Re-added to inotify, wd: %i\n", prop->wd);
             }
         }
 
