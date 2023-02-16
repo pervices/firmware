@@ -3123,6 +3123,7 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    /* The dev clocks take a small amount of time to stablize. Make sure there is sufficient time between when they are inverted and when the ADC is turned on*/\
     static int hdlr_rx_##ch##_invert_devclk(const char *data, char *ret) {       \
         if(RTM_VER >= 4) {\
             if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
@@ -5215,7 +5216,8 @@ GPIO_PINS
 
 #define DEFINE_RX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
-    /*devclk inverted here so that it is inverted for all before turning on any boards*/\
+
+#define DEFINE_RX_INVERT_DEV_CLOCK(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/invert_devclk"     , hdlr_rx_##_c##_invert_devclk,             RW, "0", SP, #_c)\
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
@@ -5543,6 +5545,12 @@ static prop_t property_table[] = {
 #undef X
 // Initialize time boards
     DEFINE_TIME()
+// Inverts dev clock going to each rx board
+// The dev clocks to rx need a small amount of time to stabilize after inverting
+// Having them get inverted before initializing the FPGA allows them to stablize by the time the rx boards turn on
+#define X(ch) DEFINE_RX_INVERT_DEV_CLOCK(ch)
+    RX_CHANNELS
+#undef X
 // Initialize FPGA
     DEFINE_FPGA()
 // Power on rx/tx boards, but don't wait for them to finish booting
