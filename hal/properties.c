@@ -3527,11 +3527,8 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, " -d 1\r");
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
-    // Put FPGA JESD core in reset
-    write_hps_reg("res_rw7", 0x20000000);
-    usleep(10000); // Wait for FPGA JESD to come out of reset
-    write_hps_reg("res_rw7", 0);
-    usleep(10000); // Wait for FPGA JESD to come out of reset
+    // Unmask SYSREF on the FPGA
+    write_hps_reg("res_rw7", 0x10000000);
 
     /* Initiate the SYSREF sequence for jesd
      * Set all boards' SYSREF detection gate to ON */
@@ -3545,6 +3542,9 @@ void sync_channels(uint8_t chan_mask) {
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
     
     usleep(200000); // Some wait time for MCUs to be ready
+
+    // Mask SYSREF on the FPGA
+    write_hps_reg("res_rw7", 0);
 
     /* Turn off all boards' SYSREF detection gates */
     strcpy(buf, "board -c ");
