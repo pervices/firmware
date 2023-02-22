@@ -3165,98 +3165,29 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 void sync_channels(uint8_t chan_mask) {
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
-    // usleep(300000); // Some wait time for the reset to be ready
+    
+    // Put JESD into continuous mode
+    strcpy(buf, "sync -c 1\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    usleep(300); // Wait for Sysref pulse to stabilize and bias around zero.
+    
+    
     /* Bring the ADCs & DACs into 'demo' mode for JESD */
-
     // RX - ADCs
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -a 1\r");
     ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-
+    
     // TX - DACs
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -d 1\r");
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-    /***********************************
-     * Start loop.
-     * Issue JESD, then read to see if
-     * bad
-     **********************************/
-#ifdef SYNC_CHECK_DAC_LOOP
-    char key[] = "00\r";
-    char dacalarmA[] = "ff\r";
-    char dacalarmB[] = "ff\r";
-    for (int i = 0; i < 15; i += 1) {
-
-        // Put FPGA JESD core in reset
-        write_hps_reg("res_rw7", 0x40000000);
-        write_hps_reg("res_rw7", 0);
-
-        /* Initiate the SYSREF sequence for jesd
-         * Set all boards' SYSREF detection gate to ON */
-        strcpy(buf, "board -c ");
-        strcat(buf, str_chan_mask);
-        strcat(buf, " -s 1\r");
-        ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-        strcpy(buf, "board -c ");
-        strcat(buf, str_chan_mask);
-        strcat(buf, " -s 1\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-        /* Trigger a SYSREF pulse */
-        // JESD core out of reset
-        usleep(100000); // Some wait time for MCUs to be ready
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
-        // Do it again
-
-        strcpy(buf, "board -c ");
-        strcat(buf, str_chan_mask);
-        strcat(buf, " -s 1\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-        usleep(100000); // Some wait time for MCUs to be ready
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        usleep(100000); // Some wait time for MCUs to be ready
-
-        // CHECK IF ALARMS
-        strcpy(buf, "dac -c a -s\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-        strcpy(dacalarmA, (char *)uart_ret_buf);
-
-        // CHECK IF ALARMS
-        strcpy(buf, "dac -c d -s\r");
-        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-        strcpy(dacalarmB, (char *)uart_ret_buf);
-
-        if ((dacalarmA[0] == key[0]) && (dacalarmA[1] == key[1]) &&
-            (dacalarmB[0] == key[0]) && (dacalarmB[1] == key[1])) {
-            break;
-        } else {
-            usleep(200000); // Some wait time for MCUs to be ready
-        }
-    }
-    /* Turn off all boards' SYSREF detection gates */
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-    strcpy(buf, "board -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -s 0\r");
-    ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-#else
-    // Put FPGA JESD core in reset
-    write_hps_reg("res_rw7", 0x20000000);
-    write_hps_reg("res_rw7", 0);
-
+    
+    // Unmask SYSREF on the FPGA
+    write_hps_reg("res_rw7", 0x10000000);
+    
     /* Initiate the SYSREF sequence for jesd
      * Set all boards' SYSREF detection gate to ON */
     strcpy(buf, "board -c ");
@@ -3267,15 +3198,12 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 1\r");
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-    /* Trigger a SYSREF pulse */
-    // JESD core out of reset
+    
+    usleep(200000); // Some wait time for MCUs to be ready
+    
+    // Mask SYSREF on the FPGA
     write_hps_reg("res_rw7", 0);
-
-    usleep(100000); // Some wait time for MCUs to be ready
-    strcpy(buf, "clk -y\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
+    
     /* Turn off all boards' SYSREF detection gates */
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
@@ -3285,8 +3213,11 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 0\r");
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
-#endif
+    
+    // Put JESD into pulsed mode
+    strcpy(buf, "sync -c 0\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
