@@ -2009,6 +2009,21 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_clk_set_time(const char *data, char *ret) {
+    // Note that this function is used by both server.c and crimson-fpga-time-sync.sh (and by extension crimson-fpga-time-sync.service). Ensure that if this funciton or its state tree path are updated, those uses are also updated
+    long double time;
+    sscanf(data, "%Lf", &time);
+    write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys10",
+                  (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+    
+    write_hps_reg("sys11",
+                  (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
+    write_hps_reg("sys13", 1);
+    write_hps_reg("sys13", 0);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_clk_cmd(const char* data, char* ret) {
     return RETURN_SUCCESS;
 }
@@ -2867,6 +2882,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
+    DEFINE_FILE_PROP("time/clk/set_time"                   , hdlr_time_clk_set_time,                 WO, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0")       \
     DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
     DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
