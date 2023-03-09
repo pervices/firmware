@@ -3728,11 +3728,6 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t 
     
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
 
-    // TODO: add MCU feature that lets us override default output MUX
-    // This is a HACK that forces the MCU to always choose output MUX A,
-    // which is the required output of the LMX for stock crimson
-    if (freq < 6001000000){ freq = 6001000000; }
-
     // Select the desired LMX
     strcpy(buf, "lmx -c ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", chan);
