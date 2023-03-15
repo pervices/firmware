@@ -7,11 +7,6 @@ noinst_LTLIBRARIES = \
 libhal_la_SOURCES = \
 	comm_manager.c \
 	pllcalc.c \
-	properties_tate.c \
-	properties_tate_8r.c \
-	properties_tate_4r4t.c \
-	properties_tate_9r7t.c \
-	properties_tate_4r4t_3g.c \
 	properties_tate_nrnt.c \
 	properties_vaunt.c \
 	property_manager.c
