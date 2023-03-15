@@ -1422,12 +1422,12 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
             q_delay = 63;\
             PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
         }\
-        int32_t ch_select = 1 << (INT(ch) + 16);\
+/*        int32_t ch_select = 1 << (INT(ch) + 16);\
         int32_t reg_val = (q_delay << 6) | i_delay;\
-        write_hps_reg("res_rw12", ch_select);\
-        write_hps_reg("res_rw13", reg_val | 0x1000);\
-        write_hps_reg("res_rw13", reg_val);\
-        snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+         write_hps_reg("res_rw12", ch_select);\
+         write_hps_reg("res_rw13", reg_val | 0x1000);\
+         write_hps_reg("res_rw13", reg_val);*/\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i\n tx delay iq is disabled due to it getting stuck with a large randome phase difference. Currently 0, 0. The above is what it would be if it weren't disabled\n", i_delay, q_delay);\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
