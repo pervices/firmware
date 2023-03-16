@@ -1431,6 +1431,20 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return RETURN_SUCCESS;\
     }                                                                          \
     \
+    /*0 for big endian packets, anything else for little endian*/\
+    static int hdlr_tx_##ch##_endian_swap(const char *data, char *ret) {      \
+        int endian = 0;\
+        sscanf(data, "%i", &endian);\
+        int bit_val;\
+        if(endian) {\
+            bit_val = 0x20000;\
+        } else {\
+            bit_val = 0;\
+        }\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], bit_val, 0x20000);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
     static int hdlr_tx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
@@ -2431,6 +2445,20 @@ TX_CHANNELS
         write_hps_reg("res_rw13", reg_val | 0x1000);\
         write_hps_reg("res_rw13", reg_val);\
         snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
+    /*0 for big endian packets, anything else for little endian*/\
+    static int hdlr_rx_##ch##_endian_swap(const char *data, char *ret) {      \
+        int endian = 0;\
+        sscanf(data, "%i", &endian);\
+        int bit_val;\
+        if(endian) {\
+            bit_val = 0x20000;\
+        } else {\
+            bit_val = 0;\
+        }\
+        write_hps_reg_mask(rx_reg4_map[INT(ch)], bit_val, 0x20000);\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
@@ -5301,6 +5329,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/endian_swap"            , hdlr_rx_##_c##_endian_swap,            RW, "0,0", RP, #_c)         \
 
 #define DEFINE_TX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/wait_async_pwr", hdlr_tx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
@@ -5399,6 +5428,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"            , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"            , hdlr_tx_##_c##_endian_swap,            RW, "0,0", RP, #_c)
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
 
