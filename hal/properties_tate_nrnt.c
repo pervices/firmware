@@ -5290,7 +5290,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_rx_##_c##_about_sw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", RP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", RP, #_c)         \
     /* Note: the registers for rx src port and tx dst port overlap but don't match perfectly*/\
@@ -5328,7 +5328,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_mode"         , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level", TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "negative", TP, #_c)  \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", TP, #_c)    \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "1", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", TP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", TP, #_c)         \
