@@ -2928,7 +2928,7 @@ TX_CHANNELS
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
         uint32_t val = 0;\
         read_hps_reg(rx_reg4_map[INT(ch)], &val);\
-        val = val & ~(0x6002 | 0x2100);\
+        val = val & ~(0x6002 | 0x100);\
         if(data[0]=='0') {\
             /*puts the dsp in reset*/\
             val = val | 0x6002;\
@@ -2941,7 +2941,7 @@ TX_CHANNELS
             /*Stream when sma trigger (has the side effect of disabling normal stream commands)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
             /*takes the dsp out of reset*/\
-            val = val | 0x2100;\
+            val = val | 0x100;\
             write_hps_reg(rx_reg4_map[INT(ch)], val);\
         }\
         return RETURN_SUCCESS;                                                 \
