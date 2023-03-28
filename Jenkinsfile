@@ -23,7 +23,7 @@ pipeline {
 			//might need to use deleteDir() to clean up workspace
 		}
 		failure {
-			mail to: 'shiqi.f@pervices.com',
+			mail to: 'tech@pervices.com',
 			subject: "Failed Pipeline: ${currentBuild.fullDisplayName}",
 			body: "Something is wrong with the build ${env.BUILD_URL}"
 		}
