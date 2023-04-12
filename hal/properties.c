@@ -35,6 +35,7 @@
 
 #define BASE_DIR "/var/volatile/crimson/"
 #define STATE_DIR "/var/volatile/crimson/state/"
+#define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
@@ -3222,10 +3223,16 @@ static char *tostr(const int num)
     return str;
 }
 
-static void set_default_str(const char* const path, const char* const str)
+static int set_default_str(const char* const path, const char* const str)
 {
     prop_t* prop = get_prop_from_cmd(path);
-    strcpy(prop->def_val, str);
+    if(prop) {
+        snprintf(prop->def_val, MAX_PROP_LEN, str);
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Unable to set initial string for property \"%s\", property not found\n", path);
+        return RETURN_ERROR_PARAM;
+    }
 }
 
 static void set_default_int(const char* const path, const int value)
@@ -3269,6 +3276,32 @@ void patch_tree(void) {
     set_default_int("tx/" #ch "/qa/uflow",    base_port + INT(ch) + NUM_CHANNELS);
     CHANNELS
 #undef X
+
+    // Read a configuration file to overrid default values of the state tree. Must be done at adjusting the default state tree values
+
+    FILE *alternate_tree_defaults_file;
+    char property_args[MAX_PROP_LEN+MAX_PATH_LEN+1];
+    // Make sure property_path and property_value are the same size as the buffer for the whole string, to avoid buffer overflows if the path of value component of the line exceed the maximum
+    char property_path[MAX_PROP_LEN+MAX_PATH_LEN+1];
+    char property_value[MAX_PROP_LEN+MAX_PATH_LEN+1];
+
+    alternate_tree_defaults_file = fopen(ALTERNATE_TREE_DEFAULTS_PATH, "r");
+    if(alternate_tree_defaults_file) {
+        while( fgets(property_args, MAX_PROP_LEN+MAX_PATH_LEN+1, alternate_tree_defaults_file)) {
+            sscanf(property_args, "%s = %s", property_path, property_value);
+            int error_code = set_default_str(property_path, property_value);
+            if(error_code) {
+                PRINT(ERROR, "Unable to set alternative default property from arguments: %s\n", property_args);
+            } else {
+                PRINT(INFO, "Set default value of property \"%s\" to \"%s\"\n", property_path, property_value);
+            }
+        }
+        fclose(alternate_tree_defaults_file);
+    } else {
+        PRINT(INFO, "No alternate default file found\n");
+        // Clears errno (which will be set to file not found). Not necessary but makes spotting error flags at unknown points easier
+        errno = 0;
+    }
 }
 
 size_t get_num_prop(void) { return num_properties; }
@@ -3297,7 +3330,7 @@ prop_t *get_prop_from_hdlr(int (*hdlr)(const char *, char *)) {
 int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
 
     const char *vcs = "/var/volatile/crimson/state/";
-    const size_t vcsl = strlen(vcs);
+    const size_t vcsl = strnlen(vcs, MAX_PATH_LEN);
     char origcwd[MAX_PATH_LEN];
     char *temp;
     size_t path_strlen;
@@ -3317,7 +3350,7 @@ int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
         return RETURN_ERROR_SET_PROP;
     }
 
-    path_strlen = strlen(path);
+    path_strlen = strnlen(path, MAX_PATH_LEN);
     r = strncmp(vcs, path, vcsl);
     if (0 == r) {
         delta = path_strlen - vcsl;
