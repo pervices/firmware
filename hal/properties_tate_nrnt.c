@@ -1081,11 +1081,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
         if (band == 0) {                       \
-            if(RTM_VER==3) {\
-                set_property("tx/" STR(ch) "/link/iq_swap", "1");\
-            } else {\
-                set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-            }\
+            set_property("tx/" STR(ch) "/link/iq_swap", "1");\
             snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);\
         } else if ((band == 1) || (band == 2)) {                       \
             set_property("tx/" STR(ch) "/link/iq_swap", "0");\
