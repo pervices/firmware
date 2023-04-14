@@ -5339,7 +5339,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/jesd_num"            , hdlr_invalid,                                   RO, "0", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,                           RW, "0", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/link/endian_swap"            , hdlr_rx_##_c##_endian_swap,            RW, "0,0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/endian_swap"            , hdlr_rx_##_c##_endian_swap,            RW, "0", RP, #_c)         \
 
 #define DEFINE_TX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/wait_async_pwr", hdlr_tx_##_c##_wait_async_pwr, RW, "0", SP, #_c)
@@ -5438,7 +5438,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"            , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0,0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"            , hdlr_tx_##_c##_endian_swap,            RW, "0,0", RP, #_c)
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"            , hdlr_tx_##_c##_endian_swap,            RW, "0", RP, #_c)
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
 
