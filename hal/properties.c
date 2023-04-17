@@ -286,7 +286,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     if (en) {
         r = synth_lut_enable(tx, channel);
         if (EXIT_SUCCESS != r) {
-            sprintf(ret, "%c", '0');
+            snprintf(ret, MAX_PROP_LEN, "%c", '0');
         }
     } else {
         synth_lut_disable(tx, channel);
@@ -599,7 +599,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             return RETURN_ERROR_PARAM;                                         \
         }                                                                      \
         snprintf(buf, sizeof(buf), "dac -c " STR(ch) " -l %u\r", en);          \
-        sprintf(ret, "%u", en);                                                \
+        snprintf(ret, MAX_PROP_LEN, "%u", en);                                                \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -617,7 +617,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             return RETURN_ERROR_PARAM;                                         \
         }                                                                      \
         snprintf(buf, sizeof(buf), "dac -c " STR(ch) " -3 %u\r", en);          \
-        sprintf(ret, "%u", en);                                                \
+        snprintf(ret, MAX_PROP_LEN, "%u", en);                                                \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -636,7 +636,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             return RETURN_ERROR_PARAM;                                         \
         }                                                                      \
                                                                                \
-        sprintf(ret, "%u", db);                                                \
+        snprintf(ret, MAX_PROP_LEN, "%u", db);                                                \
                                                                                \
         /* 96 dB (max) := 0x0, 90 dB := 0x1, ... 6 dB (min) := 0xf */          \
         sel = 16 - (db / 6);                                                   \
@@ -650,7 +650,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
         uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);            \
-        sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);                \
+        snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / DAC_NCO_CONST);                \
                                                                                \
         strcpy(buf, "dac -c " STR(ch) " -e 0 -n ");                            \
         sprintf(buf + strlen(buf), "%" PRIu32 "",                              \
@@ -743,7 +743,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
                           &pll, true, INT(ch));                                \
                                                                                \
-        sprintf(ret, "%Lf", outfreq);                                          \
+        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -906,7 +906,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             write_hps_reg("tx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val | (1 << 15));              \
-            sprintf(ret, "%lf",                                                \
+            snprintf(ret, MAX_PROP_LEN, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /* Set gain adjustment */                                          \
             read_hps_reg("txga", &old_val);                                    \
@@ -917,7 +917,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             write_hps_reg("tx" STR(ch) "1", base_factor);                      \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));             \
-            sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
+            snprintf(ret, MAX_PROP_LEN, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /* Set gain adjustment */                                          \
             read_hps_reg("txga", &old_val);                                    \
             write_hps_reg("txga",                                              \
@@ -949,9 +949,9 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
         write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
         if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+            snprintf(ret, MAX_PROP_LEN, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+            snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
@@ -1015,7 +1015,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     static int hdlr_tx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
         char channel = (INT(ch)%2)+'a';                                        \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
+        snprintf(ret, MAX_PROP_LEN, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1033,7 +1033,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         uint32_t lvl;                                                          \
         read_hps_reg("res_ro4", &lvl);                                         \
         lvl &= 0xffff;                                                         \
-        sprintf(ret, "%u", lvl);                                               \
+        snprintf(ret, MAX_PROP_LEN, "%u", lvl);                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1047,7 +1047,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
          * the bottom 32-bits */                                               \
         sprintf(flc_reg, "flc%d", 14+(INT(ch)*2));                             \
         read_hps_reg("flc_reg", &count);                                       \
-        sprintf(ret, "%u", count);                                             \
+        snprintf(ret, MAX_PROP_LEN, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1061,7 +1061,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
          * the bottom 32-bits */                                               \
         sprintf(flc_reg, "flc%d", 6+(INT(ch)*2));                              \
         read_hps_reg(flc_reg, &count);                                         \
-        sprintf(ret, "%u", count);                                             \
+        snprintf(ret, MAX_PROP_LEN, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1275,7 +1275,7 @@ CHANNELS
         set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
                           &pll, false, INT(ch));                               \
                                                                                \
-        sprintf(ret, "%Lf", outfreq);                                          \
+        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1449,7 +1449,7 @@ CHANNELS
             write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
             write_hps_reg("rx" STR(ch) "4", old_val | (1 << 15));              \
-            sprintf(ret, "%lf",                                                \
+            snprintf(ret, MAX_PROP_LEN, "%lf",                                                \
                     RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
             /*Set gain adjustment */                                           \
             gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;       \
@@ -1460,7 +1460,7 @@ CHANNELS
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
             write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 15));             \
-            sprintf(ret, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
+            snprintf(ret, MAX_PROP_LEN, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
             read_hps_reg("rxga", &old_val);                                    \
@@ -1492,9 +1492,9 @@ CHANNELS
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
         write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
         if (direction > 0) {                                                   \
-            sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+            snprintf(ret, MAX_PROP_LEN, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
         } else {                                                               \
-            sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+            snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
@@ -1561,7 +1561,7 @@ CHANNELS
     static int hdlr_rx_##ch##_link_iface(const char *data, char *ret) {        \
         /* TODO: FW support for streaming to management port required */       \
         char channel = (INT(ch)%2)+'a';                                        \
-        sprintf(ret, "%s%c", "sfp", channel);                                  \
+        snprintf(ret, MAX_PROP_LEN, "%s%c", "sfp", channel);                                  \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1600,7 +1600,7 @@ CHANNELS
                                                                                \
         /* if stream > 1, check the status of the stream */                    \
         if (stream > 1) {                                                      \
-            sprintf(ret, "%u", rx_stream[INT(ch)]); /* Alert File Tree */      \
+            snprintf(ret, MAX_PROP_LEN, "%u", rx_stream[INT(ch)]); /* Alert File Tree */      \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
@@ -1621,7 +1621,7 @@ CHANNELS
                 rx_stream[INT(ch)] = STREAM_ON;                                \
             } else {                                                           \
                 /* Do not turn ON stream if channel is OFF */                  \
-                sprintf(ret, "%u", 0); /* Alert File Tree */                   \
+                snprintf(ret, MAX_PROP_LEN, "%u", 0); /* Alert File Tree */                   \
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
             /* disable DSP core */                                             \
@@ -1795,7 +1795,7 @@ static int hdlr_cm_chanmask_rx(const char *data, char *ret) {
     }
 
     mask &= 0xffff;
-    sprintf(ret, "%x", mask);
+    snprintf(ret, MAX_PROP_LEN, "%x", mask);
 
     return RETURN_SUCCESS;
 }
@@ -1808,7 +1808,7 @@ static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     }
 
     mask &= 0xffff;
-    sprintf(ret, "%x", mask);
+    snprintf(ret, MAX_PROP_LEN, "%x", mask);
 
     return RETURN_SUCCESS;
 }
@@ -2217,7 +2217,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     /* Send Parameters over to the MCU */
     set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
                                                                         
-    sprintf(ret, "%Lf", outfreq);
+    snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
     
     return RETURN_SUCCESS;   
 }
@@ -2556,10 +2556,10 @@ static int hdlr_fpga_board_temp(const char *data, char *ret) {
 
     if (old_val >= 128) {
         old_val = old_val - 128;
-        sprintf(ret, "temp +%u degC\n", old_val);
+        snprintf(ret, MAX_PROP_LEN, "temp +%u degC\n", old_val);
     } else if (old_val < 128) {
         old_val = old_val - 58;
-        sprintf(ret, "temp -%u degC\n", old_val);
+        snprintf(ret, MAX_PROP_LEN, "temp -%u degC\n", old_val);
     }
 
     return RETURN_SUCCESS;
@@ -2640,7 +2640,7 @@ static int hdlr_fpga_board_flow_control_sfpX_port(const char *data, char *ret,
     flc0_reg |= (udp_port << (sfp_port * 16)) & mask;
     write_hps_reg("flc0", flc0_reg);
 
-    sprintf(ret, "%u", udp_port);
+    snprintf(ret, MAX_PROP_LEN, "%u", udp_port);
 
     return RETURN_SUCCESS;
 }
@@ -2679,7 +2679,7 @@ static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
     hour = (old_val & 0x000007c0) >> 6;
     min = old_val & 0x0000003f;
 
-    sprintf(ret, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month,
+    snprintf(ret, MAX_PROP_LEN, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month,
             day, hour, min);
 
     return RETURN_SUCCESS;
@@ -2688,7 +2688,7 @@ static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
 static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     uint32_t old_val;
     read_hps_reg("sys18", &old_val);
-    sprintf(ret, "config. info. 0x%02x \n", old_val);
+    snprintf(ret, MAX_PROP_LEN, "config. info. 0x%02x \n", old_val);
 
     return RETURN_SUCCESS;
 }
@@ -2740,7 +2740,7 @@ static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
 
     old_val2 = old_val2 & 0xff;
 
-    sprintf(ret, "ver. 0x%02x%02x \n", old_val2, old_val1);
+    snprintf(ret, MAX_PROP_LEN, "ver. 0x%02x%02x \n", old_val2, old_val1);
     return RETURN_SUCCESS;
 }
 
