@@ -2770,7 +2770,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     int i = 0;
 
     // check that EEPROM is programmed properly
-    sprintf(cmd, "%s%x", base_cmd, 0);
+    snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 0);
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
@@ -2792,7 +2792,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     }
 
     // check product
-    sprintf(cmd, "%s%x", base_cmd, 1);
+    snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 1);
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
@@ -2819,7 +2819,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     }
 
     // check board type
-    sprintf(cmd, "%s%x", base_cmd, 2);
+    snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 2);
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
@@ -2858,7 +2858,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     }
 
     // Check revision register
-    sprintf(cmd, "%s%x", base_cmd, 3);
+    snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 3);
     PRINT(INFO, "%s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
@@ -2873,13 +2873,13 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     }
     sscanf(buf, "0x%x", &readreg);
     PRINT(INFO, "we read 1 = 0x%x\n", readreg);
-    sprintf(buf, "RTM %u - ", readreg);
+    snprintf(buf, MAX_PROP_LEN, "RTM %u - ", readreg);
     strcat(ret, buf);    
 
     // Check feature registers
     strcat(ret, "Features:");
     for (i = 0x10; i <= 0x5f; i++) {
-        sprintf(cmd, "%s%x", base_cmd, i);
+        snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, i);
         PRINT(INFO, "%s\n", cmd);
         if ((fp = popen(cmd, "r")) == NULL) {
             PRINT(ERROR, "Error opening pipe!\n");
@@ -2895,7 +2895,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         sscanf(buf, "0x%x", &readreg);
         if ((readreg != 0) && (readreg!= 0xff)) {
             var_count++;
-            sprintf(buf, " reg 0x%x = 0x%x;", i, readreg);
+            snprintf(buf, MAX_PROP_LEN, " reg 0x%x = 0x%x;", i, readreg);
             strcat(ret, buf);
         }
     }
