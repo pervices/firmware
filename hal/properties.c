@@ -2693,14 +2693,25 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Currently our units do not have serial numbers burned into them
+// As a workaround the serial number will be rtm followed by serial number of the time mcu
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
-    uint32_t old_val1;
-    uint32_t old_val2;
-    read_hps_reg("sys16", &old_val1);
-    read_hps_reg("sys17", &old_val2);
+    //Gets the rtm value of fuse 0 of the time mcu)
+    get_property("time/about/mcufuses", buf, MAX_PROP_LEN);
+    uint32_t rtm = 0;
+    sscanf(buf, "Fuse00: 0x%x", &rtm);
 
-    // Append values
-    sprintf(ret, "%08x%08x\n", old_val2, old_val1);
+    get_property("time/about/serial", buf, MAX_PROP_LEN);
+
+    // Cuts of the time serial string as the end of the first line
+    for(uint32_t n = 0; n < strnlen(buf, MAX_PROP_LEN); n++) {
+        if(isspace(buf[n])) {
+            buf[n] = 0;
+            break;
+        }
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "%u%s\n", rtm, buf);
 
     return RETURN_SUCCESS;
 }
