@@ -3059,16 +3059,15 @@ static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Fractional time in ticks
 static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
     uint32_t gps_frac_time_lh = 0, gps_frac_time_uh = 0;
-    char gps_split[MAX_PROP_LEN];
     read_hps_reg("sys7", &gps_frac_time_lh);
     read_hps_reg("sys8", &gps_frac_time_uh);
 
-    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_uh);
-    strncpy(ret, gps_split, MAX_PROP_LEN);
-    snprintf(gps_split, MAX_PROP_LEN, "%i", gps_frac_time_lh);
-    strncat(ret, gps_split, MAX_PROP_LEN);
+    uint64_t gps_frac_time = (uint64_t) gps_frac_time_lh + (((uint64_t) gps_frac_time_uh) * 1000000000);
+
+    snprintf(ret, MAX_PROP_LEN, "%lu", gps_frac_time);
 
     return RETURN_SUCCESS;
 }
