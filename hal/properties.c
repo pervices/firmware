@@ -2151,6 +2151,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
 /* --------------------------------- TIME ----------------------------------- */
 /* -------------------------------------------------------------------------- */
 // Sets the time, updates on the next PPS
+// Note sure what the difference in intended use is, since in both cases the clock's full seconds only increments on pps
 static int hdlr_time_clk_pps(const char *data, char *ret) {
     long double time;
     sscanf(data, "%Lf", &time);
@@ -2168,6 +2169,10 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
     // upper half
     write_hps_reg("sys12",
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
+    // Toggling this bit sets the time
+    write_hps_reg_mask("sys13", 1, 1);
+    write_hps_reg_mask("sys13", 0, 1);
 
     return RETURN_SUCCESS;
 }
@@ -2268,6 +2273,20 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
         strcpy(buf, "clk -t 0\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_set_time_source(const char *data, char *ret) {
+    // Sets pps mode to input
+    if (strcmp(data, "external") == 0) {
+        write_hps_reg_mask("sys13", 2, 0x2);
+    // Sets pps mode to output
+    } else if (strcmp(data, "internal") == 0) {
+        write_hps_reg_mask("sys13", 0, 0x2);
+    // Other time sources not supported
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "Invalid time source\nValid options are: external, internal\n");
+    }
     return RETURN_SUCCESS;
 }
 
@@ -3259,6 +3278,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
     DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
+    DEFINE_FILE_PROP("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal")  \
     DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
     DEFINE_FILE_PROP("time/source/vtune"                   , hdlr_time_source_vtune,                 RW, "1403")      \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
