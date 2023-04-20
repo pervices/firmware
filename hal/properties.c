@@ -2152,22 +2152,49 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TIME ----------------------------------- */
 /* -------------------------------------------------------------------------- */
-
+// Sets the time, updates on the next PPS
 static int hdlr_time_clk_pps(const char *data, char *ret) {
+    long double time;
+    sscanf(data, "%Lf", &time);
+    // Write the number of whole seconds
+    // lower half
+    write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    // upper half
+    write_hps_reg("sys10",
+                  (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
+    // Write the fractional seconds in ticks
+    uint64_t frational_time = (time - (uint64_t)time);
+    // lower half
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    // upper half
+    write_hps_reg("sys12",
+                  (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
     return RETURN_SUCCESS;
 }
 
 static int hdlr_time_clk_set_time(const char *data, char *ret) {
     long double time;
     sscanf(data, "%Lf", &time);
+    // Write the number of whole seconds
+    // lower half
     write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    // upper half
     write_hps_reg("sys10",
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
-    write_hps_reg("sys11",
-                  (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
-    write_hps_reg("sys13", 1);
-    write_hps_reg("sys13", 0);
+    // Write the fractional seconds in ticks
+    uint64_t frational_time = (time - (uint64_t)time);
+    // lower half
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    // upper half
+    write_hps_reg("sys12",
+                  (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
+    // Toggling this bit sets the time
+    write_hps_reg_mask("sys13", 1, 1);
+    write_hps_reg_mask("sys13", 0, 1);
     return RETURN_SUCCESS;
 }
 
