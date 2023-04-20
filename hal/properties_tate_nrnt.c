@@ -3881,11 +3881,32 @@ static int hdlr_time_reboot(const char *data, char *ret) {
     }
 
 static int hdlr_time_clk_pps(const char *data, char *ret) {
+    long double time;
+    sscanf(data, "%Lf", &time);
+    // Write the number of whole seconds
+    // lower half
+    write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    // upper half
+    write_hps_reg("sys10",
+                  (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+
+    // Write the fractional seconds in ticks
+    uint64_t frational_time = (time - (uint64_t)time);
+    // lower half
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    // upper half
+    write_hps_reg("sys12",
+                  (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+
+    // Toggling this bit sets the time
+    write_hps_reg_mask("sys13", 1, 1);
+    write_hps_reg_mask("sys13", 0, 1);
+
     return RETURN_SUCCESS;
 }
 
 // Controls both the source of pps (internal vs external) and whether the port is output or input
-static int hdlr_time_clk_pps_direction(const char *data, char *ret) {
+static int hdlr_time_set_time_source(const char *data, char *ret) {
     uint32_t external;
     if (strcmp(data, "external") == 0) {
         external = 2;
@@ -3902,12 +3923,22 @@ static int hdlr_time_clk_pps_direction(const char *data, char *ret) {
 static int hdlr_time_clk_cur_time(const char *data, char *ret) {
     long double time;
     sscanf(data, "%Lf", &time);
+    // Write the number of whole seconds
+    // lower half
     write_hps_reg("sys9", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    // upper half
     write_hps_reg("sys10",
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
-    write_hps_reg("sys11",
-                  (uint32_t)(time - (uint64_t)time) & 0x00000000FFFFFFFF);
+    // Write the fractional seconds in ticks
+    uint64_t frational_time = (time - (uint64_t)time);
+    // lower half
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    // upper half
+    write_hps_reg("sys12",
+                  (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+
+    // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
     write_hps_reg_mask("sys13", 0, 1);
     return RETURN_SUCCESS;
@@ -5043,7 +5074,9 @@ static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
     read_hps_reg("sys7", &gps_frac_time_lh);
     read_hps_reg("sys8", &gps_frac_time_uh);
 
-    snprintf(ret, MAX_PROP_LEN, "%i%i", gps_frac_time_uh, gps_frac_time_lh);
+    uint64_t gps_frac_time = (uint64_t) gps_frac_time_lh + (((uint64_t) gps_frac_time_uh) * 1000000000);
+
+    snprintf(ret, MAX_PROP_LEN, "%lu", gps_frac_time);
 
     return RETURN_SUCCESS;
 }
@@ -5445,7 +5478,6 @@ GPIO_PINS
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/clk/pps_dir"                    , hdlr_time_clk_pps_direction,            RW, "internal", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
@@ -5464,6 +5496,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
