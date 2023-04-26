@@ -1050,6 +1050,14 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             tx_power[INT(ch)] = PWR_ON;                                        \
+            \
+            /* Toggles dsp reset to clear the buffer*/\
+            /* Must be put in reset, taken out of reset, put back in reset to properly reset*/\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
+            usleep(10000);\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
+            usleep(10000);\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
                                                                                \
             /* board commands */                                               \
             strcpy(buf, "board -c " STR(ch) " -d\r");                          \
