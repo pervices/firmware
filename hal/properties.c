@@ -2173,10 +2173,9 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
     // Write the fractional seconds in ticks
     uint64_t frational_time = (time - (uint64_t)time);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
     // upper half
-    write_hps_reg("sys12",
-                  (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+    write_hps_reg("sys12", (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
@@ -2199,10 +2198,9 @@ static int hdlr_time_clk_set_time(const char *data, char *ret) {
     // Write the fractional seconds in ticks
     uint64_t frational_time = (time - (uint64_t)time);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
     // upper half
-    write_hps_reg("sys12",
-                  (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
+    write_hps_reg("sys12", (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
