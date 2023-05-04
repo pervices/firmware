@@ -29,6 +29,7 @@
     #include <stdbool.h>
     #include <stdio.h>
     #include <string.h>
+    #include <math.h>
 #endif
 
 #include "channels.h"
@@ -687,7 +688,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel*/                               \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
+        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -706,17 +707,26 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
                                                                                \
             tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
                          "Shutting Down TX" STR(ch) ".\n");                    \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* read the lmx freq property for the ref_freq of the ADF5355*/        \
+        /* load the reference frequency and such for ADF5355*/                 \
         pllparam_t pll = pll_def_adf5355;                                      \
+        long double outfreq = 0;                                               \
+                                                                               \
+        /* round the requested freq to the nearest multiple of PLL ref */      \
+        float n = (float)freq / pll.ref_freq;                                  \
+        freq = round(n) * pll.ref_freq;                                        \
+                                                                               \
+        /* Ensure the requested freq is greater than the minimum */            \
+        while(freq < PLL1_RFOUT_MIN_HZ) {                                      \
+            freq += pll.ref_freq;                                              \
+        }                                                                      \
                                                                                \
         /* run the pll calc algorithm */                                       \
-        long double outfreq = 0;                                               \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
         while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
@@ -1187,7 +1197,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel */                              \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
+        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -1205,15 +1215,26 @@ CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
                          "Shutting Down RX" STR(ch) ".\n");                    \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* run the pll calc algorithm */                                       \
+        /* load the reference frequency and such for ADF5355*/                 \
         pllparam_t pll = pll_def_adf5355;                                      \
         long double outfreq = 0;                                               \
+                                                                               \
+        /* round the requested freq to the nearest multiple of PLL ref */      \
+        float n = (float)freq / pll.ref_freq;                                  \
+        freq = round(n) * pll.ref_freq;                                        \
+                                                                               \
+        /* Ensure the requested freq is greater than the minimum */            \
+        while(freq < PLL1_RFOUT_MIN_HZ) {                                      \
+            freq += pll.ref_freq;                                              \
+        }                                                                      \
+                                                                               \
+        /* run the pll calc algorithm */                                       \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
         while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
