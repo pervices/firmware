@@ -29,6 +29,7 @@
     #include <stdbool.h>
     #include <stdio.h>
     #include <string.h>
+    #include <math.h>
 #endif
 
 #include "channels.h"
@@ -686,7 +687,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel*/                               \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
+        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -705,19 +706,36 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
                                                                                \
             tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
                          "Shutting Down TX" STR(ch) ".\n");                    \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* run the pll calc algorithm */                                       \
+        /* load the reference frequency and such for ADF5355*/                 \
         pllparam_t pll = pll_def_adf5355;                                      \
         long double outfreq = 0;                                               \
+                                                                               \
+        /* round the requested freq to the nearest multiple of PLL ref */      \
+        float n = (float)freq / pll.ref_freq;                                  \
+        freq = round(n) * pll.ref_freq;                                        \
+                                                                               \
+        /* Ensure the requested freq is greater than the minimum */            \
+        while(freq < PLL1_RFOUT_MIN_HZ) {                                      \
+            freq += pll.ref_freq;                                              \
+        }                                                                      \
+                                                                               \
+        /* run the pll calc algorithm */                                       \
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
+            PRINT(INFO, "Retrying pll calc");                                  \
+            pll.R = pll.R + 1;                                                 \
+            outfreq = setFreq(&freq, &pll);                                    \
+        }                                                                      \
+                                                                               \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
@@ -1033,9 +1051,22 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         if (power >= PWR_ON && tx_power[INT(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
+        /* Continuous Sysref Mode */                                           \
+        strcpy(buf, "sync -c 1\r");                                            \
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                      \
+        usleep(300); /* Wait for Sysref to stabilize and bias around zero.*/   \
+                                                                               \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             tx_power[INT(ch)] = PWR_ON;                                        \
+                                                                               \
+            /* Toggles dsp reset to clear the buffer*/\
+            /* Must be put in reset, taken out of reset, put back in reset to properly reset*/\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
+            usleep(10000);\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
+            usleep(10000);\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
                                                                                \
             /* board commands */                                               \
             strcpy(buf, "board -c " STR(ch) " -d\r");                          \
@@ -1087,6 +1118,10 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
                                                                                \
+            /* Pulsed Sysref Mode */                                           \
+            strcpy(buf, "sync -c 0\r");                                        \
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                  \
+            usleep(300); /* Wait Sysref to stabilize and bias around zero.*/   \
             tx_power[INT(ch)] = PWR_OFF;                                       \
         }                                                                      \
                                                                                \
@@ -1161,7 +1196,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel */                              \
-        if ((freq < PLL1_RFOUT_MIN_HZ) || (freq > PLL1_RFOUT_MAX_HZ)) {        \
+        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -1179,16 +1214,33 @@ CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is < 53 MHz: "       \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
                          "Shutting Down RX" STR(ch) ".\n");                    \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* run the pll calc algorithm */                                       \
+        /* load the reference frequency and such for ADF5355*/                 \
         pllparam_t pll = pll_def_adf5355;                                      \
         long double outfreq = 0;                                               \
+                                                                               \
+        /* round the requested freq to the nearest multiple of PLL ref */      \
+        float n = (float)freq / pll.ref_freq;                                  \
+        freq = round(n) * pll.ref_freq;                                        \
+                                                                               \
+        /* Ensure the requested freq is greater than the minimum */            \
+        while(freq < PLL1_RFOUT_MIN_HZ) {                                      \
+            freq += pll.ref_freq;                                              \
+        }                                                                      \
+                                                                               \
+        /* run the pll calc algorithm */                                       \
         outfreq = setFreq(&freq, &pll);                                        \
+                                                                               \
+        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
+            PRINT(INFO, "Retrying pll calc");                                  \
+            pll.R = pll.R + 1;                                                 \
+            outfreq = setFreq(&freq, &pll);                                    \
+        }                                                                      \
                                                                                \
         strcpy(buf, "rf -c " STR(ch) " \r");                                   \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
@@ -1459,7 +1511,6 @@ CHANNELS
         else                                                                   \
             write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 14));             \
                                                                                \
-        /*sync_channels( 15 ); */                                              \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
