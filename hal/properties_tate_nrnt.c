@@ -358,16 +358,21 @@ uint32_t is_hps_only() {
 
 }
 
+uint32_t is_ddr_used() {
+    uint32_t val = 0;
+    read_hps_reg("res_ro12", &val);
+    val = (val >> 31) & 0x1;
+
+    return val;
+}
+
+
 #if NUM_TX_CHANNELS > 0
     static int get_tx_dst_port_map_loc(int chan) {
-        int network_speed = get_network_speed();
-        if(network_speed == 40) {
+        if(is_ddr_used()) {
             return tx_dst_port_map[chan];
-        } else if (network_speed == 100) {
-            return chan;
         } else {
-            PRINT(ERROR, "Unrecongnized network configuration, tx destination ports will be set as if the unit if 40G\n");
-            return tx_dst_port_map[chan];
+            return chan;
         }
     }
 #endif
@@ -4709,11 +4714,8 @@ static int hdlr_fpga_about_hps_only(const char *data, char *ret) {
 // FIFO is used when DDR can't keep up, but has very little space
 // This is for FPGA versioning only, use system/get_max_buffer_level to get the maximum buffer level (which is what matters to external programs)
 static int hdlr_fpga_about_ddr_used(const char *data, char *ret) {
-    uint32_t val = 0;
-    read_hps_reg("res_ro12", &val);
-    val = (val >> 31) & 0x1;
 
-    snprintf(ret, MAX_PROP_LEN, "%u", val);
+    snprintf(ret, MAX_PROP_LEN, "%u", is_ddr_used());
 
     return RETURN_SUCCESS;
 }
