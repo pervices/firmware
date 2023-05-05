@@ -74,6 +74,9 @@
     //Multiples of 1000ps are meaningless at 1G
     const int possible_analog_sysref_delays[NUM_ANALOG_SYSREF_DELAYS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
 
+    // Flag indicating the unit is capable to transmitting little endian samples
+    #define LITTLE_ENDIAN_SUPPORTED 1
+
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
@@ -134,6 +137,9 @@
     //0 means delay of 0, 1 = delay of 600ps, 2 = 900ps, 3=1200ps...
     //Multiples of 1000ps are meaningless at 1G
     const int possible_analog_sysref_delays[NUM_ANALOG_SYSREF_DELAYS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
+
+    // 3G does not support little endian
+    #define LITTLE_ENDIAN_SUPPORTED 0
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000

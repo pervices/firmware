@@ -1440,12 +1440,17 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         int endian = 0;\
         sscanf(data, "%i", &endian);\
         int bit_val;\
-        if(endian) {\
+        if(endian && LITTLE_ENDIAN_SUPPORTED) {\
             bit_val = 0x20000;\
         } else {\
             bit_val = 0;\
         }\
         write_hps_reg_mask(tx_reg4_map[INT(ch)], bit_val, 0x20000);\
+        if(endian && LITTLE_ENDIAN_SUPPORTED) {\
+            snprintf(ret, MAX_PROP_LEN, "1");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
@@ -2463,12 +2468,17 @@ TX_CHANNELS
         int endian = 0;\
         sscanf(data, "%i", &endian);\
         int bit_val;\
-        if(endian) {\
+        if(endian && LITTLE_ENDIAN_SUPPORTED) {\
             bit_val = 0x20000;\
         } else {\
             bit_val = 0;\
         }\
         write_hps_reg_mask(rx_reg4_map[INT(ch)], bit_val, 0x20000);\
+        if(endian && LITTLE_ENDIAN_SUPPORTED) {\
+            snprintf(ret, MAX_PROP_LEN, "1");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
