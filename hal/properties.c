@@ -935,6 +935,25 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         write_hps_reg("tx" STR(ch) "4", old_val & ~0x2);                       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /*0 for big endian packets, anything else for little endian*/\
+    static int hdlr_tx_##ch##_endian_swap(const char *data, char *ret) {      \
+        int endian = 0;\
+        sscanf(data, "%i", &endian);\
+        int bit_val;\
+        if(endian) {\
+            bit_val = 0x20000;\
+        } else {\
+            bit_val = 0;\
+        }\
+        write_hps_reg_mask(reg4[INT(ch)+4], bit_val, 0x20000);\
+        if(endian) {\
+            snprintf(ret, MAX_PROP_LEN, "1");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
+        return RETURN_SUCCESS;\
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
@@ -1404,6 +1423,25 @@ CHANNELS
         else                                                                   \
             write_hps_reg("rx" STR(ch) "4", (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /*0 for big endian packets, anything else for little endian*/\
+    static int hdlr_rx_##ch##_endian_swap(const char *data, char *ret) {      \
+        int endian = 0;\
+        sscanf(data, "%i", &endian);\
+        int bit_val;\
+        if(endian) {\
+            bit_val = 0x20000;\
+        } else {\
+            bit_val = 0;\
+        }\
+        write_hps_reg_mask(reg4[INT(ch)], bit_val, 0x20000);\
+        if(endian) {\
+            snprintf(ret, MAX_PROP_LEN, "1");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
+        return RETURN_SUCCESS;\
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_about_id(const char *data, char *ret) {          \
@@ -2835,7 +2873,8 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa")      \
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")
+    DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
+    DEFINE_FILE_PROP("rx/" #_c "/link/endian_swap"       , hdlr_rx_##_c##_endian_swap,            RW, "0")
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
@@ -2883,7 +2922,8 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")
+    DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")\
+    DEFINE_FILE_PROP("tx/" #_c "/link/endian_swap"       , hdlr_tx_##_c##_endian_swap,            RW, "0")
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
