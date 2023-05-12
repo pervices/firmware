@@ -12,49 +12,15 @@ which is available on yaourt.
 
 1.a.i Crimson Optimized Compile Commands
 
-   sh autogen.sh
-
-    ./configure                                             \
-        --prefix=/usr                                       \
-        --host=x86_64                                       \
-        CC="arm-unknown-linux-gnueabihf-gcc"                \
-        CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall  \
-            -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
-        CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
-            -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
-        CXX="arm-unknown-linux-gnueabihf-g++"               \
-        CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
-            -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
-        PRODUCT=VAUNT
-
-   make
-
-   OR use sh autovaunt.sh
+   sh autovaunt.sh
 
 1.a.ii Cyan Optimized Compile Commands
 
     Automatic configuration and compilation: "sh autotate.sh <TATE_VERSION> <OPTIONAL: RTM version"
-    Example: "sh autotate.sh TATE_4R4T_3G RTM3"
 
-    sh autogen.sh
+    sh autotate.sh TATE_NRNT RTM3/4/... R4/8... T4/8... S1000/3000/...
 
-    OR manually configure with:
-
-    ./configure                         \
-        --prefix=/usr                   \
-        --host=x86_64                   \
-        CC=aarch64-linux-gnu-gcc        \
-        CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                -march=armv8-a -mtune=cortex-a53 " \
-        CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                  -march=armv8-a -mtune=cortex-a53 " \
-        CXX=aarch64-linux-gnu-g++       \
-        CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-                  -march=armv8-a -mtune=cortex-a53 " \
-        PRODUCT=<TATE_VERSION> \
-        HW_REV=<HW_VERSION>
-
-    make -j9
+    Examples: sh autotate.sh TATE_NRNT RTM5 R8 T8 S1000
 
 2. Specifying Build Variant Target
 
