@@ -12,31 +12,15 @@ firmware from an x86_64 host to the arm computer.
 
 1.a.i Crimson Optimized Compile Commands
 
-   sed -i 's/DTATE/DVAUNT/g' configure.ac #Optional, clean git repo defaults to Vaunt.
-
-   sh autogen.sh
-   CXX="/opt/gcc-arm32/bin/arm-unknown-linux-gnueabihf-g++" \
-   CC="/opt/gcc-arm32/bin/arm-unknown-linux-gnueabihf-gcc" \
-   CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall -march=armv7-a -mtune=cortex-a9 -mfpu=neon" \
-   ./configure --prefix=/usr --host=arm-unknown-linux-gnueabihf
-   make
+   sh autovaunt.sh
 
 1.a.ii Cyan Optimized Compile Commands
 
-   # When compiling cyan, use the master-testing branch.
-   sed -i 's/DVAUNT/DTATE/g' configure.ac
+    # When compiling cyan, use the master-testing branch.
 
-   sh autogen.sh
+   sh autotate.sh TATE_NRNT RTM3/4/... R4/8... T4/8... S1000/3000/...
 
-   CXX="/usr/bin/arm-linux-gnueabi-g++" \
-   CC="/usr/bin/arm-linux-gnueabi-gcc" \
-   CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall \
-        -march=armv8-a -mtune=cortex-a53 -mfpu=neon" \
-   CPPFLAGS="" \
-   CXXFLAGS="" \
-        ./configure --prefix=/usr --host=x86_64
-
-   make
+    Examples: sh autotate.sh TATE_NRNT RTM5 R8 T8 S1000
 
 2. Specifying Build Variant Target
 
