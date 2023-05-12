@@ -2515,6 +2515,10 @@ TX_CHANNELS
     }                                                                          \
     \
     static int hdlr_rx_##ch##_iq_gain_correction(const char *data, char *ret) {      \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
            double iq_gain_error = 0;                                           \
            sscanf(data, "%lf", &iq_gain_error);                                \
            PRINT(INFO,"data as entered %lf\n", iq_gain_error);\
@@ -2549,6 +2553,10 @@ TX_CHANNELS
           return RETURN_SUCCESS;                                                           \
     }                                                                                       \
     static int hdlr_rx_##ch##_iq_phase_correction(const char *data, char *ret) {            \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
         double iq_phase_error = 0;                                                          \
         /*input range: -2.5 to 2.5, output range:0x0000 to 0x01FF, offset: 0x100, */        \
         sscanf(data,"%lf",&iq_phase_error);                                                 \
@@ -2581,6 +2589,10 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                              \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_i(const char *data, char *ret) {      \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
         double iq_dcoffset_i = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
         sscanf(data,"%lf",&iq_dcoffset_i);                                                 \
@@ -2613,6 +2625,10 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_q(const char *data, char *ret) {      \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
            /* To do */                                         \
         double iq_dcoffset_q = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
@@ -2647,6 +2663,10 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd2_ix(const char *data, char *ret) {                      \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2665,6 +2685,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd2_iy(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2683,6 +2707,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qx(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2701,6 +2729,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qy(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2719,6 +2751,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_ix(const char *data, char *ret) {                      \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2737,6 +2773,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd3_iy(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2755,6 +2795,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qx(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2773,6 +2817,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qy(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2791,6 +2839,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_ix(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2809,6 +2861,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_qx(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2827,6 +2883,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_ix(const char *data, char *ret) {                      \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2845,6 +2905,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_im3_iy(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2863,6 +2927,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qx(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2881,6 +2949,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qy(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2899,6 +2971,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                  \
     static int hdlr_rx_##ch##_iq_ip3cc(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t cc_adj;                                               \
             sscanf(data,"%hhu",&cc_adj);                                      \
@@ -2917,6 +2993,10 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_ip3ic(const char *data, char *ret) {                  \
+        if(RTM_VER  < 4) {\
+            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
+            return RETURN_SUCCESS;\
+        }\
                                                                                     \
             uint8_t ic_adj;                                               \
             sscanf(data,"%hhu",&ic_adj);                                      \
@@ -3273,8 +3353,10 @@ TX_CHANNELS
             \
             /* Turns the power indicator light on */\
             /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
-            snprintf(buf, 20, "board -w 1\r");\
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            if(RTM_VER > 3) {\
+                snprintf(buf, 20, "board -w 1\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            }\
             \
             /* power off & stream off */                                       \
         } else {                                                               \
