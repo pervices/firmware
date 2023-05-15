@@ -114,6 +114,9 @@ static const char *tx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "txa4", "txb4
 #define NUM_DEVICE_SIDE_PORTS 16
 static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
 
+// Maximum user set delay for i or q
+const int max_iq_delay = 32;
+
 static uint_fast8_t jesd_enabled = 0;
 
 // A typical VAUNT file descriptor layout may look something like this:
@@ -1420,23 +1423,23 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         if(i_delay < 0) {\
             PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
             i_delay = 0;\
-        } else if(i_delay > 63 ) {\
-            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
-            i_delay = 63;\
+        } else if(i_delay > max_iq_delay ) {\
+            PRINT(ERROR, "i delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
+            i_delay = max_iq_delay;\
         }\
         if(q_delay < 0) {\
             PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
             q_delay = 0;\
-        } else if(q_delay > 63) {\
-            q_delay = 63;\
-            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+        } else if(q_delay > max_iq_delay) {\
+            q_delay = max_iq_delay;\
+            PRINT(ERROR, "q delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
         }\
-/*        int32_t ch_select = 1 << (INT(ch) + 16);\
+        int32_t ch_select = 1 << (INT(ch) + 16);\
         int32_t reg_val = (q_delay << 6) | i_delay;\
          write_hps_reg("res_rw12", ch_select);\
          write_hps_reg("res_rw13", reg_val | 0x1000);\
-         write_hps_reg("res_rw13", reg_val);*/\
-        snprintf(ret, MAX_PROP_LEN, "%i,%i\n tx delay iq is disabled due to it getting stuck with a large randome phase difference. Currently 0, 0. The above is what it would be if it weren't disabled\n", i_delay, q_delay);\
+         write_hps_reg("res_rw13", reg_val);\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i\n", i_delay, q_delay);\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
@@ -2448,16 +2451,16 @@ TX_CHANNELS
         if(i_delay < 0) {\
             PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
             i_delay = 0;\
-        } else if(i_delay > 63 ) {\
-            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
-            i_delay = 63;\
+        } else if(i_delay > max_iq_delay ) {\
+            PRINT(ERROR, "i delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
+            i_delay = max_iq_delay;\
         }\
         if(q_delay < 0) {\
             PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
             q_delay = 0;\
-        } else if(q_delay > 63) {\
-            q_delay = 63;\
-            PRINT(ERROR, "i delay must be less than or equal to 63. Setting i delay to 63.\n");\
+        } else if(q_delay > max_iq_delay) {\
+            q_delay = max_iq_delay;\
+            PRINT(ERROR, "q delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
         }\
         int32_t ch_select = 1 << INT(ch);\
         int32_t reg_val = (q_delay << 6) | i_delay;\
