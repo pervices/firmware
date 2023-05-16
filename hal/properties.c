@@ -2546,10 +2546,12 @@ static int hdlr_time_board_led(const char *data, char *ret) {
 
 static int hdlr_time_board_led_blink(const char *data, char *ret) {
     if(strcmp(data, "0") == 0 || strcmp(data, "off") == 0) {
-        snprintf(buf, "board -b 0\r");
+        sprintf(buf, "board -b 0\r");
     } else if(strcmp(data, "1") == 0 || strcmp(data, "on") == 0) {
-        snprintf(buf, "board -b 1\r");
+        sprintf(buf, "board -b 1\r");
     }
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
 }
 
 static int hdlr_time_about_id(const char *data, char *ret) {
@@ -3366,7 +3368,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/board/test"                     , hdlr_time_board_test,                   WO, "0")         \
     DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
     DEFINE_FILE_PROP("time/board/led"                      , hdlr_time_board_led,                    WO, "0")         \
-    DEFINE_FILE_PROP("time/board/blink"                    , hdlr_time_board_led_blink,                  W0, "0")         \
+    DEFINE_FILE_PROP("time/board/blink"                    , hdlr_time_board_led_blink,                  WO, "0")         \
     DEFINE_FILE_PROP("time/about/id"                       , hdlr_time_about_id,                     RO, "001")       \
     DEFINE_FILE_PROP("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001")       \
     DEFINE_FILE_PROP("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001")       \
