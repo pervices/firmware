@@ -2546,12 +2546,14 @@ static int hdlr_time_board_led(const char *data, char *ret) {
 
 static int hdlr_time_board_led_blink(const char *data, char *ret) {
     if(strcmp(data, "0") == 0 || strcmp(data, "off") == 0) {
-        sprintf(buf, "board -b 0\r");
+        ping(uart_synth_fd, "board -b 0\r", 11);
+        return RETURN_SUCCESS;
     } else if(strcmp(data, "1") == 0 || strcmp(data, "on") == 0) {
-        sprintf(buf, "board -b 1\r");
+        ping(uart_synth_fd, "board -b 1\r", 11);
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "invalid argument\n");
     }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
 }
 
 static int hdlr_time_about_id(const char *data, char *ret) {
