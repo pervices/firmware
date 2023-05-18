@@ -1410,9 +1410,16 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     /*resets dsp (including buffer)*/\
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val = 0;                                                      \
-        read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                              \
-        write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                        \
-        write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~0x2);                       \
+        /* Puts dsp in reset to clear uflow/oflow count, then takes it out of reset*/\
+        /* Delays present because it must be in reset for an amount of time*/\
+        /* Resets twice because resets don't work properly and need to be cleared*/\
+        read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                           \
+        write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                     \
+        usleep(10000);\
+        write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x2));                   \
+        write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                     \
+        usleep(10000);\
+        write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x2));                   \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
