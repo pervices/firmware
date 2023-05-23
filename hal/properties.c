@@ -1685,7 +1685,7 @@ CHANNELS
                                                                                \
             /* board command */                                                \
             strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
@@ -2256,6 +2256,7 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
 }
 
 static int hdlr_time_clk_set_time(const char *data, char *ret) {
+    // Note that this function is used by both server.c and crimson-fpga-time-sync.sh (and by extension crimson-fpga-time-sync.service). Ensure that if this funciton or its state tree path are updated, those uses are also updated
     long double time;
     sscanf(data, "%Lf", &time);
     // Write the number of whole seconds
@@ -3307,7 +3308,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,  RW, "0")\
-    DEFINE_FILE_PROP("rx/" #_c "/link/endian_swap"       , hdlr_rx_##_c##_endian_swap,            RW, "0")
+    DEFINE_FILE_PROP("rx/" #_c "/link/endian_swap"       , hdlr_rx_##_c##_endian_swap,            RW, "0")         \
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
@@ -3448,13 +3449,13 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
 
 static prop_t property_table[] = {
+    DEFINE_TIME()
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
 #define X(ch) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
-    DEFINE_TIME()
     DEFINE_FPGA()
     DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
     DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
@@ -3694,7 +3695,7 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 void sync_channels(uint8_t chan_mask) {
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
-    
+
     // Put JESD into continuous mode
     strcpy(buf, "sync -c 1\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -3707,16 +3708,16 @@ void sync_channels(uint8_t chan_mask) {
     strcat(buf, str_chan_mask);
     strcat(buf, " -a 1\r");
     ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-    
+
     // TX - DACs
     strcpy(buf, "power -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -d 1\r");
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-    
+
     // Unmask SYSREF on the FPGA
     write_hps_reg("res_rw7", 0x10000000);
-    
+
     /* Initiate the SYSREF sequence for jesd
      * Set all boards' SYSREF detection gate to ON */
     strcpy(buf, "board -c ");
@@ -3729,10 +3730,10 @@ void sync_channels(uint8_t chan_mask) {
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
     
     usleep(200000); // Some wait time for MCUs to be ready
-    
+
     // Mask SYSREF on the FPGA
     write_hps_reg("res_rw7", 0);
-    
+
     /* Turn off all boards' SYSREF detection gates */
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
@@ -3746,7 +3747,7 @@ void sync_channels(uint8_t chan_mask) {
     // Put JESD into pulsed mode
     strcpy(buf, "sync -c 0\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    
+
 }
 
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
