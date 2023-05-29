@@ -134,6 +134,9 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
+
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t chan);
+
 /* clang-format on */
 
 // Also known as strchr (maybe we should replace this someday).
@@ -161,7 +164,7 @@ static int read_uart(int uartfd) {
     }
 
     printf("%s\n", buf);
-    strncpy((char *)uart_ret_buf, buf, MAX_UART_RET_LEN - 1);
+    snprintf((char *)uart_ret_buf, MAX_UART_RET_LEN, "%s", buf);
     return RETURN_SUCCESS;
 }
 
@@ -2198,7 +2201,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 //using -1 for streaming all
 static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     int64_t stream = 0;
-    sscanf(data, "%li", &stream);
+    sscanf(data, "%lli", &stream);
     char path_buffer[MAX_PATH_LEN];
     if(stream != 0) {
         for(int n = 0; n < NUM_CHANNELS; n++) {
@@ -3202,7 +3205,7 @@ static int hdlr_fpga_board_gps_frac_time(const char *data, char *ret) {
 
     uint64_t gps_frac_time = (uint64_t) gps_frac_time_lh + (((uint64_t) gps_frac_time_uh) * 1000000000);
 
-    snprintf(ret, MAX_PROP_LEN, "%lu", gps_frac_time);
+    snprintf(ret, MAX_PROP_LEN, "%llu", gps_frac_time);
 
     return RETURN_SUCCESS;
 }

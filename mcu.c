@@ -61,17 +61,19 @@ static int contains(const char *str, char letter, int size) {
     return cnt;
 }
 
-static void dump_args(void)
-{
-    printf("%s\n", UART_SN);
-    printf("%s\n", UART_TX);
-    printf("%s\n", UART_RX);
-    printf("%d\n", uart_synth_fd);
-    printf("%d\n", uart_tx_fd);
-    printf("%d\n", uart_rx_fd);
-    printf("%d\n", fwd);
-    printf("%d\n", uart_comm_fd);
-}
+#ifdef DEBUG_OUTPUTS
+    static void dump_args(void)
+    {
+        printf("%s\n", UART_SN);
+        printf("%s\n", UART_TX);
+        printf("%s\n", UART_RX);
+        printf("%d\n", uart_synth_fd);
+        printf("%d\n", uart_tx_fd);
+        printf("%d\n", uart_rx_fd);
+        printf("%d\n", fwd);
+        printf("%d\n", uart_comm_fd);
+    }
+#endif
 
 static void help(void)
 {
