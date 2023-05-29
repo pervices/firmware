@@ -75,7 +75,7 @@
     const int possible_analog_sysref_delays[NUM_ANALOG_SYSREF_DELAYS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
 
     // Flag indicating the unit is capable to transmitting little endian samples
-    #define LITTLE_ENDIAN_SUPPORTED 1
+    #define LITTLE_ENDIAN_SUPPORTED 0 // TMP: works on 1G, but causes phase coherency issues
 
 #elif defined(S3000)
 
