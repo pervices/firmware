@@ -58,6 +58,9 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+// Maximum user set delay for i or q
+const int max_iq_delay = 32;
+
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
 // TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -940,7 +943,34 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    static int hdlr_tx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
+        int i_delay = 0;\
+        int q_delay = 0;\
+        sscanf(data, "%i %i", &i_delay, &q_delay);\
+        if(i_delay < 0) {\
+            PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
+            i_delay = 0;\
+        } else if(i_delay > max_iq_delay ) {\
+            PRINT(ERROR, "i delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
+            i_delay = max_iq_delay;\
+        }\
+        if(q_delay < 0) {\
+            PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
+            q_delay = 0;\
+        } else if(q_delay > max_iq_delay) {\
+            q_delay = max_iq_delay;\
+            PRINT(ERROR, "q delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
+        }\
+        int32_t ch_select = 1 << (INT(ch) + 4);\
+        int32_t reg_val = (q_delay << 6) | i_delay;\
+         write_hps_reg("res_rw1", ch_select);\
+         write_hps_reg("res_rw0", reg_val | 0x1000);\
+         write_hps_reg("res_rw0", reg_val);\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i\n", i_delay, q_delay);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
     static int hdlr_tx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
@@ -1410,7 +1440,34 @@ CHANNELS
             write_hps_reg("rx" STR(ch) "4", (old_val & ~0x1e00) | 0x000);      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    static int hdlr_rx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
+        int i_delay = 0;\
+        int q_delay = 0;\
+        sscanf(data, "%i %i", &i_delay, &q_delay);\
+        if(i_delay < 0) {\
+            PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
+            i_delay = 0;\
+        } else if(i_delay > max_iq_delay ) {\
+            PRINT(ERROR, "i delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
+            i_delay = max_iq_delay;\
+        }\
+        if(q_delay < 0) {\
+            PRINT(ERROR, "q delay must be equal to or greater than 0. Setting q delay to 0\n");\
+            q_delay = 0;\
+        } else if(q_delay > max_iq_delay) {\
+            q_delay = max_iq_delay;\
+            PRINT(ERROR, "q delay must be less than or equal to %i. Setting i delay to %i.\n", max_iq_delay, max_iq_delay);\
+        }\
+        int32_t ch_select = 1 << INT(ch);\
+        int32_t reg_val = (q_delay << 6) | i_delay;\
+        write_hps_reg("res_rw1", ch_select);\
+        write_hps_reg("res_rw0", reg_val | 0x1000);\
+        write_hps_reg("res_rw0", reg_val);\
+        snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+    \
     static int hdlr_rx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
         return RETURN_SUCCESS;                                                 \
@@ -2840,7 +2897,8 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa")      \
     DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")
+    DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0")\
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
@@ -2888,7 +2946,8 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")
+    DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")\
+    DEFINE_FILE_PROP("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0")\
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
