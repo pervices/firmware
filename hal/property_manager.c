@@ -65,17 +65,32 @@ static void write_to_file(const char *path, const char *data) {
 // Helper function to read to property
 static void read_from_file(const char *path, char *data, size_t max_len) {
     FILE *fd;
+
+    // Open file
     if (!(fd = fopen(path, "r"))) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
     }
-    fgets(data, max_len, fd);
+
+    // Read content
+    data[0] = '\0';
+    int data_read = 0;
+    while ( fgets(data + data_read, max_len - data_read, fd) ) {
+        data_read = strnlen(data, max_len);
+        // Stop reading if the buffer is full (<=1 because the last byte must be null)
+        if(max_len - data_read <= 1) {
+            break;
+        }
+    }
     fclose(fd);
 
-    // remove the new line at the end of the file
-    size_t pos = 0;
-    while (data[pos] != '\n' && data[pos] != '\0')
-        pos++;
+    // How big is the file?
+    size_t pos = data_read;
+
+    // Ignore any new lines found at the end of the file
+    while ( pos > 0 && data[pos - 1] == '\n'){
+        pos--;
+    }
     data[pos] = '\0';
 
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
