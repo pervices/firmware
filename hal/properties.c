@@ -985,7 +985,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     static int hdlr_tx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
         int i_delay = 0;\
         int q_delay = 0;\
-        sscanf(data, "%i,%i", &i_delay, &q_delay);\
+        sscanf(data, "%i %i", &i_delay, &q_delay);\
         if(i_delay < 0) {\
             PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
             i_delay = 0;\
@@ -1540,7 +1540,7 @@ CHANNELS
     static int hdlr_rx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
         int i_delay = 0;\
         int q_delay = 0;\
-        sscanf(data, "%i,%i", &i_delay, &q_delay);\
+        sscanf(data, "%i %i", &i_delay, &q_delay);\
         if(i_delay < 0) {\
             PRINT(ERROR, "i delay must be equal to or greater than 0. Setting i delay to 0.\n");\
             i_delay = 0;\
@@ -3305,7 +3305,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
     DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
     DEFINE_FILE_PROP("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,  RW, "0")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0,0")\
+    DEFINE_FILE_PROP("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0")\
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
@@ -3356,7 +3356,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
     DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")\
-    DEFINE_FILE_PROP("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0,0")\
+    DEFINE_FILE_PROP("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0")\
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION)     \
