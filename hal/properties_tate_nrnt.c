@@ -1446,7 +1446,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
          write_hps_reg("res_rw12", ch_select);\
          write_hps_reg("res_rw13", reg_val | 0x1000);\
          write_hps_reg("res_rw13", reg_val);\
-        snprintf(ret, MAX_PROP_LEN, "%i,%i\n", i_delay, q_delay);\
+        snprintf(ret, MAX_PROP_LEN, "%i %i\n", i_delay, q_delay);\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
@@ -2474,7 +2474,7 @@ TX_CHANNELS
         write_hps_reg("res_rw12", ch_select);\
         write_hps_reg("res_rw13", reg_val | 0x1000);\
         write_hps_reg("res_rw13", reg_val);\
-        snprintf(ret, MAX_PROP_LEN, "%i,%i", i_delay, q_delay);\
+        snprintf(ret, MAX_PROP_LEN, "%i %i", i_delay, q_delay);\
         return RETURN_SUCCESS;\
     }                                                                          \
     \
