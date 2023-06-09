@@ -12,51 +12,6 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-if [ "$1" == "ALL" ]; then
-#     ./$0 TATE_4R4T RTM3
-#     if [ ! -f "server" ]; then
-#         echo "TATE_4R4T RTM3 failed"
-#         exit 80
-#     fi
-#     ./$0 TATE_9R7T RTM3
-#     if [ ! -f "server" ]; then
-#         echo "TATE_9R7T RTM3 failed"
-#         exit 80
-#     fi
-#     ./$0 TATE_8R RTM3
-#     if [ ! -f "server" ]; then
-#         echo "TATE_8R RTM3 failed"
-#         exit 80
-#     fi
-#     ./$0 TATE_4R4T_3G RTM3
-#     if [ ! -f "server" ]; then
-#         echo "TATE_4R4T_3G RTM3 failed"
-#         exit 80
-#     fi
-#     ./$0 TATE_4R4T RTM4
-#     if [ ! -f "server" ]; then
-#         echo "TATE_4R4T RTM4 failed"
-#         exit 80
-#     fi
-#     ./$0 TATE_9R7T RTM4
-#     if [ ! -f "server" ]; then
-#         echo "TATE_9R7T RTM4 failed"
-#         exit 80
-#     fi
-#     ./$0 TATE_8R RTM4
-#     if [ ! -f "server" ]; then
-#         echo "TATE_8R RTM4 failed"
-#         exit 80
-#     fi
-#     ./$0 TATE_4R4T_3G RTM4
-#     if [ ! -f "server" ]; then
-#         echo "TATE_4R4T_3G RTM4 failed"
-#         exit 80
-#     fi
-    echo "All not supported yet"
-    exit 80
-fi
-
 ./autogen.sh clean
 ./autogen.sh
 
