@@ -97,20 +97,10 @@ int main(int argc, char *argv[]) {
             #elif RTM5
                 printf("RTM: 5\n");
             #else
-                #error "This file must be compiled with a valid hardware revision (RTM3, RTM4)"
+                #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
             #endif
             printf("Date: %s UTC\n", VERSIONDATE);
-            #if defined(TATE)
-                printf("Product: TATE\n");
-            #elif defined(TATE_4R4T)
-                printf("Product: TATE_4R4T\n");
-            #elif defined(TATE_9R7T)
-                printf("Product: TATE_9R7T\n");
-            #elif defined(TATE_4R4T_3G)
-                printf("Product: TATE_4R4T_3G\n");
-            #elif defined(TATE_8R)
-                printf("Product: TATE_8R\n");
-            #elif defined(TATE_NRNT)
+            #if defined(TATE_NRNT)
                 printf("Product: TATE_NRNT\n");
                 printf("Rx: %i\n", NUM_RX_CHANNELS);
                 printf("Tx: %i\n", NUM_TX_CHANNELS);
@@ -118,7 +108,7 @@ int main(int argc, char *argv[]) {
             #elif defined(VAUNT)
                 printf("Product: VAUNT\n");
             #else
-                #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT, VAUNT). Confirm spelling and spaces."
+                #error "This file must be compiled with a valid PRODUCT (TATE_NRNT). Confirm spelling and spaces."
             #endif
 
             uint32_t ver39_32, ver31_0, verjesd;
