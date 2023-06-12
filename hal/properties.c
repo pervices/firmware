@@ -2148,8 +2148,12 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
         strcpy(buf, "clk -t 1\r");
     } else if (strcmp(data, "internal") == 0) {
         strcpy(buf, "clk -t 0\r");
+    } else { // just get the current state of the reference
+        strcpy(buf, "clk -i\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    // save the UART result to the state tree
+    strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
@@ -3000,7 +3004,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll_pll1" , hdlr_time_status_lol_pll_pll1,          RW, "unlocked")  \
     DEFINE_FILE_PROP("time/status/lmk_lossoflock_pll_pll2" , hdlr_time_status_lol_pll_pll2,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
+    DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0")  \
     DEFINE_FILE_PROP("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal")  \
     DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
     DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
