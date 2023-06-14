@@ -89,6 +89,17 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-v") == 0) {
             printf("Branch: %s\n", VERSIONGITBRANCH);
             printf("Revision: %s\n", VERSIONGITREVISION);
+            #ifdef RTM6
+                printf("RTM: 6\n");
+            #elif RTM7
+                printf("RTM: 7\n");
+            #elif RTM8
+                printf("RTM: 8\n");
+            #elif RTM9
+                printf("RTM: 9\n");
+            #else
+                #error "This file must be compiled with a valid hardware revision (RTM6, RTM7, RTM8, RTM9)"
+            #endif
             printf("Date: %s UTC\n", VERSIONDATE);
 
             uint32_t ver39_32, ver31_0;
