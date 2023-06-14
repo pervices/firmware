@@ -27,7 +27,6 @@
 
 #elif RTM8
     #define RTM_VER 8
-    #error "RTM8 not added to variants yet"
 
 #elif RTM9
     #define RTM_VER 9

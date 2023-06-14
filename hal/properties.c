@@ -43,7 +43,13 @@
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
 #define RESAMP_SAMPLE_RATE 260000000.0
-#define REF_FREQ           5000000
+#ifdef RTM8
+    #define REF_FREQ           5000000
+#elif RTM9
+    #define REF_FREQ           5000000
+#else
+    #error "Invalid RTM specified"
+#endif
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
@@ -2304,6 +2310,28 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     uint64_t freq = 0;
     sscanf(data, "%" SCNd64 "", &freq);
 
+#if RTM8
+    char prop_read[MAX_PROP_LEN];
+    char prop_path[128];
+
+    strcpy(prop_path, STATE_DIR);
+    strcat(prop_path, "time/about/hw_ver");
+
+    // Read EEPROM, if stock unit do nothing
+    get_property(prop_path,prop_read,MAX_PROP_LEN);
+    if (strstr(prop_read,"reg 0x11 = 0x1") == NULL) {
+        PRINT(INFO, "No LMX\n");
+        return RETURN_SUCCESS;
+    }
+
+    // if the EEPROM tells us that time has an LMX set the LMX freq
+    PRINT(INFO, "Setting LMX\n");
+#elif RTM9
+    // TODO: verify old branch behaviour should be kept
+#else
+    #error "Invalid RTM specified"
+#endif
+
     /* if freq = 0, mute PLL */
     if (freq == 0) {
         strcpy(buf, "lmx -k\r");
@@ -3918,11 +3946,19 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t 
     
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
 
+#ifdef RTM8
+    (void) chan;
+    // No-op
+    // TODO: verify old branch behaviour should be kept
+#elif RTM9
     // Select the desired LMX
     strcpy(buf, "lmx -c ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", chan);
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
+#else
+    #error #error "Invalid RTM specified"
+#endif
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k \r");
@@ -3965,11 +4001,18 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t 
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
+#ifdef RTM8
+    // No-op
+    // TODO: verify old branch behaviour should be kept
+#elif RTM9
     // Set LMX sync according to divFBen
     strcpy(buf, "lmx -s ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
+#else
+    #error #error "Invalid RTM specified"
+#endif
 
     usleep(100000);
 }

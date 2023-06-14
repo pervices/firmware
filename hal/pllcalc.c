@@ -32,13 +32,12 @@
 int main(void) {
     uint64_t reqFreq = 250e6;
     pllparam_t pll = pll_def_adf5355;
-//     pllparam_t pll = pll_def_lmx2595;
-//     pll.ref_freq = 5e6;
 
     // Debug parameters;
     double max_diff = (double)pll.ref_freq / pll.R;
     double max_N = (double)pll.n_max;
     double max_R = (double)pll.r_max;
+
     int printdebug = 0;
     uint64_t stepFreq = (1000000);
 
@@ -297,6 +296,28 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         pll->x2en = 0;
         // determine D based on Table 8 pg 27 of LMX2595 datasheet
         uint16_t D = 0;
+#ifdef RTM8
+        // TODO: verify old branch behaviour should be kept
+        if (*reqFreq > 3750000000 ) { D = 2; }
+        else if (*reqFreq > 1875000000 ) { D = 4; }
+        else if (*reqFreq > 1250000000 ) { D = 6; }
+        else if (*reqFreq > 950000000  ) { D = 8; }
+        else if (*reqFreq > 630000000 ) { D = 12; }
+        else if (*reqFreq > 470000000 ) { D = 16; }
+        else if (*reqFreq > 320000000 ) { D = 24; }
+        else if (*reqFreq > 235000000 ) { D = 32; }
+        else if (*reqFreq > 160000000 ) { D = 48; }
+        else if (*reqFreq > 130000000 ) { D = 64; }
+        else if (*reqFreq > 110000000 ) { D = 72; }
+        else if (*reqFreq > 80000000 ) { D = 96; }
+        else if (*reqFreq > 60000000 ) { D = 128; }
+        else if (*reqFreq > 40000000 ) { D = 192; }
+        else if (*reqFreq > 30000000 ) { D = 256; }
+        else if (*reqFreq > 19532000 ) { D = 384; }
+        //else if (*reqFreq > 20000000 ) {D = 384; }    // to allow synchronizing for phase coherency across RF channels D < 512
+        //else if (*reqFreq > 15000000 ) { D = 512; }
+        //else if (*reqFreq >= 10000000 ) { D = 768; }
+#elif RTM9
         if      (*reqFreq > 3750000000 ) { D = 2;   }
         else if (*reqFreq > 1875000000 ) { D = 4;   }
         else if (*reqFreq > 1250000000 ) { D = 6;   }
@@ -316,6 +337,9 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         else if (*reqFreq >   14648000 ) { D = 512; }
         else if (*reqFreq >=   9766000 ) { D = 768; }
         else { D = 0 ;}                                 // if reqFreq is too low d=0 will cause error during check
+#else
+    #error "Invalid RTM specified"
+#endif
         pll->d = D;
         pll->vcoFreq = (uint64_t)(D * (*reqFreq));
     } else {                                            // if unknown IC set d to zero, which is expected to
