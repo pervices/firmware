@@ -721,8 +721,8 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
                                                                                \
             tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
-                         "Shutting Down TX" STR(ch) ".\n");                    \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
+                         "Shutting Down TX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
@@ -1261,8 +1261,8 @@ CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
-                         "Shutting Down RX" STR(ch) ".\n");                    \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
+                         "Shutting Down RX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \

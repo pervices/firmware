@@ -101,7 +101,7 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 // Crimson TNG specific defines
 #define FREQ_TOP PLL1_RFOUT_MAX_HZ
 //#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
-#ifdef RTM8
+#if defined(RTM6) || defined(RTM7) || defined(RTM8)
 // TODO: verify old branch behaviour should be kept
     #define FREQ_BOTTOM 125000000
 #elif RTM9

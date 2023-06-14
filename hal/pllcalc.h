@@ -62,7 +62,7 @@
 // Increasing both will lead to better frequency accuracy on the radio side,
 // but at the cost of accuracy.
 
-#ifdef RTM8
+#if defined(RTM6) || defined(RTM7) || defined(RTM8)
 // TODO: verify old branch behaviour should be kept
     #define _PLL_OUT_MAX_DEVIATION 500000
 #elif RTM9
@@ -71,7 +71,10 @@
     #error "Invalid RTM specified"
 #endif
 // Core reference feeds to PLL0
-#ifdef RTM8
+#if defined(RTM6) || defined(RTM7)
+// TODO: verify old branch behaviour should be kept
+    #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
+#elif RTM8
     // TODO: verify old branch behaviour should be kept
     #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
 #elif RTM9
