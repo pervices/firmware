@@ -59,6 +59,8 @@ CFLAGS+=" -DVERSIONDATE=\\\"`TZ=UTC date '+%F-%T'`\\\""
 CFLAGS+=" -DVAUNT"
 #CFLAGS+=" -DTATE"
 
+CFLAGS+=" -D${HW_REV}"
+
 LDFLAGS="${LDFLAGS}"
 LDFLAGS+=" -Wl,-no-undefined"
 

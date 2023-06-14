@@ -34,6 +34,8 @@
 
 #include "channels.h"
 
+#include "variant_config/vaunt_rtm_config.h"
+
 #define BASE_DIR "/var/volatile/crimson/"
 #define STATE_DIR "/var/volatile/crimson/state/"
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
