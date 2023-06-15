@@ -3291,6 +3291,49 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    static int hdlr_rx_##ch##_jesd_error(const char *data, char *ret) {       \
+        /*The onehot jesd core converted into hex*/\
+        int start;                                                            \
+        sscanf(data, "%i", &start);\
+        if ( start == 1 ){\
+            uint32_t rx_err_VAL = 0;                                           \
+            bool flag_ok = true;                                               \
+            strcpy(ret,"");                                                    \
+            for (int j = 0; j<=1; j++){ /* check err0 and err1 registers */    \
+                write_hps_reg("net6", 0x1 << INT(ch));                         \
+                write_hps_reg("net7", 0x18+j);                                 \
+                write_hps_reg("net9", 0x1);\
+                write_hps_reg("net9", 0x0);\
+                read_hps_reg("res_ro30", &rx_err_VAL);                         \
+                /*Checking for errors*/\
+                if (rx_err_VAL == 0 ){                                         \
+                    PRINT(INFO, "rx_err%i has no errors\n",j);                 \
+                } else {                                                       \
+                    /* note legacy FPGA will report value 0xDEADBEEF */        \
+                    flag_ok = false;                                           \
+                    PRINT(INFO, "Bad link for Rx : %d, rx_err%i is : %X\n",\
+                        INT(ch), j, rx_err_VAL);                               \
+                    strcpy(ret, "err");                                        \
+                    sprintf(ret + strlen(ret), "%i", j);                       \
+                    strcat(ret, ": 0x");                                       \
+                    sprintf(ret + strlen(ret), "%x", rx_err_VAL);              \
+                    strcat(ret,"\n");                                          \
+                    PRINT(INFO, "Resetting Errors\n");                         \
+                    write_hps_reg("net6", 0x1 << INT(ch));                     \
+                    write_hps_reg("net7", 0x18+j);                             \
+                    write_hps_reg("net8", rx_err_VAL);                         \
+                    write_hps_reg("net9", 0x2);\
+                    write_hps_reg("net9", 0x0);\
+                    PRINT(INFO, "rx_err%i been reset\n",j);                    \
+                }\
+            }/*rof j (err0 and err1)*/                                         \
+            if (flag_ok) {                                                     \
+                snprintf(ret, sizeof("good"), "good");                         \
+            }                                                                  \
+        }/*fi start*/                                                          \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
     /* Negative: pretend there's no board there and turn the board off */\
     /* 0: disable the board but to not turn it off (use pwr_board if you actually want to turn it off) */\
     /* Positive: enable the board/finish power on process */\
@@ -5406,6 +5449,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "1", RP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", RP, #_c)     \
