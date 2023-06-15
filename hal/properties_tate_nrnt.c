@@ -3297,6 +3297,8 @@ TX_CHANNELS
         sscanf(data, "%i", &start);\
         if ( start == 1 ){\
             uint32_t rx_err_VAL = 0;                                           \
+            bool flag_ok = true;                                               \
+            strcpy(ret,"");                                                    \
             for (int j = 0; j<=1; j++){ /* check err0 and err1 registers */    \
                 write_hps_reg("net6", 0x1 << INT(ch));                         \
                 write_hps_reg("net7", 0x18+j);                                 \
@@ -3306,13 +3308,16 @@ TX_CHANNELS
                 /*Checking for errors*/\
                 if (rx_err_VAL == 0 ){                                         \
                     PRINT(INFO, "rx_err%i has no errors\n",j);                 \
-                }\
-                else if (rx_err_VAL == 0xDEADBEEF) {                           \
-                    /* deliberately empty, channel is not in use on FPGA*/;    \
-                }\
-                else{\
+                } else {                                                       \
+                    /* note legacy FPGA will report value 0xDEADBEEF */        \
+                    flag_ok = false;                                           \
                     PRINT(INFO, "Bad link for Rx : %d, rx_err%i is : %X\n",\
                         INT(ch), j, rx_err_VAL);                               \
+                    strcpy(ret, "err");                                        \
+                    sprintf(ret + strlen(ret), "%i", j);                       \
+                    strcat(ret, ": 0x");                                       \
+                    sprintf(ret + strlen(ret), "%x", rx_err_VAL);              \
+                    strcat(ret,"\n");                                          \
                     PRINT(INFO, "Resetting Errors\n");                         \
                     write_hps_reg("net6", 0x1 << INT(ch));                     \
                     write_hps_reg("net7", 0x18+j);                             \
@@ -3322,6 +3327,9 @@ TX_CHANNELS
                     PRINT(INFO, "rx_err%i been reset\n",j);                    \
                 }\
             }/*rof j (err0 and err1)*/                                         \
+            if (flag_ok) {                                                     \
+                snprintf(ret, sizeof("good"), "good");                         \
+            }                                                                  \
         }/*fi start*/                                                          \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
