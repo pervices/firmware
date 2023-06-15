@@ -2327,7 +2327,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     // if the EEPROM tells us that time has an LMX set the LMX freq
     PRINT(INFO, "Setting LMX\n");
 #elif RTM9
-    // TODO: verify old branch behaviour should be kept
+    // No-op
 #else
     #error "Invalid RTM specified"
 #endif
@@ -3949,7 +3949,6 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t 
 #ifdef RTM8
     (void) chan;
     // No-op
-    // TODO: verify old branch behaviour should be kept
 #elif RTM9
     // Select the desired LMX
     strcpy(buf, "lmx -c ");
@@ -4003,7 +4002,6 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t 
 
 #ifdef RTM8
     // No-op
-    // TODO: verify old branch behaviour should be kept
 #elif RTM9
     // Set LMX sync according to divFBen
     strcpy(buf, "lmx -s ");

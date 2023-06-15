@@ -101,14 +101,7 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 // Crimson TNG specific defines
 #define FREQ_TOP PLL1_RFOUT_MAX_HZ
 //#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
-#if defined(RTM6) || defined(RTM7) || defined(RTM8)
-// TODO: verify old branch behaviour should be kept
-    #define FREQ_BOTTOM 125000000
-#elif RTM9
-    #define FREQ_BOTTOM (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
-#else
-    #error "Invalid RTM specified"
-#endif
+#define FREQ_BOTTOM (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
 
 #define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ
 static struct synth_lut_ctx synth_lut_rx_ctx[] = {

@@ -63,7 +63,6 @@
 // but at the cost of accuracy.
 
 #if defined(RTM6) || defined(RTM7) || defined(RTM8)
-// TODO: verify old branch behaviour should be kept
     #define _PLL_OUT_MAX_DEVIATION 500000
 #elif RTM9
     #define _PLL_OUT_MAX_DEVIATION 1000000
@@ -72,10 +71,8 @@
 #endif
 // Core reference feeds to PLL0
 #if defined(RTM6) || defined(RTM7)
-// TODO: verify old branch behaviour should be kept
     #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
 #elif RTM8
-    // TODO: verify old branch behaviour should be kept
     #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
 #elif RTM9
     #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
@@ -133,14 +130,7 @@
 #define LMX2595_D_THRESH_VCO 7                  // set border between check for VCO upper limit
 #define LMX2595_VCO_MIN_HZ 7500000000ULL        // from datasheet
 
-#ifdef RTM8
-// TODO: verify old branch behaviour should be kept
-    #define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels (important for cyan RFE)
-#elif RTM9
-    #define LMX2595_DIV_MAX 768
-#else
-    #error "Invalid RTM specified"
-#endif
+#define LMX2595_DIV_MAX 768
 #define LMX2595_DIV_MIN 1       // from datasheet
 #define LMX2595_N_MAX 524287    // from datasheet
 #define LMX2595_N_MIN 28        // from datasheet
