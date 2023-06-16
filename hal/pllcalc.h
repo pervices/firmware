@@ -44,9 +44,10 @@
 #include <stdlib.h>
 
 // Uncomment for stand alone operation; compile with: gcc -lm pllcalc.c
-//#define _PLL_DEBUG_STANDALONE
-//#define _PLL_DEBUG_INFO
-//#define _PLL_DEBUG_VERBOSE
+// #define _PLL_DEBUG_STANDALONE
+// #define _PLL_DEBUG_INFO
+// #define _PLL_DEBUG_VERBOSE
+// #define RTM10
 
 #ifndef _PLL_DEBUG_STANDALONE
 #include "common.h"
@@ -64,7 +65,7 @@
 
 #if defined(RTM6) || defined(RTM7) || defined(RTM8) || defined(RTM10)
     #define _PLL_OUT_MAX_DEVIATION 500000
-#elif RTM9
+#elif defined(RTM9)
     #define _PLL_OUT_MAX_DEVIATION 1000000
 #else
     #error "Invalid RTM specified"
@@ -74,7 +75,7 @@
     #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
 #elif defined(RTM8) || defined(RTM10)
     #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
-#elif RTM9
+#elif defined(RTM9)
     #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
 #else
     #error "Invalid RTM specified"
