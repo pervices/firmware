@@ -2930,6 +2930,15 @@ static int hdlr_server_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
+#if defined(RTM6) || defined(RTM7)
+    uint32_t old_val;
+    read_hps_reg("sys1", &old_val);
+    
+    old_val = (old_val >> 7) & 0xf;
+    
+    sprintf(ret, "ver. 0x%02x", old_val);
+    return RETURN_SUCCESS;
+#else
     FILE *fp = NULL;
     char buf[MAX_PROP_LEN] = {0};
     char base_cmd[MAX_PROP_LEN] = "/usr/sbin/i2cget -y 0 0x54 0x";
@@ -3074,6 +3083,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     strcat(ret, "\n");
 
     return RETURN_SUCCESS;
+#endif
 }
 
 static int hdlr_fpga_link_rate(const char *data, char *ret) {
