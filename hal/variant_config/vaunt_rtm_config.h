@@ -29,6 +29,9 @@
 #elif RTM9
     #define RTM_VER 9
 
+#elif RTM10
+    #define RTM_VER 10
+
 #else
     #error "This file must be compiled with a valid hardware revision (RTM6, RTM7, RTM8, RTM9)"
 #endif

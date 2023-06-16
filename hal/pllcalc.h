@@ -62,7 +62,7 @@
 // Increasing both will lead to better frequency accuracy on the radio side,
 // but at the cost of accuracy.
 
-#if defined(RTM6) || defined(RTM7) || defined(RTM8)
+#if defined(RTM6) || defined(RTM7) || defined(RTM8) || defined(RTM10)
     #define _PLL_OUT_MAX_DEVIATION 500000
 #elif RTM9
     #define _PLL_OUT_MAX_DEVIATION 1000000
@@ -72,7 +72,7 @@
 // Core reference feeds to PLL0
 #if defined(RTM6) || defined(RTM7)
     #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
-#elif RTM8
+#elif defined(RTM8) || defined(RTM10)
     #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
 #elif RTM9
     #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.

@@ -97,8 +97,11 @@ int main(int argc, char *argv[]) {
                 printf("RTM: 8\n");
             #elif RTM9
                 printf("RTM: 9\n");
+            #elif RTM10
+                printf("RTM: 10\n");
             #else
-                #error "This file must be compiled with a valid hardware revision (RTM6, RTM7, RTM8, RTM9)"
+                #error "This file must be compiled with a valid hardware rev\
+ (RTM6, RTM7, RTM8, RTM9, RTM10)"
             #endif
             printf("Date: %s UTC\n", VERSIONDATE);
 
