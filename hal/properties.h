@@ -70,6 +70,7 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 void sync_channels(uint8_t chan_mask);
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, size_t channel);
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll);
 
 void dump_tree(void);
 

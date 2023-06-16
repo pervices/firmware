@@ -19,11 +19,9 @@
 
 #ifdef RTM6
     #define RTM_VER 6
-    #error "RTM6 not added to variants yet"
 
 #elif RTM7
     #define RTM_VER 7
-    #error "RTM7 not added to variants yet"
 
 #elif RTM8
     #define RTM_VER 8

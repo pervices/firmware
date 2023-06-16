@@ -39,17 +39,13 @@
 #define BASE_DIR "/var/volatile/crimson/"
 #define STATE_DIR "/var/volatile/crimson/state/"
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+#define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
 #define RESAMP_SAMPLE_RATE 260000000.0
-#ifdef RTM8
-    #define REF_FREQ           5000000
-#elif RTM9
-    #define REF_FREQ           5000000
-#else
-    #error "Invalid RTM specified"
-#endif
+
+#define REF_FREQ 5000000 // core reference frequency is 5MHz, needed by LMX2595
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
@@ -141,9 +137,6 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
     IPVER_IPV4,
 };
-
-
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t chan);
 
 /* clang-format on */
 
@@ -772,6 +765,11 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_common_lo(const char *data, char *ret) {      \
+        if (RTM_VER <= 7) {                                                    \
+            /* common LO not supported by RTM6/7 hardware */                   \
+            snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
+            return EXIT_SUCCESS;                                               \
+        }                                                                      \
         /* TODO: make writing zero restore restore switch to correct setting */\
         /* TODO: make rf_freq_val avoid setting switch if common_lo on */      \
         int enable;                                                            \
@@ -1339,6 +1337,11 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_common_lo(const char *data, char *ret) {      \
+        if (RTM_VER <= 7) {                                                    \
+            /* common LO not supported by RTM6/7 hardware */                   \
+            snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
+            return EXIT_SUCCESS;                                               \
+        }                                                                      \
         /* TODO: make writing zero restore restore switch to correct setting */\
         /* TODO: make rf_freq_val avoid setting switch if common_lo on */      \
         int enable;                                                            \
@@ -2345,10 +2348,12 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
 }
 
 static int hdlr_time_lmx_freq(const char* data, char* ret) {
-    uint64_t freq = 0;
-    sscanf(data, "%" SCNd64 "", &freq);
-
-#if RTM8
+#if defined(RTM6) || defined(RTM7)
+    // time_lmx_freq not supported by RTM6/7 hardware
+    snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);
+    return EXIT_SUCCESS;
+#elif defined(RTM8)
+    // check if there is a LoGen board and only set the LMX if there is
     char prop_read[MAX_PROP_LEN];
     char prop_path[128];
 
@@ -2358,17 +2363,18 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     // Read EEPROM, if stock unit do nothing
     get_property(prop_path,prop_read,MAX_PROP_LEN);
     if (strstr(prop_read,"reg 0x11 = 0x1") == NULL) {
-        PRINT(INFO, "No LMX\n");
+        snprintf(ret, sizeof("No LMX detected"), "No LMX detected");
         return RETURN_SUCCESS;
     }
-
-    // if the EEPROM tells us that time has an LMX set the LMX freq
-    PRINT(INFO, "Setting LMX\n");
 #elif RTM9
     // No-op
+    // always set the LMX because there is on board, not just LoGen
 #else
     #error "Invalid RTM specified"
 #endif
+
+    uint64_t freq = 0;
+    sscanf(data, "%" SCNd64 "", &freq);
 
     /* if freq = 0, mute PLL */
     if (freq == 0) {
@@ -2393,7 +2399,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     outfreq = setFreq(&freq, &pll);
     
     /* Send Parameters over to the MCU */
-    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, 1);
+    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
                                                                         
     snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
     
@@ -3991,23 +3997,22 @@ out:
     return r;
 }
 
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t chan) {
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
-    
-    double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
-
-#ifdef RTM8
-    (void) chan;
-    // No-op
+#if defined(RTM6) || defined(RTM7)
+    // set_lo_frequency not supported by RTM6/7 hardware
+    return;
+#elif RTM8
+    // There is only LoGen LMX no need to select chan
 #elif RTM9
-    // Select the desired LMX
-    strcpy(buf, "lmx -c ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", chan);
-    strcat(buf, "\r");
+    // Select the onboard LMX (no RTM9 customer had LoGen)
+    strcpy(buf, "lmx -c 1\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 #else
-    #error #error "Invalid RTM specified"
+    #error "Invalid RTM specified"
 #endif
+
+    double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k \r");
@@ -4051,15 +4056,13 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t 
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
 #ifdef RTM8
-    // No-op
-#elif RTM9
+    // No-op, MCU does not support the lmx -s argument
+#else
     // Set LMX sync according to divFBen
     strcpy(buf, "lmx -s ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
-#else
-    #error #error "Invalid RTM specified"
 #endif
 
     usleep(100000);
