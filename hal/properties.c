@@ -2435,14 +2435,16 @@ static int hdlr_time_source_sync(const char *data, char *ret) {
 static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         strcpy(buf, "clk -t 1\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     } else if (strcmp(data, "internal") == 0) {
         strcpy(buf, "clk -t 0\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     } else { // just get the current state of the reference
         strcpy(buf, "clk -i\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // save the UART result to the state tree
+        strcpy(ret, (char *)uart_ret_buf);
     }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    // save the UART result to the state tree
-    strcpy(ret, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
