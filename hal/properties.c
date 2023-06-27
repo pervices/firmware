@@ -1086,7 +1086,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         /* this is technically a 64-bit register, but we currently only need   \
          * the bottom 32-bits */                                               \
         sprintf(flc_reg, "flc%d", 14+(INT(ch)*2));                             \
-        read_hps_reg("flc_reg", &count);                                       \
+        read_hps_reg(flc_reg, &count);                                       \
         snprintf(ret, MAX_PROP_LEN, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
