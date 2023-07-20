@@ -2,10 +2,14 @@
 
 if [ -z $CC ]; then
 	SERVER_CC="arm-unknown-linux-gnueabihf-gcc"
+else 
+	SERVER_CC=$CC
 fi
 
 if [ -z $CXX ]; then
 	SERVER_CXX="arm-unknown-linux-gnueabihf-g++"
+else
+	SERVER_CXX=$CXX
 fi
 
 ./autogen.sh clean
