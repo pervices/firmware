@@ -50,7 +50,7 @@ else
     exit 80
 fi
 
-make -j9
+make -j$(nproc)
 
 if [ $# -ge 6 ]; then
     mv server $6
