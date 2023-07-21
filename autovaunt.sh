@@ -31,4 +31,4 @@ fi
         PRODUCT=VAUNT\
         HW_REV=$1
 
-make -j9
+make -j$(nproc)
