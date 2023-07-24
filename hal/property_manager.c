@@ -103,7 +103,8 @@ static void change_group_permissions_for_all(void)
 
 // Helper function to make properties
 static void make_prop(prop_t *prop) {
-    char cmd[MAX_PATH_LEN];
+    const int CMD_LENGTH = 2*MAX_PATH_LEN + 100;
+    char cmd[CMD_LENGTH];
     char path[MAX_PATH_LEN];
 
     switch (prop->type) {
@@ -158,11 +159,11 @@ static void make_prop(prop_t *prop) {
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
-        snprintf(cmd, sizeof(cmd), "rm -Rf /var/volatile/crimson/state/%s", prop->path);
+        snprintf(cmd, CMD_LENGTH, "rm -Rf " STATE_DIR "/%s", prop->path);
         system(cmd);
 
         // TODO: replace with symlinkat(2)
-        snprintf(cmd, sizeof(cmd), "cd /var/volatile/crimson/state; ln -sf %s %s",
+        snprintf(cmd, CMD_LENGTH, "cd " STATE_DIR "; ln -sf %s %s",
                  prop->symlink_target, prop->path);
         system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
@@ -507,29 +508,17 @@ int get_channel_for_path(const char *path) {
     return path[3] - 'a';
 }
 
-void power_on_channel(bool tx, int channel) {
+void power_on_channel(bool tx, char channel) {
     char buf[MAX_PATH_LEN];
     prop_t *prop;
 
-    snprintf(buf, sizeof(buf), "%s/%c/pwr", tx ? "tx" : "rx", 'a' + channel);
+    snprintf(buf, sizeof(buf), "%s/%c/pwr", tx ? "tx" : "rx", channel);
     prop = get_prop_from_cmd(buf);
     if (NULL == prop) {
         PRINT(ERROR, "Cannot find prop for command '%s'\n", buf);
         return;
     }
     write_to_file(get_abs_path(prop, buf), "1");
-}
-
-void power_on_channel_fixup(char *path) {
-    bool tx;
-    int channel = get_channel_for_path(path);
-    if (-1 == channel) {
-        // note: this is not necessarily an error (some paths do not have a
-        // channel)
-        return;
-    }
-    tx = 0 == strncmp("tx", path, 2);
-    power_on_channel(tx, channel);
 }
 
 // standard set property
@@ -549,10 +538,23 @@ int set_property(const char *prop, const char *data) {
         return RETURN_ERROR_SET_PROP;
     }
 
-    // enable channel if it has not been enabled yet
-    // (enabling the channel later will erase the current channels, so enable
-    // now)
-    power_on_channel_fixup(temp->path);
+#ifdef PROPERTY_MANAGER_DEBUG
+    PRINT(INFO, "pwr_en: %i\n", temp->pwr_en);
+    PRINT(INFO, "Setting: %s\n", temp->path);
+#endif
+    if(temp->pwr_en == UP) {
+        // enable (turns on and initializes) channel if it has not been enabled yet
+        // (enabling the channel later will erase the current channels, so enable
+        // now)
+        //This is what causes the power to turn on every time anthing with tx or rx in its path is called
+        //This is the old method
+        PRINT(ERROR, "Old method of choosing if a baord needs to be powered on removed\n");
+    //powers of channels if they are not already on
+    } else if(temp->pwr_en == RP) {
+        power_on_channel(0, *(temp->ch));
+    } else if(temp->pwr_en == TP) {
+        power_on_channel(1, *(temp->ch));
+    }
 
     write_to_file(get_abs_path(temp, path), data);
 

@@ -52,8 +52,11 @@
 
 // General purpose temp buffer size
 #define BUF_SIZE (1024)
-#define MAX_PATH_LEN (4096)
-#define MAX_PROP_LEN (1024)
+#define MAX_PATH_LEN (128)
+#define MAX_PROP_LEN (16384)
+// Having the buffer containing default properties be large results in the server file size being very large
+// Since the only time large buffers are needed is for dumps, the max size of default values is set to be very low
+#define MAX_DEFAULT_PROP_LEN (128)
 #define MAX_UART_LEN (8192)
 
 // macro for string comparison

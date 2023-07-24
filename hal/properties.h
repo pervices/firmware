@@ -33,6 +33,11 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+//directory of the state tree
+#define BASE_DIR "/var/volatile/crimson/"
+//state tree
+#define STATE_DIR "/var/volatile/crimson/state/"
+
 typedef enum { RW, RO, WO } perm_t;
 typedef enum { POLL, NO_POLL } poll_t;
 
@@ -41,14 +46,30 @@ typedef enum {
     PROP_TYPE_SYMLINK,
 } prop_type_t;
 
+//records stores wether or not to turn on the tx or rx board before performing the task
+//PROP_UNSPECIFIED_PWR means to use the old very clunky way
+//It is being kept so that older stuff doesn't need to be tested with the new methd and should be phased out
+typedef enum {
+    TP = 3, //indicates to set a tx board on
+    RP = 2, //indicates to set an rx board on
+    SP = 1, //indicates not to seta board to on
+    UP = 0, //indicates that is is unspecified whether or not to set a channel power (uses old method)
+} prop_pwr_t;
+
+//constant used in DEFINE_FILE_PROP_P, when a channel number is not applicable
+#define NAC "-1"
+
 typedef struct prop {
     prop_type_t type;
-    char path[MAX_PROP_LEN];
-    char symlink_target[MAX_PROP_LEN];
+    char path[MAX_PATH_LEN];
+    char symlink_target[MAX_PATH_LEN];
     int (*handler)(const char *data, char *ret);
     perm_t permissions;
-    char def_val[MAX_PROP_LEN]; // default value
+    char def_val[MAX_DEFAULT_PROP_LEN]; // default value
     int wd;                     // inotify watch descriptor
+    prop_pwr_t pwr_en; //stores wether or not to make sure a board is on before setting the property
+    char *ch;//channel number, only relevant for rx and tx (it is a string because of the way macros work, in practice it should only be used as a char)
+
 } prop_t;
 
 // Externed functions
