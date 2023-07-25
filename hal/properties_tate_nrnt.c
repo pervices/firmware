@@ -5064,6 +5064,10 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // Waits for the reset sequence to finish
     wait_for_fpga_reset();
 
+    // led1 indicates Linux is booted. Reseting the FPGA results in it being reset to its default value (flashing)
+    // This sets it back to solid (since if this is running Linux must be booted)
+    write_hps_reg("led1", 0x1);
+
     return RETURN_SUCCESS;
 }
 
