@@ -249,6 +249,8 @@
     #undef X
     };
 
+    #define NUM_CHANNELS ARRAY_SIZE(channel_names)
+
 #endif
 /* clang-format on */
 
