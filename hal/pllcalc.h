@@ -62,12 +62,22 @@
 // Increasing both will lead to better frequency accuracy on the radio side,
 // but at the cost of accuracy.
 
-#define _PLL_OUT_MAX_DEVIATION_LMX2595 100000000
-#define _PLL_OUT_MAX_DEVIATION_ADF5355 500000
-
 // Core reference feeds to PLL0
-#define PLL_CORE_REF_FREQ_HZ_LMX2595 100000000ULL // Default Reference Frequency used.
-#define PLL_CORE_REF_FREQ_HZ_ADF5355 5000000ULL // Default Reference Frequency used.
+#if defined(VAUNT)
+    #if defined(RTM6) || defined(RTM7)
+        #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
+    #elif defined(RTM8) || defined(RTM10)
+        #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
+    #elif defined(RTM9)
+        #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
+    #else
+        #error "Invalid RTM specified"
+    #endif
+#elif defined(TATE_NRNT)
+    #define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
+#else
+    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT VAUNT). Confirm spelling and spaces."
+#endif
 
 // PLL IDs
 #define PLL_ID_ADF5355 5355
@@ -117,7 +127,13 @@
 #define LMX2595_VCO_MAX2_HZ 11500000000ULL      // vco frequency limit if d if 8 or more
 #define LMX2595_D_THRESH_VCO 7                  // set border between check for VCO upper limit
 #define LMX2595_VCO_MIN_HZ 7500000000ULL        // from datasheet
-#define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
+#ifdef TATE_NRNT
+    #define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
+#elif defined (VAUNT)
+    #define LMX2595_DIV_MAX 768
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
+#endif
 #define LMX2595_DIV_MIN 1       // from datasheet
 #define LMX2595_N_MAX 524287    // from datasheet
 #define LMX2595_N_MIN 28        // from datasheet
@@ -160,7 +176,7 @@ typedef struct {
 // PLL Constructors
 
 //default ADF5355 constructor
-static pllparam_t __attribute__ ((unused)) pll_def_adf5355 = {   PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
+static pllparam_t __attribute__ ((unused)) pll_def_adf5355 = {   PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
                                         PLL1_R_FIXED,           PLL1_N_DEFAULT,
                                         PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
                                         PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
@@ -172,7 +188,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_adf5355 = {   PLL_ID_ADF5355,
 };
 
 //ADF5355 constructor for r divider = 5
-static pllparam_t __attribute__ ((unused)) pll_def_adf5355_r_5 = {   PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ_ADF5355,
+static pllparam_t __attribute__ ((unused)) pll_def_adf5355_r_5 = {   PLL_ID_ADF5355,         PLL_CORE_REF_FREQ_HZ,
                                             PLL1_R_FIXED_5,         PLL1_N_DEFAULT,
                                             PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
                                             PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
@@ -184,7 +200,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_adf5355_r_5 = {   PLL_ID_ADF5
 };
 
 // default LMX2595 constructor
-static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ_LMX2595,
+static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,         PLL_CORE_REF_FREQ_HZ,
                                         PLL1_R_FIXED,           PLL1_N_DEFAULT,
                                         PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
                                         PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,

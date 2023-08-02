@@ -40,7 +40,11 @@
 #include "led.h"
 #include "time_it.h"
 #include "channels.h"
-#include "synth_lut.h"
+
+#ifdef VAUNT
+    //sync_lut is used to deal with Crimson specific hardware limitations
+    #include "synth_lut.h"
+#endif
 
 int main(int argc, char *argv[]) {
 

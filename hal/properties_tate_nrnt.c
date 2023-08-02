@@ -25,7 +25,6 @@
     #include "array-utils.h"
     #include "mmap.h"
     #include "property_manager.h"
-    #include "synth_lut.h"
     #include "time_it.h"
 
     #include <ctype.h>
@@ -426,35 +425,6 @@ static int set_sma_dir(bool in) { return set_reg_bits("sys2", 4, 1, in); }
 static int set_sma_pol(bool positive) {
     return set_reg_bits("sys2", 6, 1, positive);
 }
-
-/* -------------------------------------------------------------------------- */
-/* -------------------------------- LUTS ------------------------------------ */
-/* -------------------------------------------------------------------------- */
-
-static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
-                                    const size_t channel) {
-    int r = RETURN_SUCCESS;
-
-    bool en = '0' != data[0];
-
-    if (en) {
-        r = synth_lut_enable(tx, channel);
-        if (EXIT_SUCCESS != r) {
-            snprintf(ret, MAX_PROP_LEN, "%c", '0');
-        }
-    } else {
-        synth_lut_disable(tx, channel);
-    }
-
-    return r;
-}
-
-#define X(ch)                                                              \
-    static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
-        return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
-    }
-RX_CHANNELS
-#undef X
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- GATE ------------------------------------ */
@@ -988,7 +958,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         }                                                                      \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll, INT(ch));  \
+        set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch));  \
                                                                                \
         /* if HB add back in freq before printing value to state tree */       \
         if (band == 2) {                                                       \
@@ -1821,7 +1791,7 @@ TX_CHANNELS
         }                                                                       \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ_LMX2595, &pll, INT(ch));  \
+        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch));  \
                                                                                 \
         /* if HB add back in freq before printing value to state tree */        \
         if (band == 2) {                                                        \
@@ -5237,7 +5207,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "-1", RP, #_c)         \

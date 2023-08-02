@@ -22,19 +22,25 @@
 
 #include "pllcalc.h"
 
-//STATE_DIR is also defined in channels, however it is also needed here
-#if defined(TATE_NRNT)
-    #define CALIBRATION_DIR "/var/calibration-data"
-    #define STATE_DIR "/var/cyan/state"
-#elif defined(VAUNT)
-    #define CALIBRATION_DIR "/var/calibration-data"
-    #define STATE_DIR "/var/volatile/crimson/state"
-#else
-    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
+// I couldn't actually find this hard-coded anywhere.
+#ifndef VCS_PATH
+#define VCS_PATH "/var/volatile/crimson/state"
 #endif
+
+extern int get_uart_rx_fd();
+extern int get_uart_tx_fd();
 
 extern void server_init_led();
 extern void server_ready_led();
+
+// this should really be a conditional defined in configure.ac based on the
+// hardware revision we're targetting, but ATM this is all I care about
+#ifndef hw_rev_defined_
+#define hw_rev_defined_
+
+#define CRIMSON_TNG
+
+#endif
 
 enum { RX, TX };
 
@@ -44,7 +50,7 @@ extern int set_freq_internal(const bool tx, const unsigned channel,
 struct synth_lut_ctx {
     const bool tx;
     const char *id;
-    // "/var/crimson/calibration-data/TXA-XXXXXXXXXXXXXXXXXXXXXX.bin", where
+    // "/var/volatile/crimson/calibration-data/TXA-XXXXXXXXXXXXXXXXXXXXXX.bin", where
     // "XXXX.." are lowercase hex digits
     char fn[PATH_MAX];
     int fd;
@@ -53,7 +59,7 @@ struct synth_lut_ctx {
     bool enabled;
     pthread_mutex_t lock;
 
-    uint32_t (*channel)(struct synth_lut_ctx *ctx);
+    size_t (*channel)(struct synth_lut_ctx *ctx);
     void (*disable)(struct synth_lut_ctx *ctx);
     int (*enable)(struct synth_lut_ctx *ctx);
     void (*erase)(struct synth_lut_ctx *ctx);
@@ -65,7 +71,7 @@ struct synth_lut_ctx {
     int (*autocal_values)(struct synth_lut_ctx *ctx, synth_rec_t *rec);
 };
 
-static uint32_t _synth_lut_channel(struct synth_lut_ctx *ctx);
+static size_t _synth_lut_channel(struct synth_lut_ctx *ctx);
 static void _synth_lut_disable(struct synth_lut_ctx *ctx);
 static int _synth_lut_enable(struct synth_lut_ctx *ctx);
 static void _synth_lut_erase(struct synth_lut_ctx *ctx);
@@ -95,26 +101,14 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 // Crimson TNG specific defines
 #define FREQ_TOP PLL1_RFOUT_MAX_HZ
 //#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
-#define FREQ_BOTTOM 125000000
+#define FREQ_BOTTOM (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
 
-#define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ_ADF5355
+#define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ
 static struct synth_lut_ctx synth_lut_rx_ctx[] = {
     DEF_RX_CTX(A),
     DEF_RX_CTX(B),
     DEF_RX_CTX(C),
     DEF_RX_CTX(D),
-    DEF_RX_CTX(E),
-    DEF_RX_CTX(F),
-    DEF_RX_CTX(G),
-    DEF_RX_CTX(H),
-    DEF_RX_CTX(I),
-    DEF_RX_CTX(J),
-    DEF_RX_CTX(K),
-    DEF_RX_CTX(L),
-    DEF_RX_CTX(M),
-    DEF_RX_CTX(N),
-    DEF_RX_CTX(O),
-    DEF_RX_CTX(P),
 };
 
 static struct synth_lut_ctx synth_lut_tx_ctx[] = {
@@ -122,18 +116,6 @@ static struct synth_lut_ctx synth_lut_tx_ctx[] = {
     DEF_TX_CTX(B),
     DEF_TX_CTX(C),
     DEF_TX_CTX(D),
-    DEF_TX_CTX(E),
-    DEF_TX_CTX(F),
-    DEF_TX_CTX(G),
-    DEF_TX_CTX(H),
-    DEF_TX_CTX(I),
-    DEF_TX_CTX(J),
-    DEF_TX_CTX(K),
-    DEF_TX_CTX(L),
-    DEF_TX_CTX(M),
-    DEF_TX_CTX(N),
-    DEF_TX_CTX(O),
-    DEF_TX_CTX(P),
 };
 
 #define SYNTH_LUT_LEN ((size_t)(((FREQ_TOP - FREQ_BOTTOM) / LO_STEP_SIZE) + 1))
@@ -325,35 +307,34 @@ out:
 }
 
 static struct synth_lut_ctx *synth_lut_find(const bool tx,
-                                            const uint32_t channel) {
+                                            const size_t channel) {
 
     struct synth_lut_ctx *it = NULL;
 
     // PRINT( INFO, "Looking for %s %c\n", tx ? "TX" : "RX", 'A' + channel );
 
     if (tx) {
-        int i = 0;
         FOR_EACH(it, synth_lut_tx_ctx) {
-            PRINT( INFO, "Considering TX %c @ %p\n", 'A' + i, &synth_lut_tx_ctx[ i ] );
+            // PRINT( INFO, "Considering TX %c @ %p\n", 'A' + i, &
+            // synth_lut_tx_ctx[ i ] );
             if (channel == it->channel(it)) {
-                PRINT( INFO, "Found TX %c\n", 'A' + i );
+                // PRINT( INFO, "Found TX %c\n", 'A' + i );
                 break;
             }
-            i++;
         }
     } else {
-        int i = 0;
         FOR_EACH(it, synth_lut_rx_ctx) {
-            PRINT( INFO, "Considering RX %c @ %p\n", 'A' + i, &synth_lut_rx_ctx[ i ] );
+            // PRINT( INFO, "Considering RX %c @ %p\n", 'A' + i, &
+            // synth_lut_rx_ctx[ i ] );
             if (channel == it->channel(it)) {
-                PRINT( INFO, "Found RX %c\n", 'A' + i );
+                // PRINT( INFO, "Found RX %c\n", 'A' + i );
                 break;
             }
-            i++;
         }
     }
 
-    PRINT( INFO, "Returning %s %c @ %p\n", tx ? "TX" : "RX", 'A' + channel, it );
+    // PRINT( INFO, "Returning %s %c @ %p\n", tx ? "TX" : "RX", 'A' + channel,
+    // it );
 
     return it;
 }
@@ -570,7 +551,7 @@ out:
     return r;
 }
 
-static uint32_t _synth_lut_channel(struct synth_lut_ctx *ctx) {
+static size_t _synth_lut_channel(struct synth_lut_ctx *ctx) {
 
     size_t r;
 
@@ -621,21 +602,17 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     ctx->fd = -1;
 
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-
+             "echo 0 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
     system(cmdbuf);
 
 out:
     pthread_mutex_unlock(&ctx->lock);
 }
 
-void synth_lut_disable(const bool tx, const uint32_t channel) {
+void synth_lut_disable(const bool tx, const size_t channel) {
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
-
-    printf("disable %p\n", it);
-
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         goto out;
@@ -665,7 +642,7 @@ static void _synth_lut_erase(struct synth_lut_ctx *ctx) {
     pthread_mutex_unlock(&ctx->lock);
 }
 
-void synth_lut_erase(const bool tx, const uint32_t channel) {
+void synth_lut_erase(const bool tx, const size_t channel) {
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
@@ -763,9 +740,8 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
     ctx->enabled = true;
 
     snprintf(cmdbuf, sizeof(cmdbuf),
-            "echo 1 > " STATE_DIR "/%cx/%lc/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + ctx->channel(ctx));
-
+             "echo 1 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
     system(cmdbuf);
 
 out:
@@ -782,14 +758,10 @@ out:
     return r;
 }
 
-int synth_lut_enable(const bool tx, const uint32_t channel) {
+int synth_lut_enable(const bool tx, const size_t channel) {
     int r;
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
-
-    printf("%p\n", it);
-
-
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
         r = ENOENT;
@@ -809,7 +781,7 @@ static int _synth_lut_get(struct synth_lut_ctx *ctx, const double freq,
     double integral;
     double fractional;
     size_t k;
-    uint32_t channel;
+    size_t channel;
 
     pthread_mutex_lock(&ctx->lock);
 
@@ -898,10 +870,7 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
         goto out;
     }
 
-    extern int* uart_tx_comm_fd;
-    extern int* uart_rx_comm_fd;
-
-    uart_fd = ctx->tx ? uart_tx_comm_fd[ctx->channel(ctx)] : uart_rx_comm_fd[ctx->channel(ctx)];
+    uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
     memset(buf, '\0', sizeof(buf));
     r = synth_lut_uart_cmd(uart_fd, (char *)req, buf, sizeof(buf));
@@ -926,9 +895,8 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     buf[pmatch[1].rm_eo] = '\0';
 
     snprintf(ctx->fn, sizeof(ctx->fn),
-             CALIBRATION_DIR "/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
-             'A' + ctx->channel(ctx), buf);
-
+             "/var/volatile/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             'A' + (int32_t)ctx->channel(ctx), buf);
     r = EXIT_SUCCESS;
 
 free_re:
@@ -969,7 +937,7 @@ void synth_lut_disable_all() {
     FOR_EACH(it, synth_lut_tx_ctx) { it->disable(it); }
 }
 
-bool synth_lut_is_enabled(const bool tx, const uint32_t channel) {
+bool synth_lut_is_enabled(const bool tx, const size_t channel) {
     bool r;
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
@@ -1021,7 +989,7 @@ out:
     return r;
 }
 
-bool synth_lut_is_calibrated(const bool tx, const uint32_t channel) {
+bool synth_lut_is_calibrated(const bool tx, const size_t channel) {
     bool r;
     int rr;
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
@@ -1105,16 +1073,13 @@ static int _synth_lut_autocal_enable(struct synth_lut_ctx *ctx, const bool en) {
 
     int uart_fd;
 
-    uint32_t chan_i;
-
-    extern int* uart_tx_comm_fd;
-    extern int* uart_rx_comm_fd;
+    size_t chan_i;
 
     chan_i = ctx->channel(ctx);
-    uart_fd = ctx->tx ? uart_tx_comm_fd[chan_i] : uart_rx_comm_fd[chan_i];
+    uart_fd = ctx->tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
     // tell the mcu to use autocal
-    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %lc -A %c", 'a' + chan_i,
+    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %c -A %c", 'a' + (int32_t)chan_i,
              en ? '1' : '0');
     r = synth_lut_uart_cmd(uart_fd, cmd_buf, resp_buf, sizeof(resp_buf));
     if (EXIT_SUCCESS != r) {
@@ -1141,15 +1106,12 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
     int uart_fd;
 
     bool tx = ctx->tx;
-    uint32_t chan_i = ctx->channel(ctx);
+    size_t chan_i = ctx->channel(ctx);
 
-    extern int* uart_tx_comm_fd;
-    extern int* uart_rx_comm_fd;
-
-    uart_fd = tx ? uart_tx_comm_fd[chan_i] : uart_rx_comm_fd[chan_i];
+    uart_fd = tx ? get_uart_tx_fd() : get_uart_rx_fd();
 
     // read the value back
-    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %lc -p", 'a' + chan_i);
+    snprintf(cmd_buf, sizeof(cmd_buf), "rf -c %c -p", 'a' + (int32_t) chan_i);
     r = synth_lut_uart_cmd(uart_fd, cmd_buf, resp_buf, sizeof(resp_buf));
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "synth_lut_uart_cmd() failed (%d,%s)\n", r, strerror(r));
