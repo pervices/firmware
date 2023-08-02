@@ -205,22 +205,12 @@ int mmap_init() {
     }
     mmap_fd = r;
 
-#if defined(TATE)
-    mmap_len = 0x4000;
-#elif defined(TATE_4R4T)
-    mmap_len = 0x4000;
-#elif defined(TATE_9R7T)
-    mmap_len = 0x4000;
-#elif defined(TATE_4R4T_3G)
-    mmap_len = 0x4000;
-#elif defined(TATE_8R)
-    mmap_len = 0x4000;
-#elif defined(TATE_NRNT)
+#if defined(TATE_NRNT)
     mmap_len = 0x4000;
 #elif defined(VAUNT)
     mmap_len = 0x1000;
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
 #endif
 
     rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,

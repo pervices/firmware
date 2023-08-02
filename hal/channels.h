@@ -37,79 +37,7 @@
 //channel number
 #define INT(ch) ((int)(CHR(ch) - 'a'))
 
-#if defined(TATE)
-    #define CHANNELS \
-        X(a, tx) \
-        X(b, tx) \
-        X(c, tx) \
-        X(d, tx) \
-        X(e, tx) \
-        X(f, tx) \
-        X(g, tx) \
-        X(h, tx) \
-        X(i, tx) \
-        X(j, tx) \
-        X(k, tx) \
-        X(l, tx) \
-        X(m, tx) \
-        X(n, tx) \
-        X(o, tx) \
-        X(p, tx)
-#elif defined(TATE_8R)
-    //Will be only using the populated RF slots
-    //Column 3 is for rx, 4 is for tx
-    #define CHANNELS \
-        X(a) \
-        X(b) \
-        X(c) \
-        X(d) \
-        X(e) \
-        X(f) \
-        X(g) \
-        X(h)
-
-#elif defined(TATE_4R4T)
-    //Will be only using the populated RF slots
-    //Column 3 is for rx, 4 is for tx
-    #define CHANNELS \
-        X(a) \
-        X(b) \
-        X(c) \
-        X(d)
-
-#elif defined(TATE_9R7T)
-    //Will be only using the populated RF slots
-    //Column 3 is for rx, 4 is for tx
-    #define RX_CHANNELS \
-        X(a) \
-        X(b) \
-        X(c) \
-        X(d) \
-        X(e) \
-        X(f) \
-        X(g) \
-        X(h) \
-        X(i)
-        
-    #define TX_CHANNELS \
-        X(a) \
-        X(b) \
-        X(c) \
-        X(d) \
-        X(e) \
-        X(f) \
-        X(g)
-
-#elif defined(TATE_4R4T_3G)
-    //Will be only using the populated RF slots
-    //Column 3 is for rx, 4 is for tx
-    #define CHANNELS \
-        X(a) \
-        X(b) \
-        X(c) \
-        X(d)
-
-#elif defined(VAUNT)
+#if defined(VAUNT)
     #define CHANNELS \
         X(a, io) \
         X(b, io) \
@@ -301,101 +229,14 @@
     #endif
 
 #else
-    #error "Project name (TATE | TATE_8R | TATE_4R4T | TATE_9R7T | TATE_4R4T_3G | VAUNT | TATE_NRNT) not specified or not recognized."
+    #error "Project name (VAUNT | TATE_NRNT) not specified or not recognized."
 #endif
 
 //Below is the old way of defining some channel specific properties, new versions should be integrated into the previous macro
 //creates channel maps
-#if defined (TATE_4R4T)
-    //directory of the state tree
-    #define BASE_DIR "/var/cyan"
-    //state tree
-    #define STATE_DIR "/var/cyan/state"
-    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
-    #define NUM_CHANNELS 4
-    #define NUM_TX_CHANNELS 4
 
-    #define NUM_RX_CHANNELS 4
-
-    // Converts an expanded char into a runtime integer.
-    #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
-    #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
-
-    //hps maps
-    static const char* const channel_names[] = {
-    #define X(ch) STR(ch),
-        CHANNELS
-    #undef X
-    };
-#elif defined (TATE_9R7T)
-    //directory of the state tree
-    #define BASE_DIR "/var/cyan"
-    //state tree
-    #define STATE_DIR "/var/cyan/state"
-
-    #define NUM_TX_CHANNELS 7
-
-    #define NUM_RX_CHANNELS 9
-
-    // Converts an expanded char into a runtime integer.
-    #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
-    #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
-
-#elif defined (TATE_8R)
-    //directory of the state tree
-    #define BASE_DIR "/var/cyan"
-    //state tree
-    #define STATE_DIR "/var/cyan/state"
-    //All NUM_CHANNELS should be replaced with tx and rx specific constants, until then NUM_CHANNELS is greater of NUM_TX_CHANNELS and NUM_RX_CHANNELS
-    #define NUM_CHANNELS 8
-    #define NUM_TX_CHANNELS 0
-
-    #define NUM_RX_CHANNELS 8
-
-    //rfe port mapping
-    #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
-
-    //hps maps
-    static const char* const channel_names[] = {
-    #define X(ch) STR(ch),
-        CHANNELS
-    #undef X
-    };
-//creates channel maps
-#elif defined (TATE_4R4T_3G)
-    //directory of the state tree
-    #define BASE_DIR "/var/cyan"
-    //state tree
-    #define STATE_DIR "/var/cyan/state"
-
-    #define NUM_TX_CHANNELS 4
-
-    #define NUM_RX_CHANNELS 4
-
-    #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
-    #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 3)
-
-    //hps maps
-    static const char* const channel_names[] = {
-    #define X(ch) STR(ch),
-        CHANNELS
-    #undef X
-    };
-//very old version of tate
-#elif defined (TATE)
-    //directory of the state tree
-    #define BASE_DIR "/var/cyan"
-    //state tree
-    #define STATE_DIR "/var/cyan/state"
-
-    // Channel names as strings.
-    static const char* const channel_names[] = {
-    #define X(ch, io) STR(ch),
-        CHANNELS
-    #undef X
-    };
-//old method used by tate, and vaunt
-#elif defined (VAUNT)
+//old method used by vaunt
+#if defined (VAUNT)
     //directory of the state tree
     #define BASE_DIR "/var/volatile/crimson"
     //state tree

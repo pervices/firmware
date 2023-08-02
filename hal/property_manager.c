@@ -41,8 +41,8 @@
 
 //#define PROPERTY_MANAGER_DEBUG
 
-#if !(defined(VAUNT) || defined(TATE) || defined(TATE_4R4T) || defined(TATE_9R7T) || defined(TATE_4R4T_3G) || defined(TATE_8R) || defined(TATE_NRNT) )
-    #error "You must specify either ( TATE | TATE_4R4T | defined(TATE_9R7T) | TATE_4R4T_3G | TATE_8R | TATE_NRNT ) when compiling this project."
+#if !(defined(VAUNT)  || defined(TATE_NRNT) )
+    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
 #endif
 
 int uart_synth_comm_fd;
@@ -276,59 +276,7 @@ int init_property(uint8_t options) {
     /* Setup all UART devices XXX: SHOULD RETURN -1 */
     init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
-#if defined(TATE)
-    static char name[512];
-    #define X(ch, io)                                                              \
-        const int chan_##ch = INT(ch);                                             \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_##ch);                               \
-        init_uart_comm(&uart_##io##_comm_fd[chan_##ch], name, 0);
-    CHANNELS
-    #undef X
-#elif defined(TATE_8R)
-    static char name[512];
-    #define X(ch)                                                              \
-        const int chan_rx_##ch = INT_RX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
-        init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);
-    CHANNELS
-    #undef X
-#elif defined(TATE_4R4T) 
-    static char name[512];
-    #define X(ch)                                                              \
-        const int chan_rx_##ch = INT_RX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
-        init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);                      \
-        const int chan_tx_##ch = INT_TX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
-        init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);                      
-    CHANNELS
-    #undef X
-#elif defined(TATE_9R7T) 
-    static char name[512];
-    #define X(ch)\
-        const int chan_rx_##ch = INT_RX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
-        init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);
-    RX_CHANNELS
-    #undef X
-    #define X(ch)\
-        const int chan_tx_##ch = INT_TX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
-        init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);                      
-    TX_CHANNELS
-    #undef X
-#elif defined(TATE_4R4T_3G)
-    static char name[512];
-    #define X(ch)                                                              \
-        const int chan_rx_##ch = INT_RX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
-        init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);                      \
-        const int chan_tx_##ch = INT_TX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
-        init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);
-    CHANNELS
-    #undef X
-#elif defined(TATE_NRNT)
+#if defined(TATE_NRNT)
     static char name[512];
     #define X(ch)\
         const int chan_rx_##ch = INT_RX(ch);                                          \

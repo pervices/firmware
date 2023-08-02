@@ -28,22 +28,7 @@
 
 /* TATE ports are expanded with xmacros
 * in hal/{channels.h,property_manager.c,properties.c} */
-#if defined(TATE)
-    #define UART_SYNTH "/dev/ttycyan-time"
-    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
-#elif defined(TATE_4R4T)
-    #define UART_SYNTH "/dev/ttycyan-time"
-    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
-#elif defined(TATE_9R7T)
-    #define UART_SYNTH "/dev/ttycyan-time"
-    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
-#elif defined(TATE_4R4T_3G)
-    #define UART_SYNTH "/dev/ttycyan-time"
-    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
-#elif defined(TATE_8R)
-    #define UART_SYNTH "/dev/ttycyan-time"
-    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
-#elif defined(TATE_NRNT)
+#if defined(TATE_NRNT)
     #define UART_SYNTH "/dev/ttycyan-time"
     #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
 #elif defined(VAUNT)
@@ -51,7 +36,7 @@
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE, TATE_4R4T, TATE_9R7T, TATE_4R4T_3G, TATE_8R, TATE_NRNT, VAUNT). Confirm spelling and spaces."
+    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
 #endif
 
 int get_inotify_fd();
