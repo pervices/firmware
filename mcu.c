@@ -44,10 +44,15 @@ static uint32_t timeout = DEFAULT_TIMEOUT;
 static char fwd_board = 0;
 
 // Crimson files
+#ifdef VAUNT
 static const char *UART_CRIMSON_SN = "/dev/ttycrimson-time";
 static const char *UART_CRIMSON_TX = "/dev/ttycrimson-tx";
 static const char *UART_CRIMSON_RX = "/dev/ttycrimson-rx";
 
+static int uart_crimson_synth_fd = 3;
+static int uart_crimson_tx_fd = 4;
+static int uart_crimson_rx_fd = 5;
+#elif defined(TATE_NRNT)
 // Cyan files
 static const char *UART_CYAN_SN = "/dev/ttycyan-time";
 static const char *UART_CYAN_RFE[16]  = {"/dev/ttycyan-rfe-0",
@@ -67,12 +72,11 @@ static const char *UART_CYAN_RFE[16]  = {"/dev/ttycyan-rfe-0",
                                     "/dev/ttycyan-rfe-14",
                                     "/dev/ttycyan-rfe-15"};
 
-static int uart_crimson_synth_fd = 3;
-static int uart_crimson_tx_fd = 4;
-static int uart_crimson_rx_fd = 5;
-
 static int uart_cyan_synth_fd = 3;
 static int uart_cyan_rfe_fd[16] = {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+#else
+    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT)"
+#endif
 
 static int contains(const char *str, char letter, int size) {
     int cnt = 0;
@@ -128,6 +132,8 @@ static boolean streql(char *a, char *b) { return strcmp(a, b) == 0; }
 
 static boolean last(const int arg, const int argc) { return arg == argc - 1; }
 
+//TODO: clean up this function. When merging the branches I made it ignore stuff using Crimson paths in Cyan and vice versa
+//However at a glance it looks like this means some commands are only implemented in one of them
 static void parse_args(int argc, char *argv[]) {
     // parse through the arguments
     for (int i = 1; i < argc; i++) {
@@ -152,7 +158,7 @@ static void parse_args(int argc, char *argv[]) {
             // if argument to open a console transaction
         } else if (streql(argv[i], ARG_MCU_CONSOLE)) {
             console = TRUE;
-
+#if defined(VAUNT)
             // if argument to specify this is a forward command
         } else if (streql(argv[i], ARG_MCU_UART_SN) && !last(i, argc)) {
 
@@ -166,9 +172,11 @@ static void parse_args(int argc, char *argv[]) {
 
             UART_CRIMSON_RX = argv[i + 1];
             i++;
+#endif
         } else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
             fwd = TRUE;
             i++;
+#if defined(VAUNT)
             if (argv[i][0] == 't') {
                 uart_comm_fd = uart_crimson_tx_fd;
                 fwd_board = '1';
@@ -178,8 +186,12 @@ static void parse_args(int argc, char *argv[]) {
             } else if (argv[i][0] == 's') {
                 uart_comm_fd = uart_crimson_synth_fd;
                 fwd_board = '2';
-            } else if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
+#elif defined(TATE_NRNT)
+            if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
                 uart_comm_fd = uart_cyan_rfe_fd[atoi(argv[i])];
+#else
+    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT)"
+#endif
             } else {
                 help();
             }
@@ -198,8 +210,6 @@ static void parse_args(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
 
-    int i;
-
     parse_args(argc, argv);
     #ifdef DEBUG_OUTPUTS
         dump_args();
@@ -209,7 +219,7 @@ int main(int argc, char *argv[]) {
     if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
         PRINT(ERROR, "Cannot initialize uart %s. The time board will not work\n", UART_CYAN_SN);
     }
-    for (i = 0; i < 16; i++) {
+    for (int i = 0; i < 16; i++) {
         if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
             PRINT(ERROR, "Failed to initialize UART %s, any board in this slot will not work\n", UART_CYAN_RFE[i]);
         }
