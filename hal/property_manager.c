@@ -45,9 +45,17 @@
     #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
 #endif
 
-int uart_synth_comm_fd;
+static int uart_synth_comm_fd = 0;
+#ifdef VAUNT
+static int uart_tx_comm_fd[NUM_CHANNELS] = {0};
+static int uart_rx_comm_fd[NUM_CHANNELS] = {0};
+#elif defined(TATE_NRNT)
+// TODO: figure out why there should be 32 elements, and soft code this. It should probably be either number of channels present in the configuration, or theoretical maximum number of channles
 int uart_tx_comm_fd[32];
 int uart_rx_comm_fd[32];
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
+#endif
 
 // Inotify's file descriptor
 static int inotify_fd;
@@ -62,7 +70,6 @@ static void write_to_file(const char *path, const char *data) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
     }
-    //puts("die?"); //Why die? In case something goes wrong?
     fprintf(fd, "%s", data);
     fclose(fd);
 
@@ -293,12 +300,8 @@ int init_property(uint8_t options) {
 #elif defined(VAUNT)
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
-    //
-    // Copy over.
-    //
     for (int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
         uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
-
     for (int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
 #endif
@@ -356,12 +359,6 @@ void check_property_inotifies(void) {
         // gets the event structure
         struct inotify_event *event = (struct inotify_event *)&buf[i];
         prop_t *prop = get_prop_from_wd(event->wd);
-#ifdef PROPERTY_MANAGER_DEBUG
-//         if(i > 9200) {
-//             PRINT(INFO, "stopping before %i\n", i);
-//             exit(0);
-//         }
-#endif
 
         // check if prop exists, prop will not exist if concurrent modifications
         // were made to the file while in this loop
@@ -551,18 +548,6 @@ void power_on_channel(bool is_tx, char channel) {
     write_to_file(get_abs_path(prop, buf, MAX_PATH_LEN), "1");
 }
 
-void power_on_channel_fixup(char *path) {
-    bool tx;
-    int channel = get_channel_for_path(path);
-    if (-1 == channel) {
-        // note: this is not necessarily an error (some paths do not have a
-        // channel)
-        return;
-    }
-    tx = 0 == strncmp("tx", path, 2);
-    power_on_channel(tx, channel);
-}
-
 // standard set property
 int set_property(const char *prop, const char *data) {
     char path[MAX_PATH_LEN];
@@ -590,8 +575,7 @@ int set_property(const char *prop, const char *data) {
         // now)
         //This is what causes the power to turn on every time anthing with tx or rx in its path is called
         //This is the old method
-        PRINT(VERBOSE, "Using the old method of choosing if a baord needs to be powered on\n");
-        power_on_channel_fixup(temp->path);
+        PRINT(ERROR, "Old method of choosing if a board needs to be powered on removed\n");
     //powers of channels if they are not already on
     } else if(temp->pwr_en == RP) {
         power_on_channel(0, *(temp->ch));
