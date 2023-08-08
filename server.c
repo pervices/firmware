@@ -100,8 +100,18 @@ int main(int argc, char *argv[]) {
                 printf("RTM: 4\n");
             #elif RTM5
                 printf("RTM: 5\n");
+            #elif RTM6
+                printf("RTM: 6\n");
+            #elif RTM7
+                printf("RTM: 7\n");
+            #elif RTM8
+                printf("RTM: 8\n");
+            #elif RTM9
+                printf("RTM: 9\n");
+            #elif RTM10
+                printf("RTM: 10\n");
             #else
-                #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
+                #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5, RTM6, RTM7, RTM8, RTM9, RTM10)"
             #endif
             printf("Date: %s UTC\n", VERSIONDATE);
             #if defined(TATE_NRNT)
@@ -112,8 +122,9 @@ int main(int argc, char *argv[]) {
             #elif defined(VAUNT)
                 printf("Product: VAUNT\n");
             #else
-                #error "This file must be compiled with a valid PRODUCT (TATE_NRNT). Confirm spelling and spaces."
+                #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
             #endif
+            printf("Date: %s UTC\n", VERSIONDATE);
 
             uint32_t ver39_32, ver31_0, verjesd;
             read_hps_reg("sys3", &ver39_32);
@@ -129,11 +140,13 @@ int main(int argc, char *argv[]) {
         }
     }
     
+#ifdef TATE_NRNT
     // Linux will freeze if attempting to boot an hps only image
     if(is_hps_only()) {
         PRINT(ERROR, "HPS only FPGA image detected. Cancelling server boot. The unit will not run\n");
         return 1;
     }
+#endif
 
     PRINT(INFO, "Starting Cyan server\n");
 
@@ -146,8 +159,6 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[1], "-d") == 0)
             options |= SERVER_DEBUG_OPT;
     }
-
-    PRINT(INFO, "Checked for debug arg\n");
 
     // Initialize network communications for each port
     for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
@@ -168,6 +179,11 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in sa;
     socklen_t sa_len;
 
+#ifdef VAUNT
+    // Symlink calibration data to a location in non-volatile memory
+    system("ln -sf /var/calibration-data /var/volatile/crimson/calibration-data");
+#endif
+
     // Initialize the properties, which is implemented as a Linux file structure
     const int t0 = time_it();
     init_property(options);
@@ -177,16 +193,19 @@ int main(int argc, char *argv[]) {
 
     inotify_fd = get_inotify_fd();
 
+#ifdef VAUNT
     // Perform autocalibration of the frequency synthesizers
     // N.B. this must be done after init_property() because uart init is mixed
     // in with it for some reason
-    //atexit(synth_lut_disable_all);
-    //synth_lut_enable_all_if_calibrated();
+    atexit(synth_lut_disable_all);
+    synth_lut_enable_all_if_calibrated();
+#endif
 
     // Pass the profile pointers down to properties.c
     pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
                               save_profile_path);
-    
+
+#ifdef TATE_NRNT
     /* Final checks
      * 1. Set time board to pulsed mode.
      * 2. Ensure that time board is locked. I think that we are not permitted to reset the tim eboard anymore because that would mess up the TX JESD part of the FPGA, so it would be bad id the time board is not locked. Double check this.
@@ -202,22 +221,23 @@ int main(int argc, char *argv[]) {
         write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
         usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
         abort();
-    } 
+    }
+#endif
 
-    //JESD is brought up as part of the property tree in Cyan, jesd_Reset_all is required for Crimson
-    //TODO: add ifdef to call jesd_reset_all for Crimson here if the repositories ever get merged
-    //Resets/brings up all JESDs
-    //jesd_reset_all();
-    
-    // Let the user know the server is ready to receive commands
+    // Write the linux systemtime to the FPGA
+    system("date +%s.%N > /var/volatile/crimson/state/time/clk/set_time");
+
+// Let the user know the server is ready to receive commands
+#if defined(TATE_NRNT)
     PRINT(INFO, "Cyan server is up\n");
-    
-    //Poll all UART RX buffers, as they may have stale data.
-    
+#elif defined(VAUNT)
+    PRINT(INFO, "Crimson server is up\n");
+#else
+    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
+#endif
 
-#if 1
     server_ready_led();
-    PRINT(INFO, "SERVER READY LED\n");
+
     // Main loop, look for commands, if exists, service it and respond
     for (;;) {
 
@@ -340,7 +360,5 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
         close_udp_comm(comm_fds[i]);
     }
-
-#endif
     return 0;
 }
