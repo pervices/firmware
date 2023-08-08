@@ -33,12 +33,25 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define INTERBOOT_DATA "/var/lib/cyan-server/"
+#ifdef TATE_NRNT
+    //INTERBOOT_DATA is only used in Cyan
+    #define INTERBOOT_DATA "/var/lib/cyan-server/"
+#endif
 
-//directory of the state tree
-#define BASE_DIR "/var/cyan"
-//state tree
-#define STATE_DIR "/var/cyan/state"
+#ifdef VAUNT
+    //directory of the state tree
+    #define BASE_DIR "/var/volatile/crimson/"
+    //state tree
+    #define STATE_DIR "/var/volatile/crimson/state/"
+#elif defined(TATE_NRNT)
+    //TODO: make Cyan use Volatile state tree. Probably the primary reason Crimson boots so much faster
+    //directory of the state tree
+    #define BASE_DIR "/var/cyan"
+    //state tree
+    #define STATE_DIR "/var/cyan/state"
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
+#endif
 
 typedef enum { RW, RO, WO } perm_t;
 typedef enum { POLL, NO_POLL } poll_t;
@@ -91,8 +104,11 @@ void pass_uart_rx_fd(int *fd);
 void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
                             char *save_path);
 void sync_channels(uint8_t chan_mask);
-void jesd_reset_all();
-uint32_t is_hps_only();
+#ifdef TATE_NRNT
+    // Only implemented on Cyan
+    void jesd_reset_all();
+    uint32_t is_hps_only();
+#endif
 void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
 
