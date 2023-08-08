@@ -55,7 +55,7 @@
             #define NUM_TX_CHANNELS 1
             #define S_NUM_RX "1"
             #define S_NUM_TX "1"
-            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
             #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
@@ -66,7 +66,7 @@
             #define NUM_TX_CHANNELS 2
             #define S_NUM_RX "4"
             #define S_NUM_TX "2"
-            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
             #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
@@ -76,7 +76,7 @@
             #define NUM_TX_CHANNELS 4
             #define S_NUM_RX "4"
             #define S_NUM_TX "4"
-            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
             #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
@@ -86,7 +86,7 @@
             #define NUM_TX_CHANNELS 0
             #define S_NUM_RX "8"
             #define S_NUM_TX "0"
-            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
 
         #elif defined(R8) && defined(T8)
@@ -95,7 +95,7 @@
             #define NUM_TX_CHANNELS 8
             #define S_NUM_RX "8"
             #define S_NUM_TX "8"
-            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
             #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
 
@@ -105,7 +105,7 @@
             #define NUM_TX_CHANNELS 7
             #define S_NUM_RX "9"
             #define S_NUM_TX "7"
-            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
             #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
         #else
@@ -120,7 +120,7 @@
             #define NUM_TX_CHANNELS 4
             #define S_NUM_RX "4"
             #define S_NUM_TX "4"
-            //RFE slots for each channel, ideally this would be in fpga_config.h, but its needed for stuff that doesn't include it
+            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
             #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
             #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 3)
         #else

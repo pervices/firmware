@@ -38,9 +38,9 @@
 #include "gpio_pins.h"
 #include <sys/wait.h>
 #include <sys/stat.h>
-#include "variant_config/sample_rate_config.h"
-#include "variant_config/fpga_config.h"
-#include "variant_config/rtm_config.h"
+#include "variant_config/tate_sample_rate_config.h"
+#include "variant_config/tate_fpga_config.h"
+#include "variant_config/tate_rtm_config.h"
 
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 
