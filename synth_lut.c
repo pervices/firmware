@@ -1,3 +1,5 @@
+#ifdef VAUNT
+
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -1134,3 +1136,5 @@ out:
 
     return r;
 }
+
+#endif //defined(VAUNT)
