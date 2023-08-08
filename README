@@ -8,21 +8,21 @@ information on how to get a compile working for you.
 On archlinux, you will need to install the "arm-linux-gnueabihf-gcc" toolchain,
 which is available on yaourt.
 
-1.a Quickstart Compile Routines
+1.a Automatic Compile Routines
 
 1.a.i Crimson Optimized Compile Commands
 
-   sh autovaunt.sh
+   sh autovaunt.sh <RTM>
+
+   Example: sh autovaunt.sh RTM9
 
 1.a.ii Cyan Optimized Compile Commands
 
-    Automatic configuration and compilation: "sh autotate.sh <TATE_VERSION> <OPTIONAL: RTM version"
+    sh autotate.sh <TATE_VERSION> <RTM_VERSION> R<NUM_RX> T<NUM_TX> S<MAX_RATE_MHZ>
 
-    sh autotate.sh TATE_NRNT RTM3/4/... R4/8... T4/8... S1000/3000/...
+    Example: sh autotate.sh TATE_NRNT RTM5 R8 T8 S1000
 
-    Examples: sh autotate.sh TATE_NRNT RTM5 R8 T8 S1000
-
-2. Specifying Build Variant Target
+2. Manually specifying Build Variant Target
 
 To specify whether to build a Cyan ("Tate") or Crimson ("Vaunt") server variant
 you will need to specify PRODUCT=VAUNT or PRODUCT=TATE when calling ./configure.
@@ -34,7 +34,7 @@ Crimson ("Vaunt") product variants.
 Only one product may be specified at a time, and you must specify one of them for
 compilation to succeed.
 
-3. Cross-Compiling from a development computer.
+3. Manually cross-compiling from a development computer.
 
 To build the HPS binaries from a host computer, you may be required to specify
 a non-standard location for your compiler and build chain. To ensure that your
