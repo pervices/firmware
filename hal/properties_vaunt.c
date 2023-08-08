@@ -36,14 +36,16 @@
 
 #include "channels.h"
 
-#define BASE_DIR "/var/volatile/crimson/"
-#define STATE_DIR "/var/volatile/crimson/state/"
+#include "variant_config/vaunt_rtm_config.h"
+
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+#define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
 #define RESAMP_SAMPLE_RATE 260000000.0
-#define REF_FREQ           5000000
+
+#define REF_FREQ 5000000 // core reference frequency is 5MHz, needed by LMX2595
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
@@ -135,9 +137,6 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
     IPVER_IPV4,
 };
-
-
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t chan);
 
 /* clang-format on */
 
@@ -715,8 +714,8 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
                                                                                \
             tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
-                         "Shutting Down TX" STR(ch) ".\n");                    \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
+                         "Shutting Down TX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
@@ -766,6 +765,11 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_common_lo(const char *data, char *ret) {      \
+        if (RTM_VER <= 7) {                                                    \
+            /* common LO not supported by RTM6/7 hardware */                   \
+            snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
+            return EXIT_SUCCESS;                                               \
+        }                                                                      \
         /* TODO: make writing zero restore restore switch to correct setting */\
         /* TODO: make rf_freq_val avoid setting switch if common_lo on */      \
         int enable;                                                            \
@@ -984,6 +988,25 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    /*0 for big endian packets, anything else for little endian*/\
+    static int hdlr_tx_##ch##_endian_swap(const char *data, char *ret) {      \
+        int endian = 0;\
+        sscanf(data, "%i", &endian);\
+        int bit_val;\
+        if(endian) {\
+            bit_val = 0x20000;\
+        } else {\
+            bit_val = 0;\
+        }\
+        write_hps_reg_mask(reg4[INT(ch)+4], bit_val, 0x20000);\
+        if(endian) {\
+            snprintf(ret, MAX_PROP_LEN, "1");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+                                                                                \
     static int hdlr_tx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
         int i_delay = 0;\
         int q_delay = 0;\
@@ -1063,7 +1086,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         /* this is technically a 64-bit register, but we currently only need   \
          * the bottom 32-bits */                                               \
         sprintf(flc_reg, "flc%d", 14+(INT(ch)*2));                             \
-        read_hps_reg("flc_reg", &count);                                       \
+        read_hps_reg(flc_reg, &count);                                       \
         snprintf(ret, MAX_PROP_LEN, "%u", count);                                             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1255,8 +1278,8 @@ CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            PRINT(ERROR, "Requested Synthesizer Frequency is > 6.8 GHz: "      \
-                         "Shutting Down RX" STR(ch) ".\n");                    \
+            PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
+                         "Shutting Down RX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
@@ -1314,6 +1337,11 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_common_lo(const char *data, char *ret) {      \
+        if (RTM_VER <= 7) {                                                    \
+            /* common LO not supported by RTM6/7 hardware */                   \
+            snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
+            return EXIT_SUCCESS;                                               \
+        }                                                                      \
         /* TODO: make writing zero restore restore switch to correct setting */\
         /* TODO: make rf_freq_val avoid setting switch if common_lo on */      \
         int enable;                                                            \
@@ -1539,6 +1567,25 @@ CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
+    /*0 for big endian packets, anything else for little endian*/\
+    static int hdlr_rx_##ch##_endian_swap(const char *data, char *ret) {      \
+        int endian = 0;\
+        sscanf(data, "%i", &endian);\
+        int bit_val;\
+        if(endian) {\
+            bit_val = 0x20000;\
+        } else {\
+            bit_val = 0;\
+        }\
+        write_hps_reg_mask(reg4[INT(ch)], bit_val, 0x20000);\
+        if(endian) {\
+            snprintf(ret, MAX_PROP_LEN, "1");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
+        return RETURN_SUCCESS;\
+    }                                                                          \
+                                                                                \
     static int hdlr_rx_##ch##_jesd_delay_iq(const char *data, char *ret) {      \
         int i_delay = 0;\
         int q_delay = 0;\
@@ -2301,6 +2348,31 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
 }
 
 static int hdlr_time_lmx_freq(const char* data, char* ret) {
+#if defined(RTM6) || defined(RTM7)
+    // time_lmx_freq not supported by RTM6/7 hardware
+    snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);
+    return EXIT_SUCCESS;
+#elif defined(RTM8) || defined(RTM10)
+    // check if there is a LoGen board and only set the LMX if there is
+    char prop_read[MAX_PROP_LEN];
+    char prop_path[128];
+
+    strcpy(prop_path, STATE_DIR);
+    strcat(prop_path, "time/about/hw_ver");
+
+    // Read EEPROM, if stock unit do nothing
+    get_property(prop_path,prop_read,MAX_PROP_LEN);
+    if (strstr(prop_read,"reg 0x11 = 0x1") == NULL) {
+        snprintf(ret, sizeof("No LMX detected"), "No LMX detected");
+        return RETURN_SUCCESS;
+    }
+#elif RTM9
+    // No-op
+    // always set the LMX because there is on board, not just LoGen
+#else
+    #error "Invalid RTM specified"
+#endif
+
     uint64_t freq = 0;
     sscanf(data, "%" SCNd64 "", &freq);
 
@@ -2327,7 +2399,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     outfreq = setFreq(&freq, &pll);
 
     /* Send Parameters over to the MCU */
-    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, 1);
+    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
     snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
 
@@ -2363,10 +2435,16 @@ static int hdlr_time_source_sync(const char *data, char *ret) {
 static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         strcpy(buf, "clk -t 1\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     } else if (strcmp(data, "internal") == 0) {
         strcpy(buf, "clk -t 0\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    } else { // just get the current state of the reference
+        strcpy(buf, "clk -i\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // save the UART result to the state tree
+        strcpy(ret, (char *)uart_ret_buf);
     }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
 
@@ -2898,6 +2976,15 @@ static int hdlr_server_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
+#if defined(RTM6) || defined(RTM7)
+    uint32_t old_val;
+    read_hps_reg("sys1", &old_val);
+
+    old_val = (old_val >> 7) & 0xf;
+
+    sprintf(ret, "ver. 0x%02x", old_val);
+    return RETURN_SUCCESS;
+#else
     FILE *fp = NULL;
     char buf[MAX_PROP_LEN] = {0};
     char base_cmd[MAX_PROP_LEN] = "/usr/sbin/i2cget -y 0 0x54 0x";
@@ -3042,6 +3129,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     strcat(ret, "\n");
 
     return RETURN_SUCCESS;
+#endif
 }
 
 static int hdlr_fpga_link_rate(const char *data, char *ret) {
@@ -3246,13 +3334,15 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     #error "Project name (VAUNT | TATE) not defined"
 #endif
 
-#define DEFINE_FILE_PROP(n, h, p, v) \
+#define DEFINE_FILE_PROP_P(n, h, p, v, e, c) \
     {                                \
         .type = PROP_TYPE_FILE,      \
         .path = n,                   \
         .handler = h,                \
         .permissions = p,            \
         .def_val = v,                \
+        .pwr_en = e,\
+        .ch = c,\
     },
 
 #define DEFINE_SYMLINK_PROP(n, t)    \
@@ -3264,187 +3354,189 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION)     \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/common_lo"        , hdlr_rx_##_c##_rf_common_lo,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level")     \
-    DEFINE_FILE_PROP("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/trigger/edge_sample_num"  , hdlr_rx_##_c##_trigger_edge_sample_num, RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level")     \
-    DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out")       \
-    DEFINE_FILE_PROP("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative")  \
-    DEFINE_FILE_PROP("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127")       \
-    DEFINE_FILE_PROP("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20")        \
-    DEFINE_FILE_PROP("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1")         \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "10")        \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_nco_adj,             RW, "-15000000") \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001")       \
-    DEFINE_FILE_PROP("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001")       \
-    DEFINE_FILE_PROP("rx/" #_c "/about/mcudevid"           , hdlr_rx_##_c##_about_mcudevid,          RW, "001")       \
-    DEFINE_FILE_PROP("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001")       \
-    DEFINE_FILE_PROP("rx/" #_c "/about/mcufuses"           , hdlr_rx_##_c##_about_mcufuses,          RW, "001")       \
-    DEFINE_FILE_PROP("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION)     \
-    DEFINE_FILE_PROP("rx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     \
-    DEFINE_FILE_PROP("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa")      \
-    DEFINE_FILE_PROP("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0")         \
-    DEFINE_FILE_PROP("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff")\
-    DEFINE_FILE_PROP("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,  RW, "0")\
-    DEFINE_FILE_PROP("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0")\
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, SP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/common_lo"        , hdlr_rx_##_c##_rf_common_lo,            RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_sample_num"  , hdlr_rx_##_c##_trigger_edge_sample_num, RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
+    DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lut_en"           , hdlr_rx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20", RP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "10", SP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_nco_adj,             RW, "-15000000", SP, #_c) \
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcudevid"           , hdlr_rx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcufuses"           , hdlr_rx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION, SP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/ip_dest"             , hdlr_rx_##_c##_link_ip_dest,            RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/mac_dest"            , hdlr_rx_##_c##_link_mac_dest,           RW, "ff:ff:ff:ff:ff:ff", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/prime_trigger_stream"     , hdlr_rx_##_c##_prime_trigger_stream,  RW, "0", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/link/endian_swap"         , hdlr_rx_##_c##_endian_swap,            RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION)     \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/common_lo"        , hdlr_tx_##_c##_rf_common_lo,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level")     \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/edge_sample_num"  , hdlr_tx_##_c##_trigger_edge_sample_num, RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/ufl_dir"          , hdlr_tx_##_c##_trigger_ufl_dir,         RW, "out")       \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/ufl_mode"         , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level")     \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "negative")  \
-    DEFINE_FILE_PROP("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output")    \
-    DEFINE_FILE_PROP("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/dither_mixer_en"   , hdlr_tx_##_c##_rf_dac_dither_mixer_en,  RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/dither_sra_sel"    , hdlr_tx_##_c##_rf_dac_dither_sra_sel,   RW, "6")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/lut_en"           , hdlr_tx_##_c##_rf_freq_lut_en,          RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/band"             , hdlr_tx_##_c##_rf_freq_band,            RW, "1")         \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/i_bias"           , hdlr_tx_##_c##_rf_freq_i_bias,          RW, "17")        \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/freq/q_bias"           , hdlr_tx_##_c##_rf_freq_q_bias,          RW, "17")        \
-    DEFINE_FILE_PROP("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,           RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23")        \
-    DEFINE_FILE_PROP("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10")        \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850")   \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001")       \
-    DEFINE_FILE_PROP("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION)     \
-    DEFINE_FILE_PROP("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION)     \
-    DEFINE_FILE_PROP("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "1")         \
-    DEFINE_FILE_PROP("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa")      \
-    DEFINE_FILE_PROP("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0")         \
-    DEFINE_FILE_PROP("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0")\
-    DEFINE_FILE_PROP("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0")\
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/common_lo"        , hdlr_tx_##_c##_rf_common_lo,            RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_sample_num"  , hdlr_tx_##_c##_trigger_edge_sample_num, RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_dir"          , hdlr_tx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_mode"         , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
+    DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_mixer_en"   , hdlr_tx_##_c##_rf_dac_dither_mixer_en,  RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_sra_sel"    , hdlr_tx_##_c##_rf_dac_dither_sra_sel,   RW, "6", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lut_en"           , hdlr_tx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/band"             , hdlr_tx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/i_bias"           , hdlr_tx_##_c##_rf_freq_i_bias,          RW, "17", RP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/q_bias"           , hdlr_tx_##_c##_rf_freq_q_bias,          RW, "17", RP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,           RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", RP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10", SP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"       , hdlr_tx_##_c##_endian_swap,            RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
 #define DEFINE_TIME()                                                                                                 \
-    DEFINE_FILE_PROP("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION)     \
-    DEFINE_FILE_PROP("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION)     \
-    DEFINE_FILE_PROP("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0")         \
-    DEFINE_FILE_PROP("time/clk/set_time"                   , hdlr_time_clk_set_time,                 WO, "0.0")       \
-    DEFINE_FILE_PROP("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0")       \
-    DEFINE_FILE_PROP("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "10000000")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lockdetect_jesd_pll2", hdlr_time_status_ld_jesd_pll2,          RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked")  \
-    DEFINE_FILE_PROP("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal")  \
-    DEFINE_FILE_PROP("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal")  \
-    DEFINE_FILE_PROP("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine")      \
-    DEFINE_FILE_PROP("time/source/vtune"                   , hdlr_time_source_vtune,                 RW, "1403")      \
-    DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0")         \
-    DEFINE_FILE_PROP("time/sync/lmk_sync_tgl_pll"          , hdlr_time_sync_lmk_sync_tgl_pll,        WO, "0")         \
-    DEFINE_FILE_PROP("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0")         \
-    DEFINE_FILE_PROP("time/sync/lmk_sync_resync_pll"       , hdlr_time_sync_lmk_resync_pll,          WO, "0")         \
-    DEFINE_FILE_PROP("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0")         \
-    DEFINE_FILE_PROP("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,          WO, "pulsed")    \
-    DEFINE_FILE_PROP("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0")         \
-    DEFINE_FILE_PROP("time/board/test"                     , hdlr_time_board_test,                   WO, "0")         \
-    DEFINE_FILE_PROP("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20")        \
-    DEFINE_FILE_PROP("time/board/led"                      , hdlr_time_board_led,                    WO, "0")         \
-    DEFINE_FILE_PROP("time/about/id"                       , hdlr_time_about_id,                     RO, "001")       \
-    DEFINE_FILE_PROP("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001")       \
-    DEFINE_FILE_PROP("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001")       \
-    DEFINE_FILE_PROP("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001")       \
-    DEFINE_FILE_PROP("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001")       \
-    DEFINE_FILE_PROP("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)
+    DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
+    DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
+    DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/clk/set_time"                   , hdlr_time_clk_set_time,                 WO, "0.0", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "10000000", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll2", hdlr_time_status_ld_jesd_pll2,          RW, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/source/vtune"                   , hdlr_time_source_vtune,                 RW, "1403", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_pll"          , hdlr_time_sync_lmk_sync_tgl_pll,        WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_pll"       , hdlr_time_sync_lmk_resync_pll,          WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,          WO, "pulsed", SP, NAC)    \
+    DEFINE_FILE_PROP_P("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
+    DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)
 
     // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
 
 #define DEFINE_FPGA()                                                                                                         \
-    DEFINE_FILE_PROP("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0")               \
-    DEFINE_FILE_PROP("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out")               \
-    DEFINE_FILE_PROP("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative")          \
-    DEFINE_FILE_PROP("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION)             \
-    DEFINE_FILE_PROP("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION)             \
-    DEFINE_FILE_PROP("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "")                  \
-    DEFINE_FILE_PROP("fpga/about/hw_ver"                   , hdlr_fpga_about_hw_ver,                 RW, VERSION)             \
-    DEFINE_FILE_PROP("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001")               \
-    DEFINE_FILE_PROP("fpga/about/name"                     , hdlr_invalid,                           RO, PROJECT_NAME)        \
-    DEFINE_FILE_PROP("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001")               \
-    DEFINE_FILE_PROP("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm")  \
-    DEFINE_FILE_PROP("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/flow_control/sfpb_port"   , hdlr_fpga_board_flow_control_sfpb_port, RW, "42809")             \
-    DEFINE_FILE_PROP("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0")                 \
-    DEFINE_FILE_PROP("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20")                \
-    DEFINE_FILE_PROP("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "1250000000")        \
-    DEFINE_FILE_PROP("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2")        \
-    DEFINE_FILE_PROP("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00") \
-    DEFINE_FILE_PROP("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "1400")              \
-    DEFINE_FILE_PROP("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2")        \
-    DEFINE_FILE_PROP("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01") \
-    DEFINE_FILE_PROP("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "1400")              \
-    DEFINE_FILE_PROP("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0")                 \
-    DEFINE_FILE_PROP("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME)        \
-    DEFINE_FILE_PROP("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2")
+    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
+    DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
+    DEFINE_FILE_PROP_P("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)             \
+    DEFINE_FILE_PROP_P("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "", SP, NAC)                  \
+    DEFINE_FILE_PROP_P("fpga/about/hw_ver"                   , hdlr_fpga_about_hw_ver,                 RW, VERSION, SP, NAC)             \
+    DEFINE_FILE_PROP_P("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/about/name"                     , hdlr_invalid,                           RO, PROJECT_NAME, SP, NAC)        \
+    DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
+    DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
+    DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpb_port"   , hdlr_fpga_board_flow_control_sfpb_port, RW, "42809", SP, NAC)             \
+    DEFINE_FILE_PROP_P("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20", SP, NAC)                \
+    DEFINE_FILE_PROP_P("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "10000000000", SP, NAC)        \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, NAC)        \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00", SP, NAC) \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "1400", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2", SP, NAC)        \
+    DEFINE_FILE_PROP_P("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01", SP, NAC) \
+    DEFINE_FILE_PROP_P("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "1400", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
+    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
 
 #define DEFINE_CM()                                                    \
-    DEFINE_FILE_PROP("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0") \
-    DEFINE_FILE_PROP("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0") \
-    DEFINE_FILE_PROP("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0") \
-    DEFINE_FILE_PROP("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0") \
-    DEFINE_FILE_PROP("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0") \
-    DEFINE_FILE_PROP("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0") \
-    DEFINE_FILE_PROP("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0")
+    DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
 
 static prop_t property_table[] = {
     DEFINE_TIME()
@@ -3455,8 +3547,8 @@ static prop_t property_table[] = {
     CHANNELS
 #undef X
     DEFINE_FPGA()
-    DEFINE_FILE_PROP("save_config", hdlr_save_config, RW, "/home/root/profile.cfg")
-    DEFINE_FILE_PROP("load_config", hdlr_load_config, RW, "/home/root/profile.cfg")
+    DEFINE_FILE_PROP_P("save_config", hdlr_save_config, RW, "/home/root/profile.cfg", SP, NAC)
+    DEFINE_FILE_PROP_P("load_config", hdlr_load_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_CM()
 };
 
@@ -3826,99 +3918,22 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     usleep(100000);
 }
 
-int set_pll_frequency2(int actual_uart_fd, uint64_t reference,
-                       pllparam_t *pll) {
-    int r;
-    // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
-
-    // Send Reference to MCU ( No Need ATM since fixed reference )
-    snprintf(buf, sizeof(buf), "rf -v %" PRIu32 "\r",
-             (uint32_t)(reference / 1000)); // Send reference in kHz
-    r = write(actual_uart_fd, buf, strlen(buf));
-    if (strlen(buf) != r) {
-        r = errno;
-        goto out;
-    }
-
-    // write ADF4355/5355 R
-    snprintf(buf, sizeof(buf), "rf -r %" PRIu16 "\r", pll->R);
-    r = write(actual_uart_fd, buf, strlen(buf));
-    if (strlen(buf) != r) {
-        r = errno;
-        goto out;
-    }
-
-    // write ADF4355/ADF5355 N
-    snprintf(buf, sizeof(buf), "rf -n %" PRIu32 "\r", pll->N);
-    r = write(actual_uart_fd, buf, strlen(buf));
-    if (strlen(buf) != r) {
-        r = errno;
-        goto out;
-    }
-
-    // write ADF4355/ADF5355 D
-    snprintf(buf, sizeof(buf), "rf -d %" PRIu16 "\r", pll->d);
-    r = write(actual_uart_fd, buf, strlen(buf));
-    if (strlen(buf) != r) {
-        r = errno;
-        goto out;
-    }
-
-    // write ADF4355/ADF5355 feedback mode
-    snprintf(buf, sizeof(buf), "rf -t %" PRIu8 "\r", pll->divFBen);
-    r = write(actual_uart_fd, buf, strlen(buf));
-    if (strlen(buf) != r) {
-        r = errno;
-        goto out;
-    }
-
-    // write ADF4355/ADF5355 Output RF Power
-    // default to lower mid power
-    snprintf(buf, sizeof(buf), "rf -g %" PRIu8 "\r", 1 /*pll->power*/);
-    r = write(actual_uart_fd, buf, strlen(buf));
-    if (strlen(buf) != r) {
-        r = errno;
-        goto out;
-    }
-
-    // write ADF4355/ADF5355 Output Frequency
-    // Send output frequency in kHz
-    snprintf(buf, sizeof(buf), "rf -f %" PRIu32 "\r",
-             (uint32_t)(pll->vcoFreq / pll->d / 1000));
-    r = write(actual_uart_fd, buf, strlen(buf));
-    if (strlen(buf) != r) {
-        r = errno;
-        goto out;
-    }
-
-    size_t tries;
-    for (tries = 0; tries < 10; tries++) {
-        read(actual_uart_fd, buf, sizeof(buf));
-        usleep(10000);
-    }
-
-    r = EXIT_SUCCESS;
-
-out:
-    if (EXIT_SUCCESS != r) {
-        buf[strlen(buf)] = '\0';
-        PRINT(ERROR, "failed to send command '%s' (%d,%s)\n", buf, errno,
-              strerror(errno));
-    }
-
-    return r;
-}
-
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t chan) {
+void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
+#if defined(RTM6) || defined(RTM7)
+    // set_lo_frequency not supported by RTM6/7 hardware
+    return;
+#elif defined(RTM8) || defined (RTM10)
+    // There is only LoGen LMX no need to select chan
+#elif RTM9
+    // Select the onboard LMX (no RTM9 customer had LoGen)
+    strcpy(buf, "lmx -c 1\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+#else
+    #error "Invalid RTM specified"
+#endif
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
-
-    // Select the desired LMX
-    strcpy(buf, "lmx -c ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", chan);
-    strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k \r");
@@ -3961,11 +3976,15 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll, uint8_t 
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
+#ifdef RTM8
+    // No-op, MCU does not support the lmx -s argument
+#else
     // Set LMX sync according to divFBen
     strcpy(buf, "lmx -s ");
     sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
+#endif
 
     usleep(100000);
 }
@@ -4032,4 +4051,4 @@ out:
     return r;
 }
 
-#endif
+#endif//defined(VAUNT)

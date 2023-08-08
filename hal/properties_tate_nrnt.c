@@ -6101,4 +6101,4 @@ void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int c
     usleep(100000);
 }
 
-#endif
+#endif //defined(TATE_NRNT)

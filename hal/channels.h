@@ -237,10 +237,6 @@
 
 //old method used by vaunt
 #if defined (VAUNT)
-    //directory of the state tree
-    #define BASE_DIR "/var/volatile/crimson"
-    //state tree
-    #define STATE_DIR "/var/volatile/crimson/state"
 
     // Channel names as strings.
     static const char* const channel_names[] = {

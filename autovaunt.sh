@@ -28,7 +28,10 @@ fi
 	CXX=$SERVER_CXX \
         CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
             -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
-        PRODUCT=VAUNT\
-        HW_REV=$1
+        PRODUCT="VAUNT" \
+        HW_REV="$1" \
+        NRX="R4" \
+        NTX="T4" \
+        MAX_RATE="S162M5"
 
 make -j$(nproc)
