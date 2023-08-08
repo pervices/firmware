@@ -39,10 +39,10 @@
 
 #if defined(VAUNT)
     #define CHANNELS \
-        X(a, io) \
-        X(b, io) \
-        X(c, io) \
-        X(d, io)
+        X(a) \
+        X(b) \
+        X(c) \
+        X(d)
 #elif defined(TATE_NRNT)
 
     #if defined (S1000)
@@ -240,7 +240,7 @@
 
     // Channel names as strings.
     static const char* const channel_names[] = {
-    #define X(ch, io) STR(ch),
+    #define X(ch) STR(ch),
         CHANNELS
     #undef X
     };
