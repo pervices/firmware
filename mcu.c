@@ -41,7 +41,6 @@ static boolean silent = FALSE;
 static boolean console = FALSE;
 static boolean fwd = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
-static char fwd_board = 0;
 
 // Crimson files
 #ifdef VAUNT
@@ -179,13 +178,10 @@ static void parse_args(int argc, char *argv[]) {
 #if defined(VAUNT)
             if (argv[i][0] == 't') {
                 uart_comm_fd = uart_crimson_tx_fd;
-                fwd_board = '1';
             } else if (argv[i][0] == 'r') {
                 uart_comm_fd = uart_crimson_rx_fd;
-                fwd_board = '0';
             } else if (argv[i][0] == 's') {
                 uart_comm_fd = uart_crimson_synth_fd;
-                fwd_board = '2';
 #elif defined(TATE_NRNT)
             if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
                 uart_comm_fd = uart_cyan_rfe_fd[atoi(argv[i])];
