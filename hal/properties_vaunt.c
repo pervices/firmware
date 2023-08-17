@@ -688,10 +688,15 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         uint64_t freq = 0;                                                     \
         sscanf(data, "%" SCNd64 "", &freq);                                    \
                                                                                \
-        /* if freq = 0, mute PLL */                                            \
-        if (freq == 0) {                                                       \
+        /* if freq = 0 or below allowed range, mute PLL */                     \
+        if (freq < MIN_LO) {                                                       \
+            if(freq != 0) {\
+                PRINT(ERROR, "Requested tx lo %lu to low. Muting PLL\n", freq);\
+            }\
             strcpy(buf, "rf -c " STR(ch) " -z\r");                             \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
+            \
+            snprintf(ret, MAX_PROP_LEN, "0");\
                                                                                \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
@@ -1253,10 +1258,15 @@ CHANNELS
         uint64_t freq = 0;                                                     \
         sscanf(data, "%" SCNd64 "", &freq);                                    \
                                                                                \
-        /* if freq = 0, mute PLL */                                            \
-        if (freq == 0) {                                                       \
+        /* if freq = 0 or below allowed range, mute PLL */                     \
+        if (freq < MIN_LO) {                                                       \
+            if(freq != 0) {\
+                PRINT(ERROR, "Requested tx lo %lu to low. Muting PLL\n", freq);\
+            }\
             strcpy(buf, "rf -c " STR(ch) " -z\r");                             \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
+            \
+            snprintf(ret, MAX_PROP_LEN, "0");\
                                                                                \
             return RETURN_SUCCESS;                                             \
         }                                                                      \
@@ -3540,6 +3550,10 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
 
+// Contians information about the configuration
+#define DEFINE_SYSTEM_INFO()\
+    DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
+
 static prop_t property_table[] = {
     DEFINE_TIME()
 #define X(ch) DEFINE_RX_CHANNEL(ch)
@@ -3552,6 +3566,7 @@ static prop_t property_table[] = {
     DEFINE_FILE_PROP_P("save_config", hdlr_save_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_FILE_PROP_P("load_config", hdlr_load_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_CM()
+    DEFINE_SYSTEM_INFO()
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);

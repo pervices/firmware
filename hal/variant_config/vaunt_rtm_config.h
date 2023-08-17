@@ -19,17 +19,35 @@
 
 #ifdef RTM6
     #define RTM_VER 6
+    // Minimum LO in MHz
+    #define MIN_LO 175000000
+    #define MIN_LO_S "175000000"
 
 #elif RTM7
     #define RTM_VER 7
+    // Minimum LO in MHz
+    #define MIN_LO 175000000
+    #define MIN_LO_S "175000000"
 
 #elif RTM8
     #define RTM_VER 8
+    // Minimum LO in MHz
+    // Theoretically can be 115MHz but becomes unreliable below 175MHz and has significant role off
+    #define MIN_LO 175000000
+    #define MIN_LO_S "175000000"
 
 #elif RTM9
     #define RTM_VER 9
+    // Minimum LO in MHz
+    // TODO test to determine limits, using this as the minimum since it is likely a safe value
+    #define MIN_LO 180000000
+    #define MIN_LO_S "180000000"
 
 #elif RTM10
+    // Minimum LO in MHz
+    // Assumed to have equivalent lo performance to RTM8
+    #define MIN_LO 175000000
+    #define MIN_LO_S "175000000"
     #define RTM_VER 10
 
 #else
