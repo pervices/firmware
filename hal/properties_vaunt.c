@@ -965,6 +965,17 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             direction = 0;                                                     \
         }                                                                      \
                                                                                \
+        /* Cap to allowable range */\
+        freq = abs(freq);\
+        if(INT(ch) == 0 || INT(ch) == 1) {\
+            freq = fmin(freq, BASE_SAMPLE_RATE / 2.0);\
+        /* On Crimson tx c/d operate at quarter rate*/\
+        } else if(INT(ch) == 2 || INT(ch) == 3) {\
+            freq = fmin(freq, BASE_SAMPLE_RATE / 8.0);\
+        } else {\
+            PRINT(ERROR, "Frequency range limit not set for this channel\n");\
+        }\
+        \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
         write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
@@ -1545,6 +1556,10 @@ CHANNELS
             direction = 0;                                                     \
         }                                                                      \
                                                                                \
+        /* Cap to allowable range */\
+        freq = abs(freq);\
+        freq = fmin(freq, BASE_SAMPLE_RATE / 2.0);\
+        \
         /* write NCO adj */                                                    \
         uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
         write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
