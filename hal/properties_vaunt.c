@@ -3429,8 +3429,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/common_lo"        , hdlr_tx_##_c##_rf_common_lo,            RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/common_lo"        , hdlr_tx_##_c##_rf_common_lo,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
@@ -3440,36 +3439,37 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_mixer_en"   , hdlr_tx_##_c##_rf_dac_dither_mixer_en,  RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_sra_sel"    , hdlr_tx_##_c##_rf_dac_dither_sra_sel,   RW, "6", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lut_en"           , hdlr_tx_##_c##_rf_freq_lut_en,          RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/band"             , hdlr_tx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/i_bias"           , hdlr_tx_##_c##_rf_freq_i_bias,          RW, "17", RP, #_c)        \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/q_bias"           , hdlr_tx_##_c##_rf_freq_q_bias,          RW, "17", RP, #_c)        \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,           RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", RP, #_c)        \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_mixer_en"   , hdlr_tx_##_c##_rf_dac_dither_mixer_en,  RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_sra_sel"    , hdlr_tx_##_c##_rf_dac_dither_sra_sel,   RW, "6", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lut_en"           , hdlr_tx_##_c##_rf_freq_lut_en,          RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/band"             , hdlr_tx_##_c##_rf_freq_band,            RW, "1", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/i_bias"           , hdlr_tx_##_c##_rf_freq_i_bias,          RW, "17", TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/q_bias"           , hdlr_tx_##_c##_rf_freq_q_bias,          RW, "17", TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,           RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23",TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10", SP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001", TP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001", TP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001", TP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001", TP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001", TP, #_c)       \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, TP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_invalid,                           RO, VERSION, SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", SP, #_c)         \
