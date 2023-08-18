@@ -227,8 +227,11 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
+#ifdef VAUNT
     // Write the linux systemtime to the FPGA
+    // Was only implemented on Crimson. Could be implemented on Cyan with a different property, but shouldn't have an impact
     system("date +%s.%N > /var/volatile/crimson/state/time/clk/set_time");
+#endif
 
 // Let the user know the server is ready to receive commands
 #if defined(TATE_NRNT)
