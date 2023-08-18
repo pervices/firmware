@@ -1,0 +1,9 @@
+[Unit]
+Description=Writing systemtime to fpga every five minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
