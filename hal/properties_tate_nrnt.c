@@ -1961,7 +1961,8 @@ TX_CHANNELS
             current_gain-= atten;\
             \
         } else {\
-            PRINT(ERROR, "Invalid band: %i when setting gain\n");\
+            PRINT(ERROR, "Invalid band: %i when setting gain\n", band);\
+            snprintf(ret, MAX_PROP_LEN, "0");\
             return RETURN_ERROR_PARAM;\
         }\
                                                                                \
