@@ -5807,6 +5807,7 @@ int jesd_master_reset() {
         }
 
         // TODO: add function on tx board instead of using register write
+        // Enables SYSREF_MODE_ONESHOT, must be done to enable listening for sysref
         snprintf(buf, MAX_PROP_LEN, "dac -r 03a -w 2\r");
 #define X(ch)                                                              \
         if(tx_power[INT(ch)]==PWR_HALF_ON || tx_power[INT(ch)]==PWR_ON) {\
@@ -5820,6 +5821,8 @@ int jesd_master_reset() {
 
         //Wait for links to go down
         usleep(jesd_reset_delay);
+
+        // Issues sysref pulse
         set_property("time/sync/lmk_sync_tgl_jesd", "1");
 
         //Wait for links to re-establish
