@@ -3011,24 +3011,20 @@ TX_CHANNELS
     \
     /* The dev clocks take a small amount of time to stablize. Make sure there is sufficient time between when they are inverted and when the ADC is turned on*/\
     static int hdlr_rx_##ch##_invert_devclk(const char *data, char *ret) {       \
-        if(RTM_VER >= 4) {\
-            if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
-                /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
-                return RETURN_SUCCESS;\
-            }\
-            int invert;                                                            \
-            sscanf(data, "%i", &invert);                                           \
-            if (invert) {\
-                snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
-                ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
-                usleep(1);\
-            } else {\
-                snprintf(buf, 40, "clk -r %i -p 0\r", INT_RX(ch));\
-                ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
-                usleep(1);\
-            }\
+        if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        int invert;                                                            \
+        sscanf(data, "%i", &invert);                                           \
+        if (invert) {\
+            snprintf(buf, 40, "clk -r %i -p 1\r", INT_RX(ch));\
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
+            usleep(1);\
         } else {\
-            snprintf(ret, 50, "invert_devlck not supported on rtm %i\n", RTM_VER);\
+            snprintf(buf, 40, "clk -r %i -p 0\r", INT_RX(ch));\
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));\
+            usleep(1);\
         }\
         \
         return RETURN_SUCCESS;                                                 \
