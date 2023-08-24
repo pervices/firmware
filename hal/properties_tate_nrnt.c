@@ -1671,7 +1671,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         if(tx_power[INT(ch)] == PWR_ON || tx_power[INT(ch)] == PWR_HALF_ON) {\
             strcpy(buf, "status -g\r");                                            \
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-            snprintf(ret, 10, (char *)uart_ret_buf);                                     \
+            snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
         } else if (tx_power[INT(ch)] == PWR_NO_BOARD) {\
             snprintf(ret, 50, "No board detected in slot");\
         } else {\
