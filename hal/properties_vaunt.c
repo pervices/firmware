@@ -1126,7 +1126,6 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {               \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
-        uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
@@ -1142,6 +1141,24 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         if (power >= PWR_ON) {                                                 \
             tx_power[INT(ch)] = PWR_ON;                                        \
             \
+                                                                               \
+            /* board commands */                                               \
+            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
+            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
+            usleep(200000);                                                    \
+                                                                               \
+            /* disable dsp channel */                                         \
+            read_hps_reg(reg4[INT(CH) + 4], &old_val);                               \
+            write_hps_reg(reg4[INT(CH) + 4], old_val & ~0x100);                      \
+                                                                               \
+            /* send sync pulse */                                              \
+            /* TODO: figure out if the JESD sync issue here causes issues on already active channels*/\
+            sync_channels(15);                                                 \
+                                                                               \
+            /* enable dsp channels, and reset the DSP */                \
+            read_hps_reg(reg4[INT(ch) + 4], &old_val);                       \
+            write_hps_reg(reg4[INT(ch) + 4], old_val | 0x100);               \
+            read_hps_reg(reg4[INT(ch) + 4], &old_val);                       \
             /* Toggles dsp reset to clear the buffer*/\
             /* Must be put in reset, taken out of reset, put back in reset to properly reset*/\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
@@ -1149,40 +1166,6 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
             usleep(10000);\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
-                                                                               \
-            /* board commands */                                               \
-            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
-            usleep(200000);                                                    \
-                                                                               \
-            /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i], &old_val);                               \
-                write_hps_reg(reg4[i], old_val & ~0x100);                      \
-            }                                                                  \
-                                                                               \
-            /* send sync pulse */                                              \
-            sync_channels(15);                                                 \
-                                                                               \
-            /* enable active dsp channels, and reset the DSP */                \
-            for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 4], &old_val);                       \
-                    write_hps_reg(reg4[i + 4], old_val | 0x100);               \
-                    read_hps_reg(reg4[i + 4], &old_val);                       \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 4], old_val | 0x2);                 \
-                    write_hps_reg(reg4[i + 4], old_val &(~0x2));               \
-                }                                                              \
-                if (rx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x100);                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x2);                     \
-                    write_hps_reg(reg4[i], old_val &(~0x2));                   \
-                }                                                              \
-            }                                                                  \
                                                                                \
             /* power off */                                                    \
         } else {                                                               \
@@ -1763,7 +1746,6 @@ CHANNELS
     static int hdlr_rx_##ch##_pwr(const char *data, char *ret) {               \
         uint32_t old_val;                                                      \
         uint8_t power;                                                         \
-        uint8_t i;                                                             \
         sscanf(data, "%" SCNd8 "", &power);                                    \
                                                                                \
         /* check if power is already enabled */                                \
@@ -1780,33 +1762,21 @@ CHANNELS
             usleep(200000);                                                    \
                                                                                \
             /* disable dsp channels */                                         \
-            for (i = 0; i < (NUM_CHANNELS * 2); i++) {                         \
-                read_hps_reg(reg4[i], &old_val);                               \
-                write_hps_reg(reg4[i], old_val & ~0x100);                      \
-            }                                                                  \
+            read_hps_reg(reg4[INT(CH)], &old_val);                               \
+            write_hps_reg(reg4[INT(CH)], old_val & ~0x100);                      \
                                                                                \
             /* send sync pulse */                                              \
+            /* TODO: figure out if the JESD sync issue here causes issues on already active channels*/\
             sync_channels(15);                                                 \
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
-            for (i = 0; i < NUM_CHANNELS; i++) {                               \
-                if (tx_power[i] == PWR_ON) {                                   \
-                    read_hps_reg(reg4[i + 4], &old_val);                       \
-                    write_hps_reg(reg4[i + 4], old_val | 0x100);               \
-                    read_hps_reg(reg4[i + 4], &old_val);                       \
-                    PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,           \
-                          toupper(CHR(ch)));                                   \
-                    write_hps_reg(reg4[i + 4], old_val | 0x2);                 \
-                    write_hps_reg(reg4[i + 4], old_val &(~0x2));               \
-                }                                                              \
-                if (rx_stream[i] == STREAM_ON) {                               \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x100);                   \
-                    read_hps_reg(reg4[i], &old_val);                           \
-                    write_hps_reg(reg4[i], old_val | 0x2);                     \
-                    write_hps_reg(reg4[i], old_val &(~0x2));                   \
-                }                                                              \
-            }                                                                  \
+            if (rx_stream[INT(ch)] == STREAM_ON) {                               \
+                read_hps_reg(reg4[INT(ch)], &old_val);                           \
+                write_hps_reg(reg4[INT(ch)], old_val | 0x100);                   \
+                read_hps_reg(reg4[INT(ch)], &old_val);                           \
+                write_hps_reg(reg4[INT(ch)], old_val | 0x2);                     \
+                write_hps_reg(reg4[INT(ch)], old_val &(~0x2));                   \
+            }                                                              \
                                                                                \
             /* power off & stream off */                                       \
         } else {                                                               \
