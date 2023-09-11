@@ -896,7 +896,7 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##_c##_rf_board_led_blink(const char *data, char *ret) { \
+    static int hdlr_tx_##ch##_rf_board_led_blink(const char *data, char *ret) { \
         strcpy(buf, "board -z 1\r");                                             \
         strcat(buf, data);                                                     \
         strcat(buf, "\r");                                                     \
