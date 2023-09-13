@@ -24,6 +24,8 @@
 
 #include "pllcalc.h"
 
+#include "hal/variant_config/vaunt_rtm_config.h"
+
 // I couldn't actually find this hard-coded anywhere.
 #ifndef VCS_PATH
 #define VCS_PATH "/var/volatile/crimson/state"
@@ -102,8 +104,14 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 
 // Crimson TNG specific defines
 #define FREQ_TOP PLL1_RFOUT_MAX_HZ
-//#define FREQ_BOTTOM PLL1_RFOUT_MIN_HZ
-#define FREQ_BOTTOM (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
+
+// Start generating the lookup table from either the minimum LO for the rtm  or the minimum LO theoretically achievable
+#define PLL_ABSOLUTE_MIN (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
+#if PLL_ABSOLUTE_MIN < MIN_LO
+    #define FREQ_BOTTOM MIN_LO
+#else
+    #define FREQ_BOTTOM PLL_ABSOLUTE_MIN
+#endif
 
 #define LO_STEP_SIZE PLL_CORE_REF_FREQ_HZ
 static struct synth_lut_ctx synth_lut_rx_ctx[] = {
@@ -265,9 +273,9 @@ static int synth_lut_calibrate_n_for_freq(const double freq, const size_t n,
         chan_i = ctx->channel(ctx);
         r = ctx->set_freq(ctx, freq);
         if (EXIT_SUCCESS != r) {
-            PRINT(ERROR, "failed to set %s %c @ %u MHz (%d,%s)\n",
-                  tx ? "TX" : "RX", 'A' + chan_i, freq / 1000000, r,
-                  strerror(r));
+            PRINT(ERROR, "failed to set %s %c @ %f MHz (%d,%s)\n",
+                tx ? "TX" : "RX", 'A' + chan_i, freq / 1000000, r,
+                strerror(r));
             goto out;
         }
     }
@@ -761,19 +769,14 @@ out:
 }
 
 int synth_lut_enable(const bool tx, const size_t channel) {
-    int r;
 
     struct synth_lut_ctx *it = synth_lut_find(tx, channel);
     if (NULL == it) {
         PRINT(ERROR, "unable to find %s %c\n", tx ? "TX" : "RX", 'A' + channel);
-        r = ENOENT;
-        goto out;
+        return ENOENT;
+    } else {
+        return it->enable(it);
     }
-
-    r = it->enable(it);
-
-out:
-    return r;
 }
 
 static int _synth_lut_get(struct synth_lut_ctx *ctx, const double freq,
