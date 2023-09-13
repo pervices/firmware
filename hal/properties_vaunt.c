@@ -1429,7 +1429,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_board_temp(const char *data, char *ret) {     \
-        strcpy(buf, "board -c " STR(ch) " -t\r");                              \
+        strcpy(buf, "board -c " STR(ch) " -u\r");                              \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
