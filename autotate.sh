@@ -52,7 +52,3 @@ else
 fi
 
 make -j$(nproc)
-
-if [ $# -ge 6 ]; then
-    mv server $6
-fi
