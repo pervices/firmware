@@ -32,6 +32,7 @@ fi
         HW_REV="$1" \
         NRX="R4" \
         NTX="T4" \
-        MAX_RATE="S162M5"
+        MAX_RATE="S162M5" \
+        SPECIAL_FLAGS="F0"
 
 make -j$(nproc)

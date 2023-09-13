@@ -21,6 +21,13 @@ elif [ $# -ge 5 ]; then
         exit 80
     fi
 
+    # SPECIAL_FLAGS is a hex bitmask with an F before it (optional)
+    if [ $# -ge 6 ]; then
+        special_flags=$6
+    else
+        special_flags="F0"
+    fi
+
     ./configure                         \
             --prefix=/usr                   \
             --host=x86_64                   \
@@ -37,7 +44,8 @@ elif [ $# -ge 5 ]; then
             HW_REV=$2 \
             NRX=$3 \
             NTX=$4 \
-            MAX_RATE=$5
+            MAX_RATE=$5 \
+            SPECIAL_FLAGS=$special_flags
 else
     echo "No valid configuration specified"
     exit 80

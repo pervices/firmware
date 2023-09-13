@@ -135,6 +135,9 @@ int main(int argc, char *argv[]) {
             read_hps_reg("res_ro11", &verjesd);
             printf("JESD: %02x\n", (verjesd & 0xff0000) >> 16);
 #endif
+#if USE_3G_AS_1G
+            printf("USE_3G_AS_1G\n");
+#endif
 
             return 0;
         }
