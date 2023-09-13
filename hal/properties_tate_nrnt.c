@@ -5960,65 +5960,6 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     }
 }
 
-int set_freq_internal(const bool tx, const unsigned channel,
-                      const double freq) {
-
-    typedef int (*fp_t)(const char *, char *);
-
-    static const fp_t rx_fp[] = {
-#define X(ch) hdlr_rx_##ch##_rf_freq_val,
-        RX_CHANNELS
-#undef X
-    };
-
-    static const fp_t tx_fp[] = {
-#define X(ch) hdlr_tx_##ch##_rf_lo_freq,
-        TX_CHANNELS
-#undef X
-    };
-
-    int r;
-
-    char req_buf[MAX_PROP_LEN];
-    char rsp_buf[MAX_PROP_LEN];
-
-    if (channel > (tx ? ARRAY_SIZE(tx_fp) : ARRAY_SIZE(rx_fp))) {
-        r = E2BIG;
-        PRINT(ERROR, "channel %u is invalid (%d,%s)\n", channel, r,
-              strerror(r));
-        goto out;
-    }
-
-    const fp_t *fp = tx ? tx_fp : rx_fp;
-
-    // N.B. the print formatter in this case must be equal to the one in
-    // hdlr_XX_X_rf_freq_val
-    snprintf(req_buf, sizeof(req_buf), "%lf", freq);
-
-    r = fp[channel](req_buf, rsp_buf);
-    if (RETURN_SUCCESS != r) {
-        PRINT(ERROR, "function call to hdlr_XX_X_rf_freq_val() failed (%d)\n",
-              r);
-        r = EIO;
-        goto out;
-    }
-
-    double actual_freq = 0;
-    if (1 != sscanf(rsp_buf, "%lf", &actual_freq) || actual_freq != freq) {
-        r = EIO;
-        PRINT(ERROR, "%s %c: expected: %f, actual: %f\n", tx ? "TX" : "RX",
-              'A' + channel, freq, actual_freq);
-        goto out;
-    }
-
-    flush_uart_comm(tx ? uart_tx_fd[channel] : uart_rx_fd[channel]);
-
-    r = EXIT_SUCCESS;
-
-out:
-    return r;
-}
-
 void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
