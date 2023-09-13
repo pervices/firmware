@@ -1255,7 +1255,7 @@ CHANNELS
         /* if freq = 0 or below allowed range, mute PLL */                     \
         if (freq < MIN_LO) {                                                       \
             if(freq != 0) {\
-                PRINT(ERROR, "Requested tx lo %lu to low. Muting PLL\n", freq);\
+                PRINT(ERROR, "Requested rx lo %lu to low. Muting PLL\n", freq);\
             }\
             strcpy(buf, "rf -c " STR(ch) " -z\r");                             \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
