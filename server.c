@@ -154,7 +154,14 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
+#if defined(TATE_NRNT)
     PRINT(INFO, "Starting Cyan server\n");
+#elif defined(VAUNT)
+    PRINT(INFO, "Starting Crimson server\n");
+#else
+    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
+#endif
+
 
     server_init_led();
     
