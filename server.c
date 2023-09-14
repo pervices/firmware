@@ -135,6 +135,9 @@ int main(int argc, char *argv[]) {
             read_hps_reg("res_ro11", &verjesd);
             printf("JESD: %02x\n", (verjesd & 0xff0000) >> 16);
 #endif
+#if USE_3G_AS_1G
+            printf("USE_3G_AS_1G\n");
+#endif
 
             return 0;
         }
@@ -151,7 +154,14 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
+#if defined(TATE_NRNT)
     PRINT(INFO, "Starting Cyan server\n");
+#elif defined(VAUNT)
+    PRINT(INFO, "Starting Crimson server\n");
+#else
+    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
+#endif
+
 
     server_init_led();
     

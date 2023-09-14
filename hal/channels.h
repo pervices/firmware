@@ -21,6 +21,12 @@
 /* clang-format off */
 
 #include "array-utils.h"
+#if defined(TATE_NRNT)
+    #include "variant_config/tate_special_config.h"
+#elif defined(VAUNT)
+#else
+    #error "Invalid product specified"
+#endif
 
 // https://en.wikipedia.org/wiki/X_Macro.
 
@@ -48,6 +54,15 @@
     #if defined (S1000)
         #define MAX_SAMPLE_RATE 1000
 
+        //Default 1G RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
+        //Some channel combinations may override it
+        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+        #if USE_3G_AS_1G
+            #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 3)
+        #else
+            #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
+        #endif
+
         // Note: 1R1T uses the 4R4T FPGA
         #if defined(R1) && defined(T1)
             #define FPGA_4R4T_1G
@@ -55,9 +70,6 @@
             #define NUM_TX_CHANNELS 1
             #define S_NUM_RX "1"
             #define S_NUM_TX "1"
-            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
-            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
-            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
         // Note: 4R2T uses the 4R4T FPGA
         #elif defined(R4) && defined(T2)
@@ -66,9 +78,6 @@
             #define NUM_TX_CHANNELS 2
             #define S_NUM_RX "4"
             #define S_NUM_TX "2"
-            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
-            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
-            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
         #elif defined(R4) && defined(T4)
             #define FPGA_4R4T_1G
@@ -76,9 +85,6 @@
             #define NUM_TX_CHANNELS 4
             #define S_NUM_RX "4"
             #define S_NUM_TX "4"
-            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
-            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
-            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 2)
 
         #elif defined(R8) && defined(T0)
             #define FPGA_8R0T_1G
@@ -86,8 +92,8 @@
             #define NUM_TX_CHANNELS 0
             #define S_NUM_RX "8"
             #define S_NUM_TX "0"
-            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
-            #define INT_RX(ch) ((int)((INT(ch)%4)*4)+(1*(INT(ch)/4)))
+            // Refine rfe slot info for tx since it is unused
+            #undef INT_TX
 
         #elif defined(R8) && defined(T8)
             #define FPGA_8R8T_1G
@@ -95,9 +101,9 @@
             #define NUM_TX_CHANNELS 8
             #define S_NUM_RX "8"
             #define S_NUM_TX "8"
-            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
-            #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
-            #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
+            #if USE_3G_AS_1G
+                #error "Invalid channel combination with USE_3G_AS_1G"
+            #endif
 
         #elif defined(R9) && defined(T7)
             #define FPGA_9R7T_1G
@@ -105,24 +111,33 @@
             #define NUM_TX_CHANNELS 7
             #define S_NUM_RX "9"
             #define S_NUM_TX "7"
-            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
+            //override default rfe slot mapping
             #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
             #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
+            #if USE_3G_AS_1G
+                #error "Invalid channel combination with USE_3G_AS_1G"
+            #endif
         #else
             #error Invalid number of channels specified for 1G, must be: R4 T4, R8 T0, R9 T7, R8 T8, R4 T2
         #endif
 
     #elif defined (S3000)
         #define MAX_SAMPLE_RATE 3000
+
+        //Default 3G RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
+        //Some channel combinations may override it
+        #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
+        #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 3)
+
+        #if USE_3G_AS_1G
+            #error "Using USE_3G_AS_1G flag and 3G sample rate"
+        #endif
         #if defined(R4) && defined(T4)
             #define FPGA_4R4T_3G
             #define NUM_RX_CHANNELS 4
             #define NUM_TX_CHANNELS 4
             #define S_NUM_RX "4"
             #define S_NUM_TX "4"
-            //RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
-            #define INT_RX(ch) ((int)(4*(CHR(ch) - 'a')))
-            #define INT_TX(ch) ((int)(4*(CHR(ch) - 'a')) + 3)
         #else
             #error Invalid number of rx channels specified for 3G, must be: R4 T4
         #endif

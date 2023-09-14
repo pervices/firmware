@@ -61,6 +61,7 @@ CFLAGS+=" -D${HW_REV}"
 CFLAGS+=" -D${NRX}"
 CFLAGS+=" -D${NTX}"
 CFLAGS+=" -D${MAX_RATE}"
+CFLAGS+=" -D${SPECIAL_FLAGS}"
 
 LDFLAGS="${LDFLAGS}"
 LDFLAGS+=" -Wl,-no-undefined"
