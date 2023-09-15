@@ -24,4 +24,12 @@ void server_init_led(void);
 
 void server_ready_led(void);
 
+/* led control codes:
+0x0     off
+0x1     solid green
+0x9     solid red
+0x70003 flashing green
+0x8000A flashing red
+*/
+
 #endif
