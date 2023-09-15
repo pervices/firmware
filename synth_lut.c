@@ -204,49 +204,6 @@ out:
     return r;
 }
 
-#if 0
-static int synth_lut_calibrate_one_for_freq(struct synth_lut_ctx *ctx,
-                                            const double freq,
-                                            synth_rec_t *rec) {
-    int r;
-
-    bool tx = ctx->tx;
-    size_t chan_i = ctx->channel(ctx);
-
-    r = ctx->autocal_enable(ctx, true);
-    if (EXIT_SUCCESS != r) {
-        PRINT(ERROR, "autocal_enable() failed (%d,%s)\n", r, strerror(r));
-        goto out;
-    }
-
-    r = ctx->set_freq(ctx, freq);
-    if (EXIT_SUCCESS != r) {
-        PRINT(ERROR, "failed to set %s %c @ %u MHz (%d,%s)\n", tx ? "TX" : "RX",
-              'A' + chan_i, freq / 1000000, r, strerror(r));
-        goto out;
-    }
-
-    r = ctx->autocal_values(ctx, rec);
-    if (EXIT_SUCCESS != r) {
-        PRINT(ERROR,
-              "failed to read back autocal values %s %c @ %u MHz (%d,%s)\n",
-              tx ? "TX" : "RX", 'A' + chan_i, freq / 1000000, r, strerror(r));
-        goto out;
-    }
-
-    r = ctx->autocal_enable(ctx, false);
-    if (EXIT_SUCCESS != r) {
-        PRINT(ERROR, "autocal_enable() failed (%d,%s)\n", r, strerror(r));
-        goto out;
-    }
-
-    r = EXIT_SUCCESS;
-
-out:
-    return r;
-}
-#endif
-
 static int synth_lut_calibrate_n_for_freq(const double freq, const size_t n,
                                           struct synth_lut_ctx *ctx_[],
                                           synth_rec_t *rec_[]) {
