@@ -64,6 +64,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+#define MAX_AUTOCAL_ATTEMPTS 5
+
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
 
@@ -4060,7 +4062,7 @@ int set_freq_internal(const bool tx, const unsigned channel,
         r = E2BIG;
         PRINT(ERROR, "channel %u is invalid (%d,%s)\n", channel, r,
               strerror(r));
-        goto out;
+        return r;
     }
 
     const fp_t *fp = tx ? tx_fp : rx_fp;
@@ -4072,27 +4074,29 @@ int set_freq_internal(const bool tx, const unsigned channel,
     // hdlr_XX_X_rf_freq_val
     snprintf(req_buf, sizeof(req_buf), "%lf", freq);
 
-    r = fp[channel](req_buf, rsp_buf);
-    if (RETURN_SUCCESS != r) {
-        PRINT(ERROR, "function call to hdlr_XX_X_rf_freq_val() failed (%d)\n",
-              r);
-        r = EIO;
-        goto out;
+    for(int n = 0; n < MAX_AUTOCAL_ATTEMPTS; n++) {
+        r = fp[channel](req_buf, rsp_buf);
+        if (RETURN_SUCCESS != r) {
+            PRINT(ERROR, "function call to hdlr_XX_X_rf_freq_val() failed (%d)\n",
+                r);
+            flush_uart_comm(tx ? uart_tx_fd[channel] : uart_rx_fd[channel]);
+            return EIO;
+        }
+
+        double actual_freq = 0;
+        if (1 != sscanf(rsp_buf, "%lf", &actual_freq) || actual_freq != freq) {
+            PRINT(ERROR, "%s %c: autocal attempt %i failed for freq %lf\n", tx ? "TX" : "RX",
+                'A' + channel, n, freq);
+        } else {
+            // Attempt to set frequency success, no further attemptes required
+            return EXIT_SUCCESS;
+        }
     }
 
-    double actual_freq = 0;
-    if (1 != sscanf(rsp_buf, "%lf", &actual_freq) || actual_freq != freq) {
-        r = EIO;
-        PRINT(ERROR, "%s %c: expected: %f, actual: %f\n", tx ? "TX" : "RX",
-              'A' + channel, freq, actual_freq);
-        goto out;
-    }
+    // Return error for autocal failure
+    // TODO: replace EIO with proper error, the person who chose to use EIO assummed UART errors were the only possible problem
+    r = EIO;
 
-    flush_uart_comm(tx ? uart_tx_fd[channel] : uart_rx_fd[channel]);
-
-    r = EXIT_SUCCESS;
-
-out:
     return r;
 }
 
