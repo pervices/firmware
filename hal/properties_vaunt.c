@@ -592,7 +592,8 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     read_uart(fd);
 }
 
-static int check_pll(int ch, bool is_tx) {
+// Verifies the rf pll is good. Returns 1 if the pll is locked
+int check_rf_pll(int ch, bool is_tx) {
     snprintf(buf, sizeof(buf), "status -c %c -l\r", (char)ch + 'a');
     if(is_tx) {
         ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
@@ -768,10 +769,13 @@ static int check_pll(int ch, bool is_tx) {
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
-                          &pll, true, INT(ch));                                \
-                                                                               \
-        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
+        if(set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
+                          &pll, true, INT(ch))) {                                \
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);\
+        } else {\
+            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -878,7 +882,7 @@ static int check_pll(int ch, bool is_tx) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_pll(INT(ch), true)) {\
+        if(check_rf_pll(INT(ch), true)) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
@@ -1333,10 +1337,13 @@ CHANNELS
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
-                          &pll, false, INT(ch));                               \
-                                                                               \
-        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
+        if(set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
+                          &pll, false, INT(ch))) {                               \
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);\
+        } else {\
+            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
+            snprintf(ret, MAX_PROP_LEN, "0");\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1452,7 +1459,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_pll(INT(ch), false)) {\
+        if(check_rf_pll(INT(ch), false)) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
@@ -3862,7 +3869,8 @@ void sync_channels(uint8_t chan_mask) {
 
 }
 
-void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
+// Returns 1 on success, 0 on failure
+int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, size_t channel) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
@@ -3938,6 +3946,21 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
     usleep(100000);
+
+    if(check_rf_pll(channel, tx)) {
+        // Success
+        return 1;
+    } else {
+        // Mute PLL to avoid transmitting with an enexpected frequency
+        strcpy(buf, "rf -c " STR(ch) " -z\r");
+        ping(uart_fd, (uint8_t *)buf, strlen(buf));
+        if(tx) {
+            PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+        } else {
+            PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+        }
+        return 0;
+    }
 }
 
 void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {

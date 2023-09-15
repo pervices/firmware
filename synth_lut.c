@@ -37,6 +37,8 @@ extern int get_uart_tx_fd();
 extern void server_init_led();
 extern void server_ready_led();
 
+extern int check_rf_pll(int ch, bool is_tx);
+
 // this should really be a conditional defined in configure.ac based on the
 // hardware revision we're targetting, but ATM this is all I care about
 #ifndef hw_rev_defined_
