@@ -351,40 +351,6 @@ static struct synth_lut_ctx *synth_lut_find(const bool tx,
     return it;
 }
 
-#if 0
-static int synth_lut_calibrate_one(struct synth_lut_ctx *ctx) {
-
-    int r;
-
-    size_t i;
-    double freq;
-    size_t chan_i;
-
-    synth_rec_t *rec;
-
-    for (i = 0; i < SYNTH_LUT_LEN; i++) {
-
-        freq = (double)FREQ_BOTTOM + i * (double)LO_STEP_SIZE;
-        chan_i = ctx->channel(ctx);
-        rec = &ctx->fm[i];
-
-        r = synth_lut_calibrate_one_for_freq(ctx, freq, rec);
-        if (EXIT_SUCCESS != r) {
-            PRINT(ERROR, "%s %c @ %u MHz failed (%d,%s)\n",
-                  ctx->tx ? "TX" : "RX", 'A' + chan_i,
-                  (unsigned)(freq / 1000000), r, strerror(r));
-            return r;
-        }
-
-        PRINT(INFO, "%s %c @ %u MHz: { %u, %u, %u }\n", ctx->tx ? "TX" : "RX",
-              'A' + chan_i, (unsigned)(freq / 1000000), rec->core, rec->band,
-              rec->bias);
-    }
-
-    return EXIT_SUCCESS;
-}
-#endif
-
 static int synth_lut_recalibrate_all() {
 
     int r;
