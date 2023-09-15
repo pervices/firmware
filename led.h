@@ -24,6 +24,8 @@ void server_init_led(void);
 
 void server_ready_led(void);
 
+void error_led(void);
+
 /* led control codes:
 0x0     off
 0x1     solid green

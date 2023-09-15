@@ -36,6 +36,7 @@ extern int get_uart_tx_fd();
 
 extern void server_init_led();
 extern void server_ready_led();
+extern void error_led(void);
 
 extern int check_rf_pll(int ch, bool is_tx);
 
@@ -686,7 +687,13 @@ out:
         rec = NULL;
     }
 
-    server_ready_led();
+    if(r == EXIT_SUCCESS) {
+        PRINT(INFO, "Lookup table generation successfully completed\n");
+        server_ready_led();
+    } else {
+        PRINT(ERROR, "Lookup table generation failed\n");
+        error_led();
+    }
 
     pthread_mutex_unlock(&ctx->lock);
 
