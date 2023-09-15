@@ -592,6 +592,19 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     read_uart(fd);
 }
 
+static int check_pll(int ch, bool is_tx) {
+    snprintf(buf, sizeof(buf), "status -c %c -l\r", (char)ch + 'a');
+    if(is_tx) {
+        ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
+    } else {
+        ping(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf));
+    }
+    int pll_chan; // dummy variable used to deal with the pll channel number being different
+    int result;
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
+    return result;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -865,9 +878,11 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
-        strcpy(buf, "status -c " STR(ch) " -l\r");                             \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
+        if(check_pll(INT(ch), true)) {\
+            snprintf(ret, MAX_PROP_LEN, "Locked\n");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1437,9 +1452,11 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
-        strcpy(buf, "status -c " STR(ch) " -l\r");                             \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
+        if(check_pll(INT(ch), false)) {\
+            snprintf(ret, MAX_PROP_LEN, "Locked\n");\
+        } else {\
+            snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
