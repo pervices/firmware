@@ -40,6 +40,8 @@ extern void error_led(void);
 
 extern int check_rf_pll(int ch, bool is_tx);
 
+extern const int64_t MAX_LO;
+
 // this should really be a conditional defined in configure.ac based on the
 // hardware revision we're targetting, but ATM this is all I care about
 #ifndef hw_rev_defined_
@@ -106,7 +108,9 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 #define DEF_TX_CTX(ch) DEF_RTX_CTX(tx, TX, ch)
 
 // Crimson TNG specific defines
-#define FREQ_TOP PLL1_RFOUT_MAX_HZ
+
+// Maximum LO frequency in the lookup table (lower of the PLL's theoretical maximum frequency and an LO that let's Crimson use it's full range
+#define FREQ_TOP MAX_LO
 
 // Start generating the lookup table from either the minimum LO for the rtm  or the minimum LO theoretically achievable
 #define PLL_ABSOLUTE_MIN (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
@@ -603,7 +607,7 @@ void synth_lut_erase_all() {
 
 static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
 
-    static const size_t n = SYNTH_LUT_LEN;
+    size_t n = SYNTH_LUT_LEN;
 
     int r;
 

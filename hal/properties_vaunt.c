@@ -64,7 +64,17 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+// Maximum number of times the LO will be reset if unlocked
 #define MAX_AUTOCAL_ATTEMPTS 5
+
+//Defines maximum LO and performs a sanity check to make sure said LO is theoretically achievable by hardware
+#define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
+// MAX_RELVANT_LO = 6GHz + (bandwidth/2) + some amount so that when rounded because of the LO step so 1 step outside that range is included
+#define MAX_RELVANT_LO 6180000000
+#if MAX_RELVANT_LO > PLL_ABSOLUTE_MAX
+    #error "Desired LO range greater than theoretical hardware limit"
+#endif
+const int64_t MAX_LO = MAX_RELVANT_LO;
 
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
@@ -718,7 +728,7 @@ int check_rf_pll(int ch, bool is_tx) {
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel*/                               \
-        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
+        if (freq > MAX_LO) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -738,7 +748,7 @@ int check_rf_pll(int ch, bool is_tx) {
             tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
             PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
-                         "Shutting Down TX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
+                         "Shutting Down TX" STR(ch) ".\n", MAX_LO); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
@@ -1287,7 +1297,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel */                              \
-        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
+        if (freq > MAX_LO) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -1306,7 +1316,7 @@ CHANNELS
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
-                         "Shutting Down RX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
+                         "Shutting Down RX" STR(ch) ".\n", MAX_LO); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
