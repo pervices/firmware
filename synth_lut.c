@@ -315,7 +315,7 @@ static struct synth_lut_ctx *synth_lut_find(const bool tx,
 
 static int synth_lut_recalibrate_all() {
 
-    int r;
+    int r;// = 0;
 
     size_t i;
     size_t j;
@@ -372,24 +372,54 @@ static int synth_lut_recalibrate_all() {
         ctx[j]->fm = &rect[j * SYNTH_LUT_LEN];
     }
 
-    // for each frequency, calibrate all channels
-    for (i = 0; i < SYNTH_LUT_LEN; i++) {
+    // Records that the given frequency succeeded
+    uint8_t *freq_good = malloc(SYNTH_LUT_LEN);
+    memset(freq_good, 0, sizeof(SYNTH_LUT_LEN));
 
-        freq = (double)FREQ_BOTTOM + i * (double)LO_STEP_SIZE;
+    // The maximum number of
+    const int MAX_PLL_ATTEMPT_LOOPS = 3;
+    int error_cache = 0;
 
-        // populate our array of rec to pass to synth_lut_calibrate_n_for_freq
-        for (j = 0; j < n_channels; j++) {
-            rec[j] = &ctx[j]->fm[i];
+    int pll_attempt_loops;
+    for(pll_attempt_loops = 0; pll_attempt_loops < MAX_PLL_ATTEMPT_LOOPS; pll_attempt_loops++) {
+        bool all_passed = true;
+        // for each frequency, calibrate all channels
+        for (i = 0; i < SYNTH_LUT_LEN; i++) {
+            // Skip frequency if a previous attempt at that frequency already succeeded
+            if(freq_good[i]) {
+                continue;
+            }
+
+            freq = (double)FREQ_BOTTOM + i * (double)LO_STEP_SIZE;
+
+            // populate our array of rec to pass to synth_lut_calibrate_n_for_freq
+            for (j = 0; j < n_channels; j++) {
+                rec[j] = &ctx[j]->fm[i];
+            }
+
+            PRINT(INFO, "calling synth_lut_calibrate_n_for_freq()..\n");
+
+            r = synth_lut_calibrate_n_for_freq(freq, n_channels, ctx, rec);
+            if (EXIT_SUCCESS != r) {
+                PRINT(ERROR, "%u MHz failed (%d,%s) during table loop %i\n", (unsigned)(freq / 1000000),
+                    r, strerror(r), pll_attempt_loops);
+                error_cache = r;
+                all_passed = false;
+            } else {
+                // Records that this frequency worked on this pass, so it is not reattempted in future pass throughs the loop
+                freq_good[i] = 1;
+            }
         }
-
-        PRINT(INFO, "calling synth_lut_calibrate_n_for_freq()..\n");
-
-        r = synth_lut_calibrate_n_for_freq(freq, n_channels, ctx, rec);
-        if (EXIT_SUCCESS != r) {
-            PRINT(ERROR, "%u MHz failed (%d,%s)\n", (unsigned)(freq / 1000000),
-                  r, strerror(r));
-            goto out;
+        if(all_passed) {
+            break;
         }
+    }
+    free(freq_good);
+
+    if(pll_attempt_loops >= MAX_PLL_ATTEMPT_LOOPS) {
+        PRINT(ERROR, "PLL lookup table generation failed for some frequencies even after repeated attempts. Aborting\n");
+        r = error_cache;
+        goto out;
     }
 
     for (j = 0; j < n_channels; j++) {
@@ -398,6 +428,7 @@ static int synth_lut_recalibrate_all() {
                     strlen(")'") + sizeof('\0');
         cmdbuf = malloc(cmdbuf_sz);
         if (NULL == cmdbuf) {
+            r = errno;
             PRINT(ERROR, "Failed to allocate memory for mkdir -p (%d,%s)\n",
                   errno, strerror(errno));
             goto out;
