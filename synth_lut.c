@@ -405,6 +405,13 @@ static int synth_lut_recalibrate_all() {
                     r, strerror(r), pll_attempt_loops);
                 error_cache = r;
                 all_passed = false;
+
+                // Reinit the PLL on the rx and tx boards
+                char cmd_buf[PATH_MAX];
+                char resp_buf[PATH_MAX];
+                snprintf(cmd_buf, PATH_MAX, "board -b\r");
+                synth_lut_uart_cmd(get_uart_rx_fd(), cmd_buf, resp_buf, PATH_MAX);
+                synth_lut_uart_cmd(get_uart_tx_fd(), cmd_buf, resp_buf, PATH_MAX);
             } else {
                 // Records that this frequency worked on this pass, so it is not reattempted in future pass throughs the loop
                 freq_good[i] = 1;
