@@ -3957,22 +3957,43 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     // Send output frequency in kHz
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
-    usleep(100000);
 
-    if(check_rf_pll(channel, tx)) {
-        // Success
-        return 1;
-    } else {
-        // Mute PLL to avoid transmitting with an enexpected frequency
-        strcpy(buf, "rf -c " STR(ch) " -z\r");
-        ping(uart_fd, (uint8_t *)buf, strlen(buf));
-        if(tx) {
-            PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
-        } else {
-            PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
-        }
-        return 0;
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_rf_pll(channel, tx);
     }
+
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, tx)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            if(tx) {
+                PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+            } else {
+                PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+            }
+            return 0;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    // success
+    return 1;
 }
 
 void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
