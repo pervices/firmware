@@ -192,11 +192,6 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in sa;
     socklen_t sa_len;
 
-#ifdef VAUNT
-    // Symlink calibration data to a location in non-volatile memory
-    system("ln -sf /var/calibration-data /var/volatile/crimson/calibration-data");
-#endif
-
     // Initialize the properties, which is implemented as a Linux file structure
     const int t0 = time_it();
     init_property(options);

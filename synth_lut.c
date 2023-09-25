@@ -27,8 +27,8 @@
 #include "hal/variant_config/vaunt_rtm_config.h"
 
 // I couldn't actually find this hard-coded anywhere.
-#ifndef VCS_PATH
-#define VCS_PATH "/var/volatile/crimson/state"
+#ifndef LUT_PATH
+#define LUT_PATH "/var/calibration-data"
 #endif
 
 extern int get_uart_rx_fd();
@@ -867,7 +867,7 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     buf[pmatch[1].rm_eo] = '\0';
 
     snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/volatile/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             LUT_PATH "/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
              'A' + (int32_t)ctx->channel(ctx), buf);
     r = EXIT_SUCCESS;
 
