@@ -27,8 +27,8 @@
 #include "hal/variant_config/vaunt_rtm_config.h"
 
 // I couldn't actually find this hard-coded anywhere.
-#ifndef VCS_PATH
-#define VCS_PATH "/var/volatile/crimson/state"
+#ifndef LUT_PATH
+#define LUT_PATH "/var/calibration-data"
 #endif
 
 extern int get_uart_rx_fd();
@@ -39,6 +39,8 @@ extern void server_ready_led();
 extern void error_led(void);
 
 extern int check_rf_pll(int ch, bool is_tx);
+
+extern const int64_t MAX_LO;
 
 // this should really be a conditional defined in configure.ac based on the
 // hardware revision we're targetting, but ATM this is all I care about
@@ -106,7 +108,9 @@ static int _synth_lut_autocal_values(struct synth_lut_ctx *ctx,
 #define DEF_TX_CTX(ch) DEF_RTX_CTX(tx, TX, ch)
 
 // Crimson TNG specific defines
-#define FREQ_TOP PLL1_RFOUT_MAX_HZ
+
+// Maximum LO frequency in the lookup table (lower of the PLL's theoretical maximum frequency and an LO that let's Crimson use it's full range
+#define FREQ_TOP MAX_LO
 
 // Start generating the lookup table from either the minimum LO for the rtm  or the minimum LO theoretically achievable
 #define PLL_ABSOLUTE_MIN (PLL_CORE_REF_FREQ_HZ*PLL1_N_MIN)
@@ -311,7 +315,7 @@ static struct synth_lut_ctx *synth_lut_find(const bool tx,
 
 static int synth_lut_recalibrate_all() {
 
-    int r;
+    int r;// = 0;
 
     size_t i;
     size_t j;
@@ -368,24 +372,54 @@ static int synth_lut_recalibrate_all() {
         ctx[j]->fm = &rect[j * SYNTH_LUT_LEN];
     }
 
-    // for each frequency, calibrate all channels
-    for (i = 0; i < SYNTH_LUT_LEN; i++) {
+    // Records that the given frequency succeeded
+    uint8_t *freq_good = malloc(SYNTH_LUT_LEN);
+    memset(freq_good, 0, sizeof(SYNTH_LUT_LEN));
 
-        freq = (double)FREQ_BOTTOM + i * (double)LO_STEP_SIZE;
+    // The maximum number of
+    const int MAX_PLL_ATTEMPT_LOOPS = 3;
+    int error_cache = 0;
 
-        // populate our array of rec to pass to synth_lut_calibrate_n_for_freq
-        for (j = 0; j < n_channels; j++) {
-            rec[j] = &ctx[j]->fm[i];
+    int pll_attempt_loops;
+    for(pll_attempt_loops = 0; pll_attempt_loops < MAX_PLL_ATTEMPT_LOOPS; pll_attempt_loops++) {
+        bool all_passed = true;
+        // for each frequency, calibrate all channels
+        for (i = 0; i < SYNTH_LUT_LEN; i++) {
+            // Skip frequency if a previous attempt at that frequency already succeeded
+            if(freq_good[i]) {
+                continue;
+            }
+
+            freq = (double)FREQ_BOTTOM + i * (double)LO_STEP_SIZE;
+
+            // populate our array of rec to pass to synth_lut_calibrate_n_for_freq
+            for (j = 0; j < n_channels; j++) {
+                rec[j] = &ctx[j]->fm[i];
+            }
+
+            PRINT(INFO, "calling synth_lut_calibrate_n_for_freq()..\n");
+
+            r = synth_lut_calibrate_n_for_freq(freq, n_channels, ctx, rec);
+            if (EXIT_SUCCESS != r) {
+                PRINT(ERROR, "%u MHz failed (%d,%s) during table loop %i\n", (unsigned)(freq / 1000000),
+                    r, strerror(r), pll_attempt_loops);
+                error_cache = r;
+                all_passed = false;
+            } else {
+                // Records that this frequency worked on this pass, so it is not reattempted in future pass throughs the loop
+                freq_good[i] = 1;
+            }
         }
-
-        PRINT(INFO, "calling synth_lut_calibrate_n_for_freq()..\n");
-
-        r = synth_lut_calibrate_n_for_freq(freq, n_channels, ctx, rec);
-        if (EXIT_SUCCESS != r) {
-            PRINT(ERROR, "%u MHz failed (%d,%s)\n", (unsigned)(freq / 1000000),
-                  r, strerror(r));
-            goto out;
+        if(all_passed) {
+            break;
         }
+    }
+    free(freq_good);
+
+    if(pll_attempt_loops >= MAX_PLL_ATTEMPT_LOOPS) {
+        PRINT(ERROR, "PLL lookup table generation failed for some frequencies even after repeated attempts. Aborting\n");
+        r = error_cache;
+        goto out;
     }
 
     for (j = 0; j < n_channels; j++) {
@@ -394,6 +428,7 @@ static int synth_lut_recalibrate_all() {
                     strlen(")'") + sizeof('\0');
         cmdbuf = malloc(cmdbuf_sz);
         if (NULL == cmdbuf) {
+            r = errno;
             PRINT(ERROR, "Failed to allocate memory for mkdir -p (%d,%s)\n",
                   errno, strerror(errno));
             goto out;
@@ -603,7 +638,7 @@ void synth_lut_erase_all() {
 
 static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
 
-    static const size_t n = SYNTH_LUT_LEN;
+    size_t n = SYNTH_LUT_LEN;
 
     int r;
 
@@ -832,7 +867,7 @@ static int _synth_lut_init(struct synth_lut_ctx *ctx) {
     buf[pmatch[1].rm_eo] = '\0';
 
     snprintf(ctx->fn, sizeof(ctx->fn),
-             "/var/volatile/crimson/calibration-data/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
+             LUT_PATH "/%s%c-%s.bin", ctx->tx ? "TX" : "RX",
              'A' + (int32_t)ctx->channel(ctx), buf);
     r = EXIT_SUCCESS;
 

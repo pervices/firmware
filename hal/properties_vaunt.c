@@ -64,7 +64,17 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+// Maximum number of times the LO will be reset if unlocked
 #define MAX_AUTOCAL_ATTEMPTS 5
+
+//Defines maximum LO and performs a sanity check to make sure said LO is theoretically achievable by hardware
+#define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
+// MAX_RELVANT_LO = 6GHz + (bandwidth/2) + some amount so that when rounded because of the LO step so 1 step outside that range is included
+#define MAX_RELVANT_LO 6180000000
+#if MAX_RELVANT_LO > PLL_ABSOLUTE_MAX
+    #error "Desired LO range greater than theoretical hardware limit"
+#endif
+const int64_t MAX_LO = MAX_RELVANT_LO;
 
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
@@ -718,7 +728,7 @@ int check_rf_pll(int ch, bool is_tx) {
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel*/                               \
-        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
+        if (freq > MAX_LO) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -738,7 +748,7 @@ int check_rf_pll(int ch, bool is_tx) {
             tx_power[INT(ch)] = PWR_OFF;                                       \
                                                                                \
             PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
-                         "Shutting Down TX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
+                         "Shutting Down TX" STR(ch) ".\n", MAX_LO); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
@@ -1287,7 +1297,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* if freq out of bounds, kill channel */                              \
-        if (freq > PLL1_RFOUT_MAX_HZ) {                                        \
+        if (freq > MAX_LO) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
@@ -1306,7 +1316,7 @@ CHANNELS
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             PRINT(ERROR, "Requested Synthesizer Frequency is > %lu Hz: "      \
-                         "Shutting Down RX" STR(ch) ".\n", PLL1_RFOUT_MAX_HZ); \
+                         "Shutting Down RX" STR(ch) ".\n", MAX_LO); \
                                                                                \
             return RETURN_ERROR;                                               \
         }                                                                      \
@@ -3947,22 +3957,43 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     // Send output frequency in kHz
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
-    usleep(100000);
 
-    if(check_rf_pll(channel, tx)) {
-        // Success
-        return 1;
-    } else {
-        // Mute PLL to avoid transmitting with an enexpected frequency
-        strcpy(buf, "rf -c " STR(ch) " -z\r");
-        ping(uart_fd, (uint8_t *)buf, strlen(buf));
-        if(tx) {
-            PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
-        } else {
-            PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
-        }
-        return 0;
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_rf_pll(channel, tx);
     }
+
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, tx)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            if(tx) {
+                PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+            } else {
+                PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+            }
+            return 0;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    // success
+    return 1;
 }
 
 void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
