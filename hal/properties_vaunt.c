@@ -2391,7 +2391,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     char prop_path[128];
 
     strcpy(prop_path, STATE_DIR);
-    strcat(prop_path, "time/about/hw_ver");
+    strcat(prop_path, "/time/about/hw_ver");
 
     // Read EEPROM, if stock unit do nothing
     get_property(prop_path,prop_read,MAX_PROP_LEN);
