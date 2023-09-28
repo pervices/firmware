@@ -67,6 +67,9 @@
 // Maximum number of times the LO will be reset if unlocked
 #define MAX_AUTOCAL_ATTEMPTS 5
 
+// set to 1 for DEBUG PRINTS related to EEPROM
+#define DEBUG_PRINT_EEPROM 0
+
 //Defines maximum LO and performs a sanity check to make sure said LO is theoretically achievable by hardware
 #define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
 // MAX_RELVANT_LO = 6GHz + (bandwidth/2) + some amount so that when rounded because of the LO step so 1 step outside that range is included
@@ -3028,7 +3031,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // check that EEPROM is programmed properly
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 0);
-    PRINT(INFO, "%s\n", cmd);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcpy(ret, "ERROR: EEPROM read failed");
@@ -3041,7 +3044,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    PRINT(INFO, "we read  0 = 0x%x\n", readreg);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read  0 = 0x%x\n", readreg);}
     if (readreg != 0xaa ) {
         PRINT(ERROR, "EEPROM not programmed or does not exist");
         strcpy(ret, "ERROR: EEPROM not programmed or does not exist");
@@ -3050,7 +3053,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // check product
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 1);
-    PRINT(INFO, "%s\n", cmd);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcpy(ret, "ERROR: EEPROM read failed");
@@ -3063,7 +3066,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    PRINT(INFO, "we read 1 = 0x%x\n", readreg);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read 1 = 0x%x\n", readreg);}
     switch(readreg) {
     case 1:
         strcpy(ret, "Crimson ");
@@ -3077,7 +3080,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // check board type
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 2);
-    PRINT(INFO, "%s\n", cmd);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcat(ret, " ERROR: EEPROM read failed");
@@ -3090,7 +3093,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    PRINT(INFO, "we read 1 = 0x%x\n", readreg);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read 1 = 0x%x\n", readreg);}
     switch(readreg) {
         case 1:
             strcat(ret, "Time ");
@@ -3116,7 +3119,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // Check revision register
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 3);
-    PRINT(INFO, "%s\n", cmd);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcat(ret, " ERROR: EEPROM read failed");
@@ -3129,7 +3132,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    PRINT(INFO, "we read 1 = 0x%x\n", readreg);
+    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read 1 = 0x%x\n", readreg);}
     snprintf(buf, MAX_PROP_LEN, "RTM %u - ", readreg);
     strcat(ret, buf);
 
@@ -3137,7 +3140,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     strcat(ret, "Features:");
     for (i = 0x10; i <= 0x5f; i++) {
         snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, i);
-        PRINT(INFO, "%s\n", cmd);
+        if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
         if ((fp = popen(cmd, "r")) == NULL) {
             PRINT(ERROR, "Error opening pipe!\n");
             strcat(ret, " ERROR: EEPROM read failed");
