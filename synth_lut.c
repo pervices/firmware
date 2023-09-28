@@ -992,13 +992,13 @@ int synth_lut_enable_all_if_calibrated() {
         if (true &&
             EXIT_SUCCESS == (r = it->is_calibrated(it, &is_calibrated)) &&
             is_calibrated && EXIT_SUCCESS == (r = it->enable(it))) {
-            PRINT(INFO, "Enabled synth lut for %s %c\n", it->tx ? "TX" : "RX",
+            PRINT(INFO, "Enabled synth lut for %s %s\n", it->tx ? "TX" : "RX",
                   it->id);
         }
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR,
                   "Warning: Failed to check calibration or enable synth lut "
-                  "for %s %c\n",
+                  "for %s %s\n",
                   it->tx ? "TX" : "RX", it->id);
         }
     }
@@ -1007,13 +1007,13 @@ int synth_lut_enable_all_if_calibrated() {
         if (true &&
             EXIT_SUCCESS == (r = it->is_calibrated(it, &is_calibrated)) &&
             is_calibrated && EXIT_SUCCESS == (r = it->enable(it))) {
-            PRINT(INFO, "Enabled synth lut for %s %c\n", it->tx ? "TX" : "RX",
+            PRINT(INFO, "Enabled synth lut for %s %s\n", it->tx ? "TX" : "RX",
                   it->id);
         }
         if (EXIT_SUCCESS != r) {
             PRINT(ERROR,
                   "Warning: Failed to check calibration or enable synth lut "
-                  "for %s %c\n",
+                  "for %s %s\n",
                   it->tx ? "TX" : "RX", it->id);
         }
     }
