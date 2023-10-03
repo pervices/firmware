@@ -313,9 +313,12 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         else if (*reqFreq > 40000000 ) { D = 192; }
         else if (*reqFreq > 30000000 ) { D = 256; }
         else if (*reqFreq > 19532000 ) { D = 384; }
-        //else if (*reqFreq > 20000000 ) {D = 384; }    // to allow synchronizing for phase coherency across RF channels D < 512
-        //else if (*reqFreq > 15000000 ) { D = 512; }
-        //else if (*reqFreq >= 10000000 ) { D = 768; }
+        // to allow synchronizing for phase coherency across Cyan RF channels D < 512
+#if defined(VAUNT)
+        // but crimson time board has only one LMX2595 and needs these divider settings
+        else if (*reqFreq > 14648000 ) { D = 512; }
+        else if (*reqFreq >= 9766000 ) { D = 768; }
+#endif
         else { D = 0 ;}                                 // if reqFreq is too low d=0 will cause error during check
         pll->d = D;
         pll->vcoFreq = (uint64_t)(D * (*reqFreq));
