@@ -40,9 +40,9 @@
 
 #ifdef VAUNT
     //directory of the state tree
-    #define BASE_DIR "/var/volatile/crimson/"
+    #define BASE_DIR "/var/volatile/crimson"
     //state tree
-    #define STATE_DIR "/var/volatile/crimson/state/"
+    #define STATE_DIR "/var/volatile/crimson/state"
 #elif defined(TATE_NRNT)
     //TODO: make Cyan use Volatile state tree. Probably the primary reason Crimson boots so much faster
     //directory of the state tree
