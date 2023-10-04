@@ -1,5 +1,15 @@
 #!/bin/sh
 
+if [ $# -eq 0 ]; then
+    echo "Hardware revision required"
+    echo "Example: ./autovaunt.sh RTM10"
+    exit 80
+elif [ $# -eq 1 ]; then
+    special_flags="F0"
+else
+    special_flags="${2^^}"
+fi
+
 if [ -z $CC ]; then
 	SERVER_CC="arm-unknown-linux-gnueabihf-gcc"
 else 
@@ -33,6 +43,6 @@ fi
         NRX="R4" \
         NTX="T4" \
         MAX_RATE="S162M5" \
-        SPECIAL_FLAGS="F0"
+        SPECIAL_FLAGS=$special_flags
 
 make -j$(nproc)

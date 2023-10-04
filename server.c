@@ -44,6 +44,8 @@
 #ifdef VAUNT
     //sync_lut is used to deal with Crimson specific hardware limitations
     #include "synth_lut.h"
+    #include "variant_config/vaunt_special_config.h"
+    #include "variant_config/vaunt_rtm_config.h"
 #endif
 
 int main(int argc, char *argv[]) {
@@ -137,6 +139,9 @@ int main(int argc, char *argv[]) {
 #endif
 #if USE_3G_AS_1G
             printf("USE_3G_AS_1G\n");
+#endif
+#if FIXED_40G
+            printf("FIXED_40G\n");
 #endif
 
             return 0;

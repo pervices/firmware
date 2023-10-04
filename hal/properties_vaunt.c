@@ -37,6 +37,7 @@
 #include "channels.h"
 
 #include "variant_config/vaunt_rtm_config.h"
+#include "variant_config/vaunt_special_config.h"
 
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
