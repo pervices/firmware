@@ -45,6 +45,7 @@
 
 // For stand alone operation;
 //#define _PLL_DEBUG_STANDALONE //Standalone program, compile with: gcc -lm pllcalc.c
+//#define TATE_NRNT // or #define VAUNT
 //#define _PLL_DEBUG_INFO
 //#define _PLL_DEBUG_VERBOSE
 
