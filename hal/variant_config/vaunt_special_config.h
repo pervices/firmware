@@ -21,13 +21,13 @@
 
 //Decodes flags for special variant
 // Currently implemented mask values:
-// bit 0: flag indicates the unit is a variant with a fixed 40GHz shift (+ normal tunable stuff)
+// bit 0: flag indicates the unit is an avery rx where the tx board has been replaced by a 40GHz RX front end
 
 // Decode bitmask
 #ifdef F1
-    #define FIXED_40G 1
+    #define RX_40GHZ_FE 1
 #elif defined(F0)
-    #define FIXED_40G 0
+    #define RX_40GHZ_FE 0
 #else
     #error "This file must be compiled with a valid flag combination (F0, F1)"
 #endif
