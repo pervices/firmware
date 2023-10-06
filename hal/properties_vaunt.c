@@ -118,12 +118,6 @@ static uint8_t rx_power[] = {
 #undef X
 };
 
-static uint8_t tx_power[] = {
-#define X(ch) PWR_OFF,
-    CHANNELS
-#undef X
-};
-
 static uint8_t rx_stream[] = {
 #define X(ch) STREAM_OFF,
     CHANNELS
@@ -139,6 +133,13 @@ static const char *reg4[] = {
 #undef X
 };
 
+#if (!RX_40GHZ_FE)
+static uint8_t tx_power[] = {
+    #define X(ch) PWR_OFF,
+    CHANNELS
+    #undef X
+};
+
 static int i_bias[] = {
 #define X(ch) 17,
     CHANNELS
@@ -150,6 +151,7 @@ static int q_bias[] = {
     CHANNELS
 #undef X
 };
+#endif //(!RX_40GHZ_FE)
 
 uint8_t *_save_profile;
 uint8_t *_load_profile;
@@ -277,6 +279,7 @@ static int hdlr_rx_sync(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+#if (!RX_40GHZ_FE)
 static int hdlr_tx_sync(const char *data, char *ret) {
     uint32_t old_val;
 
@@ -287,6 +290,25 @@ static int hdlr_tx_sync(const char *data, char *ret) {
 
     return RETURN_SUCCESS;
 }
+
+static int set_gating_mode(const char *chan, bool dsp) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
+    return set_reg_bits(reg_name, 12, 1, dsp);
+}
+
+static int valid_gating_mode(const char *data, bool *dsp) {
+    if (false) {
+    } else if (0 == strncmp("dsp", data, strlen("dsp"))) {
+        *dsp = true;
+    } else if (0 == strncmp("output", data, strlen("output"))) {
+        *dsp = false;
+    } else {
+        return RETURN_ERROR_PARAM;
+    }
+    return RETURN_SUCCESS;
+}
+#endif //(!RX_40GHZ_FE)
 
 static int hdlr_save_config(const char *data, char *ret) {
     *_save_profile = 1;
@@ -331,22 +353,22 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
-    }                                                                          \
-    static int hdlr_tx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
-        return hdlr_XX_X_rf_freq_lut_en(data, ret, true, INT(ch));             \
     }
 CHANNELS
 #undef X
 
+#if (!RX_40GHZ_FE)
+#define X(ch)                                                                  \
+static int hdlr_tx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
+    return hdlr_XX_X_rf_freq_lut_en(data, ret, true, INT(ch));             \
+}
+CHANNELS
+#undef X
+#endif //(!RX_40GHZ_FE)
+
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- GATE ------------------------------------ */
 /* -------------------------------------------------------------------------- */
-
-static int set_gating_mode(const char *chan, bool dsp) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
-    return set_reg_bits(reg_name, 12, 1, dsp);
-}
 
 static int valid_trigger_mode(const char *data, bool *edge) {
 
@@ -476,76 +498,7 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
     }
 }
 
-static int valid_gating_mode(const char *data, bool *dsp) {
-    if (false) {
-    } else if (0 == strncmp("dsp", data, strlen("dsp"))) {
-        *dsp = true;
-    } else if (0 == strncmp("output", data, strlen("output"))) {
-        *dsp = false;
-    } else {
-        return RETURN_ERROR_PARAM;
-    }
-    return RETURN_SUCCESS;
-}
-
 #define X(ch)                                                                  \
-    static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(true, true, #ch, val);                            \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
-                                                   char *ret) {                \
-        uint32_t val;                                                          \
-        int r;                                                                 \
-        r = valid_edge_backoff(data, &val) ||                                  \
-            set_edge_backoff(true, #ch, val);                                  \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
-                                                      char *ret) {             \
-        uint64_t val;                                                          \
-        int r;                                                                 \
-        r = valid_edge_sample_num(data, &val) ||                               \
-            set_edge_sample_num(true, #ch, val);                               \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        uint32_t val;                                                          \
-        int r;                                                                 \
-        r = valid_trigger_sel(data, &val) || set_trigger_sel(true, #ch, val);  \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_dir(data, &val) ||                                   \
-            set_trigger_ufl_dir(true, #ch, val);                               \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_ufl_mode(const char *data, char *ret) {  \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_mode(data, &val) ||                                  \
-            set_trigger_mode(false, true, #ch, val);                           \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_trigger_pol(data, &val) ||                                   \
-            set_trigger_ufl_pol(true, #ch, val);                               \
-        return r;                                                              \
-    }                                                                          \
-                                                                               \
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
         bool val;                                                              \
@@ -632,7 +585,7 @@ int check_rf_pll(int ch, bool is_tx) {
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
-
+#if (!RX_40GHZ_FE)
 #define X(ch)                                                                  \
     static int hdlr_tx_##ch##_rf_dac_dither_en(const char *data, char *ret) {  \
         int r;                                                                 \
@@ -1269,9 +1222,74 @@ int check_rf_pll(int ch, bool is_tx) {
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
+        int r;                                                                 \
+        bool val;                                                              \
+        r = valid_trigger_mode(data, &val) ||                                  \
+        set_trigger_mode(true, true, #ch, val);                                \
+        return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_edge_backoff(const char *data,           \
+    char *ret) {                                                               \
+        uint32_t val;                                                          \
+        int r;                                                                 \
+        r = valid_edge_backoff(data, &val) ||                                  \
+        set_edge_backoff(true, #ch, val);                                      \
+        return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
+    char *ret) {                                                               \
+        uint64_t val;                                                          \
+        int r;                                                                 \
+        r = valid_edge_sample_num(data, &val) ||                               \
+        set_edge_sample_num(true, #ch, val);                                   \
+        return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
+        uint32_t val;                                                          \
+        int r;                                                                 \
+        r = valid_trigger_sel(data, &val) || set_trigger_sel(true, #ch, val);  \
+        return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
+        int r;                                                                 \
+        bool val;                                                              \
+        r = valid_trigger_dir(data, &val) ||                                   \
+        set_trigger_ufl_dir(true, #ch, val);                                   \
+        return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_ufl_mode(const char *data, char *ret) {  \
+        int r;                                                                 \
+        bool val;                                                              \
+        r = valid_trigger_mode(data, &val) ||                                  \
+        set_trigger_mode(false, true, #ch, val);                               \
+        return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
+        int r;                                                                 \
+        bool val;                                                              \
+        r = valid_trigger_pol(data, &val) ||                                   \
+        set_trigger_ufl_pol(true, #ch, val);                                   \
+        return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
+        int r;                                                                 \
+        bool val;                                                              \
+        r = valid_gating_mode(data, &val) || set_gating_mode(#ch, val);        \
+        return r;                                                              \
     }
 CHANNELS
 #undef X
+#endif // (!RX_40GHZ_FE)
 
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- RX ------------------------------------- */
@@ -1883,16 +1901,6 @@ CHANNELS
 CHANNELS
 #undef X
 
-#define X(ch)                                                                  \
-    static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
-        int r;                                                                 \
-        bool val;                                                              \
-        r = valid_gating_mode(data, &val) || set_gating_mode(#ch, val);        \
-        return r;                                                              \
-    }
-CHANNELS
-#undef X
-
 /* -------------------------------------------------------------------------- */
 /* ------------------------------ CHANNEL MASK ------------------------------ */
 /* -------------------------------------------------------------------------- */
@@ -1915,19 +1923,6 @@ static uint16_t cm_chanmask_get(const char *path) {
 }
 
 static int hdlr_cm_chanmask_rx(const char *data, char *ret) {
-    uint32_t mask;
-
-    if (1 != sscanf(data, "%x", &mask)) {
-        return RETURN_ERROR_PARAM;
-    }
-
-    mask &= 0xffff;
-    snprintf(ret, MAX_PROP_LEN, "%x", mask);
-
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     uint32_t mask;
 
     if (1 != sscanf(data, "%x", &mask)) {
@@ -2123,6 +2118,20 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+#if (!RX_40GHZ_FE)
+static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
+    uint32_t mask;
+    
+    if (1 != sscanf(data, "%x", &mask)) {
+        return RETURN_ERROR_PARAM;
+    }
+    
+    mask &= 0xffff;
+    snprintf(ret, MAX_PROP_LEN, "%x", mask);
+    
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
     int r;
 
@@ -2172,6 +2181,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 
     return RETURN_SUCCESS;
 }
+#endif //(!RX_40GHZ_FE)
 
 static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     int r;
@@ -2237,7 +2247,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         set_property(prop->path, inbuf);
         prop->wd = wd_backup;
     }
-
+#if (!RX_40GHZ_FE)
     for (i = 0; i < NUM_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
@@ -2263,7 +2273,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         set_property(prop->path, inbuf);
         prop->wd = wd_backup;
     }
-
+#endif //(!RX_40GHZ_FE)
     return RETURN_SUCCESS;
 }
 
@@ -2332,6 +2342,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
+#if (!RX_40GHZ_FE)
     for (i = 0; i < NUM_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
@@ -2356,7 +2367,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         set_property(prop->path, inbuf);
         prop->wd = wd_backup;
     }
-
+#endif // (!RX_40GHZ_FE)
     return RETURN_SUCCESS;
 }
 
@@ -2826,9 +2837,11 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 
 // Dumps all of the board logs for TX, RX, and TIME
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
+#if (!RX_40GHZ_FE)
 #define X(ch) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
     CHANNELS
 #undef X
+#endif //(!RX_40GHZ_FE)
 #define X(ch) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
     CHANNELS
 #undef X
@@ -3856,7 +3869,16 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
 
-#define DEFINE_CM()                                                    \
+#if (RX_40GHZ_FE) // reduced common settings without tx
+    #define DEFINE_CM()                                                    \
+    DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+#else // normal common settings with tx and rx
+    #define DEFINE_CM()                                                    \
     DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
@@ -3865,6 +3887,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+#endif
 
 #define DEFINE_FPGA_POST()                                                                      \
     DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master", hdlr_jesd_reset_master, RW, "1", SP, NAC)
@@ -3880,9 +3903,11 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
+#if (!RX_40GHZ_FE)
 #define X(ch) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
+#endif
     DEFINE_FPGA()
     DEFINE_FILE_PROP_P("save_config", hdlr_save_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_FILE_PROP_P("load_config", hdlr_load_config, RW, "/home/root/profile.cfg", SP, NAC)
@@ -4358,6 +4383,9 @@ int set_freq_internal(const bool tx, const unsigned channel,
                       const double freq) {
 
     typedef int (*fp_t)(const char *, char *);
+    if (RX_40GHZ_FE && tx) {
+        return RETURN_ERROR_PARAM;
+    }
 
     static const fp_t rx_fp[] = {
 #define X(ch) hdlr_rx_##ch##_rf_freq_val,
@@ -4365,11 +4393,15 @@ int set_freq_internal(const bool tx, const unsigned channel,
 #undef X
     };
 
+#if (!RX_40GHZ_FE)
     static const fp_t tx_fp[] = {
 #define X(ch) hdlr_tx_##ch##_rf_freq_val,
         CHANNELS
 #undef X
     };
+#else
+    static const fp_t tx_fp[0];
+#endif // (!RX_40GHZ_FE)
 
     int r;
 
