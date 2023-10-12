@@ -154,7 +154,7 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll);
+void set_lo_frequency(int uart_fd, pllparam_t *pll);
 
 /* clang-format on */
 
@@ -2436,7 +2436,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     outfreq = setFreq(&freq, &pll);
 
     /* Send Parameters over to the MCU */
-    set_lo_frequency(uart_synth_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
+    set_lo_frequency(uart_synth_fd, &pll);
 
     snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
 
@@ -4000,7 +4000,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     return 1;
 }
 
-void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
+void set_lo_frequency(int uart_fd, pllparam_t *pll) {
     // extract lo variables and pass to MCU (LMX2595)
 #if defined(RTM6) || defined(RTM7)
     // set_lo_frequency not supported by RTM6/7 hardware
@@ -4023,7 +4023,7 @@ void set_lo_frequency(int uart_fd, uint64_t reference, pllparam_t *pll) {
 
     // Send Reference in MHz to MCU
     strcpy(buf, "lmx -o ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference / 1000000));
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(pll->ref_freq / 1000000));
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
