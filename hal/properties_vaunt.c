@@ -47,6 +47,8 @@
 #define BASE_SAMPLE_RATE   325000000.0
 #define RESAMP_SAMPLE_RATE 260000000.0
 
+#define AVERY_IF 650000000UL
+
 #define REF_FREQ 5000000 // core reference frequency is 5MHz, needed by LMX2595
 
 #define IPVER_IPV4 0
@@ -162,8 +164,6 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
     IPVER_IPV4,
 };
-
-void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num);
 
 /* clang-format on */
 
@@ -1298,6 +1298,9 @@ CHANNELS
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {       \
         uint64_t freq = 0;                                                     \
+        uint64_t lmx_freq = 0; /* for use with avery 40GHz FE */               \
+        long double outfreq = 0;                                               \
+        pllparam_t pll;                                                        \
         sscanf(data, "%" SCNd64 "", &freq);                                    \
                                                                                \
         /* if freq = 0 or below allowed range, mute PLL */                     \
@@ -1313,6 +1316,78 @@ CHANNELS
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
+        if (RX_40GHZ_FE) {                                                     \
+            if (freq > 40000000000) { /*out of bounds, too high*/              \
+                /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
+                strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+            } else if (freq > 20000000000) { /*Front end high band 20GHz - 40GHz*/\
+                /* select the band*/                                           \
+                strcpy(buf, "rf -c " STR(ch) " -b 3\r");                       \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                /* load the reference frequency and such for LMX2595*/         \
+                pll = pll_def_lmx2595_avery;                                   \
+                /* round the requested freq to the nearest multiple of PLL ref around the 650MHz target IF*/\
+                /* multiplied by four times because of ADAR2004 quadrupler*/   \
+                float n = ((float)freq - AVERY_IF ) / (4 * pll.ref_freq);      \
+                lmx_freq = round(n) * pll.ref_freq;                            \
+                /* run the pll calc algorithm */                               \
+                outfreq = setFreq(&lmx_freq, &pll);                            \
+                while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {           \
+                    PRINT(INFO, "Retrying pll calc");                          \
+                    pll.R = pll.R + 1;                                         \
+                    outfreq = setFreq(&lmx_freq, &pll);                        \
+                }                                                              \
+                /* set internal band of ADAR2004 */                            \
+                strcpy(buf, "rf -c " STR(ch) " -f ");                          \
+                sprintf(buf + strlen(buf), "%" PRIu64 "", lmx_freq);           \
+                strcat(buf, "\r");                                             \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
+                /* Send Parameters over to the MCU */                          \
+                /* TODO: should there be a check that the LMX2595 locked? */   \
+                set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
+                /* set the lmx to use output B */                              \
+                if (lmx_freq >= 7500000000) {                                  \
+                    /* set outB to use VCO directly */                         \
+                    strcpy(buf, "lmx -c " STR(ch) " -J 4\r");                  \
+                } else {                                                       \
+                    /* set outB to use CH_DIV directly */                      \
+                    strcpy(buf, "lmx -c " STR(ch) " -J 3\r");                  \
+                }                                                              \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                /* set lmx_freq to account for ADAR2004 quadrupler when print to state tree*/ \
+                lmx_freq *= 4;                                                 \
+                /* set the freq to 650MHz so normal RF chain centered on IF */ \
+                freq = AVERY_IF;                                               \
+            } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
+                /* select the band*/                                           \
+                strcpy(buf, "rf -c " STR(ch) " -b 2\r");                       \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                /* load the reference frequency and such for LMX2595*/         \
+                pll = pll_def_lmx2595_avery;                                   \
+                /* round the requested freq to the nearest multiple of PLL ref around the 650MHz target IF*/\
+                float n = ((float)freq - AVERY_IF ) / pll.ref_freq;            \
+                lmx_freq = round(n) * pll.ref_freq;                            \
+                /* run the pll calc algorithm */                               \
+                outfreq = setFreq(&lmx_freq, &pll);                            \
+                while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {           \
+                    PRINT(INFO, "Retrying pll calc");                          \
+                    pll.R = pll.R + 1;                                         \
+                    outfreq = setFreq(&lmx_freq, &pll);                        \
+                }                                                              \
+                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
+                /* Send Parameters over to the MCU */                          \
+                /* TODO: should there be a check that the LMX2595 locked? */   \
+                set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
+                /* uses output A by default */                                 \
+                /* set the freq to 650MHz so normal RF chain centered on IF */ \
+                freq = AVERY_IF;                                               \
+            } else { /* Front end low band */                                  \
+                strcpy(buf, "rf -c " STR(ch) " -b 1\r");                       \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+            }                                                                  \
+        } /*fi RX_40GHZ_FE*/                                                   \
         /* if freq out of bounds, kill channel */                              \
         if (freq > MAX_LO) {                                        \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
@@ -1339,8 +1414,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* load the reference frequency and such for ADF5355*/                 \
-        pllparam_t pll = pll_def_adf5355;                                      \
-        long double outfreq = 0;                                               \
+        pll = pll_def_adf5355;                                                 \
                                                                                \
         /* round the requested freq to the nearest multiple of PLL ref */      \
         float n = (float)freq / pll.ref_freq;                                  \
@@ -1368,7 +1442,7 @@ CHANNELS
         /* Send Parameters over to the MCU */                                  \
         if(set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
                           &pll, false, INT(ch))) {                               \
-            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);\
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq + lmx_freq);\
         } else {\
             PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
             snprintf(ret, MAX_PROP_LEN, "0");\
@@ -1386,10 +1460,14 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
-        strcpy(buf, "rf -c " STR(ch) " -b ");                                  \
-        strcat(buf, data);                                                     \
-        strcat(buf, "\r");                                                     \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
+        snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b %s\r", data);        \
+        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        if (RX_40GHZ_FE) {                                                     \
+            /* assume the FE will be baseband, if it should not be it will be  \
+             * set in hdlr_rx_##ch##_rf_freq_val() */                          \
+            snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b 0\r");           \
+            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+        }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \

@@ -80,6 +80,8 @@
     #error "This file must be compiled with a valid PRODUCT (TATE_NRNT VAUNT). Confirm spelling and spaces."
 #endif
 
+#define AVERY_REF_FREQ_HZ 325000000ULL
+
 // PLL IDs
 #define PLL_ID_ADF5355 5355
 #define PLL_ID_LMX2595 2595
@@ -210,6 +212,19 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
                                         LMX2595_DIV_MAX,        LMX2595_DIV_MIN,
                                         LMX2595_N_MAX,          LMX2595_N_MIN,
                                         LMX2595_R_MAX,          LMX2595_R_MIN
+};
+
+// default LMX2595 constructor
+static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
+    PLL_ID_LMX2595,         AVERY_REF_FREQ_HZ,
+    PLL1_R_FIXED,           PLL1_N_DEFAULT,
+    PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+    PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+    LMX2595_RFOUT_MAX_HZ,   LMX2595_RFOUT_MIN_HZ,
+    LMX2595_VCO_MAX1_HZ,    LMX2595_VCO_MIN_HZ,
+    LMX2595_DIV_MAX,        LMX2595_DIV_MIN,
+    LMX2595_N_MAX,          LMX2595_N_MIN,
+    LMX2595_R_MAX,          LMX2595_R_MIN
 };
 
 // Set Output Frequency

@@ -108,6 +108,7 @@ void sync_channels(uint8_t chan_mask);
 #endif
 int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
+void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan);
 
 void dump_tree(void);
 
