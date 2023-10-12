@@ -272,7 +272,7 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         pll->x2en = 1;
         pll->d = 1;
         pll->vcoFreq = *reqFreq / 2;
-    } else if (*reqFreq > pll->vco_f_min) {             // if we don't need doubler or divider
+    } else if (*reqFreq >= pll->vco_f_min) {             // if we don't need doubler or divider
         pll->x2en = 0;
         pll->d = 1;
         pll->vcoFreq = *reqFreq;
