@@ -1979,6 +1979,35 @@ CHANNELS
 CHANNELS
 #undef X
 
+#if (RX_40GHZ_FE)
+#define X(ch)                                                                  \
+    static int hdlr_rx_##ch##_fe_lut_en(const char *data, char *ret) {         \
+        uint8_t enable;                                                        \
+        sscanf(data, "%" SCNd8 "", &enable);                                   \
+        if(enable) {                                                           \
+            strcpy(buf, "rf -c " STR(ch) " -l 0\r");                           \
+            strcpy(ret, "1");                                                  \
+        } else {                                                               \
+            strcpy(buf, "rf -c " STR(ch) " -l 1\r");                           \
+            strcpy(ret, "0");                                                  \
+        }                                                                      \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_fe_gain(const char *data, char *ret) {           \
+        uint8_t gain;                                                          \
+        sscanf(data, "%" SCNd8 "", &gain);                                     \
+        if(gain > 7) { gain = 7; }                                             \
+        snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -g %" PRIu8 "\r", gain);\
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        snprintf(ret, MAX_PROP_LEN, "%i", gain);                               \
+        return RETURN_SUCCESS;                                                 \
+    }
+CHANNELS
+#undef X
+#endif // (RX_40GHZ_FE)
+
 /* -------------------------------------------------------------------------- */
 /* ------------------------------ CHANNEL MASK ------------------------------ */
 /* -------------------------------------------------------------------------- */
@@ -3817,6 +3846,10 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/link/endian_swap"         , hdlr_rx_##_c##_endian_swap,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
+#define DEFINE_RX_40GHZFE_CHANNEL(_c)                                                           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/fe/lut_en"   , hdlr_rx_##_c##_fe_lut_en, RW, "0", RP, #_c)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/fe/gain"     , hdlr_rx_##_c##_fe_gain,   RW, "0", RP, #_c)
+
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/common_lo"        , hdlr_tx_##_c##_rf_common_lo,            RW, "0", TP, #_c)         \
@@ -3981,7 +4014,11 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
-#if (!RX_40GHZ_FE)
+#if (RX_40GHZ_FE)
+    #define X(ch) DEFINE_RX_40GHZFE_CHANNEL(ch)
+        CHANNELS
+    #undef X
+#else
 #define X(ch) DEFINE_TX_CHANNEL(ch)
     CHANNELS
 #undef X
