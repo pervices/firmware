@@ -2142,35 +2142,51 @@ TX_CHANNELS
         get_property("rx/" STR(ch) "/dsp/rate", rate_s, 50);\
         double rate;\
         sscanf(rate_s, "%lf", &rate);\
+        \
+        /* nco shift caused by hardware configuration */\
+        double hardware_shift;\
+        if(USE_3G_AS_1G) {\
+            hardware_shift = RX_NCO_SHIFT_3G_TO_1G;\
+        } else {\
+            hardware_shift = 0;\
+        }\
                                                                                \
         /* The dsp (including the nco is bypassed at or above the RX_DSP_SAMPLE_RATE */                      \
+        /* FPGA NCO bypassed, note that it may still report non 0 to compensate for hardware shifts */\
         if (rate >= RX_DSP_SAMPLE_RATE) {\
-            freq = 0;\
-        /* check for a minus or plus sign at the front */                      \
-        } else if (data[0] == '-') {                                                  \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 1;                                                     \
-        } else if (data[0] == '+') {                                           \
-            sscanf(data + 1, "%lf", &freq);                                    \
-            direction = 0;                                                     \
-        } else {                                                               \
+            snprintf(ret, MAX_PROP_LEN, "%lf", hardware_shift);\
+        /* Normal FPGA NCO usage */\
+        } else {\
             sscanf(data, "%lf", &freq);                                        \
-            direction = 0;                                                     \
-        }                                                                      \
-                                                                               \
-        /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * RX_DSP_NCO_CONST);            \
-        write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
-        if (direction > 0) {                                                   \
-            snprintf(ret, MAX_PROP_LEN, "-%lf", (double)nco_steps / RX_DSP_NCO_CONST);           \
-        } else {                                                               \
-            snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / RX_DSP_NCO_CONST);            \
-        }                                                                      \
-                                                                               \
-        /* write direction */                                                  \
-        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
-        write_hps_reg(rx_reg4_map[INT(ch)],                                        \
-                      (old_val & ~(0x1 << 13)) | (direction << 13));           \
+            \
+            /* Shift the frequency attempted by variable components to account for the fixed components*/\
+            freq += hardware_shift;\
+            /* NCO uses a bit on one register to direction, another for magnitude */\
+            if(freq < 0) {\
+                direction = 1;\
+                freq = -freq;\
+            } else {\
+                direction = 0;\
+            }\
+                                                                                \
+            /* write NCO adj */                                                    \
+            uint32_t nco_steps = (uint32_t)round(freq * RX_DSP_NCO_CONST);            \
+            write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
+            \
+            /* write direction */                                                  \
+            read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
+            write_hps_reg(rx_reg4_map[INT(ch)],                                        \
+                        (old_val & ~(0x1 << 13)) | (direction << 13));           \
+            \
+            double actual_freq;\
+            if(direction) {\
+                actual_freq = (-(double)nco_steps / RX_DSP_NCO_CONST) - hardware_shift;\
+            } else {\
+                actual_freq = (double)nco_steps / RX_DSP_NCO_CONST - hardware_shift;\
+            }\
+            snprintf(ret, MAX_PROP_LEN, "%lf", actual_freq);\
+        }\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \

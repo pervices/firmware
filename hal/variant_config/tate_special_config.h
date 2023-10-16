@@ -33,3 +33,6 @@
 #else
     #error "This file must be compiled with a valid flag combination (F0, F1)"
 #endif
+
+// NCO shift in the ADC in 1Gsps mode of the ADC32RF45
+#define RX_NCO_SHIFT_3G_TO_1G 250000000
