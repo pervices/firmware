@@ -764,8 +764,13 @@ int check_rf_pll(int ch, bool is_tx) {
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* load the reference frequency and such for ADF5355*/                 \
-        pllparam_t pll = pll_def_adf5355;                                      \
+        pllparam_t pll;                                                        \
+        /* load the reference frequency and such for RF PLL*/                  \
+        if (RTM_VER <= 10) {                                                   \
+            pll = pll_def_adf5355;                                             \
+        } else {                                                               \
+            pll = pll_def_lmx2572;                                             \
+        }                                                                      \
         long double outfreq = 0;                                               \
                                                                                \
         /* round the requested freq to the nearest multiple of PLL ref */      \
@@ -786,19 +791,24 @@ int check_rf_pll(int ch, bool is_tx) {
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
                                                                                \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        /* Send Parameters over to the MCU */                                  \
-        if(set_pll_frequency(uart_tx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
-                          &pll, true, INT(ch))) {                                \
-            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);\
-        } else {\
-            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
-            snprintf(ret, MAX_PROP_LEN, "0");\
-        }\
+        if (RTM_VER <= 10) { /* use adf5355 */                                 \
+            strcpy(buf, "rf -c " STR(ch) " \r");                               \
+            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+            if(!set_pll_frequency(uart_tx_fd[INT(ch)],                         \
+                (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, INT(ch)))          \
+            {                                                                  \
+                PRINT(ERROR,                                                   \
+                    "PLL lock failed when attempting to set freq to %lf\n",    \
+                    outfreq);                                                  \
+                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            }                                                                  \
+        } else { /* RTM >= 11 use lmx2572 */                                   \
+            /* TODO: check if the PLL is locked*/                              \
+            set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));              \
+        }                                                                      \
+        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1320,8 +1330,13 @@ CHANNELS
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* load the reference frequency and such for ADF5355*/                 \
-        pllparam_t pll = pll_def_adf5355;                                      \
+        pllparam_t pll;                                                        \
+        /* load the reference frequency and such for RF PLL*/                  \
+        if (RTM_VER <= 10) {                                                   \
+            pll = pll_def_adf5355;                                             \
+        } else {                                                               \
+            pll = pll_def_lmx2572;                                             \
+        }                                                                      \
         long double outfreq = 0;                                               \
                                                                                \
         /* round the requested freq to the nearest multiple of PLL ref */      \
@@ -1342,19 +1357,24 @@ CHANNELS
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
                                                                                \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
-                                                                               \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        /* Send Parameters over to the MCU */                                  \
-        if(set_pll_frequency(uart_rx_fd[INT(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, \
-                          &pll, false, INT(ch))) {                               \
-            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);\
-        } else {\
-            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
-            snprintf(ret, MAX_PROP_LEN, "0");\
-        }\
+        if (RTM_VER <= 10) { /* use adf5355 */                                 \
+            strcpy(buf, "rf -c " STR(ch) " \r");                               \
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+            if(!set_pll_frequency(uart_rx_fd[INT(ch)],                         \
+                (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, INT(ch)))         \
+            {                                                                  \
+                PRINT(ERROR,                                                   \
+                    "PLL lock failed when attempting to set freq to %lf\n",    \
+                    outfreq);                                                  \
+                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            }                                                                  \
+        } else { /* RTM >= 11 use lmx2572 */                                   \
+            /* TODO: check if the PLL is locked*/                              \
+            set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch));              \
+        }                                                                      \
+        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
