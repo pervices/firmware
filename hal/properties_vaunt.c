@@ -766,7 +766,7 @@ int check_rf_pll(int ch, bool is_tx) {
         freq = round(n) * pll.ref_freq;                                        \
                                                                                \
         /* Ensure the requested freq is greater than the minimum */            \
-        while(freq < PLL1_RFOUT_MIN_HZ) {                                      \
+        while(freq < pll.rf_out_min) {                                         \
             freq += pll.ref_freq;                                              \
         }                                                                      \
                                                                                \
@@ -1334,7 +1334,7 @@ CHANNELS
         freq = round(n) * pll.ref_freq;                                        \
                                                                                \
         /* Ensure the requested freq is greater than the minimum */            \
-        while(freq < PLL1_RFOUT_MIN_HZ) {                                      \
+        while(freq < pll.rf_out_min) {                                         \
             freq += pll.ref_freq;                                              \
         }                                                                      \
                                                                                \
