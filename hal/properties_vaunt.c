@@ -2489,7 +2489,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     // time_lmx_freq not supported by RTM6/7 hardware
     snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);
     return EXIT_SUCCESS;
-#elif defined(RTM8) || defined(RTM10)
+#elif defined(RTM8) || defined(RTM10) || defined (RTM11)
     // check if there is a LoGen board and only set the LMX if there is
     char prop_read[MAX_PROP_LEN];
     char prop_path[128];
