@@ -26,8 +26,10 @@
 // Decode bitmask
 #ifdef F1
     #define USE_3G_AS_1G 1
+    #define S_USE_3G_AS_1G "1"
 #elif defined(F0)
     #define USE_3G_AS_1G 0
+    #define S_USE_3G_AS_1G "0"
 #else
     #error "This file must be compiled with a valid flag combination (F0, F1)"
 #endif
