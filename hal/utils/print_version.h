@@ -4,8 +4,10 @@
 
 #ifdef VAUNT
     #include "variant_config/vaunt_special_config.h"
+    #include "variant_config/vaunt_rtm_config.h"
 #elif defined(TATE_NRNT)
     #include "variant_config/tate_special_config.h"
+    #include "variant_config/tate_rtm_config.h"
     #include "../channels.h"
 #endif
 
@@ -13,25 +15,7 @@
 void print_version() {
     printf("Branch: %s\n", VERSIONGITBRANCH);
     printf("Revision: %s\n", VERSIONGITREVISION);
-    #ifdef RTM3
-        printf("RTM: 3\n");
-    #elif RTM4
-        printf("RTM: 4\n");
-    #elif RTM5
-        printf("RTM: 5\n");
-    #elif RTM6
-        printf("RTM: 6\n");
-    #elif RTM7
-        printf("RTM: 7\n");
-    #elif RTM8
-        printf("RTM: 8\n");
-    #elif RTM9
-        printf("RTM: 9\n");
-    #elif RTM10
-        printf("RTM: 10\n");
-    #else
-        #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5, RTM6, RTM7, RTM8, RTM9, RTM10)"
-    #endif
+    printf("RTM: %i\n", RTM_VER);
     printf("Date: %s UTC\n", VERSIONDATE);
     #if defined(TATE_NRNT)
         printf("Product: TATE_NRNT\n");
