@@ -176,11 +176,8 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
     double N1 = 0;
 
     if (pll->id == PLL_ID_ADF5355) {
-        // For phase coherency we need to stick with step sizes
-        // corresponding to a reference as defined (currently 25e6)
-        // However when reqFreq is below threshold we will divide
-        // reference by 5.
         // Determine the values of the N and dividers for PLL1
+        /// divFBen is bit 13 of ADF5355 reg6: Feedback Select
         if (!pll->divFBen) {
             pll->divFBen = 0;
             N1 = (double)pll->vcoFreq / (double)pd_freq;
