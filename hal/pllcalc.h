@@ -83,6 +83,7 @@
 // PLL IDs
 #define PLL_ID_ADF5355 5355
 #define PLL_ID_LMX2595 2595
+#define PLL_ID_LMX2572 2572
 
 // ADF4355 PLL Specifications
 #define PLL1_REF_MAX_HZ 600000000ULL
@@ -140,6 +141,22 @@
 #define LMX2595_N_MIN 28        // from datasheet
 #define LMX2595_R_MAX 255       // could technically get higher using pre-div, but currently unsupported
 #define LMX2595_R_MIN 1         // from datasheet
+
+// LMX2572 Specifications
+// (NB: a lot of this is duplicated from lmx2572_ll.h)
+#define LMX2572_RFOUT_MAX_HZ 6400000000ULL
+#define LMX2572_RFOUT_MIN_HZ 12500000ULL
+#define LMX2572_VCO_MAX_HZ 6400000000ULL
+#define LMX2572_VCO_MIN_HZ 3200000000ULL
+#define LMX2572_DIV_MAX 256
+#define LMX2572_DIV_MIN 1
+#define LMX2572_N_MAX 524287
+#define LMX2572_N_MIN 20
+#define LMX2572_N_DIV_MIN_HIBAND    24
+#define LMX2572_N_DIV_HIBAND_THRESH 4000000000ULL // MHz
+#define LMX2572_R_MAX 255       // could technically get higher using pre-div, but currently unsupported
+#define LMX2572_R_MIN 1
+
 /*
 
  * This file has the following sections:
@@ -210,6 +227,20 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
                                         LMX2595_DIV_MAX,        LMX2595_DIV_MIN,
                                         LMX2595_N_MAX,          LMX2595_N_MIN,
                                         LMX2595_R_MAX,          LMX2595_R_MIN
+};
+
+
+// default LMX2572 constructor
+static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
+    PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ,
+    PLL1_R_FIXED,           PLL1_N_DEFAULT,
+    PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+    PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+    LMX2572_RFOUT_MAX_HZ,   LMX2572_RFOUT_MIN_HZ,
+    LMX2572_VCO_MAX_HZ,     LMX2572_VCO_MIN_HZ,
+    LMX2572_DIV_MAX,        LMX2572_DIV_MIN,
+    LMX2572_N_MAX,          LMX2572_N_MIN,
+    LMX2572_R_MAX,          LMX2572_R_MIN
 };
 
 // Set Output Frequency
