@@ -3120,6 +3120,13 @@ TX_CHANNELS
             if((rx_power[INT(ch)] & ~PWR_NO_BOARD) == PWR_OFF) {\
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
+            \
+            if(USE_3G_AS_1G) {\
+                /* Tells the 3G board to operate in 1G mode */\
+                snprintf(buf, MAX_PROP_LEN, "board -i 1000\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            }\
+            \
             /* Sets board state to PWR_ON, jesd_reset_all will only attempt to reset boards that are set to on*/\
             rx_power[INT(ch)] = PWR_ON | (rx_power[INT(ch)] & PWR_NO_BOARD);\
                                                                                \
