@@ -1250,6 +1250,8 @@ static const reg_t reg_table[] = {
     {0xf60 + HPS2FPGA_GPR_OFST, "res_rw6", 0x00000000, "RW"},
     {0xf70 + HPS2FPGA_GPR_OFST, "res_rw7", 0x00000000, "RW"},
 
+    {0xf74 + HPS2FPGA_GPR_OFST, "rst_req0", 0x00000000, "RW"},
+
     {0xf80 + HPS2FPGA_GPR_OFST, "res_ro0", 0x00000000, "RO"},
     {0xf90 + HPS2FPGA_GPR_OFST, "res_ro1", 0x00000000, "RO"},
     {0xfa0 + HPS2FPGA_GPR_OFST, "res_ro2", 0x00000000, "RO"},
@@ -1257,7 +1259,10 @@ static const reg_t reg_table[] = {
     {0xfc0 + HPS2FPGA_GPR_OFST, "res_ro4", 0x00000000, "RO"},
     {0xfd0 + HPS2FPGA_GPR_OFST, "res_ro5", 0x00000000, "RO"},
     {0xfe0 + HPS2FPGA_GPR_OFST, "res_ro6", 0x00000000, "RO"},
-    {0xff0 + HPS2FPGA_GPR_OFST, "res_ro7", 0x00000000, "RO"}
+    {0xff0 + HPS2FPGA_GPR_OFST, "res_ro7", 0x00000000, "RO"},
+
+    {0xff4 + HPS2FPGA_GPR_OFST, "rst_stat0", 0x00000000, "RO"},
+    {0xff8 + HPS2FPGA_GPR_OFST, "rst_stat1", 0x00000000, "RO"}
 };
 #else
     #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
