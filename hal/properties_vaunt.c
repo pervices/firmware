@@ -1168,8 +1168,7 @@ int check_rf_pll(int ch, bool is_tx) {
             return RETURN_SUCCESS;                                             \
                                                                                \
         /* Continuous Sysref Mode */                                           \
-        strcpy(buf, "sync -c 1\r");                                            \
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                      \
+        set_property("time/sync/sysref_mode", "continuous");                   \
         usleep(300); /* Wait for Sysref to stabilize and bias around zero.*/   \
                                                                                \
         /* power on */                                                         \
@@ -1219,8 +1218,7 @@ int check_rf_pll(int ch, bool is_tx) {
             write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
                                                                                \
             /* Pulsed Sysref Mode */                                           \
-            strcpy(buf, "sync -c 0\r");                                        \
-            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));                  \
+            set_property("time/sync/sysref_mode", "pulsed");                   \
             usleep(300); /* Wait Sysref to stabilize and bias around zero.*/   \
             tx_power[INT(ch)] = PWR_OFF;                                       \
         }                                                                      \
@@ -3832,8 +3830,7 @@ void sync_channels(uint8_t chan_mask) {
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
 
     // Put JESD into continuous mode
-    strcpy(buf, "sync -c 1\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "continuous");
     usleep(300); // Wait for Sysref pulse to stabilize and bias around zero.
 
 
@@ -3880,8 +3877,7 @@ void sync_channels(uint8_t chan_mask) {
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
     // Put JESD into pulsed mode
-    strcpy(buf, "sync -c 0\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    set_property("time/sync/sysref_mode", "pulsed");
 
 }
 
