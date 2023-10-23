@@ -34,6 +34,7 @@
     #include <math.h>
 #endif
 
+#include <sys/stat.h>
 #include "channels.h"
 
 #include "variant_config/vaunt_rtm_config.h"
@@ -79,6 +80,8 @@
     #error "Desired LO range greater than theoretical hardware limit"
 #endif
 const int64_t MAX_LO = MAX_RELVANT_LO;
+
+const int jesd_max_server_restart_attempts = 4;
 
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
@@ -3355,6 +3358,111 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     return RETURN_SUCCESS;
 }
 
+static int read_interboot_variable(char* data_filename, int64_t* value) {
+    struct stat sb;
+    
+    char data_path[MAX_PROP_LEN];
+    
+    snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
+    
+    int file_missing = stat(data_path, &sb);
+    
+    PRINT(INFO, "Reading from %s\n", data_path);
+    
+    if(file_missing) {
+        *value = 0;
+        return file_missing;
+    } else {
+        FILE *data_file = fopen( data_path, "r");
+        fscanf(data_file, "%lli", value);
+        fclose(data_file);
+        return 0;
+    }
+}
+
+static void update_interboot_variable(char* data_filename, int64_t value) {
+    struct stat sb;
+    
+    char data_path[MAX_PROP_LEN];
+    
+    snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
+    
+    int directory_missing = stat(INTERBOOT_DATA, &sb);
+    
+    if(directory_missing) {
+        mkdir(INTERBOOT_DATA, 0644);
+    }
+    
+    FILE *data_file = fopen( data_path, "w");
+    
+    fprintf(data_file, "%lli", value);
+    fclose(data_file);
+}
+
+// Returns 0 is jesd links come up, 1 if any links fail
+static int hdlr_jesd_reset_master(const char *data, char *ret) {
+    //Do nothing is 0 is provided, reset all if everything else is provided
+    int reset = 0;
+    sscanf(data, "%i", &reset);
+    if (!reset){
+        return RETURN_SUCCESS;
+    }
+
+    //TODO is setting to pulsed mode necessary?
+    set_property("time/sync/sysref_mode", "pulsed");
+
+    uint8_t jesd_master_error = 0;
+    uint8_t i, error_val, ret_val;
+    char prop_path[PROP_PATH_LEN];
+    // TODO expand to cover tx channels too
+    for (i = 0; i < NUM_CHANNELS; i++) {
+        snprintf(prop_path, PROP_PATH_LEN, "rx/%c/status/adc_alarm", i+'a');
+        set_property(prop_path, "1");
+        usleep(100); // I just made this delay up, but it seems to work
+        get_property(prop_path, buf, MAX_PROP_LEN);
+        ret_val = sscanf(buf,"Error: 0x%02hhx", &error_val);
+        if (!ret_val) {
+            PRINT(ERROR,"hdlr_jesd_reset_master: sscanf fail");
+            jesd_master_error += 1;
+        }
+        jesd_master_error += error_val;
+    }
+
+    if(!jesd_master_error) {
+        update_interboot_variable("cons_rx_jesd_fail_count", 0);
+    } else {
+        int64_t failed_count = 0;
+        read_interboot_variable("cons_rx_jesd_fail_count", &failed_count);
+        if(failed_count < jesd_max_server_restart_attempts) {
+            update_interboot_variable("cons_jesd_fail_count", failed_count + 1);
+            // reboot the rx board
+            set_property("time/sync/sysref_mode","continuous");
+            snprintf(buf, MAX_PROP_LEN,"board -r\r");
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+            PRINT(ERROR, "Restarting server\n");
+            system("systemctl restart crimson-server");
+            // Waits for the server reboot command to restart the server
+            while(1) {
+                usleep(1000);
+            }
+        } else {
+            PRINT(ERROR, "Unable to establish RX JESD links despite multiple server restarts. The system will not attempt another server restart to bring up JESD links until links successfully establish\n");
+            snprintf(ret, MAX_PROP_LEN, "1");
+            // TODO set the LEDs as Victor requested
+        }
+    }
+
+    // This print message is down here instead of in jesd_master_reset in order to make it closer to the end of server boot to make it easier to spot
+    if(!jesd_master_error) {
+        PRINT(INFO, "All JESD successfully established\n");
+        snprintf(ret, MAX_PROP_LEN, "good");
+        return RETURN_SUCCESS;
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "bad");
+        return RETURN_ERROR;
+    }
+}
+
 /* clang-format off */
 
 /* -------------------------------------------------------------------------- */
@@ -3573,6 +3681,9 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
     DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
 
+#define DEFINE_FPGA_POST()                                                                      \
+    DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master", hdlr_jesd_reset_master, RW, "1", SP, NAC)
+
 // Contians information about the configuration
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
@@ -3589,6 +3700,7 @@ static prop_t property_table[] = {
     DEFINE_FILE_PROP_P("save_config", hdlr_save_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_FILE_PROP_P("load_config", hdlr_load_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_CM()
+    DEFINE_FPGA_POST()
     DEFINE_SYSTEM_INFO()
 };
 

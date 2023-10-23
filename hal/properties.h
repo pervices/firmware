@@ -33,22 +33,19 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#ifdef TATE_NRNT
-    //INTERBOOT_DATA is only used in Cyan
-    #define INTERBOOT_DATA "/var/lib/cyan-server/"
-#endif
-
 #ifdef VAUNT
     //directory of the state tree
     #define BASE_DIR "/var/volatile/crimson"
     //state tree
     #define STATE_DIR "/var/volatile/crimson/state"
+    #define INTERBOOT_DATA "/var/lib/crimson-server/"
 #elif defined(TATE_NRNT)
     //TODO: make Cyan use Volatile state tree. Probably the primary reason Crimson boots so much faster
     //directory of the state tree
     #define BASE_DIR "/var/cyan"
     //state tree
     #define STATE_DIR "/var/cyan/state"
+    #define INTERBOOT_DATA "/var/lib/cyan-server/"
 #else
     #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
 #endif
