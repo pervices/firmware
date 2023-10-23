@@ -44,7 +44,8 @@
 #include <stdlib.h>
 
 // For stand alone operation;
-//#define _PLL_DEBUG_STANDALONE //Standalone program, compile with: gcc -lm pllcalc.c
+//#define _PLL_DEBUG_STANDALONE //Standalone program, compile with: gcc -lm pllcalc.c and run with: ./a.out
+//#define TATE_NRNT // or #define VAUNT and #define RTM10
 //#define _PLL_DEBUG_INFO
 //#define _PLL_DEBUG_VERBOSE
 

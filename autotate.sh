@@ -11,6 +11,7 @@ fi
 if [ $# -eq 1 ]; then
     echo "This mode is no longer supported, use NRNT mode"
     echo "Example: ./autotate TATE_NRNT RTM5 R4 T4 S1000 for TATE_4R4T"
+    echo "special variants: ./autotate TATE_NRNT RTM5 R4 T4 S1000 F1"
     exit 80
 elif [ $# -eq 2 ]; then
     echo "This mode is no longer supported, use NRNT mode"
@@ -22,6 +23,7 @@ elif [ $# -ge 5 ]; then
     fi
 
     # SPECIAL_FLAGS is a hex bitmask with an F before it (optional)
+    # see firmware/hal/variant_config/tate_special_config.h for details
     if [ $# -ge 6 ]; then
         special_flags=$6
     else
