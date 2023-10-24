@@ -80,7 +80,7 @@
     #error "This file must be compiled with a valid PRODUCT (TATE_NRNT VAUNT). Confirm spelling and spaces."
 #endif
 
-#define AVERY_REF_FREQ_HZ 325000000ULL
+#define AVERY_REF_FREQ_HZ 100000000ULL
 
 // PLL IDs
 #define PLL_ID_ADF5355 5355

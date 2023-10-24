@@ -1890,6 +1890,20 @@ CHANNELS
 #undef X
 
 #if (RX_40GHZ_FE)
+static int hdlr_time_clk_avery(const char *data, char *ret) {
+    uint8_t enable;
+    sscanf(data, "%" SCNd8 "", &enable);
+    if(enable) {
+        strcpy(buf, "clk -r 1\r");
+        strcpy(ret, "1");
+    } else {
+        strcpy(buf, "clk -r 0\r");
+        strcpy(ret, "0");
+    }
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_fe_lut_en(const char *data, char *ret) {         \
         uint8_t enable;                                                        \
@@ -3757,6 +3771,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
 #define DEFINE_RX_40GHZFE_CHANNEL(_c)                                                           \
+    DEFINE_FILE_PROP_P("time/clk/avery"         , hdlr_time_clk_avery,      RW, "1", RP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/lut_en"   , hdlr_rx_##_c##_fe_lut_en, RW, "0", RP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/gain"     , hdlr_rx_##_c##_fe_gain,   RW, "0", RP, #_c)
 
