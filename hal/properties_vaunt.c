@@ -2433,13 +2433,13 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
     /* run the pll calc algorithm */
     pllparam_t pll = pll_def_lmx2595;
     pll.ref_freq = REF_FREQ;
-    long double outfreq = 0;
+    double outfreq = 0;
     outfreq = setFreq(&freq, &pll);
 
     /* Send Parameters over to the MCU */
     set_lo_frequency(uart_synth_fd, &pll, 0);
 
-    snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
+    snprintf(ret, MAX_PROP_LEN, "%lf", outfreq);
 
     return RETURN_SUCCESS;
 }
