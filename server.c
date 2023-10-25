@@ -140,8 +140,8 @@ int main(int argc, char *argv[]) {
 #if USE_3G_AS_1G
             printf("USE_3G_AS_1G\n");
 #endif
-#if FIXED_40G
-            printf("FIXED_40G\n");
+#if RX_40GHZ_FE
+            printf("RX_40GHZ_FE\n");
 #endif
 
             return 0;
