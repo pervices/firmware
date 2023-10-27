@@ -2469,6 +2469,7 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
     return RETURN_SUCCESS;
 }
 
+#if 0
 static int hdlr_time_lmx_freq(const char* data, char* ret) {
 #if defined(RTM6) || defined(RTM7)
     // time_lmx_freq not supported by RTM6/7 hardware
@@ -2527,7 +2528,7 @@ static int hdlr_time_lmx_freq(const char* data, char* ret) {
 
     return RETURN_SUCCESS;
 }
-
+#endif
 
 #if 0
 static int hdlr_time_source_vco(const char *data, char *ret) {
@@ -3694,7 +3695,6 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/set_time"                   , hdlr_time_clk_set_time,                 WO, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
-    DEFINE_FILE_PROP_P("time/lmx/freq"                       , hdlr_time_lmx_freq,                     RW, "10000000", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked", SP, NAC)  \
