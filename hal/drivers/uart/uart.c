@@ -18,7 +18,8 @@
 #include "uart.h"
 
 // Maximum before a UART command is considered a fail
-#define TIMEOUT 10000000UL // us, 10 seconds
+// Longest command: board -r
+#define TIMEOUT 15000000UL // us, 15 seconds
 
 // Minimum time between UART commands
 #define TIME_INTERVAL 50000 // us, 0.05 seconds

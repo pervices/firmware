@@ -1946,6 +1946,90 @@ static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Issues reboot command to rx board, does not wait for reboot to complete
+// NOTE: sysref must be continuous during reboot
+static int hdlr_cm_quick_reboot_rx(const char *data, char *ret) {
+    int32_t request;
+
+    sscanf(data, "%i", &request);
+
+    if(request > 0) {
+        snprintf(buf, MAX_PROP_LEN, "board -r\r");
+        // Issues reboot command (in Vaunt all radio front ends are on the same board so rebooting one reboots all)
+        send_uart_comm(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
+        snprintf(ret, MAX_PROP_LEN, "1");
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "0");
+    }
+
+    return RETURN_SUCCESS;
+}
+
+// Issues reboot command to tx board, does not wait for reboot to complete
+// NOTE: sysref must be continuous during reboot
+static int hdlr_cm_quick_reboot_tx(const char *data, char *ret) {
+    int32_t request;
+
+    sscanf(data, "%i", &request);
+
+    if(request > 0) {
+        snprintf(buf, MAX_PROP_LEN, "board -r\r");
+        // Issues reboot command (in Vaunt all radio front ends are on the same board so rebooting one reboots all)
+        send_uart_comm(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
+        snprintf(ret, MAX_PROP_LEN, "1");
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "0");
+    }
+
+    return RETURN_SUCCESS;
+}
+
+// Issues reboot command to rx board, does not wait for reboot to complete
+// NOTE: sysref must be continuous during reboot
+static int hdlr_cm_wait_for_reboot_rx(const char *data, char *ret) {
+    int32_t request;
+
+    sscanf(data, "%i", &request);
+
+    if(request > 0) {
+        // Waits for the boot message to fnish printing
+        read_uart(uart_rx_fd[0]);
+        int bytes_read = strnlen((char *)uart_ret_buf, MAX_PROP_LEN);
+        if(bytes_read != 0) {
+            snprintf(ret, MAX_PROP_LEN, "reboot complete");
+        } else {
+            snprintf(ret, MAX_PROP_LEN, "reboot failed");
+        }
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "no action");
+    }
+
+    return RETURN_SUCCESS;
+}
+
+// Issues reboot command to tx board, does not wait for reboot to complete
+// NOTE: sysref must be continuous during reboot
+static int hdlr_cm_wait_for_reboot_tx(const char *data, char *ret) {
+    int32_t request;
+
+    sscanf(data, "%i", &request);
+
+    if(request > 0) {
+        // Waits for the boot message to fnish printing
+        read_uart(uart_tx_fd[0]);
+        int bytes_read = strnlen((char *)uart_ret_buf, MAX_PROP_LEN);
+        if(bytes_read != 0) {
+            snprintf(ret, MAX_PROP_LEN, "reboot complete");
+        } else {
+            snprintf(ret, MAX_PROP_LEN, "reboot failed");
+        }
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "no action");
+    }
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
     int r;
 
@@ -3495,6 +3579,15 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
         .symlink_target = t,         \
     },
 
+#define DEFINE_START_RFE_REBOOT()\
+    DEFINE_FILE_PROP_P("cm/rx/quick_reboot"                   , hdlr_cm_quick_reboot_rx,                           RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("cm/tx/quick_reboot"                   , hdlr_cm_quick_reboot_tx,                           RW, "1", SP, NAC)\
+
+#define DEFINE_WAIT_RFE_REBOOT()\
+    DEFINE_FILE_PROP_P("cm/rx/wait_for_reboot"                   , hdlr_cm_wait_for_reboot_rx,                           RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("cm/tx/wait_for_reboot"                   , hdlr_cm_wait_for_reboot_tx,                           RW, "1", SP, NAC)\
+
+
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, SP, #_c)     \
@@ -3617,7 +3710,8 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_pll"       , hdlr_time_sync_lmk_resync_pll,          WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,          WO, "pulsed", SP, NAC)    \
+    /* Note: default value is continuous because it must be continuous later in boot when rfe boards reboot*/\
+    DEFINE_FILE_PROP_P("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,          WO, "continuous", SP, NAC)    \
     DEFINE_FILE_PROP_P("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
@@ -3690,6 +3784,8 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
 static prop_t property_table[] = {
     DEFINE_TIME()
+    DEFINE_START_RFE_REBOOT()
+    DEFINE_WAIT_RFE_REBOOT()
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     CHANNELS
 #undef X
