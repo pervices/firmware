@@ -23,6 +23,10 @@
 #include "common.h"
 #include "comm_manager.h"
 
+// mmap must be initialed for printing the version
+#include "mmap.h"
+#include "hal/utils/print_version.h"
+
 #define ARG_MCU_SILENT "-s"
 #define ARG_MCU_CONSOLE "-c"
 #define ARG_MCU_FWD "-f"
@@ -137,16 +141,12 @@ static void parse_args(int argc, char *argv[]) {
     // parse through the arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-v") == 0) {
-            printf("Branch: %s\n", VERSIONGITBRANCH);
-            printf("Revision: %s\n", VERSIONGITREVISION);
-            printf("Date: %s UTC\n", VERSIONDATE);
-            #if defined(TATE_NRNT)
-                printf("Product: TATE_NRNT\n");
-            #elif defined(VAUNT)
-                printf("Product: VAUNT\n");
-            #else
-                #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
-            #endif
+            // This program only requires the mmap to be initialed when getting version info
+            int r = mmap_init();
+            if (EXIT_SUCCESS != r) {
+                PRINT(ERROR, "mmap_init failed, some version info will be inaccurate\n");
+            }
+            print_version();
             exit(0);
             return;
         }

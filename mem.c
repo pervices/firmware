@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "common.h"
 #include "mmap.h"
+#include "hal/utils/print_version.h"
 
 #define ARG_MEM_READ "mr"
 #define ARG_MEM_WRITE "mw"
@@ -12,23 +13,6 @@
 #define ARG_REG_CHECK "rc"
 
 int main(int argc, char *argv[]) {
-    // Check for firmware version
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-v") == 0) {
-            printf("Branch: %s\n", VERSIONGITBRANCH);
-            printf("Revision: %s\n", VERSIONGITREVISION);
-            printf("Date: %s UTC\n", VERSIONDATE);
-            #if defined(TATE_NRNT)
-                printf("Product: TATE_NRNT\n");
-            #elif defined(VAUNT)
-                printf("Product: VAUNT\n");
-            #else
-                #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
-            #endif
-
-            return 0;
-        }
-    }
 
     char *reg;            // register
     uint32_t addr, value; // r/w address, and value if applicable
@@ -42,6 +26,15 @@ int main(int argc, char *argv[]) {
         PRINT(ERROR, "mmap_init failed\n");
         return r;
     }
+
+    // Check for firmware version
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0) {
+            print_version();
+            return 0;
+        }
+    }
+
     atexit(mmap_fini);
 
     /* Parse arguments */
