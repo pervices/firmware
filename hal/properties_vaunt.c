@@ -3493,37 +3493,61 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
         return RETURN_SUCCESS;
     }
 
-    //TODO is setting to pulsed mode necessary?
-    set_property("time/sync/sysref_mode", "pulsed");
-
     uint8_t jesd_master_error = 0;
-    uint8_t i, error_val, ret_val;
+    uint8_t i, j, error_val, ret_val;
+    char ch_type;
     char prop_path[PROP_PATH_LEN];
-    // TODO expand to cover tx channels too
+
+    // Check RX JESD links
     for (i = 0; i < NUM_CHANNELS; i++) {
         snprintf(prop_path, PROP_PATH_LEN, "rx/%c/status/adc_alarm", i+'a');
         set_property(prop_path, "1");
-        usleep(100); // I just made this delay up, but it seems to work
         get_property(prop_path, buf, MAX_PROP_LEN);
         ret_val = sscanf(buf,"Error: 0x%02hhx", &error_val);
         if (!ret_val) {
-            PRINT(ERROR,"hdlr_jesd_reset_master: sscanf fail");
+            PRINT(ERROR,"RX JESD sscanf fail\n");
             jesd_master_error += 1;
         }
         jesd_master_error += error_val;
     }
 
+    // TODO: Check TX JESD links
+
+    // Check RX and TX RF PLLs
+    for (j = 0; j < 2; j++) {
+        switch(j)
+        {
+            case 0:
+                ch_type = 'r';
+                break;
+            case 1:
+                ch_type = 't';
+                break;
+            default:
+                PRINT(ERROR,"unexpected case. j = %hhu\n",j);
+                return RETURN_ERROR;
+        }
+        for (i = 0; i < NUM_CHANNELS; i++) {
+            snprintf(prop_path, PROP_PATH_LEN, "%cx/%c/status/rfpll_lock", ch_type, i+'a');
+            set_property(prop_path, "1");
+            get_property(prop_path, buf, MAX_PROP_LEN);
+            if(strcmp(buf,"Locked") != 0) {
+                jesd_master_error += 1;
+            }
+        }
+    }
+
     if(!jesd_master_error) {
-        update_interboot_variable("cons_rx_jesd_fail_count", 0);
+        update_interboot_variable("cons_boot_fail_count", 0);
+        PRINT(INFO, "All JESD links established and RF PLLs locked\n");
+        snprintf(ret, MAX_PROP_LEN, "good");
+        return RETURN_SUCCESS;
     } else {
         int64_t failed_count = 0;
-        read_interboot_variable("cons_rx_jesd_fail_count", &failed_count);
+        read_interboot_variable("cons_boot_fail_count", &failed_count);
         if(failed_count < jesd_max_server_restart_attempts) {
-            update_interboot_variable("cons_jesd_fail_count", failed_count + 1);
-            // reboot the rx board
-            set_property("time/sync/sysref_mode","continuous");
-            snprintf(buf, MAX_PROP_LEN,"board -r\r");
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+            update_interboot_variable("cons_boot_fail_count", failed_count + 1);
+            // restarting the server will set the time board to continuous mode then reboot the rx and tx boards
             PRINT(ERROR, "Restarting server\n");
             system("systemctl restart crimson-server");
             // Waits for the server reboot command to restart the server
@@ -3531,20 +3555,11 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
                 usleep(1000);
             }
         } else {
-            PRINT(ERROR, "Unable to establish RX JESD links despite multiple server restarts. The system will not attempt another server restart to bring up JESD links until links successfully establish\n");
-            snprintf(ret, MAX_PROP_LEN, "1");
             // TODO set the LEDs as Victor requested
+            PRINT(ERROR, "Unable to establish all JESD links and lock all RF PLLs despite multiple server restarts. The system will not attempt another server restart until a successful boot\n");
+            snprintf(ret, MAX_PROP_LEN, "bad");
+            return RETURN_ERROR;
         }
-    }
-
-    // This print message is down here instead of in jesd_master_reset in order to make it closer to the end of server boot to make it easier to spot
-    if(!jesd_master_error) {
-        PRINT(INFO, "All JESD successfully established\n");
-        snprintf(ret, MAX_PROP_LEN, "good");
-        return RETURN_SUCCESS;
-    } else {
-        snprintf(ret, MAX_PROP_LEN, "bad");
-        return RETURN_ERROR;
     }
 }
 
@@ -3609,8 +3624,8 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20", RP, #_c)        \
@@ -3661,7 +3676,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/i_bias"           , hdlr_tx_##_c##_rf_freq_i_bias,          RW, "17", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/q_bias"           , hdlr_tx_##_c##_rf_freq_q_bias,          RW, "17", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,           RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0", TP, #_c)         \
