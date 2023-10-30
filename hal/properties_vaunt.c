@@ -1170,19 +1170,9 @@ int check_rf_pll(int ch, bool is_tx) {
         if (power >= PWR_ON && tx_power[INT(ch)] == PWR_ON)                    \
             return RETURN_SUCCESS;                                             \
                                                                                \
-        /* Continuous Sysref Mode */                                           \
-        set_property("time/sync/sysref_mode", "continuous");                   \
-        usleep(300); /* Wait for Sysref to stabilize and bias around zero.*/   \
-                                                                               \
         /* power on */                                                         \
         if (power >= PWR_ON) {                                                 \
             tx_power[INT(ch)] = PWR_ON;                                        \
-            \
-                                                                               \
-            /* board commands */                                               \
-            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
-            usleep(200000);                                                    \
                                                                                \
             /* disable dsp channel */                                         \
             read_hps_reg(reg4[INT(CH) + 4], &old_val);                               \
@@ -1220,9 +1210,6 @@ int check_rf_pll(int ch, bool is_tx) {
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
             write_hps_reg("tx" STR(ch) "4", old_val &(~0x100));                \
                                                                                \
-            /* Pulsed Sysref Mode */                                           \
-            set_property("time/sync/sysref_mode", "pulsed");                   \
-            usleep(300); /* Wait Sysref to stabilize and bias around zero.*/   \
             tx_power[INT(ch)] = PWR_OFF;                                       \
         }                                                                      \
                                                                                \
