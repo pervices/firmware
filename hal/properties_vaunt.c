@@ -2977,6 +2977,18 @@ static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data,
     return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 1);
 }
 
+static int hdlr_fpga_board_init_regs(const char *data, char *ret) {
+    uint8_t init;
+    sscanf(data, "%" SCNu8 "", &init);
+
+    if(init) {
+        snprintf(ret, MAX_PROP_LEN,"1");
+        mmap_init_regs(0);
+    }
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     uint32_t reset;
     uint32_t status = 1;
@@ -3797,6 +3809,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
 
 #define DEFINE_FPGA()                                                                                                         \
+    DEFINE_FILE_PROP_P("fpga/board/init_regs"                , hdlr_fpga_board_init_regs,              RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/reg_rst_req"              , hdlr_fpga_board_reg_rst_req,            RW, "8", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
