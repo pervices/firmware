@@ -1200,11 +1200,14 @@ int check_rf_pll(int ch, bool is_tx) {
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
                                                                                \
-            /* disable DSP cores */                                            \
-            read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
-                  toupper(CHR(ch)));                                           \
-            write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                    \
+            /* Toggles dsp reset to clear the buffer*/\
+            /* Must be put in reset, taken out of reset, put back in reset to properly reset*/\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
+            usleep(10000);\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
+            usleep(10000);\
+            /* leaves the in reset to disable DSP cores */\
+            write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
                                                                                \
             /* disable channel */                                              \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
