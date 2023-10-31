@@ -239,7 +239,7 @@ static void build_tree(void) {
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
         prop = get_prop(i);
-        PRINT(INFO, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
+        PRINT(VERBOSE, "\tXXX: %d: Making prop: %s wd: %i\n", i, prop->path, prop->wd);
         make_prop(prop);
         if (PROP_TYPE_SYMLINK != prop->type) {
             add_prop_to_inotify(prop);
