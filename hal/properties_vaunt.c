@@ -86,6 +86,9 @@ const int jesd_max_server_restart_attempts = 4;
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
 
+// Minimum delay required to clear the buffer when resetting the dsp
+const int buffer_reset_delay = 10;
+
 // A typical VAUNT file descriptor layout may look something like this:
 // RX = { 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
 // TX = { 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1  }
@@ -1035,11 +1038,11 @@ int check_rf_pll(int ch, bool is_tx) {
         /* Delays present because it must be in reset for an amount of time*/\
         /* Resets twice because resets don't work properly and need to be cleared*/\
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
-        usleep(10000);\
+        usleep(buffer_reset_delay);\
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
-        usleep(10000);\
+        usleep(buffer_reset_delay);\
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
-        usleep(10000);\
+        usleep(buffer_reset_delay);\
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1189,9 +1192,9 @@ int check_rf_pll(int ch, bool is_tx) {
             /* Toggles dsp reset to clear the buffer*/\
             /* Must be put in reset, taken out of reset, put back in reset to properly reset*/\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
-            usleep(10000);\
+            usleep(buffer_reset_delay);\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
-            usleep(10000);\
+            usleep(buffer_reset_delay);\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
                                                                                \
             /* power off */                                                    \
@@ -1203,9 +1206,9 @@ int check_rf_pll(int ch, bool is_tx) {
             /* Toggles dsp reset to clear the buffer*/\
             /* Must be put in reset, taken out of reset, put back in reset to properly reset*/\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
-            usleep(10000);\
+            usleep(buffer_reset_delay);\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);\
-            usleep(10000);\
+            usleep(buffer_reset_delay);\
             /* leaves the in reset to disable DSP cores */\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);\
                                                                                \
