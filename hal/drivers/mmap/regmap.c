@@ -1047,15 +1047,15 @@ static const reg_t reg_table[] = {
 };
 #elif defined(VAUNT)
 static const reg_t reg_table[] = {
-    {0x000 + HPS2FPGA_GPR_OFST, "sys0", 0x00000000, "RW"},
+    {0x000 + HPS2FPGA_GPR_OFST, "sys0", 0x00010000, "RW"},
     {0x010 + HPS2FPGA_GPR_OFST, "sys1", 0xffff003f, "RO"},
     {0x020 + HPS2FPGA_GPR_OFST, "sys2", 0x00000000, "RW"},
-    {0x030 + HPS2FPGA_GPR_OFST, "sys3", 0x00000003, "RW"},
-    {0x040 + HPS2FPGA_GPR_OFST, "sys4", 0x00000000, "RW"},
+    {0x030 + HPS2FPGA_GPR_OFST, "sys3", 0x00000003, "RO"},
+    {0x040 + HPS2FPGA_GPR_OFST, "sys4", 0x00000000, "RO"},
     {0x050 + HPS2FPGA_GPR_OFST, "sys5", 0x00000000, "RO"},
     {0x060 + HPS2FPGA_GPR_OFST, "sys6", 0x00000000, "RO"},
-    {0x070 + HPS2FPGA_GPR_OFST, "sys7", 0x00000000, "RW"},
-    {0x080 + HPS2FPGA_GPR_OFST, "sys8", 0x00000000, "RW"},
+    {0x070 + HPS2FPGA_GPR_OFST, "sys7", 0x00000000, "RO"},
+    {0x080 + HPS2FPGA_GPR_OFST, "sys8", 0x00000000, "RO"},
     {0x090 + HPS2FPGA_GPR_OFST, "sys9", 0x00000000, "RW"},
     {0x0a0 + HPS2FPGA_GPR_OFST, "sys10", 0x00000000, "RW"},
     {0x0b0 + HPS2FPGA_GPR_OFST, "sys11", 0x00000000, "RW"},
@@ -1250,7 +1250,7 @@ static const reg_t reg_table[] = {
     {0xf60 + HPS2FPGA_GPR_OFST, "res_rw6", 0x00000000, "RW"},
     {0xf70 + HPS2FPGA_GPR_OFST, "res_rw7", 0x00000000, "RW"},
 
-    {0xf74 + HPS2FPGA_GPR_OFST, "rst_req0", 0x00000000, "RW"},
+    {0xf74 + HPS2FPGA_GPR_OFST, "rst_req0", 0xffffffff, "RW"},
 
     {0xf80 + HPS2FPGA_GPR_OFST, "res_ro0", 0x00000000, "RO"},
     {0xf90 + HPS2FPGA_GPR_OFST, "res_ro1", 0x00000000, "RO"},

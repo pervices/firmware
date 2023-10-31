@@ -47,6 +47,7 @@ int check_hps_reg(void);
 void set_mem_debug_opt(uint8_t options);
 
 int mmap_init();
+void mmap_init_regs(uint8_t verbosity);
 void mmap_fini();
 uint32_t read_jesd_reg(uint8_t jesd_num, uint32_t address, uint32_t *data);
 uint32_t write_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t data);

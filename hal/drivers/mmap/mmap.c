@@ -234,6 +234,24 @@ out:
     return r;
 }
 
+void mmap_init_regs(uint8_t verbosity) {
+    size_t num_regs = get_num_regs();
+    const reg_t *curr_reg;
+    for (size_t i = 0; i < num_regs; i++) {
+        curr_reg = get_reg_from_index(i);
+        if(strcmp(curr_reg->perm,"RO")){ // for each non-read-only register
+            if (verbosity) {
+                printf("WRITE\treg = %s\taddress = 0x%04x\tdefault = 0x%08x\tperm = %s\n",
+                   curr_reg->name, curr_reg->addr, curr_reg->def_val, curr_reg->perm);
+            }
+            write_hps_addr(curr_reg->addr, curr_reg->def_val);
+        } else if (verbosity) {
+            printf("SKIP\treg = %s\taddress = 0x%04x\tdefault = 0x%08x\tperm = %s\n",
+                   curr_reg->name, curr_reg->addr, curr_reg->def_val, curr_reg->perm);
+        }
+    }
+}
+
 void mmap_fini() {
     if (MAP_FAILED != mmap_base) {
         munmap(mmap_base, mmap_len);
