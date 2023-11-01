@@ -68,7 +68,7 @@
 
 // Maximum number of times the LO will be reset if unlocked
 #define MAX_AUTOCAL_ATTEMPTS 5
-#define MAX_RESET_WAIT 200 // * 100us = 0.02s
+#define MAX_RESET_WAIT 5000 // * 100us = 0.5s
 
 // set to 1 for DEBUG PRINTS related to EEPROM
 #define DEBUG_PRINT_EEPROM 0
