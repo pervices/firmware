@@ -3054,8 +3054,8 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     do {
         usleep(100);
         time++;
-        read_hps_reg("rst_req0", &status);
-    } while (!status && time < MAX_RESET_WAIT);
+        read_hps_reg("rst_stat0", &status);
+    } while (status && time < MAX_RESET_WAIT);
 
     snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
     return RETURN_SUCCESS;
