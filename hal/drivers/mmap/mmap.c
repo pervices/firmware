@@ -125,6 +125,11 @@ int dump_hps_reg(void) {
     return RETURN_SUCCESS;
 }
 
+// Excempt register from check
+#define CHECK_EXCEMPT 1
+// CHECK_SPECIAL_* indicates the the register is a special case
+// sys0 can cause a system reboot when bit 16 is low for 7 seconds
+#define CHECK_SPECIAL_SYS0 2
 //compares the before and after values of all registers when writting to a register
 //writes the current values of each register to itself
 int check_hps_reg(void) {
@@ -137,20 +142,22 @@ int check_hps_reg(void) {
     uint32_t old_val[get_num_regs()];
     //generates the list of registers to exempt from the test
     for(index = 0; index < get_num_regs(); index++) {
-        if(strstr(get_reg_from_index(index)->name, "sys") != 0) {
-            exempt_regs[index] = 1;
+        if(strstr(get_reg_from_index(index)->name, "sys0") != 0) {
+            exempt_regs[index] = CHECK_SPECIAL_SYS0;
         } else if(strstr(get_reg_from_index(index)->perm, "RO") != 0) {
-            exempt_regs[index] = 1;
+            exempt_regs[index] = CHECK_EXCEMPT;
         } else {
             exempt_regs[index] = 0;
         }
     }
     for(check_index = 0; check_index < get_num_regs(); check_index++) {
-        if(exempt_regs[check_index]) {
+        if(exempt_regs[check_index] == CHECK_EXCEMPT) {
             continue;
         }
+
+        // Gets the current value of every relevant register
         for (index = 0; index < get_num_regs(); index++) {
-            if(exempt_regs[index]) {
+            if(exempt_regs[index] == CHECK_EXCEMPT) {
                 continue;
             }
             const reg_t *temp = get_reg_from_index(index);
@@ -169,12 +176,14 @@ int check_hps_reg(void) {
             }
         }
 
+        // Writes the register to be checked to the value not used anywhere
         ret = reg_write(get_reg_from_index(check_index)->addr, &dummy_data);
         old_val[check_index] = dummy_data;
         if(ret <0) return ret;
 
+        // Verifies no other registers have unexpected changes
         for (index = 0; index < get_num_regs(); index++) {
-            if(exempt_regs[index]) {
+            if(exempt_regs[index] == CHECK_EXCEMPT) {
                 continue;
             }
             const reg_t *temp = get_reg_from_index(index);
@@ -187,6 +196,11 @@ int check_hps_reg(void) {
             }
         }
 
+        // Makes sure sys0 bit 16 is high to prevent a reboot
+        if(exempt_regs[check_index] == CHECK_SPECIAL_SYS0) {
+            uint32_t good_sys0_val = 0x00010000;
+            reg_write(get_reg_from_index(check_index)->addr, &good_sys0_val);
+        }
     }
     printf("Register check complete\n");
     return RETURN_SUCCESS;
