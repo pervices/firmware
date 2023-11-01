@@ -130,6 +130,7 @@ int dump_hps_reg(void) {
 // CHECK_SPECIAL_* indicates the the register is a special case
 // sys0 can cause a system reboot when bit 16 is low for 7 seconds
 #define CHECK_SPECIAL_SYS0 2
+#define CHECK_SPECIAL_RST_REQ0 3
 //compares the before and after values of all registers when writting to a register
 //writes the current values of each register to itself
 int check_hps_reg(void) {
@@ -144,6 +145,8 @@ int check_hps_reg(void) {
     for(index = 0; index < get_num_regs(); index++) {
         if(strstr(get_reg_from_index(index)->name, "sys0") != 0) {
             exempt_regs[index] = CHECK_SPECIAL_SYS0;
+        } else if(strstr(get_reg_from_index(index)->name, "rst_req0") != 0) {
+            exempt_regs[index] = CHECK_SPECIAL_RST_REQ0;
         } else if(strstr(get_reg_from_index(index)->perm, "RO") != 0) {
             exempt_regs[index] = CHECK_EXCEMPT;
         } else {
@@ -167,12 +170,17 @@ int check_hps_reg(void) {
                 return ret;
         }
 
-        //searches for a value to write to the checked register that is not currently in use anywhere
-        dummy_data = 0;
-        for(int n = 0; n < get_num_regs(); n++) {
-            if(dummy_data == old_val[n]) {
-                dummy_data++;
-                n = 0;
+        if(exempt_regs[check_index] == CHECK_SPECIAL_RST_REQ0) {
+            // Sets rst_req0 to a value that won't trigger a reset
+            dummy_data = 0xffffffff;
+        } else {
+            dummy_data = 0;
+            //searches for a value to write to the checked register that is not currently in use anywhere
+            for(int n = 0; n < get_num_regs(); n++) {
+                if(dummy_data == old_val[n]) {
+                    dummy_data++;
+                    n = 0;
+                }
             }
         }
 
