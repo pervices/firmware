@@ -68,6 +68,7 @@
 
 // Maximum number of times the LO will be reset if unlocked
 #define MAX_AUTOCAL_ATTEMPTS 5
+#define MAX_RESET_WAIT 200 // * 100us = 0.02s
 
 // set to 1 for DEBUG PRINTS related to EEPROM
 #define DEBUG_PRINT_EEPROM 0
@@ -2982,6 +2983,84 @@ static inline int hdlr_fpga_board_flow_control_sfpb_port(const char *data,
     return hdlr_fpga_board_flow_control_sfpX_port(data, ret, 1);
 }
 
+static int hdlr_fpga_board_init_regs(const char *data, char *ret) {
+    uint8_t init;
+    sscanf(data, "%" SCNu8 "", &init);
+
+    if(init) {
+        snprintf(ret, MAX_PROP_LEN,"1");
+        mmap_init_regs(0);
+    }
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
+    uint32_t reset;
+    uint32_t status = 1;
+    uint16_t time = 0;
+    sscanf(data, "%" SCNu32 "", &reset);
+
+    switch(reset)
+    {
+        case 0:
+            // writing all high bits will not trigger reset, then we will still
+            // read the status register
+            reset = 0x3f;
+            break;
+        case 1: 
+            PRINT(INFO,"hps pll reset\n");
+        case 3:
+            PRINT(INFO,"failover pll reset\n");
+        case 5:
+            PRINT(INFO,"link pll reset\n");
+        case 7:
+            PRINT(INFO,"HPS reset\n");
+        case 8:
+            PRINT(INFO,"Chip ID reset\n");
+        case 9:
+            PRINT(INFO,"Temperature logic reset\n");
+        case 10:
+            PRINT(INFO,"led control reset\n");
+        case 11:
+            PRINT(INFO,"10G reset\n");
+        case 12:
+            PRINT(INFO,"10G Handler reset\n");
+        case 13:
+            PRINT(INFO,"10G Response reset\n");
+        case 14:
+            PRINT(INFO,"GPIO reset\n");
+        case 15:
+            PRINT(INFO,"system time module reset\n");
+        case 16:
+            PRINT(INFO,"JESD reset\n");
+        case 17:
+            PRINT(INFO,"tx chain reset\n");
+        case 18:
+            PRINT(INFO,"rx chain reset\n");
+        case 19:
+            PRINT(INFO,"status core fifo reset\n");
+            break;
+        default:
+            PRINT(ERROR, "invalid reset state: %" PRIu32 "\n", reset);
+            snprintf(ret, MAX_PROP_LEN,"invalid reset state: %" PRIu32 "\n", reset);
+            return RETURN_SUCCESS;
+    }
+
+    reset |= 0xffffffc0; // keep bits 32:6 high
+    write_hps_reg("rst_req0", reset);
+
+    // poll rst_stat0
+    do {
+        usleep(100);
+        time++;
+        read_hps_reg("rst_req0", &status);
+    } while (!status && time < MAX_RESET_WAIT);
+
+    snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
     uint32_t old_val=0;
 
@@ -3070,8 +3149,10 @@ static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
     read_hps_reg("sys4", &old_val1);
 
     old_val2 = old_val2 & 0xff;
+    // NOTE server -v prints old_val2 & 0xf, we expect old_val2 & 0xf0 to be 0
+    // server -v prints warning if it is not
 
-    snprintf(ret, MAX_PROP_LEN, "ver. 0x%02x%02x \n", old_val2, old_val1);
+    snprintf(ret, MAX_PROP_LEN, "ver. 0x%02x%08x \n", old_val2, old_val1);
     return RETURN_SUCCESS;
 }
 
@@ -3734,6 +3815,8 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
 
 #define DEFINE_FPGA()                                                                                                         \
+    DEFINE_FILE_PROP_P("fpga/board/init_regs"                , hdlr_fpga_board_init_regs,              RW, "1", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/reg_rst_req"              , hdlr_fpga_board_reg_rst_req,            RW, "8", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \

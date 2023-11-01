@@ -4667,8 +4667,10 @@ static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
     read_hps_reg("sys4", &old_val1);
 
     old_val2 = old_val2 & 0xff;
+    // NOTE server -v prints old_val2 & 0xf, we expect old_val2 & 0xf0 to be 0
+    // server -v prints warning if it is not
 
-    snprintf(ret, MAX_PROP_LEN, "ver. 0x%02x%02x \n", old_val2, old_val1);
+    snprintf(ret, MAX_PROP_LEN, "ver. 0x%02x%08x \n", old_val2, old_val1);
     return RETURN_SUCCESS;
 }
 

@@ -31,6 +31,9 @@ void print_version() {
     uint32_t ver39_32, ver31_0;
     read_hps_reg("sys3", &ver39_32);
     read_hps_reg("sys4", &ver31_0);
+    if (ver39_32 & 0xf0){
+        printf("WARNING: unexpected non-zero bits sys3[7:4] = 0x%x\n", (ver39_32 & 0xf0) >> 4);
+    }
     printf("FPGA: %01x%08x\n", (ver39_32 & 0xf), (ver31_0 & 0xffffffff));
     #ifdef TATE_NRNT
     uint32_t verjesd;

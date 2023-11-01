@@ -11,6 +11,7 @@
 #define ARG_REG_DUMP "rd"
 #define ARG_REG_LIST "rl"
 #define ARG_REG_CHECK "rc"
+#define ARG_INIT_REGS "ir"
 
 int main(int argc, char *argv[]) {
 
@@ -106,16 +107,24 @@ int main(int argc, char *argv[]) {
         // if command is register list (execution ends here)
     } else if ((argc == 2 || argc == 3) && strcmp(argv[1], ARG_REG_LIST) == 0) {
         if (argc == 3)
-            sscanf(argv[3], "%x", &verbose);
+            sscanf(argv[2], "%x", &verbose);
         list_hps_reg(verbose);
+        return 0;
+
+        // if command is initialize registers (execution ends here)
+    } else if ((argc == 2 || argc == 3) && strcmp(argv[1], ARG_INIT_REGS) == 0) {
+        if (argc == 3)
+            sscanf(argv[2], "%x", &verbose);
+        mmap_init_regs(verbose);
         return 0;
 
         // usage menu
     } else {
-        printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] "
+        printf("Usage: mem [%s|%s|%s|%s|%s|%s|%s|%s|%s] [address|reg_name|verbosity] "
                "[value|length|mask] [mask]\n",
                ARG_MEM_READ, ARG_MEM_WRITE, ARG_MEM_DUMP, ARG_REG_READ,
-               ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST, ARG_REG_CHECK);
+               ARG_REG_WRITE, ARG_REG_DUMP, ARG_REG_LIST, ARG_REG_CHECK,
+               ARG_INIT_REGS);
         return 0;
     }
 
