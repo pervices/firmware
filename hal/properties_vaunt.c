@@ -68,7 +68,7 @@
 
 // Maximum number of times the LO will be reset if unlocked
 #define MAX_AUTOCAL_ATTEMPTS 5
-#define MAX_RESET_WAIT 200 // * 100us = 0.02s
+#define MAX_RESET_WAIT 5000 // * 100us = 0.5s
 
 // set to 1 for DEBUG PRINTS related to EEPROM
 #define DEBUG_PRINT_EEPROM 0
@@ -3054,8 +3054,8 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     do {
         usleep(100);
         time++;
-        read_hps_reg("rst_req0", &status);
-    } while (!status && time < MAX_RESET_WAIT);
+        read_hps_reg("rst_stat0", &status);
+    } while (status && time < MAX_RESET_WAIT);
 
     snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
     return RETURN_SUCCESS;
