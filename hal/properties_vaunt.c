@@ -75,14 +75,20 @@
 // set to 1 for DEBUG PRINTS related to EEPROM
 #define DEBUG_PRINT_EEPROM 0
 
+#if RX_40GHZ_FE
+    #define MAX_RF_FREQ 4065000000
+    #define S_MAX_RF_FREQ "4065000000"
+#else
+    #define MAX_RF_FREQ 6180000000
+    #define S_MAX_RF_FREQ "6180000000"
+#endif
+
 //Defines maximum LO and performs a sanity check to make sure said LO is theoretically achievable by hardware
 #define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
-// MAX_RELVANT_LO = 6GHz + (bandwidth/2) + some amount so that when rounded because of the LO step so 1 step outside that range is included
-#define MAX_RELVANT_LO 6180000000
-#if MAX_RELVANT_LO > PLL_ABSOLUTE_MAX
+#if MAX_RF_FREQ > PLL_ABSOLUTE_MAX
     #error "Desired LO range greater than theoretical hardware limit"
 #endif
-const int64_t MAX_LO = MAX_RELVANT_LO;
+const int64_t MAX_LO = MAX_RF_FREQ;
 
 const int jesd_max_server_restart_attempts = 4;
 
@@ -3930,6 +3936,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
 // Contians information about the configuration
 #define DEFINE_SYSTEM_INFO()\
+    DEFINE_FILE_PROP_P("system/max_lo"              , hdlr_invalid,                           RO, S_MAX_RF_FREQ, SP, NAC)\
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
 
 static prop_t property_table[] = {
