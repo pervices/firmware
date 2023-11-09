@@ -712,7 +712,7 @@ int check_rf_pll(int ch, bool is_tx) {
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
         while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
-            PRINT(INFO, "Retrying pll calc");                                  \
+            PRINT(INFO, "Retrying pll calc\n");                                \
             pll.R = pll.R + 1;                                                 \
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
@@ -1246,20 +1246,22 @@ CHANNELS
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
-                /* round the requested freq to the nearest multiple of PLL ref around the 650MHz target IF*/\
+                /* round the requested freq to the nearest multiple of phase*/ \
+                /* detector frequency around the 650MHz target IF*/            \
                 /* multiplied by four times because of ADAR2004 quadrupler*/   \
-                float n = ((float)freq - AVERY_IF ) / (4 * pll.ref_freq);      \
-                lmx_freq = round(n) * pll.ref_freq;                            \
+                float n = ((float)freq - AVERY_IF ) / (4 * pll.ref_freq / pll.R);\
+                lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
                 /* run the pll calc algorithm */                               \
                 outfreq = setFreq(&lmx_freq, &pll);                            \
                 while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {           \
-                    PRINT(INFO, "Retrying pll calc");                          \
+                    PRINT(INFO, "Retrying pll calc\n");                        \
                     pll.R = pll.R + 1;                                         \
                     outfreq = setFreq(&lmx_freq, &pll);                        \
                 }                                                              \
-                /* set internal band of ADAR2004 */                            \
+                lmx_freq = (uint64_t)outfreq;                                  \
+                /* set internal band of ADAR2004 in MHz*/                      \
                 strcpy(buf, "rf -c " STR(ch) " -f ");                          \
-                sprintf(buf + strlen(buf), "%" PRIu64 "", lmx_freq);           \
+                sprintf(buf + strlen(buf), "%" PRIu64 "", lmx_freq/1000000);   \
                 strcat(buf, "\r");                                             \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
@@ -1285,16 +1287,18 @@ CHANNELS
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
-                /* round the requested freq to the nearest multiple of PLL ref around the 650MHz target IF*/\
-                float n = ((float)freq - AVERY_IF ) / pll.ref_freq;            \
-                lmx_freq = round(n) * pll.ref_freq;                            \
+                /* round the requested freq to the nearest multiple of phase*/ \
+                /* detector frequency around the 650MHz target IF*/            \
+                float n = ((float)freq - AVERY_IF ) / ( pll.ref_freq / pll.R );\
+                lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
                 /* run the pll calc algorithm */                               \
                 outfreq = setFreq(&lmx_freq, &pll);                            \
                 while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {           \
-                    PRINT(INFO, "Retrying pll calc");                          \
+                    PRINT(INFO, "Retrying pll calc\n");                        \
                     pll.R = pll.R + 1;                                         \
                     outfreq = setFreq(&lmx_freq, &pll);                        \
                 }                                                              \
+                lmx_freq = (uint64_t)outfreq;                                  \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
                 /* TODO: should there be a check that the LMX2595 locked? */   \
@@ -1348,7 +1352,7 @@ CHANNELS
         outfreq = setFreq(&freq, &pll);                                        \
                                                                                \
         while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
-            PRINT(INFO, "Retrying pll calc");                                  \
+            PRINT(INFO, "Retrying pll calc\n");                                \
             pll.R = pll.R + 1;                                                 \
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
