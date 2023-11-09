@@ -76,15 +76,16 @@
 #define DEBUG_PRINT_EEPROM 0
 
 #if RX_40GHZ_FE
-    #define MAX_RF_FREQ 4065000000
-    #define S_MAX_RF_FREQ "4065000000"
+    #define MAX_RF_FREQ    40650000000ULL
+    #define S_MAX_RF_FREQ "40650000000"
+    #define PLL_ABSOLUTE_MAX (40000000000ULL + PLL1_RFOUT_MAX_HZ)
 #else
-    #define MAX_RF_FREQ 6180000000
+    #define MAX_RF_FREQ    6180000000ULL
     #define S_MAX_RF_FREQ "6180000000"
+    #define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
 #endif
 
 //Defines maximum LO and performs a sanity check to make sure said LO is theoretically achievable by hardware
-#define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
 #if MAX_RF_FREQ > PLL_ABSOLUTE_MAX
     #error "Desired LO range greater than theoretical hardware limit"
 #endif
