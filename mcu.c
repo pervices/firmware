@@ -179,12 +179,12 @@ static void parse_args(int argc, char *argv[]) {
 #endif
         } else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
             i++;
-            if (argv[i][0] == 't') {
+            if (argv[i][0] == 's') {
                 target_dev = DEV_TIME;
 #if defined(VAUNT)
-            } else if (argv[i][0] == 'r') {
+            } else if (argv[i][0] == 't') {
                 target_dev = DEV_TX;
-            } else if (argv[i][0] == 's') {
+            } else if (argv[i][0] == 'r') {
                 target_dev = DEV_RX;
 #elif defined(TATE_NRNT)
             } else if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
