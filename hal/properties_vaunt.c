@@ -4391,9 +4391,9 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
     strcpy(buf, "lmx -k \r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
-    // Send Reference in MHz to MCU
+    // Send Phase Detector Frequency in MHz to MCU
     strcpy(buf, "lmx -o ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(pll->ref_freq / 1000000));
+    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(pll->ref_freq / pll->R / 1000000));
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
