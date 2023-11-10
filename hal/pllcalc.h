@@ -217,7 +217,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
 // default LMX2595 constructor
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
     PLL_ID_LMX2595,         AVERY_REF_FREQ_HZ,
-    PLL1_R_FIXED,           PLL1_N_DEFAULT,
+    20,                     PLL1_N_DEFAULT,
     PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
     PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
     LMX2595_RFOUT_MAX_HZ,   LMX2595_RFOUT_MIN_HZ,
