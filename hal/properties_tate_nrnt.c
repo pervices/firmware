@@ -1898,6 +1898,44 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    /* Sets the digital gain amplifier*/\
+    /* NOTE: do not set when setting other gains, brings down JESD */\
+    static int hdlr_rx_##ch##_rf_gain_adc_digital(const char *data, char *ret) {      \
+        double requested_gain = 0;\
+        sscanf(data, "%lf", &requested_gain);                                             \
+        if(requested_gain < 0) {\
+            snprintf(ret, MAX_PROP_LEN, "-1\n");\
+            return RETURN_SUCCESS;\
+        } else if(rx_stream[INT(ch)] == STREAM_ON) {\
+            PRINT(ERROR, "RX is currently streaming. Setting the ADC digital gain will disrupt that. Skipping setting the ADC gain\n");\
+            /* Get existing gain without setting it */\
+            snprintf(buf, MAX_PROP_LEN, "adc -D\r");\
+        } else {\
+            /* The unit the function takes is dB*1000. i.e. 120000 = 12dB */\
+            int32_t requested_gain_int = (int32_t) (requested_gain * 1000);\
+            snprintf(buf, MAX_PROP_LEN, "adc -d %i\r", requested_gain_int);\
+        }\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        int32_t actual_gain_int_a = 0;\
+        int32_t actual_gain_int_b = 0;\
+        sscanf((char *)uart_ret_buf, "Digital gain (dB*1000): CHA: %i, CHB: %i\n", &actual_gain_int_a, &actual_gain_int_b);\
+        double actual_gain = (double)actual_gain_int_a/1000;\
+        \
+        /* Warns the user if there is a mismatch between ADC channel A or B (should be impossible when going through our API)*/\
+        if(actual_gain_int_a != actual_gain_int_b) {\
+            double actual_gain_b = (double)actual_gain_int_b/1000;\
+            PRINT(ERROR, "Mistmatch between ADC gains. A: %lf, B: %lf\n", actual_gain, actual_gain_b);\
+        }\
+        \
+        snprintf(ret, MAX_PROP_LEN, "%lf\n", actual_gain);\
+        if(rx_stream[INT(ch)] != STREAM_ON) {\
+            /* Resets JESD if the ADC digital gain was set */\
+            set_property("fpga/jesd/jesd_reset_master", "1");\
+        }\
+        \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
     /*sets variable amplifiers, variable attentuators, bypassable amplifiers to achieve desired gain*/\
     /*Note: this sets it bassed on the current band, any time the band is changed, this must be updated*/\
     static int hdlr_rx_##ch##_rf_gain_val(const char *data, char *ret) {       \
@@ -5233,6 +5271,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "-1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/adc_digital"      , hdlr_rx_##_c##_rf_gain_adc_digital,     RW, "-1", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_gaincor"         , hdlr_rx_##_c##_iq_gain_correction,      RW, "0", RP, #_c)         \
