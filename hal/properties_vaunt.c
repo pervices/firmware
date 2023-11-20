@@ -1916,7 +1916,7 @@ static int hdlr_time_clk_avery(const char *data, char *ret) {
 }
 
 #define X(ch)                                                                  \
-    static int hdlr_rx_##ch##_fe_lut_en(const char *data, char *ret) {         \
+    static int hdlr_rx_##ch##_fe_lna(const char *data, char *ret) {            \
         uint8_t enable;                                                        \
         sscanf(data, "%" SCNd8 "", &enable);                                   \
         if(enable) {                                                           \
@@ -3783,7 +3783,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
 #define DEFINE_RX_40GHZFE_CHANNEL(_c)                                                           \
     DEFINE_FILE_PROP_P("time/clk/avery"         , hdlr_time_clk_avery,      RW, "1", RP, #_c)   \
-    DEFINE_FILE_PROP_P("rx/" #_c "/fe/lut_en"   , hdlr_rx_##_c##_fe_lut_en, RW, "0", RP, #_c)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/fe/lna"      , hdlr_rx_##_c##_fe_lna,    RW, "0", RP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/gain"     , hdlr_rx_##_c##_fe_gain,   RW, "0", RP, #_c)
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
