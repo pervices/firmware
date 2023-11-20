@@ -2,11 +2,9 @@
 
 if [ $# -eq 0 ]; then
     echo "Version unspecified"
+    echo "Example: ./autotate TATE_NRNT RTM5 R4 T4 S1000 for TATE_4R4T"
     exit 1
 fi
-
-./autogen.sh clean
-./autogen.sh
 
 if [ $# -eq 1 ]; then
     echo "This mode is no longer supported, use NRNT mode"
@@ -15,12 +13,16 @@ if [ $# -eq 1 ]; then
     exit 80
 elif [ $# -eq 2 ]; then
     echo "This mode is no longer supported, use NRNT mode"
+    echo "Example: ./autotate TATE_NRNT RTM5 R4 T4 S1000 for TATE_4R4T"
     exit 80
 elif [ $# -ge 5 ]; then
     if [ "$1" != "TATE_NRNT" ]; then
         echo "Parameters for NRNT specified but product is not NRNT"
         exit 80
     fi
+    
+    ./autogen.sh clean
+    ./autogen.sh
 
     # SPECIAL_FLAGS is a hex bitmask with an F before it (optional)
     # see firmware/hal/variant_config/tate_special_config.h for details
