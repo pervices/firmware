@@ -112,7 +112,7 @@
             #define S_NUM_RX "9"
             #define S_NUM_TX "7"
             //override default rfe slot mapping
-            #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+            #undef INT_TX
             #define INT_TX(ch) ((int)(4*(((CHR(ch) + 1) - 'a')%4)) + ((int)((CHR(ch) + 1) - 'a')/4) + 2)
             #if USE_3G_AS_1G
                 #error "Invalid channel combination with USE_3G_AS_1G"
