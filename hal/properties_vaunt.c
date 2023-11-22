@@ -1236,7 +1236,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         if (RX_40GHZ_FE) {                                                     \
-            if (freq > 40000000000) { /*out of bounds, too high*/              \
+            if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
