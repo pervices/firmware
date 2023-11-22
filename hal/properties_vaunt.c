@@ -1388,10 +1388,14 @@ CHANNELS
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b %s\r", data);        \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
         if (RX_40GHZ_FE) {                                                     \
-            /* assume the FE will be baseband, if it should not be it will be  \
-             * set in hdlr_rx_##ch##_rf_freq_val() */                          \
-            snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b 1\r");           \
-            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+            /* for crimson baseband, FE board must be baseband, otherwise FE
+             * band set in hdlr_rx_##ch##_rf_freq_val() */                     \
+            uint8_t highband;                                                  \
+            sscanf(data, "%" SCNu8 "", &highband);                             \
+            if (highband == 0) {                                               \
+                snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b 1\r");       \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+            }                                                                  \
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
