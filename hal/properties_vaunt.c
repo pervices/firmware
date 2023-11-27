@@ -2521,12 +2521,10 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
 }
 
 static int hdlr_time_clk_pps_dtc(const char* data, char* ret) {
-    int pps_detected;
-    sscanf(data, "%i", &pps_detected);
+    uint32_t pps_detected;
+    read_hps_reg("sys21", &pps_detected);
     
-    write_hps_reg("sys21", pps_detected);
     snprintf(ret, MAX_PROP_LEN, "%i", pps_detected);
-
     return RETURN_SUCCESS;
 }
 
