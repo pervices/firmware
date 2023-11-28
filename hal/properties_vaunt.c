@@ -4353,6 +4353,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
         return check_rf_pll(channel, tx);
     }
 
+    int lock_failed = 0;
     // Polling loop waiting for PLL to finish locking
     while(!check_rf_pll(channel, tx)) {
         struct timespec current_time;
@@ -4361,6 +4362,21 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
 
         // Timout occured, print error message and
         if(time_difference_ns > timeout_ns) {
+            lock_failed = 1;
+            break;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    if(lock_failed) {
+        // If setting the PLL failed using the lookup table, reattempt without it
+        if(synth_lut_is_enabled(tx, channel)) {
+            synth_lut_disable(tx, channel);
+            PRINT(ERROR, "PLL lock failed when attempting to use the lookup table. Re-attempting without the lookup table\n");
+            return set_pll_frequency(uart_fd, reference, pll, tx, channel);
+        } else {
             // Mute PLL to avoid transmitting with an enexpected frequency
             strcpy(buf, "rf -c " STR(ch) " -z\r");
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
@@ -4371,13 +4387,10 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
             }
             return 0;
         }
-
-        // Wait 1us between polls to avoid spamming logs
-        usleep(1);
+    } else {
+        // success
+        return 1;
     }
-
-    // success
-    return 1;
 }
 
 void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
