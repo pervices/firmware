@@ -70,6 +70,7 @@ static int uart_devices[MAX_DEVICES];
 #ifdef VAUNT
 static uint8_t used_uart_devices[MAX_DEVICES] = {FREE_DEVICE};
 
+int get_uart_synth_fd() { return uart_devices[0]; }
 int get_uart_tx_fd() { return uart_devices[1]; }
 int get_uart_rx_fd() { return uart_devices[2]; }
 #elif defined(TATE_NRNT)
