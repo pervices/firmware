@@ -4655,6 +4655,17 @@ static int hdlr_fpga_about_ddr_used(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Gets the speed grade of the FPGA (HU1, HU2, HU3)
+static int hdlr_fpga_about_speed_grade(const char *data, char *ret) {
+
+    uint32_t val = 0;
+    read_hps_reg("res_ro16", &val);
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
     uint32_t chip_id_msb = 0;
     uint32_t chip_id_lsb = 0;
@@ -5454,6 +5465,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/imgparam/backplane_pinout", hdlr_fpga_about_backplane_pinout,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/hps_only"        , hdlr_fpga_about_hps_only,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/ddr_used"        , hdlr_fpga_about_ddr_used,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/speed_grade"     , hdlr_fpga_about_speed_grade,            RW, "0", SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
