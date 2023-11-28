@@ -1235,6 +1235,7 @@ CHANNELS
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
+        /* NOTE: in RX_40GHZ_FE the 40GHz board is physically connected where tx would normally be */\
         if (RX_40GHZ_FE) {                                                     \
             if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
