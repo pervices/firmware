@@ -1994,9 +1994,15 @@ CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
+            if (RX_40GHZ_FE) {                                                 \
+                /* mute the front end board */                                 \
+                strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
+                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+            }                                                                  \
+                                                                               \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));  \
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
