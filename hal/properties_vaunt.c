@@ -724,7 +724,7 @@ int check_rf_pll(int ch, bool is_tx) {
                                                                                \
         /* Send Parameters over to the MCU */                                  \
         if(set_pll_frequency(uart_tx_fd[INT(ch)],                              \
-            (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, INT(ch)))              \
+            (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, INT(ch), true))        \
         {                                                                      \
             snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                       \
         } else {                                                               \
@@ -1365,7 +1365,7 @@ CHANNELS
                                                                                \
         /* Send Parameters over to the MCU */                                  \
         if(set_pll_frequency(uart_rx_fd[INT(ch)],                              \
-            (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, INT(ch)))             \
+            (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, INT(ch), true))       \
         {                                                                      \
             snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq + lmx_freq);            \
         } else {                                                               \
@@ -4267,7 +4267,7 @@ void sync_channels(uint8_t chan_mask) {
 
 // Returns 1 on success, 0 on failure
 int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
-                       bool tx, size_t channel) {
+                       bool tx, size_t channel, bool use_lut_if_possible) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )
@@ -4310,7 +4310,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
 
     double freq = pll->vcoFreq / pll->d;
 
-    if (synth_lut_is_enabled(tx, channel)) {
+    if (synth_lut_is_enabled(tx, channel) && use_lut_if_possible) {
         synth_rec_t rec;
         int ret = synth_lut_get(tx, channel, freq, &rec);
         if (EXIT_SUCCESS != ret) {
@@ -4372,10 +4372,9 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
 
     if(lock_failed) {
         // If setting the PLL failed using the lookup table, reattempt without it
-        if(synth_lut_is_enabled(tx, channel)) {
-            synth_lut_disable(tx, channel);
+        if(synth_lut_is_enabled(tx, channel) && use_lut_if_possible) {
             PRINT(ERROR, "PLL lock failed when attempting to use the lookup table. Re-attempting without the lookup table\n");
-            return set_pll_frequency(uart_fd, reference, pll, tx, channel);
+            return set_pll_frequency(uart_fd, reference, pll, tx, channel, false);
         } else {
             // Mute PLL to avoid transmitting with an enexpected frequency
             strcpy(buf, "rf -c " STR(ch) " -z\r");

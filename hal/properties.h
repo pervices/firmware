@@ -106,8 +106,13 @@ void sync_channels(uint8_t chan_mask);
     void jesd_reset_all();
     uint32_t is_hps_only();
 #endif
-int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
+#ifdef VAUNT
+    int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
+                       bool tx, uint32_t channel, bool use_lut_if_possible);
+#else
+    int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
+#endif
 void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan);
 
 void dump_tree(void);
