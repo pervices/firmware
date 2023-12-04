@@ -65,6 +65,10 @@
 #define PWR_ON  1
 #define PWR_OFF 0
 
+// Values indicating whether JESD is initialized of unitialized for that channel
+#define JESD_INIT 1
+#define JESD_UNINIT 0
+
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
@@ -127,6 +131,12 @@ static uint8_t rx_power[] = {
 #undef X
 };
 
+static uint8_t rx_jesd[] = {
+#define X(ch) JESD_UNINIT,
+    CHANNELS
+#undef X
+};
+
 static uint8_t rx_stream[] = {
 #define X(ch) STREAM_OFF,
     CHANNELS
@@ -147,6 +157,12 @@ static uint8_t tx_power[] = {
     #define X(ch) PWR_OFF,
     CHANNELS
     #undef X
+};
+
+static uint8_t tx_jesd[] = {
+#define X(ch) JESD_UNINIT,
+    CHANNELS
+#undef X
 };
 
 static int i_bias[] = {
@@ -1071,8 +1087,9 @@ int check_rf_pll(int ch, bool is_tx) {
             write_hps_reg(reg4[INT(CH) + 4], old_val & ~0x100);                \
                                                                                \
             /* send sync pulse */                                              \
-            /* TODO: does JESD sync here cause issues on already active channels?*/\
-            sync_channels(15);                                                 \
+            if(tx_jesd[INT(ch)] == JESD_UNINIT) {\
+                sync_channels(15);\
+            }\
                                                                                \
             /* enable dsp channels, and reset the DSP */                       \
             read_hps_reg(reg4[INT(ch) + 4], &old_val);                         \
@@ -1823,8 +1840,10 @@ CHANNELS
             write_hps_reg(reg4[INT(CH)], old_val & ~0x100);                      \
                                                                                \
             /* send sync pulse */                                              \
-            /* TODO: figure out if the JESD sync issue here causes issues on already active channels*/\
-            sync_channels(15);                                                 \
+            /* TODO: add check and if JESD is down reinitialize JESD regardless of if it is already initialized */\
+            if(rx_jesd[INT(ch)] == JESD_UNINIT) {\
+                sync_channels(15);\
+            }\
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
             if (rx_stream[INT(ch)] == STREAM_ON) {                               \
