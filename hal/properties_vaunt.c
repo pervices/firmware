@@ -317,7 +317,7 @@ static int hdlr_tx_sync(const char *data, char *ret) {
 static int set_gating_mode(const char *chan, bool dsp) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
-    return set_reg_bits(reg_name, 12, 1, dsp);
+    return set_reg_bits(reg_name, 18, 1, dsp);
 }
 
 static int valid_gating_mode(const char *data, bool *dsp) {
@@ -517,6 +517,42 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
     }
 }
 
+static int valid_time_gate_logic(const char *data, uint32_t *val) {
+    int r;
+    r = sscanf(data, "%" PRIu32, val);
+    if (1 == r && (*val == 0 || *val == 1)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
+static int valid_trig_time_disable(const char *data, uint32_t *val) {
+    int r;
+    r = sscanf(data, "%" PRIu32, val);
+    if (1 == r && (*val == 0 || *val == 1)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
+static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 6 : 9);    
+    return set_reg_bits(reg_name, (tx?16:13), 1, val);
+}
+
+static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 6 : 9);    
+    return set_reg_bits(reg_name, (tx?17:14), 1, val);
+}
+
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
@@ -562,6 +598,18 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
         bool val;                                                              \
         return valid_trigger_pol(data, &val) ||                                \
             set_trigger_ufl_pol(false, #ch, val);                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_trig_time_disable(data, &val) ||                          \
+             set_trig_time_disable(false, #ch, val);                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_time_gate_logic(data, &val) ||                                        \
+            set_trig_time_gate_logic(false, #ch, val);                             \
     }
 CHANNELS
 #undef X
@@ -1222,7 +1270,19 @@ int check_rf_pll(int ch, bool is_tx) {
     static int hdlr_tx_##ch##_trigger_gating(const char *data, char *ret) {    \
         bool val;                                                              \
         return valid_gating_mode(data, &val) || set_gating_mode(#ch, val);     \
-    }
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_trig_time_disable(data, &val) ||                          \
+             set_trig_time_disable(true, #ch, val);                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_time_gate_logic(data, &val) ||                                        \
+            set_trig_time_gate_logic(true, #ch, val);                             \
+    }                                                                        
 CHANNELS
 #undef X
 #endif // (!RX_40GHZ_FE)
@@ -3771,6 +3831,8 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"     , hdlr_rx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
@@ -3824,6 +3886,8 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_mode"         , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", TP, #_c)         \
