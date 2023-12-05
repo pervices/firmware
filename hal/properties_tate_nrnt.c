@@ -844,6 +844,18 @@ TX_CHANNELS
             \
         }\
         return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_trig_time_disable(data, &val) ||                          \
+             set_trig_time_disable(false, #ch, val);                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_time_gate_logic(data, &val) ||                                        \
+            set_trig_time_gate_logic(false, #ch, val);                             \
     }
 RX_CHANNELS
 #undef X
@@ -3411,19 +3423,7 @@ RX_CHANNELS
             \
         }\
         return r;                                                              \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
-        uint32_t val;                                                          \
-        return valid_trig_time_disable(data, &val) ||                          \
-             set_trig_time_disable(true, #ch, val);                            \
-    }                                                                          \
-                                                                               \
-    static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
-        uint32_t val;                                                          \
-        return valid_time_gate_logic(data, &val) ||                            \
-            set_trig_time_gate_logic(true, #ch, val);                          \
-    } 
+    }                                                                          
 TX_CHANNELS
 #undef X
 
