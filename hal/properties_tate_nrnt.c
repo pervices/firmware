@@ -743,14 +743,22 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
         uint32_t val;                                                          \
-        return valid_trig_time_disable(data, &val) ||                          \
-             set_trig_time_disable(true, #ch, val);                            \
+        int r = valid_trig_time_disable(data, &val);\
+        if(r == RETURN_SUCCESS) {\
+            return set_trig_time_disable(true, #ch, val);\
+        } else {\
+            return r;\
+        }\
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
         uint32_t val;                                                          \
-        return valid_time_gate_logic(data, &val) ||                            \
-            set_trig_time_gate_logic(true, #ch, val);                          \
+        int r = valid_time_gate_logic(data, &val);\
+        if(r == RETURN_SUCCESS) {\
+            return set_trig_time_gate_logic(true, #ch, val);\
+        } else {\
+            return r;\
+        }\
     }
 TX_CHANNELS
 #undef X
