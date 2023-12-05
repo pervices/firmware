@@ -523,18 +523,18 @@ static int valid_trig_time_disable(const char *data, uint32_t *val) {
     }
 }
 
-static int set_trig_time_gate_logic(bool tx, const char *chan, bool dsp) {
+static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 6 : 9);    
-    return set_reg_bits(reg_name, tx ? 16 : 13, 1, dsp);
+    return set_reg_bits(reg_name, tx ? 16 : 13, 1, val);
 }
 
-static int set_trig_time_disable(bool tx, const char *chan, bool dsp) {
+static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 6 : 9);    
-    return set_reg_bits(reg_name, tx ? 17 : 14, 1, dsp);
+    return set_reg_bits(reg_name, tx ? 17 : 14, 1, val);
 }
 
 #define X(ch)                                                                  \
