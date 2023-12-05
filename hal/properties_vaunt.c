@@ -501,6 +501,26 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
     }
 }
 
+static int valid_time_gate_logic(const char *data, uint32_t *val) {
+    r = sscanf(data, "%" PRIu32, val);
+    if (1 == r && (*val == 0 || *val == 1)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
+static int valid_trig_time_disable(const char *data, uint32_t *val) {
+    r = sscanf(data, "%" PRIu32, val);
+    if (1 == r && (*val == 0 || *val == 1)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
 static int set_trig_time_gate_logic(bool tx, const char *chan, bool dsp) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
@@ -563,15 +583,15 @@ static int set_trig_time_disable(bool tx, const char *chan, bool dsp) {
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
-        bool val;                                                              \
-        return valid_trigger_pol(data, &val) ||                                \
-            set_trig_time_disable(false, #ch, val);                              \
+        uint32_t val;                                                              \
+        return valid_trig_time_disable(data, &val) ||                          \
+             set_trig_time_disable(false, #ch, val);                              \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
-        bool val;                                                              \
-        return valid_trigger_pol(data, &val) ||                                \
-            set_trig_time_gate_logic(false, #ch, val);                              \
+        uint32_t val;                                                              \
+        return valid_time_gate_logic(data, &val) ||                                        \
+            set_trig_time_gate_logic(false, #ch, val);                             \
     }
 CHANNELS
 #undef X
@@ -1233,15 +1253,17 @@ int check_rf_pll(int ch, bool is_tx) {
         return valid_gating_mode(data, &val) || set_gating_mode(#ch, val);     \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_trigger_time_disable(const char *data, char *ret) {    \
-        bool val;                                                              \
-        return set_trig_time_disable(true, #ch, val);                                \
+    static int hdlr_tx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_trig_time_disable(data, &val) ||                          \
+             set_trig_time_disable(true, #ch, val);                              \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {    \
-        bool val;                                                              \
-        return set_trig_time_gate_logic(true, #ch, val);                             \
-    }                                                                          
+    static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_time_gate_logic(data, &val) ||                                        \
+            set_trig_time_gate_logic(true, #ch, val);                             \
+    }                                                                        
 CHANNELS
 #undef X
 #endif // (!RX_40GHZ_FE)
