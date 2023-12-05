@@ -1240,7 +1240,7 @@ int check_rf_pll(int ch, bool is_tx) {
                                                                                \
     static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {    \
         bool val;                                                              \
-        return set_trig_time_gate_logic(#ch, val);                             \
+        return set_trig_time_gate_logic(true, #ch, val);                             \
     }                                                                          
 CHANNELS
 #undef X
