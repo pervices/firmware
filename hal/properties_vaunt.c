@@ -502,6 +502,7 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
 }
 
 static int valid_time_gate_logic(const char *data, uint32_t *val) {
+    int r;
     r = sscanf(data, "%" PRIu32, val);
     if (1 == r && (*val == 0 || *val == 1)) {
         return RETURN_SUCCESS;
@@ -512,6 +513,7 @@ static int valid_time_gate_logic(const char *data, uint32_t *val) {
 }
 
 static int valid_trig_time_disable(const char *data, uint32_t *val) {
+    int r;
     r = sscanf(data, "%" PRIu32, val);
     if (1 == r && (*val == 0 || *val == 1)) {
         return RETURN_SUCCESS;
