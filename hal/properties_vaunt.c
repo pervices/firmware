@@ -3214,6 +3214,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     uint32_t status = 1;
     uint16_t time = 0;
     sscanf(data, "%" SCNu32 "", &reset);
+    uint8_t jesd_reset = 0;
 
     switch(reset)
     {
@@ -3248,6 +3249,10 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             PRINT(INFO,"system time module reset\n");
         case 16:
             PRINT(INFO,"JESD reset\n");
+            // Indiates JESD was reset and cleanup is required
+            jesd_reset = 1;
+            // Prepared for JESD reset (since IP block is being reset
+            sync_channels_prep(15);
         case 17:
             PRINT(INFO,"tx chain reset\n");
         case 18:
@@ -3269,10 +3274,16 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
         usleep(100);
         time++;
         read_hps_reg("rst_stat0", &status);
-    } while (status && time < MAX_RESET_WAIT);
+        // Bit 23 of rst_stat0 indicates JESD is up
+    } while (status == 0x800000 && time < MAX_RESET_WAIT);
     
     // write the register back to its default state
     write_hps_reg("rst_req0", 0xffffffff);
+
+    // Cleans up JESD reset status if JESD was reset
+    if(jesd_reset) {
+        sync_channels_cleanup(15);
+    }
 
     snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
     return RETURN_SUCCESS;
@@ -4130,6 +4141,7 @@ static prop_t property_table[] = {
     CHANNELS
 #undef X
 #endif
+    // NOTE: unlike on Cyan, on Crimson FPGA initialization happens last
     DEFINE_FPGA()
     DEFINE_FILE_PROP_P("save_config", hdlr_save_config, RW, "/home/root/profile.cfg", SP, NAC)
     DEFINE_FILE_PROP_P("load_config", hdlr_load_config, RW, "/home/root/profile.cfg", SP, NAC)
@@ -4372,6 +4384,12 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 // Uses zeroth file descriptor for RX And TX for now until a way is found to
 // convert the channel mask into a integer.
 void sync_channels(uint8_t chan_mask) {
+    sync_channels_prep(chan_mask);
+    sync_channels_cleanup(chan_mask);
+}
+
+// Prepares for syncing channels (should happen automatically after prepartion finished)
+void sync_channels_prep(uint8_t chan_mask) {
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
 
@@ -4409,6 +4427,13 @@ void sync_channels(uint8_t chan_mask) {
 
     usleep(200000); // Some wait time for MCUs to be ready
 
+
+}
+
+// Cleans up state after syncing channels
+void sync_channels_cleanup(uint8_t chan_mask) {
+    char str_chan_mask[MAX_PROP_LEN] = "";
+
     // Mask SYSREF on the FPGA
     write_hps_reg("res_rw7", 0);
 
@@ -4424,7 +4449,6 @@ void sync_channels(uint8_t chan_mask) {
 
     // Put JESD into pulsed mode
     set_property("time/sync/sysref_mode", "pulsed");
-
 }
 
 // Returns 1 on success, 0 on failure
