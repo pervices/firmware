@@ -4403,25 +4403,10 @@ void sync_channels_prep(uint8_t chan_mask) {
     set_property("time/sync/sysref_mode", "continuous");
     usleep(300); // Wait for Sysref pulse to stabilize and bias around zero.
 
-
-    /* Bring the ADCs & DACs into 'demo' mode for JESD */
-    // RX - ADCs
-    strcpy(buf, "power -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -a 1\r");
-    ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
-
-    // TX - DACs
-    strcpy(buf, "power -c ");
-    strcat(buf, str_chan_mask);
-    strcat(buf, " -d 1\r");
-    ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
-
     // Unmask SYSREF on the FPGA
     write_hps_reg("res_rw7", 0x10000000);
 
-    /* Initiate the SYSREF sequence for jesd
-     * Set all boards' SYSREF detection gate to ON */
+    /* Set all boards' SYSREF detection gate to ON */
     strcpy(buf, "board -c ");
     strcat(buf, str_chan_mask);
     strcat(buf, " -s 1\r");
@@ -4432,8 +4417,6 @@ void sync_channels_prep(uint8_t chan_mask) {
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
     usleep(200000); // Some wait time for MCUs to be ready
-
-
 }
 
 // Cleans up state after syncing channels
