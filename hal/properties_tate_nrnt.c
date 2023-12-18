@@ -1172,14 +1172,10 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
-    static int hdlr_tx_##ch##_status_lna(const char *data, char *ret) {   \
-        if(RTM_VER > 3) {\
-            snprintf(buf, 10, "rf -S\r");\
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            snprintf(ret, 50, (char *)uart_ret_buf);\
-        } else {\
-            snprintf(ret, 50, "lna status not implemented on RTM3 mcu\n");\
-        }\
+    static int hdlr_tx_##ch##_status_lna(const char *data, char *ret) {        \
+        snprintf(buf, 10, "rf -S\r");                                          \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        snprintf(ret, 50, (char *)uart_ret_buf);                               \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1602,6 +1598,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     /* Positive: enable the board/finish power on process */\
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
         uint32_t old_val = 0;                                                  \
+        int num_lna_attempts = 0;                                              \
         int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
         \
@@ -1636,23 +1633,20 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                     set_property("tx/" STR(ch) "/jesd/reset", "1");\
                 }\
             }\
-            /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
-            if(RTM_VER > 3 && !(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
-                int num_lna_attempts = 0;\
-                while(1) {\
-                    hdlr_tx_##ch##_status_lna("1", buf);\
-                    if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
-                        PRINT(INFO, "LNA is good\n");\
-                        break;\
-                    } else if(num_lna_attempts >= 10){\
-                        PRINT(ERROR, "Failed to start lna after 10 attempts\n");\
-                        break;\
-                    } else {\
-                        PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
-                        num_lna_attempts ++;\
-                        snprintf(buf, 20, "rf -L r\r");\
-                        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                    }\
+            /* Check if low noise aplifier is in a good condition */           \
+            while(1) {                                                         \
+                hdlr_tx_##ch##_status_lna("1", buf);                           \
+                if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
+                    PRINT(INFO, "LNA is good\n");                              \
+                    break;                                                     \
+                } else if(num_lna_attempts >= 10){                             \
+                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");   \
+                    break;                                                     \
+                } else {                                                       \
+                    PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
+                    num_lna_attempts ++;                                       \
+                    snprintf(buf, 20, "rf -L r\r");                            \
+                    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
             }\
                                                                                \
@@ -1673,10 +1667,8 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
             /* Turns the power indicator light on */\
             /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
-            if(RTM_VER != 3) {\
-                snprintf(buf, 20, "board -w 1\r");\
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            }\
+            snprintf(buf, 20, "board -w 1\r");                                 \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
             /* power off */                                                    \
         } else {                                                               \
             \
@@ -1684,10 +1676,8 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                 /* mute the channel */                                             \
                 strcpy(buf, "rf -z\r");                          \
                 ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
-                if(RTM_VER != 3) {\
-                    snprintf(buf, 20, "board -w 0\r");\
-                    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                }\
+                snprintf(buf, 20, "board -w 0\r");\
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                     tx_power[INT(ch)] = PWR_HALF_ON;\
                 } else {\
@@ -2156,13 +2146,9 @@ TX_CHANNELS
     }                                                                          \
     \
     static int hdlr_rx_##ch##_status_lna(const char *data, char *ret) {   \
-        if(RTM_VER > 3) {\
-            snprintf(buf, 10, "rf -S\r");\
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            snprintf(ret, 50, (char *)uart_ret_buf);\
-        } else {\
-            snprintf(ret, 50, "lna status not implemented on RTM3 mcu\n");\
-        }\
+        snprintf(buf, 10, "rf -S\r");                                          \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        snprintf(ret, 50, (char *)uart_ret_buf);                               \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2390,10 +2376,6 @@ TX_CHANNELS
     }                                                                          \
     \
     static int hdlr_rx_##ch##_iq_gain_correction(const char *data, char *ret) {      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
            double iq_gain_error = 0;                                           \
            sscanf(data, "%lf", &iq_gain_error);                                \
            PRINT(INFO,"data as entered %lf\n", iq_gain_error);\
@@ -2428,10 +2410,6 @@ TX_CHANNELS
           return RETURN_SUCCESS;                                                           \
     }                                                                                       \
     static int hdlr_rx_##ch##_iq_phase_correction(const char *data, char *ret) {            \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
         double iq_phase_error = 0;                                                          \
         /*input range: -2.5 to 2.5, output range:0x0000 to 0x01FF, offset: 0x100, */        \
         sscanf(data,"%lf",&iq_phase_error);                                                 \
@@ -2464,10 +2442,6 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                              \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_i(const char *data, char *ret) {      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
         double iq_dcoffset_i = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
         sscanf(data,"%lf",&iq_dcoffset_i);                                                 \
@@ -2500,10 +2474,6 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_q(const char *data, char *ret) {      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
            /* To do */                                         \
         double iq_dcoffset_q = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
@@ -2538,10 +2508,6 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd2_ix(const char *data, char *ret) {                      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2560,10 +2526,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd2_iy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2582,10 +2544,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2604,10 +2562,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2626,10 +2580,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_ix(const char *data, char *ret) {                      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2648,10 +2598,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd3_iy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2670,10 +2616,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2692,10 +2634,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2714,10 +2652,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_ix(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2736,10 +2670,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2758,10 +2688,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_ix(const char *data, char *ret) {                      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2780,10 +2706,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_im3_iy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2802,10 +2724,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2824,10 +2742,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2846,10 +2760,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                  \
     static int hdlr_rx_##ch##_iq_ip3cc(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t cc_adj;                                               \
             sscanf(data,"%hhu",&cc_adj);                                      \
@@ -2868,10 +2778,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_ip3ic(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t ic_adj;                                               \
             sscanf(data,"%hhu",&ic_adj);                                      \
@@ -3204,6 +3110,7 @@ TX_CHANNELS
             return RETURN_SUCCESS;\
         }\
         uint32_t old_val = 0;                                                  \
+        int num_lna_attempts = 0;                                              \
         int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
         \
@@ -3240,23 +3147,20 @@ TX_CHANNELS
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
             \
-            /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
-            if(RTM_VER > 3) {\
-                int num_lna_attempts = 0;\
-                while(1) {\
-                    hdlr_rx_##ch##_status_lna("1", buf);\
-                    if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
-                        PRINT(INFO, "LNA is good\n");\
-                        break;\
-                    } else if(num_lna_attempts >= 10){\
-                        PRINT(ERROR, "Failed to start lna after 10 attempts\n");\
-                        break;\
-                    } else {\
-                        PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
-                        num_lna_attempts ++;\
-                        snprintf(buf, 20, "rf -L r\r");\
-                        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                    }\
+            /* Check if low noise aplifier is in a good condition*/            \
+            while(1) {                                                         \
+                hdlr_rx_##ch##_status_lna("1", buf);                           \
+                if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
+                    PRINT(INFO, "LNA is good\n");                              \
+                    break;                                                     \
+                } else if(num_lna_attempts >= 10){                             \
+                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");   \
+                    break;                                                     \
+                } else {                                                       \
+                    PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
+                    num_lna_attempts ++;                                       \
+                    snprintf(buf, 20, "rf -L r\r");                            \
+                    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
             }\
                                                                     \
@@ -3274,10 +3178,8 @@ TX_CHANNELS
             \
             /* Turns the power indicator light on */\
             /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
-            if(RTM_VER > 3) {\
-                snprintf(buf, 20, "board -w 1\r");\
-                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            }\
+            snprintf(buf, 20, "board -w 1\r");                                 \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
             \
             /* power off & stream off */                                       \
         } else {                                                               \
