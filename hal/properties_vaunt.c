@@ -616,17 +616,15 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
 }
 
 // Verifies the rf pll is good. Returns 1 if the pll is locked
-int check_rf_pll(int ch, bool is_tx) {
+int check_rf_pll(int ch, int uart_fd) {
     snprintf(buf, sizeof(buf), "status -c %c -l\r", (char)ch + 'a');
-    if(is_tx) {
-        ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
-    } else {
-        ping(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf));
-    }
-    int pll_chan; // dummy variable used to deal with the pll channel number being different
-    int result;
-    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
-    return result;
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+    // TODO: this read is closely linked to the MCU code and is written for TP11. This is likely to change for RTM11.
+    int pll_chan1, pll_chan2; // dummy variable used to deal with the pll channel number being different
+    int result_adf, result_lmx;
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, ADF5355 Lock Detect: 0x%x\nCHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan1, &result_adf, &pll_chan2, & result_lmx);
+    // TODO: for tp11 reports for both devices for each channel, when only one device is populated per channel. We expect only one result to be lock. Likely to change for RTM11.
+    return (result_adf || result_lmx);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -915,7 +913,7 @@ int check_rf_pll(int ch, bool is_tx) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_rf_pll(INT(ch), true)) {\
+        if(check_rf_pll(INT(ch), uart_tx_fd[INT(ch)])) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
@@ -1490,7 +1488,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_rf_pll(INT(ch), false)) {\
+        if(check_rf_pll(INT(ch), uart_rx_fd[INT(ch)])) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
@@ -4285,11 +4283,23 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     if(time_ret) {
         PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
         usleep(timeout_ns/1000);
-        return check_rf_pll(channel, tx);
+        if (check_rf_pll(channel, uart_fd)) {
+            return 1; //success
+        } else {
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            if(tx) {
+                PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+            } else {
+                PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+            }
+            return 0;
+        }
     }
 
     // Polling loop waiting for PLL to finish locking
-    while(!check_rf_pll(channel, tx)) {
+    while(!check_rf_pll(channel, uart_fd)) {
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
         int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
@@ -4315,7 +4325,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     return 1;
 }
 
-void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
+void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     // extract lo variables and pass to MCU (LMX2595)
 #if defined(RTM6) || defined(RTM7)
     // set_lo_frequency not supported by RTM6/7 hardware
@@ -4323,7 +4333,7 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
 #endif
 
     // map channel number to chan_mask
-    uint8_t chan_mask = 1 << chan_num;
+    uint8_t chan_mask = 1 << channel;
     // set the chan_mask
     snprintf(buf, MAX_PROP_LEN, "lmx -c %" PRIu8 "\r", chan_mask);
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
@@ -4371,7 +4381,41 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
-    usleep(100000);
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        if(!check_rf_pll(channel, uart_fd)){
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            PRINT(ERROR, "LMX unlocked. Muting PLL\n");
+        }
+        return;
+    }
+
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, uart_fd)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            PRINT(ERROR, "LMX unlocked. Muting PLL\n");
+            return;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
 }
 
 int set_freq_internal(const bool tx, const unsigned channel,
