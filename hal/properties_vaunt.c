@@ -45,6 +45,7 @@
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
+#define S_MAX_RATE        "325000000"
 #define RESAMP_SAMPLE_RATE 260000000.0
 
 #define AVERY_IF 650000000UL
@@ -4130,6 +4131,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/max_lo"              , hdlr_invalid,                           RO, S_MAX_RF_FREQ, SP, NAC)\
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)\
 
 static prop_t property_table[] = {
     DEFINE_TIME()
