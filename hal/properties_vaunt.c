@@ -2754,9 +2754,19 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         strcpy(buf, "clk -t 1\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        if(strstr((char *)uart_ret_buf,"Unlocked") != NULL)
+        {
+            PRINT(ERROR, "clocks unlocked setting reference to external\n");
+            strcpy(ret, "Error Unlocked PLL with External Reference");
+        }
     } else if (strcmp(data, "internal") == 0) {
         strcpy(buf, "clk -t 0\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        if(strstr((char *)uart_ret_buf,"Unlocked") != NULL)
+        {
+            PRINT(ERROR, "clocks unlocked setting reference to internal\n");
+            strcpy(ret, "Error Unlocked PLL with Internal Reference");
+        }
     } else { // just get the current state of the reference
         strcpy(buf, "clk -i\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
