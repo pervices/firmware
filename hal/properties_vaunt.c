@@ -2986,6 +2986,14 @@ static int hdlr_time_board_led(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_board_led_blink_enable(const char *data, char *ret) {
+    strcpy(buf, "board -b ");
+    strcat(buf, data);
+    strcat(buf, "\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_about_id(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -4052,6 +4060,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/led_blink_enable"         , hdlr_time_board_led_blink_enable,       RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001", SP, NAC)       \
