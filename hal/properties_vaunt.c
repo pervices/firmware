@@ -2988,7 +2988,18 @@ static int hdlr_time_board_led(const char *data, char *ret) {
 
 static int hdlr_time_board_led_blink_enable(const char *data, char *ret) {
     strcpy(buf, "board -b ");
-    strcat(buf, data);
+
+    if (strcmp(data, "on") == 0 || strcmp(data, "1") == 0)
+    {
+        strcat(buf, "1");
+    } else if (strcmp(data, "off") == 0 || strcmp(data, "0") == 0)
+    {
+        strcat(buf, "0");
+    } else
+    {
+        return RETURN_ERROR;
+    }
+
     strcat(buf, "\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
