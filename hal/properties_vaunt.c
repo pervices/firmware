@@ -1360,9 +1360,15 @@ int check_rf_pll(int ch, bool is_tx) {
     }                                                                           \
                                                                                 \
     static int hdlr_tx_##ch##_led_blink_enable(const char *data, char *ret) {   \
-        strcpy(buf, "board -z ");                                               \
-        strcat(buf, data);                                                      \
-        strcat(buf, "\r");                                                      \
+        if(strcmp(data, "on") == 0){                                            \
+            strcpy(buf, "board -z 1\r");                                          \
+        } else if (strcmp(data, "off") == 0){                                   \
+            strcpy(buf, "board -z 0\r");                                          \
+        } else if ((strcmp(data, "0") == 0) || ((strcmp(data, "1") == 0))) {              \
+            strcpy(buf, "board -z ");                                           \
+            strcat(buf, data);                                                  \
+            strcat(buf, "\r");                                                  \
+        }                                                                       \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                 \
         return RETURN_SUCCESS;                                                  \
     }
@@ -2995,9 +3001,15 @@ static int hdlr_time_board_led(const char *data, char *ret) {
 }
 
 static int hdlr_time_board_led_blink_enable(const char *data, char *ret) {
-    strcpy(buf, "debug -b ");
-    strcat(buf, data);
-    strcat(buf, "\r");
+    if(strcmp(data, "on") == 0){
+        strcpy(buf, "debug -b 1\r");
+    } else if (strcmp(data, "off") == 0){
+            strcpy(buf, "debug -b 0\r");
+    } else if ((strcmp(data, "0") == 0) || ((strcmp(data, "1") == 0))) {
+            strcpy(buf, "debug -b ");
+            strcat(buf, data);
+            strcat(buf, "\r");
+    }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
 }
