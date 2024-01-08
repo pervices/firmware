@@ -1357,7 +1357,15 @@ int check_rf_pll(int ch, bool is_tx) {
         } else {\
             return r;\
         }\
-    }                                                                        
+    }                                                                           \
+                                                                                \
+    static int hdlr_tx_##ch##_led_blink_enable(const char *data, char *ret) {   \
+        strcpy(buf, "board -z ");                                               \
+        strcat(buf, data);                                                      \
+        strcat(buf, "\r");                                                      \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                 \
+        return RETURN_SUCCESS;                                                  \
+    }
 CHANNELS
 #undef X
 #endif // (!RX_40GHZ_FE)
@@ -2986,6 +2994,14 @@ static int hdlr_time_board_led(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_board_led_blink_enable(const char *data, char *ret) {
+    strcpy(buf, "debug -b ");
+    strcat(buf, data);
+    strcat(buf, "\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_about_id(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -4004,6 +4020,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23",TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/led_blink_enable"   , hdlr_tx_##_c##_led_blink_enable,        RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10", SP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0", SP, #_c)         \
@@ -4052,6 +4069,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/led_blink_enable"         , hdlr_time_board_led_blink_enable,       RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001", SP, NAC)       \
