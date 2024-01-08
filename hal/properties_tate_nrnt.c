@@ -113,6 +113,10 @@ static const char *tx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "txa4", "txb4
 #define NUM_DEVICE_SIDE_PORTS 16
 static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
 
+// Set to true after changing rx to 1G so it doesn't get set to it again
+// Only used with USE_3G_AS_1G
+static uint8_t rx_3g_set_to_1g[NUM_RX_CHANNELS] = {0};
+
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
 
@@ -2932,6 +2936,7 @@ TX_CHANNELS
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
+            rx_3g_set_to_1g[INT(ch)] = 0;\
             /* This function is meant to block until after power is either on or off. However a hardware issue can cause unpopulated boards to never be detected as off*/\
             snprintf(pwr_cmd, 40, "rfe_control %d off %i", INT_RX(ch), PWR_TIMEOUT);\
             system(pwr_cmd);                                                   \
@@ -3137,10 +3142,11 @@ TX_CHANNELS
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
             \
-            if(USE_3G_AS_1G) {\
+            if(USE_3G_AS_1G && !rx_3g_set_to_1g[INT(ch)]) {\
                 /* Tells the 3G board to operate in 1G mode */\
                 snprintf(buf, MAX_PROP_LEN, "board -i 1000\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                rx_3g_set_to_1g[INT(ch)] = 1;\
             }\
             \
             /* Sets board state to PWR_ON, jesd_reset_all will only attempt to reset boards that are set to on*/\
