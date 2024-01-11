@@ -3914,15 +3914,22 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         PRINT(INFO, "Setting clock reference source to external\n");
         strcpy(buf, "clk -t 1\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // Leave the property as what is was set to. Included for clarity, should be redundant
+        snprintf(ret, MAX_PROP_LEN, "%s", data);
     } else if (strcmp(data, "internal") == 0) {
         // ensure 10MHz reference is set
         set_property("time/source/freq_mhz", "10");
         PRINT(INFO, "Setting clock reference source to internal\n");
         strcpy(buf, "clk -t 0\r");
-    } else {
-        PRINT(ERROR, "Invalid clock source: %s\n", data);
-        snprintf(ret, MAX_PROP_LEN, "invalid_source");
-        return RETURN_ERROR_PARAM;
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // Leave the property as what is was set to. Included for clarity, should be redundant
+        snprintf(ret, MAX_PROP_LEN, "%s", data);
+    } else {  // just get the current state of the reference
+        strcpy(buf, "clk -i\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // save the UART result to the state tree
+        strcpy(ret, (char *)uart_ret_buf);
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     // Waits for clock to stabilize
@@ -3930,9 +3937,6 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     if(property_good("time/status/status_good") != 1) {
         PRINT(ERROR, "PLL loss of lock detected after changing clock reference source\n");
         snprintf(ret, MAX_PROP_LEN, "pll_lock_failure");
-    } else {
-        // Leave the property as what is was set to. Included for clarity, should be redundant
-        snprintf(ret, MAX_PROP_LEN, "%s", data);
     }
     return RETURN_SUCCESS;
 }
@@ -5404,7 +5408,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \

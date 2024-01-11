@@ -45,7 +45,7 @@
 
 // Sample rates are in samples per second (SPS).
 #define BASE_SAMPLE_RATE   325000000.0
-#define RESAMP_SAMPLE_RATE 260000000.0
+#define S_MAX_RATE        "325000000"
 
 #define AVERY_IF 650000000UL
 
@@ -1687,36 +1687,20 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
         uint32_t old_val;                                                      \
-        uint16_t base_factor, resamp_factor;                                   \
-        double base_err = 0.0, resamp_err = 0.0;                               \
+        uint16_t base_factor;                                                  \
+        double base_err = 0.0;                                                 \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
                                                                                \
         /* get the error for base rate */                                      \
         base_factor =                                                          \
             get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);          \
-        resamp_factor =                                                        \
-            get_optimal_sr_factor(rate, RESAMP_SAMPLE_RATE, &resamp_err);      \
-                                                                               \
         /* set the appropriate sample rate */                                  \
         memset(ret, 0, MAX_PROP_LEN);                                          \
         int channel = INT(ch);                                                 \
         int shift = (channel%4)*8;                                             \
                                                                                \
         int gain_factor;                                                       \
-        /* The 4/5 resampler has been removed from the FPGA code. */           \
-        if ( false ) {                                                         \
-            write_hps_reg("rx" STR(ch) "1", resamp_factor);                    \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val | (1 << 15));              \
-            snprintf(ret, MAX_PROP_LEN, "%lf",                                                \
-                    RESAMP_SAMPLE_RATE / (double)(resamp_factor + 1));         \
-            /*Set gain adjustment */                                           \
-            gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;       \
-            read_hps_reg("rxga", &old_val);                                    \
-            write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
-                                  (((uint16_t)gain_factor) << shift));         \
-        } else {                                                               \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
             write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 15));             \
@@ -1726,7 +1710,6 @@ CHANNELS
             read_hps_reg("rxga", &old_val);                                    \
             write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
                                   (((uint16_t)gain_factor) << shift));         \
-        }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2771,9 +2754,19 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         strcpy(buf, "clk -t 1\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        if(strstr((char *)uart_ret_buf,"Unlocked") != NULL)
+        {
+            PRINT(ERROR, "clocks unlocked setting reference to external\n");
+            strcpy(ret, "Error Unlocked PLL with External Reference");
+        }
     } else if (strcmp(data, "internal") == 0) {
         strcpy(buf, "clk -t 0\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        if(strstr((char *)uart_ret_buf,"Unlocked") != NULL)
+        {
+            PRINT(ERROR, "clocks unlocked setting reference to internal\n");
+            strcpy(ret, "Error Unlocked PLL with Internal Reference");
+        }
     } else { // just get the current state of the reference
         strcpy(buf, "clk -i\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -4130,6 +4123,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/max_lo"              , hdlr_invalid,                           RO, S_MAX_RF_FREQ, SP, NAC)\
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)\
 
 static prop_t property_table[] = {
     DEFINE_TIME()
