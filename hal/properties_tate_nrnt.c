@@ -176,8 +176,8 @@ const int jesd_mask_delay = 200000;
 int jesd_master_reset();
 static int hdlr_jesd_reset_master(const char *data, char *ret);
 
-void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
-void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 
 typedef enum {
     pulsed = 0,
@@ -920,6 +920,21 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return 0;
     }
 }
+
+// Verifies the rf pll is good. Returns 1 if the pll is locked
+int check_rf_pll(int ch, bool is_tx) {
+    snprintf(buf, sizeof(buf), "status -l\r");
+    if(is_tx) {
+        ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
+    } else {
+        ping(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf));
+    }
+    int pll_chan; // dummy variable used to deal with the pll channel number being different
+    int result;
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
+    return result;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -1853,14 +1868,18 @@ TX_CHANNELS
         }                                                                       \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch));  \
+        if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
+            /* if HB add back in freq before printing value to state tree */        \
+            if (band == 2) {                                                        \
+                outfreq += HB_STAGE2_MIXER_FREQ;                                    \
+            }                                                                       \
+            /* Save the frequency that is being set into the property */            \
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                            \
+        } else {\
+            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
+            snprintf(ret, MAX_PROP_LEN, "0");                                  \
+        }\
                                                                                 \
-        /* if HB add back in freq before printing value to state tree */        \
-        if (band == 2) {                                                        \
-            outfreq += HB_STAGE2_MIXER_FREQ;                                    \
-        }                                                                       \
-        /* Save the frequency that is being set into the property */            \
-        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                           \
                                                                                 \
         return RETURN_SUCCESS;                                                  \
     }                                                                           \
@@ -6024,7 +6043,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     }
 }
 
-void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6061,12 +6080,50 @@ void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int c
     // write LMX Output Frequency in MHz
     snprintf(buf, MAX_PROP_LEN, "lmx -f %" PRIu32 "\r", (uint32_t)(freq / 1000000));
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
-    usleep(100000);
+
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_rf_pll(channel, false);
+    }
+
+    int lock_failed = 0;
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, false)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            lock_failed = 1;
+            break;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    if(lock_failed) {
+        // Mute PLL to avoid transmitting with an enexpected frequency
+        strcpy(buf, "rf -c " STR(ch) " -z\r");
+        ping(uart_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+        return 0;
+    } else {
+        // success
+        return 1;
+    }
 }
 
 //At time of write, the only differences between set_lo_frequency rx and tx is the ping function used
 //which is used to avoid sending uart commands to unpopulated boards
-void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6103,7 +6160,45 @@ void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int c
     // write LMX Output Frequency in MHz
     snprintf(buf, MAX_PROP_LEN, "lmx -f %" PRIu32 "\r", (uint32_t)(freq / 1000000));
     ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
-    usleep(100000);
+
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_rf_pll(channel, true);
+    }
+
+    int lock_failed = 0;
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, true)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            lock_failed = 1;
+            break;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    if(lock_failed) {
+        // Mute PLL to avoid transmitting with an enexpected frequency
+        strcpy(buf, "rf -c " STR(ch) " -z\r");
+        ping(uart_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+        return 0;
+    } else {
+        // success
+        return 1;
+    }
 }
 
 #endif //defined(TATE_NRNT)
