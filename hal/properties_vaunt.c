@@ -3275,6 +3275,9 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
         read_hps_reg("rst_stat0", &status);
         // Bit 23 of rst_stat0 indicates JESD is up
     } while (status == 0x800000 && time < MAX_RESET_WAIT);
+    if(time >= MAX_RESET_WAIT) {
+        PRINT(ERROR, "Timout while waiting for FPGA reset\n");
+    }
     
     // write the register back to its default state
     write_hps_reg("rst_req0", 0xffffffff);
