@@ -1877,7 +1877,7 @@ CHANNELS
         if(data[0]=='0') {\
             /*puts the dsp in reset*/\
             val = val | 0x6002;\
-            /*turn time disable off*/
+            /*turn time disable off*/\
             reg9_val = reg9_val & ~(0x4000);\
             write_hps_reg(reg4[INT(ch)], val);\
             rx_stream[INT(ch)] = STREAM_OFF;\
@@ -1889,7 +1889,7 @@ CHANNELS
             set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
             /*takes the dsp out of reset*/\
             val = val | 0x2100;\
-            /*disable time trigger*/
+            /*disable time trigger*/\
             reg9_val = reg9_val | 0x4000;\
             write_hps_reg(reg4[INT(ch)], val);\
         }\
