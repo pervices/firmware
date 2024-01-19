@@ -152,6 +152,15 @@ static const char *reg4[] = {
 #undef X
 };
 
+static const char *reg9[] = {
+#define X(ch) "rx"STR(ch)"9",
+    CHANNELS
+#undef X
+#define X(ch) "tx"STR(ch)"9",
+    CHANNELS
+#undef X
+};
+
 #if (!RX_40GHZ_FE)
 static uint8_t tx_power[] = {
     #define X(ch) PWR_OFF,
