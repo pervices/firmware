@@ -3573,6 +3573,8 @@ static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
             request_bit = request_bit << 16;
             // Setting bit 16 to high enables this modes, low sets it to normal
             write_hps_reg_mask(tx_reg4_map[n], request_bit, 1 << 16);
+            // Force stream mode needs to disable Time Trigger
+            write_hps_reg_mask(tx_reg9_map[n], request_bit, 1 << 14);
         }
 
     return RETURN_SUCCESS;

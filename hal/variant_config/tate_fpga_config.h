@@ -49,6 +49,7 @@
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
     static const char *rx_reg4_map[NUM_FPGA_RX] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
     static const char *tx_reg4_map[NUM_FPGA_TX] = { };
+    static const char *tx_reg9_map[NUM_FPGA_TX] = { };
 
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
@@ -90,6 +91,7 @@
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
     static const char *rx_reg4_map[NUM_FPGA_RX] = { "rxa4", "rxe4", "rxi4", "rxm4" };
     static const char *tx_reg4_map[NUM_FPGA_TX] = { "txa4", "txb4", "txc4", "txd4" };
+    static const char *tx_reg9_map[NUM_FPGA_TX] = { "txa9", "txb9", "txc9", "txd9" };
 
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
@@ -139,6 +141,7 @@
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
     static const char *rx_reg4_map[NUM_FPGA_RX] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4", "rxo4" };
     static const char *tx_reg4_map[NUM_FPGA_TX] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4" };
+    static const char *tx_reg9_map[NUM_FPGA_TX] = { "txa9", "txb9", "txc9", "txd9", "txe9", "txf9", "txg9" };
 
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
@@ -189,6 +192,7 @@
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
     static const char *rx_reg4_map[NUM_FPGA_RX] = { "rxa4", "rxb4", "rxe4", "rxf4", "rxi4", "rxj4", "rxm4", "rxn4" };
     static const char *tx_reg4_map[NUM_FPGA_TX] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4", "txh4" };
+    static const char *tx_reg9_map[NUM_FPGA_TX] = { "txa9", "txb9", "txc9", "txd9", "txe9", "txf9", "txg9", "txh9" };
 
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
@@ -239,6 +243,7 @@
     //most registers follow the pattern rxa0 for ch a, rxb0 for ch b, the general purpose register for each channel does not
     static const char *rx_reg4_map[NUM_FPGA_RX] = { "rxa4", "rxe4", "rxi4", "rxm4" };
     static const char *tx_reg4_map[NUM_FPGA_TX] = { "txa4", "txb4", "txc4", "txd4" };
+    static const char *tx_reg9_map[NUM_FPGA_TX] = { "txa9", "txb9", "txc9", "txd9" };
 
     //registers used for trigger streaming
     //note: these registers have multiple purposes and only masked writes should be done to them
