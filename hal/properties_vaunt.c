@@ -1889,6 +1889,7 @@ CHANNELS
             /*turn time disable off*/\
             reg9_val = reg9_val & ~(0x4000);\
             write_hps_reg(reg4[INT(ch)], val);\
+            write_hps_reg(reg9[INT(ch)], reg9_val);\
             rx_stream[INT(ch)] = STREAM_OFF;\
             /*Ignores sma (enabling normal stream command)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
@@ -1901,6 +1902,7 @@ CHANNELS
             /*disable time trigger*/\
             reg9_val = reg9_val | 0x4000;\
             write_hps_reg(reg4[INT(ch)], val);\
+            write_hps_reg(reg9[INT(ch)], reg9_val);\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
