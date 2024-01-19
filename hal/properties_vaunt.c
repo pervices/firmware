@@ -1870,11 +1870,15 @@ CHANNELS
     static int hdlr_rx_##ch##_prime_trigger_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
         uint32_t val = 0;\
+        uint32_t reg9_val = 0;\
         read_hps_reg(reg4[INT(ch)], &val);\
+        read_hps_reg(reg9[INT(ch)], &reg9_val);\
         val = val & ~(0x6002 | 0x2100);\
         if(data[0]=='0') {\
             /*puts the dsp in reset*/\
             val = val | 0x6002;\
+            /*turn time disable off*/
+            reg9_val = reg9_val & ~(0x4000);\
             write_hps_reg(reg4[INT(ch)], val);\
             rx_stream[INT(ch)] = STREAM_OFF;\
             /*Ignores sma (enabling normal stream command)*/\
@@ -1885,6 +1889,8 @@ CHANNELS
             set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
             /*takes the dsp out of reset*/\
             val = val | 0x2100;\
+            /*disable time trigger*/
+            reg9_val = reg9_val | 0x4000;\
             write_hps_reg(reg4[INT(ch)], val);\
         }\
         return RETURN_SUCCESS;                                                 \
