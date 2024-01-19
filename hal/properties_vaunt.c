@@ -1879,10 +1879,14 @@ CHANNELS
             rx_stream[INT(ch)] = STREAM_OFF;\
             /*Ignores sma (enabling normal stream command)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
+            /*turn time disable off*/\
+            set_property("rx/" STR(ch) "/trigger/time_disable", "0");\
         } else {\
             rx_stream[INT(ch)] = STREAM_ON;\
             /*Stream when sma trigger (has the side effect of disabling normal stream commands)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
+            /*disable time trigger*/\
+            set_property("rx/" STR(ch) "/trigger/time_disable", "1");\
             /*takes the dsp out of reset*/\
             val = val | 0x2100;\
             write_hps_reg(reg4[INT(ch)], val);\
