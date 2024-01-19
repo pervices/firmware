@@ -43,9 +43,53 @@
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
-// Sample rates are in samples per second (SPS).
-#define BASE_SAMPLE_RATE   325000000.0
-#define S_MAX_RATE        "325000000"
+double get_base_sample_rate() {
+    // FPGA register reports sample rate in MHz, this function returns Hz
+    uint32_t read_val;
+    read_hps_reg("res_ro3",&read_val);
+    read_val = ( read_val >> 20) & 0xFFF;
+    switch(read_val){
+        case 300:
+            return 300000000.0;
+        case 325:
+            return 325000000.0;
+        default:
+            PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
+            return 0;
+    }
+}
+
+double get_dsp_nco_const() {
+    // (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
+    uint32_t read_val;
+    read_hps_reg("res_ro3",&read_val);
+    read_val = ( read_val >> 20) & 0xFFF;
+    switch(read_val){
+        case 300:
+            return 14.3165576533333333333333333333333333;
+        case 325:
+            return 13.215283987692307692307692307692307692307692307692307690000;
+        default:
+            PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
+            return 0;
+    }
+}
+
+double get_dac_nco_const() {
+    // (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
+    uint32_t read_val;
+    read_hps_reg("res_ro3",&read_val);
+    read_val = ( read_val >> 20) & 0xFFF;
+    switch(read_val){
+        case 300:
+            return 234562.480592213333333333333333333333;
+        case 325:
+            return 216519.21285435076923076923076923076923076923076923076919296;
+        default:
+            PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
+            return 0;
+    }
+}
 
 #define AVERY_IF 650000000UL
 
@@ -53,14 +97,6 @@
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
-
-// (2 ^ 32) / (1 * BASE_SAMPLE_RATE)
-#define DSP_NCO_CONST \
-    ((double)13.215283987692307692307692307692307692307692307692307690000)
-
-// (2 ^ 48) / (4 * BASE_SAMPLE_RATE)
-#define DAC_NCO_CONST \
-    ((double)216519.21285435076923076923076923076923076923076923076919296)
 
 #define PWR_ON  1
 #define PWR_OFF 0
@@ -733,8 +769,8 @@ int check_rf_pll(int ch, bool is_tx) {
     static int hdlr_tx_##ch##_rf_dac_nco(const char *data, char *ret) {        \
         double freq;                                                           \
         sscanf(data, "%lf", &freq);                                            \
-        uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);            \
-        snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / DAC_NCO_CONST); \
+        uint64_t nco_steps = (uint64_t)round(freq * get_dac_nco_const());      \
+        snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / get_dac_nco_const());\
                                                                                \
         snprintf(buf, MAX_PROP_LEN,                                            \
             "dac -c " STR(ch) " -n %" PRIu32 " -o %" PRIu32 "\r",              \
@@ -964,7 +1000,7 @@ int check_rf_pll(int ch, bool is_tx) {
                                                                                \
         /* get the error for base rate */                                      \
         base_factor =                                                          \
-            get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);          \
+            get_optimal_sr_factor(rate, get_base_sample_rate(), &base_err);    \
         /* set the appropriate sample rate */                                  \
         int channel = INT(ch);                                                 \
         int shift = (channel%4)*8;                                             \
@@ -972,7 +1008,7 @@ int check_rf_pll(int ch, bool is_tx) {
         read_hps_reg("tx" STR(ch) "4", &old_val);                              \
         write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));                 \
         snprintf(ret, MAX_PROP_LEN, "%lf",                                     \
-            BASE_SAMPLE_RATE / (double)(base_factor + 1));                     \
+            get_base_sample_rate() / (double)(base_factor + 1));               \
         /* Set gain adjustment */                                              \
         read_hps_reg("txga", &old_val);                                        \
         write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
@@ -1000,23 +1036,23 @@ int check_rf_pll(int ch, bool is_tx) {
                                                                                \
         /* Cap to allowable range */                                           \
         if(INT(ch) == 0 || INT(ch) == 1) {                                     \
-            freq = fmin(freq, BASE_SAMPLE_RATE / 2.0);                         \
+            freq = fmin(freq, get_base_sample_rate() / 2.0);                   \
         /* On Crimson tx c/d operate at quarter rate*/                         \
         } else if(INT(ch) == 2 || INT(ch) == 3) {                              \
-            freq = fmin(freq, BASE_SAMPLE_RATE / 8.0);                         \
+            freq = fmin(freq, get_base_sample_rate() / 8.0);                   \
         } else {                                                               \
             PRINT(ERROR, "Frequency range limit not set for this channel\n");  \
         }                                                                      \
                                                                                \
         /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        uint32_t nco_steps = (uint32_t)round(freq * get_dsp_nco_const());      \
         write_hps_reg("tx" STR(ch) "0", nco_steps);                            \
         if (direction > 0) {                                                   \
             snprintf(ret, MAX_PROP_LEN, "-%lf",                                \
-                (double)nco_steps / DSP_NCO_CONST);                            \
+                (double)nco_steps / get_dsp_nco_const());                      \
         } else {                                                               \
             snprintf(ret, MAX_PROP_LEN, "%lf",                                 \
-                (double)nco_steps / DSP_NCO_CONST);                            \
+                (double)nco_steps / get_dsp_nco_const());                      \
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
@@ -1694,7 +1730,7 @@ CHANNELS
                                                                                \
         /* get the error for base rate */                                      \
         base_factor =                                                          \
-            get_optimal_sr_factor(rate, BASE_SAMPLE_RATE, &base_err);          \
+            get_optimal_sr_factor(rate, get_base_sample_rate(), &base_err);    \
         /* set the appropriate sample rate */                                  \
         memset(ret, 0, MAX_PROP_LEN);                                          \
         int channel = INT(ch);                                                 \
@@ -1704,7 +1740,7 @@ CHANNELS
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
             read_hps_reg("rx" STR(ch) "4", &old_val);                          \
             write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 15));             \
-            snprintf(ret, MAX_PROP_LEN, "%lf", BASE_SAMPLE_RATE / (double)(base_factor + 1)); \
+            snprintf(ret, MAX_PROP_LEN, "%lf", get_base_sample_rate() / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
             read_hps_reg("rxga", &old_val);                                    \
@@ -1733,15 +1769,15 @@ CHANNELS
                                                                                \
         /* Cap to allowable range */\
         freq = abs(freq);\
-        freq = fmin(freq, BASE_SAMPLE_RATE / 2.0);\
+        freq = fmin(freq, get_base_sample_rate() / 2.0);\
         \
         /* write NCO adj */                                                    \
-        uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);            \
+        uint32_t nco_steps = (uint32_t)round(freq * get_dsp_nco_const());      \
         write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
         if (direction > 0) {                                                   \
-            snprintf(ret, MAX_PROP_LEN, "-%lf", (double)nco_steps / DSP_NCO_CONST);           \
+            snprintf(ret, MAX_PROP_LEN, "-%lf", (double)nco_steps / get_dsp_nco_const());\
         } else {                                                               \
-            snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / DSP_NCO_CONST);            \
+            snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / get_dsp_nco_const());\
         }                                                                      \
                                                                                \
         /* write direction */                                                  \
@@ -3889,6 +3925,25 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
     }
 }
 
+static int hdlr_max_sample_rate(const char *data, char *ret) {
+    uint16_t fpga_samp_rate, mcu_samp_rate;
+    uint32_t read_val;
+    read_hps_reg("res_ro3",&read_val);
+    fpga_samp_rate = ( read_val >> 20) & 0xFFF;
+    snprintf(buf, sizeof(buf), "clk -d\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    sscanf((char *)uart_ret_buf, "DEVCLK: %" SCNu32 "Hz", &read_val);
+    mcu_samp_rate = read_val / 1000000;
+    if (fpga_samp_rate == mcu_samp_rate) {
+        snprintf(ret, MAX_PROP_LEN,"%u",read_val);
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "FPGA for %uMHz; TIME board for %uMHz\n", fpga_samp_rate, mcu_samp_rate);
+        snprintf(ret, MAX_PROP_LEN, "ERROR: FPGA for %uMHz; TIME board for %uMHz\n", fpga_samp_rate, mcu_samp_rate);
+        return RETURN_ERROR;
+    }
+}
+
 /* clang-format off */
 
 /* -------------------------------------------------------------------------- */
@@ -4144,7 +4199,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/max_lo"              , hdlr_invalid,                           RO, S_MAX_RF_FREQ, SP, NAC)\
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
-    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_max_sample_rate,                   RW, "1", SP, NAC)\
 
 static prop_t property_table[] = {
     DEFINE_TIME()
