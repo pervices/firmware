@@ -3284,7 +3284,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     } while (status != 0x800000 && time < MAX_RESET_WAIT);
 
     if(time >= MAX_RESET_WAIT) {
-        PRINT(ERROR, "Timout while waiting for FPGA reset\n");
+        PRINT(ERROR, "Timeout while waiting for FPGA reset\n");
     }
     
     // write the register back to its default state
