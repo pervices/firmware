@@ -3140,8 +3140,10 @@ static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
     //DEBUG USE ONLY: To ensure consistency, JESD sync's are managed
     //through the reset controller.
 
-    //Issue JESD reset request.
-    set_property("fpga/board/reg_rst_req", "16");
+    if (strcmp(data, "0") != 0) {
+        //Issue JESD reset request.
+        set_property("fpga/board/reg_rst_req", "16");
+    }
 
     return RETURN_SUCCESS;
 }
