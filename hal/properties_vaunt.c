@@ -3137,25 +3137,39 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_jesd_sync(const char *data, char *ret) {
-    if (strcmp(data, "0") != 0) {
-        sync_channels(15);
-    }
+    //DEBUG USE ONLY: To ensure consistency, JESD sync's are managed
+    //through the reset controller.
+
+    //Issue JESD reset request.
+    set_property("fpga/board/reg_rst_req", "16");
+
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_board_sys_rstreq(const char *data, char *ret) {
+static int hdlr_fpga_board_rst_softsys(const char *data, char *ret) {
+    //This function is for debug use only: we should depreciate it.
+    //This performs a soft system reset (does not restart server)
+    //It reboots all the boards, and resets the 10G handler.
+
     if (strcmp(data, "0") != 0) {
+        //Reboot time board
         strcpy(buf, "board -r\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         usleep(1000000);
 
+        //Reboot Rx board
         strcpy(buf, "board -r\r");
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
-        usleep(500000);
 
+        //Reboot Tx board
         strcpy(buf, "board -r\r");
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
-        usleep(500000);
+
+        //Issue reset request from 10G handler
+        set_property("fpga/board/reg_rst_req", "12");
+
+        //Ensure sysref is pulsed.
+        set_property("time/sync/sysref_mode", "pulsed");
     }
     return RETURN_SUCCESS;
 }
@@ -3277,8 +3291,10 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
         usleep(100);
         time++;
         read_hps_reg("rst_stat0", &status);
-        // Bit 23 of rst_stat0 indicates JESD is up
-    } while (status == 0x800000 && time < MAX_RESET_WAIT);
+        // Bit 23 of rst_stat0 indicates PLLs are locked
+        // Remaining bits should be zero.
+    } while (status != 0x800000 && time < MAX_RESET_WAIT);
+
     if(time >= MAX_RESET_WAIT) {
         PRINT(ERROR, "Timout while waiting for FPGA reset\n");
     }
@@ -3292,6 +3308,20 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     }
 
     snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_reg_rst_status(const char *data, char *ret) {
+    uint32_t old_val;
+
+    read_hps_reg("rst_stat0", &old_val);
+    snprintf(ret, MAX_PROP_LEN, "rst_stat0: %x\n", old_val);
+
+    read_hps_reg("rst_stat1", &old_val);
+    snprintf(ret, MAX_PROP_LEN, "rst_stat1: %x\n", old_val);
+
+    //TODO: Implement clearing of loss-of-lock bits
+    //write_hps_reg("sys0", old_val | 0x10);
     return RETURN_SUCCESS;
 }
 
@@ -3438,7 +3468,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     }
     fgets(buf, MAX_PROP_LEN, fp);
      if (pclose(fp)) {
-        PRINT(ERROR, "Error closin pipe!");
+        PRINT(ERROR, "Error closing pipe!");
         strcpy(ret, "ERROR: EEPROM read failed");
         return RETURN_ERROR;
     }
@@ -3797,7 +3827,7 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
 }
 
 // Returns 0 is jesd links come up, 1 if any links fail
-static int hdlr_jesd_reset_master(const char *data, char *ret) {
+static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
     //Do nothing is 0 is provided, reset all if everything else is provided
     int reset = 0;
     sscanf(data, "%i", &reset);
@@ -3809,6 +3839,9 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     uint8_t i, j, error_val, ret_val;
     char ch_type;
     char prop_path[PROP_PATH_LEN];
+
+    //Initiate reset request from GPIO interface (GPIO > SystemTime > JESD > DSP)
+    set_property("fpga/board/reg_rst_req", "14");
 
     // Check RX JESD links
     for (i = 0; i < NUM_CHANNELS; i++) {
@@ -4064,6 +4097,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/board/init_regs"                , hdlr_fpga_board_init_regs,              RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/reg_rst_req"              , hdlr_fpga_board_reg_rst_req,            RW, "8", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/reg_rst_status"           , hdlr_fpga_board_reg_rst_status,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
@@ -4086,7 +4120,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/rst_softsys"              , hdlr_fpga_board_rst_softsys,            WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20", SP, NAC)                \
     DEFINE_FILE_PROP_P("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0", SP, NAC)                 \
@@ -4124,7 +4158,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 #endif
 
 #define DEFINE_FPGA_POST()                                                                      \
-    DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master", hdlr_jesd_reset_master, RW, "1", SP, NAC)
+    DEFINE_FILE_PROP_P("fpga/board/rst_postinit", hdlr_fpga_board_rst_postinit, RW, "1", SP, NAC)
 
 // Contians information about the configuration
 #define DEFINE_SYSTEM_INFO()\
