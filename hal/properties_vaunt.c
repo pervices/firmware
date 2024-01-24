@@ -3328,14 +3328,7 @@ static int hdlr_fpga_board_reg_rst_status(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_fw_rst(const char *data, char *ret) {
-    uint32_t old_val=0;
-
-    if (strcmp(data, "0") != 0) {
-        read_hps_reg("sys0", &old_val);
-        write_hps_reg("sys0", old_val | 0x10);
-        write_hps_reg("sys0", old_val & (~0x10));
-    }
-
+    //Depreciated
     return RETURN_SUCCESS;
 }
 
