@@ -219,6 +219,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
                                         LMX2595_R_MAX,          LMX2595_R_MIN
 };
 
+#if defined(VAUNT)
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
     PLL_ID_LMX2595,         AVERY_REF_FREQ_HZ,
     PLL1_R_FIXED,           PLL1_N_DEFAULT,
@@ -230,6 +231,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
     LMX2595_N_MAX,          LMX2595_N_MIN,
     LMX2595_R_MAX,          LMX2595_R_MIN
 };
+#endif
 
 // Set Output Frequency
 double setFreq(uint64_t *reqFreq,
