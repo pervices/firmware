@@ -20,6 +20,7 @@
 #include "array-utils.h"
 #include "common.h"
 #include "comm_manager.h"
+#include "led.h"
 #include "synth_lut.h"
 
 #include "pllcalc.h"
@@ -34,10 +35,6 @@
 extern int get_uart_synth_fd();
 extern int get_uart_rx_fd();
 extern int get_uart_tx_fd();
-
-extern void server_init_led();
-extern void server_ready_led();
-extern void error_led(void);
 
 extern int check_rf_pll(int ch, bool is_tx);
 
@@ -691,7 +688,7 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
         goto out;
     }
 
-    server_init_led();
+    set_led_state(LED_STATE_INIT);
 
     PRINT(INFO, "Enabling sythesizer calibration tables on %s %c..\n",
           ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx));
@@ -763,10 +760,10 @@ out:
 
     if(r == EXIT_SUCCESS) {
         PRINT(INFO, "Lookup table generation successfully completed\n");
-        server_ready_led();
+        set_led_state(LED_STATE_READY);
     } else {
         PRINT(ERROR, "Lookup table generation failed\n");
-        error_led();
+        set_led_state(LED_STATE_ERROR);
     }
 
     pthread_mutex_unlock(&ctx->lock);

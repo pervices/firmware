@@ -23,6 +23,7 @@
     #include "properties.h"
 
     #include "array-utils.h"
+    #include "led.h"
     #include "mmap.h"
     #include "property_manager.h"
     #include "synth_lut.h"
@@ -3251,6 +3252,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     uint16_t time = 0;
     sscanf(data, "%" SCNu32 "", &reset);
     uint8_t jesd_reset = 0;
+    uint8_t led_reset = 0;
 
     switch(reset)
     {
@@ -3267,6 +3269,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             PRINT(INFO,"link pll reset\n");
         case 7:
             PRINT(INFO,"HPS reset\n");
+            led_reset = get_led_state();
         case 8:
             PRINT(INFO,"Chip ID reset\n");
         case 9:
@@ -3320,6 +3323,11 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     
     // write the register back to its default state
     write_hps_reg("rst_req0", 0xffffffff);
+
+    // set the leds back to their beginning state
+    if(led_reset){
+        set_led_state(led_reset);
+    }
 
     // Cleans up JESD reset status if JESD was reset
     if(jesd_reset) {

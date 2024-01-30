@@ -36,6 +36,7 @@
 
 #include <signal.h>
 #include "gpio_pins.h"
+#include "led.h"
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include "variant_config/tate_sample_rate_config.h"
@@ -5078,6 +5079,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      * Writing 0 to the state tree will not trigger any reset
      */
     int reset_type = 0;
+    uint8_t led_state = get_led_state();
 
     sscanf(data, "%i", &reset_type);
 
@@ -5111,9 +5113,9 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // Waits for the reset sequence to finish
     wait_for_fpga_reset();
 
-    // led1 indicates Linux is booted. Reseting the FPGA results in it being reset to its default value (flashing)
-    // This sets it back to solid (since if this is running Linux must be booted)
-    write_hps_reg("led1", 0x1);
+    // Resetting the FPGA results in user visible LEDs being reset to their
+    // default value. This sets it back to the state it was in before the FPGA reset.
+    set_led_state(led_state);
 
     return RETURN_SUCCESS;
 }
