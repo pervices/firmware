@@ -1988,11 +1988,6 @@ CHANNELS
         if (power >= PWR_ON) {                                                 \
             rx_power[INT(ch)] = PWR_ON;                                        \
                                                                                \
-            /* board command */                                                \
-            strcpy(buf, "board -c " STR(ch) " -d\r");                          \
-            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
-            usleep(200000);                                                    \
-                                                                               \
             /* disable dsp channels */                                         \
             read_hps_reg(reg4[INT(CH)], &old_val);                               \
             write_hps_reg(reg4[INT(CH)], old_val & ~0x100);                      \
