@@ -3855,13 +3855,26 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
         return RETURN_SUCCESS;
     }
 
-    uint8_t jesd_master_error = 0;
+    uint8_t fail_count = 0;
     uint8_t i, j, error_val, ret_val;
     char ch_type;
     char prop_path[PROP_PATH_LEN];
-
-    //Initiate reset request from GPIO interface (GPIO > SystemTime > JESD > DSP)
-    set_property("fpga/board/reg_rst_req", "14");
+    
+    // Check for known bad FPGA state
+    uint32_t read_val;
+    read_hps_reg("rst_stat0",&read_val);
+    if(read_val & 0x1001FFF){
+        // Bit 24 means JESD will not work. Bits 12:0 all represent other
+        // errors. Usually if any of the error bits is high, bit 24 will be
+        // too. In our testing reset state 7 usually worked, but once I needed
+        // to use reset state 5. I want this to work every time, so we will just
+        // use reset state 1 (the most aggressive reset available).
+        fail_count += 1;
+        set_property("fpga/board/reg_rst_req", "1");
+    } else {
+        //Initiate reset request from GPIO interface (GPIO > SystemTime > JESD > DSP)
+        set_property("fpga/board/reg_rst_req", "14");
+    }
 
     // Check RX JESD links
     for (i = 0; i < NUM_CHANNELS; i++) {
@@ -3871,9 +3884,9 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
         ret_val = sscanf(buf,"Error: 0x%02hhx", &error_val);
         if (!ret_val) {
             PRINT(ERROR,"RX JESD sscanf fail\n");
-            jesd_master_error += 1;
+            fail_count += 1;
         }
-        jesd_master_error += error_val;
+        fail_count += error_val;
     }
 
     // TODO: Check TX JESD links
@@ -3897,12 +3910,12 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
             set_property(prop_path, "1");
             get_property(prop_path, buf, MAX_PROP_LEN);
             if(strcmp(buf,"Locked") != 0) {
-                jesd_master_error += 1;
+                fail_count += 1;
             }
         }
     }
 
-    if(!jesd_master_error) {
+    if(!fail_count) {
         update_interboot_variable("cons_boot_fail_count", 0);
         PRINT(INFO, "All JESD links established and RF PLLs locked\n");
         snprintf(ret, MAX_PROP_LEN, "good");
