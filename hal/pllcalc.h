@@ -74,13 +74,6 @@
     #else
         #error "Invalid RTM specified"
     #endif
-
-    #if defined (RTM10)
-        // RTM10 currently uses 5MHz reference, with doubler on ADF5355 active, LMX2595 on avery does not use the doubler so it needs a different define
-        #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ/2
-    #else
-        #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
-    #endif
 #elif defined(TATE_NRNT)
     #define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
 #else
@@ -218,20 +211,6 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
                                         LMX2595_N_MAX,          LMX2595_N_MIN,
                                         LMX2595_R_MAX,          LMX2595_R_MIN
 };
-
-#if defined(VAUNT)
-static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
-    PLL_ID_LMX2595,         AVERY_REF_FREQ_HZ,
-    PLL1_R_FIXED,           PLL1_N_DEFAULT,
-    PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
-    PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
-    LMX2595_RFOUT_MAX_HZ,   LMX2595_RFOUT_MIN_HZ,
-    LMX2595_VCO_MAX1_HZ,    LMX2595_VCO_MIN_HZ,
-    LMX2595_DIV_MAX,        LMX2595_DIV_MIN,
-    LMX2595_N_MAX,          LMX2595_N_MIN,
-    LMX2595_R_MAX,          LMX2595_R_MIN
-};
-#endif
 
 // Set Output Frequency
 double setFreq(uint64_t *reqFreq,

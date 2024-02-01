@@ -1435,7 +1435,7 @@ CHANNELS
                 strcpy(buf, "rf -c " STR(ch) " -b 3\r");                       \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
-                pll = pll_def_lmx2595_avery;                                   \
+                pll = pll_def_lmx2595;                                         \
                 /* round the requested freq to the nearest multiple of phase*/ \
                 /* detector frequency around the 650MHz target IF*/            \
                 /* multiplied by four times because of ADAR2004 quadrupler*/   \
@@ -1476,7 +1476,7 @@ CHANNELS
                 strcpy(buf, "rf -c " STR(ch) " -b 2\r");                       \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
-                pll = pll_def_lmx2595_avery;                                   \
+                pll = pll_def_lmx2595;                                         \
                 /* round the requested freq to the nearest multiple of phase*/ \
                 /* detector frequency around the 650MHz target IF*/            \
                 float n = ((float)freq - AVERY_IF ) / ( pll.ref_freq / pll.R );\
