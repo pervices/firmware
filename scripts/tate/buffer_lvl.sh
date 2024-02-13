@@ -38,6 +38,6 @@ while true; do
         buff_ap=$((100-buff_percent));
         v=$(printf "%-${buff_percent}s" "");
         vv=$(printf "%-${buff_ap}s" " ");
-        echo -ne "Buff Lvl= $buff_lvl \tMax= $max \tFilled= $buff_percent% \tMax= $maxperc%    \t //${v// /#} ${vv// / } // \r"
+        echo -ne "\r\e[KBuff Lvl= $buff_lvl \tMax= $max \tFilled= $buff_percent% \tMax= $maxperc%    \t //${v// /#} ${vv// / } //"
 
 done
