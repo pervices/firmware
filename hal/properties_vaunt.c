@@ -44,6 +44,9 @@
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
+// Number to divide the base sample rate by to get the maximum rate the host can request
+int link_rate_divisor = 1;
+
 double get_base_sample_rate() {
     // FPGA register reports sample rate in MHz, this function returns Hz
     uint32_t read_val;
@@ -51,8 +54,12 @@ double get_base_sample_rate() {
     read_val = ( read_val >> 20) & 0xFFF;
     switch(read_val){
         case 300:
+            link_rate_divisor = 1;
             return 300000000.0;
         case 325:
+            // 10G link cannot take 325Msps, so user the host is limited to 2162.5Msps
+            // Internal FPGA calcs can still use the base rate
+            link_rate_divisor = 2;
             return 325000000.0;
         default:
             PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
@@ -998,6 +1005,14 @@ int check_rf_pll(int ch, bool is_tx) {
         double base_err = 0.0;                                                 \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
+        \
+        /* Limit for full rate DAC */\
+        if(INT(ch) == 0 || INT(ch) == 1) {\
+            rate = fmin(rate, get_base_sample_rate() / link_rate_divisor);\
+        /* Limit for quarter rate DAC */\
+        } else if (INT(ch) == 2 || INT(ch) == 3){\
+            rate = fmin(rate, get_base_sample_rate() / (link_rate_divisor * 4));\
+        }\
                                                                                \
         /* get the error for base rate */                                      \
         base_factor =                                                          \
@@ -1728,6 +1743,9 @@ CHANNELS
         double base_err = 0.0;                                                 \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
+        \
+        /* Caps the rate to the maximum */\
+        rate = fmin(rate, get_base_sample_rate() / link_rate_divisor);\
                                                                                \
         /* get the error for base rate */                                      \
         base_factor =                                                          \
