@@ -5545,7 +5545,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/otw_rx"                   , hdlr_invalid,                           RO, S_OTW_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
-    DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "-1", SP, NAC)\
+    DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/flags/USE_3G_AS_1G"       , hdlr_invalid,                           RO, S_USE_3G_AS_1G, SP, NAC)\
 
 static prop_t property_table[] = {
@@ -5665,13 +5665,6 @@ void patch_tree(void) {
 
         TX_CHANNELS
     #undef X
-#endif
-
-#if RTM_VER == 3 || RTM_VER == 4
-    set_default_int("system/self_calibration", 1);
-
-#elif RTM_VER == 5
-    set_default_int("system/self_calibration", 0);
 #endif
 
     // Read a configuration file to overrid default values of the state tree. Must be done at adjusting the default state tree values
