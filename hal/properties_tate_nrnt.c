@@ -4694,6 +4694,7 @@ static int hdlr_fpga_about_serial(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Does nothing on Cyan since there are seperate input and output pins
 static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
     int r;
     bool val = 0;
@@ -5459,7 +5460,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "in", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/sw_ver"                   , hdlr_fpga_about_sw_ver,                 RW, VERSION, SP, NAC)             \
