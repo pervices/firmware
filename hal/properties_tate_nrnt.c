@@ -171,7 +171,8 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
-const int jesd_reset_delay = 100000;
+// Delay when waiting for JESD to come up
+const int jesd_up_delay = 100000;
 const int jesd_mask_delay = 200000;
 
 int jesd_master_reset();
@@ -1590,7 +1591,7 @@ int check_rf_pll(int ch, bool is_tx) {
             if(current_sysref_mode != continuous) {\
                 set_property("time/sync/lmk_sync_tgl_jesd", "1");\
             };\
-            usleep(jesd_reset_delay);\
+            usleep(jesd_up_delay);\
             set_property("tx/" STR(ch) "/jesd/unmask", "0");\
             return RETURN_SUCCESS;\
         }\
@@ -3046,7 +3047,7 @@ TX_CHANNELS
             if(current_sysref_mode != continuous) {\
                 set_property("time/sync/lmk_sync_tgl_jesd", "1");\
             };\
-            usleep(jesd_reset_delay);\
+            usleep(jesd_up_delay);\
             set_property("rx/" STR(ch) "/jesd/unmask", "0");\
             return RETURN_SUCCESS;\
         }\
@@ -4029,6 +4030,41 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
         current_sysref_mode = unspecified_sysref;
         return RETURN_ERROR;
     }
+}
+
+// Sets number of pulses issued per sysref
+static int hdlr_time_sync_pulses_per_sysref(const char *data, char *ret) {
+    int num_pulses = 0;
+    sscanf(data, "%i", &num_pulses);
+
+    // Determines to code for the requested number of pulses
+    int pulse_code;
+    if(num_pulses == 1) {
+        pulse_code = 0;
+    }
+    else if(num_pulses == 2) {
+        pulse_code = 1;
+    }
+    else if(num_pulses == 4) {
+        pulse_code = 2;
+    }
+    else if(num_pulses == 8) {
+        pulse_code = 3;
+    }
+    else {
+        PRINT(ERROR, "Invalid number of sysref pulses requested. Defaulting to 8\n");
+        num_pulses = 8;
+        pulse_code = 3;
+    }
+
+    // TODO: add to MCU API instead of relying on register write
+    // Sets the number of sysref pulses
+    snprintf(buf, MAX_PROP_LEN, "debug -l 7 -r 13e -w %x\r", pulse_code);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    snprintf(ret, MAX_PROP_LEN, "%i", num_pulses);
+
+    return RETURN_ERROR;
 }
 
 // Toggle SPI Sync
@@ -5117,6 +5153,14 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // default value. This sets it back to the state it was in before the FPGA reset.
     set_led_state(led_state);
 
+    // Prevent premature JESD init from causing issues
+    for(uint8_t n = 0; n < NUM_RX_CHANNELS; n++) {
+        // Turns off reinit on error (which will be occuring continuously until its time to reinit JESD)
+        write_jesd_reg(1 << n, 0x50, 0x1000);
+        // Disables csr_dis_lane_align_det
+        write_jesd_reg(1 << n, 0x54, 0x0);
+    }
+
     return RETURN_SUCCESS;
 }
 
@@ -5437,6 +5481,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
+    /* 3G requires 4 pulses */\
+    /* TODO verify this change doesn't break 1G */\
+    DEFINE_FILE_PROP_P("time/sync/pulses_per_sysref"         , hdlr_time_sync_pulses_per_sysref,       RW, SYSREF_PULSES, SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0", SP, NAC)         \
@@ -5458,7 +5505,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
@@ -5894,17 +5941,20 @@ int jesd_master_reset() {
         TX_CHANNELS
 #undef X
 
-        //Issue JESD master reset
-        set_property("fpga/reset", "3");
+        // Reinits JESD and begins waiting for sysref
+        for(uint8_t n = 0; n  < NUM_RX_CHANNELS; n++) {
+            write_jesd_reg(1 << n, 0x54, 0x5);
+        }
 
         //Wait for links to go down
-        usleep(jesd_reset_delay);
+        // NOTE: 100ms is to short on RTM4 3G. 1G can handle 100ms
+        usleep(200000);
 
         // Issues sysref pulse
         set_property("time/sync/lmk_sync_tgl_jesd", "1");
 
         //Wait for links to re-establish
-        usleep(jesd_reset_delay);
+        usleep(jesd_up_delay);
 
         //Immediately mask all channels.
         for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {

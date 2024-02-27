@@ -77,6 +77,9 @@
     // Flag indicating the unit is capable to transmitting little endian samples
     #define LITTLE_ENDIAN_SUPPORTED 1
 
+    // Number of pulses per sysref
+    #define SYSREF_PULSES "8"
+
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
@@ -140,6 +143,10 @@
 
     // 3G does not support little endian
     #define LITTLE_ENDIAN_SUPPORTED 0
+
+    // Number of pulses per sysref
+    // Theoretically the default of 8 should be fine, experimentally it needs to be 4
+    #define SYSREF_PULSES "4"
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
