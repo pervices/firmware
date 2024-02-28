@@ -171,7 +171,7 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
-const int jesd_reset_delay = 100000;
+const int jesd_reset_delay = 300000;
 const int jesd_mask_delay = 200000;
 
 int jesd_master_reset();
