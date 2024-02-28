@@ -6012,6 +6012,8 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
     set_analog_sysref_delay(analog_sysref_delay);
 
+    system("echo \"debug -l 7 -r 13e -w 2\" | mcu -f s");
+
     // Note this is set to 0 for success, any other value for failure
     int jesd_master_error = jesd_master_reset();
 
