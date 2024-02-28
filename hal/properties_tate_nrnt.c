@@ -5919,7 +5919,7 @@ int jesd_master_reset() {
         system("/home/dev0/jesd_gp.sh -j 3 -a 0x54 -v 0x5");
 
         //Wait for links to go down
-        usleep(jesd_reset_delay);
+        // usleep(jesd_reset_delay);
 
         // Issues sysref pulse
         set_property("time/sync/lmk_sync_tgl_jesd", "1");
