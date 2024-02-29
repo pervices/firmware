@@ -4031,6 +4031,41 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
     }
 }
 
+// Sets number of pulses issued per sysref
+static int hdlr_time_sync_pulses_per_sysref(const char *data, char *ret) {
+    int num_pulses = 0;
+    sscanf(data, "%i", &num_pulses);
+
+    // Determines to code for the requested number of pulses
+    int pulse_code;
+    if(num_pulses == 1) {
+        pulse_code = 0;
+    }
+    else if(num_pulses == 2) {
+        pulse_code = 1;
+    }
+    else if(num_pulses == 4) {
+        pulse_code = 2;
+    }
+    else if(num_pulses == 8) {
+        pulse_code = 3;
+    }
+    else {
+        PRINT(ERROR, "Invalid number of sysref pulses requested. Defaulting to 8\n");
+        num_pulses = 8;
+        pulse_code = 3;
+    }
+
+    // TODO: add to MCU API instead of relying on register write
+    // Sets the number of sysref pulses
+    snprintf(buf, MAX_PROP_LEN, "debug -l 7 -r 13e -w %x\r", pulse_code);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    snprintf(ret, MAX_PROP_LEN, "%i", num_pulses);
+
+    return RETURN_ERROR;
+}
+
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
@@ -5444,6 +5479,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
+    DEFINE_FILE_PROP_P("time/sync/pulses_per_sysref"         , hdlr_time_sync_pulses_per_sysref,       RW, "4", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0", SP, NAC)         \
@@ -5997,9 +6033,6 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     }
 
     set_analog_sysref_delay(analog_sysref_delay);
-
-    // Set sysref to send 4 pulses
-    system("echo \"debug -l 7 -r 13e -w 2\" | mcu -f s");
 
     // Note this is set to 0 for success, any other value for failure
     int jesd_master_error = jesd_master_reset();
