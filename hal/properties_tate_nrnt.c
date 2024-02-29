@@ -171,7 +171,8 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
-const int jesd_reset_delay = 100000;
+// Delay when waiting for JESD to come up
+const int jesd_up_delay = 100000;
 const int jesd_mask_delay = 200000;
 
 int jesd_master_reset();
@@ -1590,7 +1591,7 @@ int check_rf_pll(int ch, bool is_tx) {
             if(current_sysref_mode != continuous) {\
                 set_property("time/sync/lmk_sync_tgl_jesd", "1");\
             };\
-            usleep(jesd_reset_delay);\
+            usleep(jesd_up_delay);\
             set_property("tx/" STR(ch) "/jesd/unmask", "0");\
             return RETURN_SUCCESS;\
         }\
@@ -3046,7 +3047,7 @@ TX_CHANNELS
             if(current_sysref_mode != continuous) {\
                 set_property("time/sync/lmk_sync_tgl_jesd", "1");\
             };\
-            usleep(jesd_reset_delay);\
+            usleep(jesd_up_delay);\
             set_property("rx/" STR(ch) "/jesd/unmask", "0");\
             return RETURN_SUCCESS;\
         }\
@@ -5896,7 +5897,7 @@ int jesd_master_reset() {
 
     //Takes rx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored.
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
-    for(int chan = NUM_RX_CHANNELS -1; chan >= 0; chan--) {
+    for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
         if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
             write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
@@ -5947,13 +5948,14 @@ int jesd_master_reset() {
         }
 
         //Wait for links to go down
-        usleep(jesd_reset_delay * 2);
+        // NOTE: 100ms is to short on RTM4 3G. 1G can handle 100ms
+        usleep(200000);
 
         // Issues sysref pulse
         set_property("time/sync/lmk_sync_tgl_jesd", "1");
 
         //Wait for links to re-establish
-        usleep(jesd_reset_delay);
+        usleep(jesd_up_delay);
 
         //Immediately mask all channels.
         for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
@@ -5965,7 +5967,7 @@ int jesd_master_reset() {
         }
 
         //Checks if all rx JESDs are working
-        for(int chan = NUM_RX_CHANNELS - 1; chan >= 0 && !is_bad_attempt; chan--) {
+        for(int chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/status", chan+'a');
                 if(property_good(prop_path) != 1) {
