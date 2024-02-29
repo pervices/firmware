@@ -5415,11 +5415,12 @@ GPIO_PINS
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
 
-#define DEFINE_TIME()                                                                                                 \
-    /* Delay needed after here*/\
+#define DEFINE_DEBUG_DELAY()\
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)\
-    DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \
+
+#define DEFINE_TIME()                                                                                                 \
     /* Delay needed before here*/\
+    DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
@@ -5560,6 +5561,7 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_TX_BOARD_PWR(ch)
     TX_CHANNELS
 #undef X
+    DEFINE_DEBUG_DELAY()
 // Initialize time boards
     DEFINE_TIME()
 // Inverts dev clock going to each rx board
