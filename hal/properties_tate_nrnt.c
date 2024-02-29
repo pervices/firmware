@@ -5464,7 +5464,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad", SP, NAC)\
-    DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "0", SP, NAC)
+    DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "0", SP, NAC)\
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
@@ -5861,7 +5861,7 @@ int jesd_master_reset() {
 
     //Takes rx channels dsp out of reset if they are in use. When channels are in reset JESD sync is ignored.
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
-    for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+    for(int chan = NUM_RX_CHANNELS -1; chan >= 0; chan--) {
         read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
         // if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
         //     write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
@@ -5933,7 +5933,7 @@ int jesd_master_reset() {
         }
 
         //Checks if all rx JESDs are working
-        for(int chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
+        for(int chan = NUM_RX_CHANNELS - 1; chan >= 0 && !is_bad_attempt; chan--) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/status", chan+'a');
                 if(property_good(prop_path) != 1) {
