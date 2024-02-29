@@ -4192,6 +4192,10 @@ static int hdlr_time_board_temp(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
+    for(int n = 0; n < 10; n++) {
+
+    }
+
     return RETURN_SUCCESS;
 }
 
@@ -5053,6 +5057,9 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_user_regs(const char *data, char *ret) {
+    // DEBUG: taking this function to add a delay to
+    PRINT(ERROR, "DEBUG delay\n");
+    usleep(1000000);
     return RETURN_SUCCESS;
 }
 
@@ -5449,10 +5456,10 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "0", SP, NAC)
 
 #define DEFINE_FPGA()                                                                                                         \
+    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
