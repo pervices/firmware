@@ -5845,11 +5845,11 @@ int jesd_master_reset() {
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
     for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
-        if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
-            write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
-        } else {
+        // if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+        //     write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+        // } else {
             write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
-        }
+        // }
     }
     // Gives time for sysref unmask to update
     usleep(jesd_mask_delay);
@@ -5990,6 +5990,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
     set_analog_sysref_delay(analog_sysref_delay);
 
+    // Set sysref to send 4 pulses
     system("echo \"debug -l 7 -r 13e -w 2\" | mcu -f s");
 
     // Note this is set to 0 for success, any other value for failure
