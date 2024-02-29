@@ -148,10 +148,10 @@
     #if (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS ==4)
         //TODO generate this dynamically, used by the macro to create the functions for each channel
         #define RX_CHANNELS \
-            X(d) \
-            X(c) \
+            X(a) \
             X(b) \
-            X(a)
+            X(c) \
+            X(d)
 
         #define TX_CHANNELS \
             X(a) \
