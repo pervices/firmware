@@ -5554,10 +5554,10 @@ GPIO_PINS
 
 static prop_t property_table[] = {
 // Turns off rx boards
+    DEFINE_DEBUG_DELAY()
 #define X(ch) DEFINE_RX_BOARD_PWR(ch)
     RX_CHANNELS
 #undef X
-    DEFINE_DEBUG_DELAY()
 // Turns off tx boards
 #define X(ch) DEFINE_TX_BOARD_PWR(ch)
     TX_CHANNELS
