@@ -4203,10 +4203,6 @@ static int hdlr_time_board_temp(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
-    for(int n = 0; n < 10; n++) {
-
-    }
-
     return RETURN_SUCCESS;
 }
 
