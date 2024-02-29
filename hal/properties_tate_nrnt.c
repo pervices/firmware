@@ -6034,8 +6034,6 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
 
     set_analog_sysref_delay(analog_sysref_delay);
 
-    usleep(100000);
-
     // Note this is set to 0 for success, any other value for failure
     int jesd_master_error = jesd_master_reset();
 
