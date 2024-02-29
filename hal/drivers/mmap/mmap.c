@@ -284,3 +284,27 @@ void mmap_fini() {
         mmap_fd = -1;
     }
 }
+
+#if defined(TATE_NRNT)
+//the jesd_shift in this is the used for the bitshift to select the which jesd's registers to access
+int read_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t *data) {
+    uint32_t jesd_id = 1 << jesd_shift;
+    int error_code = write_hps_reg("net6", jesd_id);
+    error_code |= write_hps_reg("net7", address/4);
+    error_code |= write_hps_reg("net9", 0x1);
+    error_code |= write_hps_reg("net9", 0x0);
+    error_code |= read_hps_reg("res_ro30", data);
+    return error_code;
+}
+
+//the jesd_shift in this is the one used for the bitshift to select the which jesd's registers to access
+int write_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t data) {
+    uint32_t jesd_id = 1 << jesd_shift;
+    int error_code = write_hps_reg("net6", jesd_id);
+    error_code |= write_hps_reg("net7", address/4);
+    error_code |= write_hps_reg("net8", data);
+    error_code |= write_hps_reg("net9", 0x2);
+    error_code |= write_hps_reg("net9", 0x0);
+    return error_code;
+}
+#endif
