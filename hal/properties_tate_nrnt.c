@@ -3339,6 +3339,17 @@ TX_CHANNELS
     }\
     /*-1 indicates do nothing, 1 indicates respond to sysref, 0 indicates do not respond to sysref*/\
     static int hdlr_rx_##ch##_jesd_mask(const char *data, char *ret) {\
+        int mask = 0;\
+        sscanf(data, "%i", &mask);\
+        if(mask < 0) {\
+            return RETURN_SUCCESS;\
+        } else if(mask > 0) {\
+            snprintf(buf, MAX_PROP_LEN, "board -s 1\r");\
+        } else {\
+            snprintf(buf, MAX_PROP_LEN, "board -s 0\r");\
+        }\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        \
         return RETURN_SUCCESS;\
     }
 RX_CHANNELS
