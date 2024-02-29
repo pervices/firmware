@@ -5480,7 +5480,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "pulsed", SP, NAC)   \
+    DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
     /* 3G requires 4 pulses */\
     /* TODO verify this change doesn't break 1G */\
     DEFINE_FILE_PROP_P("time/sync/pulses_per_sysref"         , hdlr_time_sync_pulses_per_sysref,       RW, "4", SP, NAC)         \
