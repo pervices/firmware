@@ -5056,12 +5056,12 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_user_regs(const char *data, char *ret) {
-    // DEBUG: taking this function to add a delay to
-    PRINT(ERROR, "DEBUG delay\n");
-    usleep(1000000);
-    return RETURN_SUCCESS;
-}
+// static int hdlr_fpga_user_regs(const char *data, char *ret) {
+//     // DEBUG: taking this function to add a delay to
+//     PRINT(ERROR, "DEBUG delay\n");
+//     usleep(1000000);
+//     return RETURN_SUCCESS;
+// }
 
 static int hdlr_fpga_reset(const char *data, char *ret) {
     /* The reset controllet is like a waterfall:
@@ -5554,7 +5554,7 @@ GPIO_PINS
 
 static prop_t property_table[] = {
 // Turns off rx boards
-    DEFINE_DEBUG_DELAY()
+    // DEFINE_DEBUG_DELAY()
 #define X(ch) DEFINE_RX_BOARD_PWR(ch)
     RX_CHANNELS
 #undef X
