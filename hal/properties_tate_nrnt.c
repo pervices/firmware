@@ -5153,8 +5153,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // default value. This sets it back to the state it was in before the FPGA reset.
     set_led_state(led_state);
 
-    // Prevent FPGA JESD from being triggered by continuous sysref when powering on boards or? prevents it from tiggering rx to start JESD early - maybe hopefully
-
+    // Prevent premature JESD init from causing issues
     for(uint8_t n = 0; n < NUM_RX_CHANNELS; n++) {
         // Turns on reinit on error (which will be occuring continuously until its time to reinit JESD)
         write_jesd_reg(1 << n, 0x50, 0x1000);
