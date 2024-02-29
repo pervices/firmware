@@ -5481,7 +5481,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "pulsed", SP, NAC)   \
-    DEFINE_FILE_PROP_P("time/sync/pulses_per_sysref"         , hdlr_time_sync_pulses_per_sysref,       RW, "8", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/sync/pulses_per_sysref"         , hdlr_time_sync_pulses_per_sysref,       RW, "4", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0", SP, NAC)         \
