@@ -5063,12 +5063,9 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-// static int hdlr_fpga_user_regs(const char *data, char *ret) {
-//     // DEBUG: taking this function to add a delay to
-//     PRINT(ERROR, "DEBUG delay\n");
-//     usleep(1000000);
-//     return RETURN_SUCCESS;
-// }
+static int hdlr_fpga_user_regs(const char *data, char *ret) {
+    return RETURN_SUCCESS;
+}
 
 static int hdlr_fpga_reset(const char *data, char *ret) {
     /* The reset controllet is like a waterfall:
@@ -5422,11 +5419,7 @@ GPIO_PINS
 //    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0")
 //    DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0")
 
-#define DEFINE_DEBUG_DELAY()\
-    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)\
-
 #define DEFINE_TIME()                                                                                                 \
-    /* Delay needed before here*/\
     DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
@@ -5470,6 +5463,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
@@ -5561,7 +5555,6 @@ GPIO_PINS
 
 static prop_t property_table[] = {
 // Turns off rx boards
-    // DEFINE_DEBUG_DELAY()
 #define X(ch) DEFINE_RX_BOARD_PWR(ch)
     RX_CHANNELS
 #undef X
