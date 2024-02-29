@@ -5899,13 +5899,10 @@ int jesd_master_reset() {
         TX_CHANNELS
 #undef X
 
-        //Issue JESD master reset
-        // set_property("fpga/reset", "3");
-
-        system("/home/dev0/jesd_gp.sh -j 3 -a 0x54 -v 0x5");
-        system("/home/dev0/jesd_gp.sh -j 2 -a 0x54 -v 0x5");
-        system("/home/dev0/jesd_gp.sh -j 1 -a 0x54 -v 0x5");
-        system("/home/dev0/jesd_gp.sh -j 0 -a 0x54 -v 0x5");
+        // Reinits JESD and begins waiting for sysref
+        for(uint8_t n = 0; n < NUM_RX_CHANNELS; n++) {
+            write_jesd_reg(1 << n, 0x54, 0x5);
+        }
 
         //Wait for links to go down
         usleep(jesd_reset_delay);
