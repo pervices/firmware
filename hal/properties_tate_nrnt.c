@@ -5900,8 +5900,8 @@ int jesd_master_reset() {
 #undef X
 
         // Reinits JESD and begins waiting for sysref
-        for(uint8_t n = 0; n < NUM_RX_CHANNELS; n++) {
-            write_jesd_reg(1 << n, 0x54, 0x5);
+        for(uint8_t n = NUM_RX_CHANNELS; n  > 0; n--) {
+            write_jesd_reg(1 << (n - 1), 0x54, 0x5);
         }
 
         //Wait for links to go down
