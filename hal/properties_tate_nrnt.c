@@ -5902,12 +5902,7 @@ int jesd_master_reset() {
 #undef X
 
         //Issue JESD master reset
-        // set_property("fpga/reset", "3");
-
-        system("/home/dev0/jesd_gp.sh -j 3 -a 0x54 -v 0x5");
-        system("/home/dev0/jesd_gp.sh -j 2 -a 0x54 -v 0x5");
-        system("/home/dev0/jesd_gp.sh -j 1 -a 0x54 -v 0x5");
-        system("/home/dev0/jesd_gp.sh -j 0 -a 0x54 -v 0x5");
+        set_property("fpga/reset", "3");
 
         //Wait for links to go down
         usleep(jesd_reset_delay);
