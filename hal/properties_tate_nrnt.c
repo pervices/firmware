@@ -5120,6 +5120,11 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // default value. This sets it back to the state it was in before the FPGA reset.
     set_led_state(led_state);
 
+    system("/home/dev0/jesd_gp.sh -j 3 -a 0x54 -v 0x0");
+    system("/home/dev0/jesd_gp.sh -j 2 -a 0x54 -v 0x0");
+    system("/home/dev0/jesd_gp.sh -j 1 -a 0x54 -v 0x0");
+    system("/home/dev0/jesd_gp.sh -j 0 -a 0x54 -v 0x0");
+
     return RETURN_SUCCESS;
 }
 
@@ -5443,7 +5448,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
+    DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "pulsed", SP, NAC)   \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_resync_all"            , hdlr_time_sync_lmk_resync_all,          WO, "0", SP, NAC)         \
@@ -5902,7 +5907,12 @@ int jesd_master_reset() {
 #undef X
 
         //Issue JESD master reset
-        set_property("fpga/reset", "3");
+        // set_property("fpga/reset", "3");
+
+        system("/home/dev0/jesd_gp.sh -j 3 -a 0x54 -v 0x5");
+        system("/home/dev0/jesd_gp.sh -j 2 -a 0x54 -v 0x5");
+        system("/home/dev0/jesd_gp.sh -j 1 -a 0x54 -v 0x5");
+        system("/home/dev0/jesd_gp.sh -j 0 -a 0x54 -v 0x5");
 
         //Wait for links to go down
         usleep(jesd_reset_delay);
