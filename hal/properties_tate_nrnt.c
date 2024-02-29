@@ -171,7 +171,7 @@ static const uint8_t ipver[] = {
     IPVER_IPV4,
 };
 
-const int jesd_reset_delay = 300000;
+const int jesd_reset_delay = 100000;
 const int jesd_mask_delay = 200000;
 
 int jesd_master_reset();
@@ -5464,7 +5464,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad", SP, NAC)\
-    DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "0", SP, NAC)\
+    DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "0", SP, NAC)
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
