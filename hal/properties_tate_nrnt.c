@@ -5557,11 +5557,11 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_BOARD_PWR(ch)
     RX_CHANNELS
 #undef X
+    DEFINE_DEBUG_DELAY()
 // Turns off tx boards
 #define X(ch) DEFINE_TX_BOARD_PWR(ch)
     TX_CHANNELS
 #undef X
-    DEFINE_DEBUG_DELAY()
 // Initialize time boards
     DEFINE_TIME()
 // Inverts dev clock going to each rx board
