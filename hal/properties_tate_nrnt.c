@@ -5858,11 +5858,11 @@ int jesd_master_reset() {
     //Not taking them out of reset will result in them being out of alignment, and inconsistent behaviour if all channels are in reset
     for(int chan = NUM_RX_CHANNELS -1; chan >= 0; chan--) {
         read_hps_reg(rx_reg4_map[chan], &original_rx4[chan]);
-        // if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
-        //     write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
-        // } else {
+        if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
+            write_hps_reg_mask(rx_reg4_map[chan], 0x0, 0x2);
+        } else {
             write_hps_reg_mask(rx_reg4_map[chan], 0x2, 0x2);
-        // }
+        }
     }
     // Gives time for sysref unmask to update
     usleep(jesd_mask_delay);
