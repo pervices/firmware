@@ -5155,7 +5155,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
 
     // Prevent premature JESD init from causing issues
     for(uint8_t n = 0; n < NUM_RX_CHANNELS; n++) {
-        // Turns on reinit on error (which will be occuring continuously until its time to reinit JESD)
+        // Turns off reinit on error (which will be occuring continuously until its time to reinit JESD)
         write_jesd_reg(1 << n, 0x50, 0x1000);
         // Disables csr_dis_lane_align_det
         write_jesd_reg(1 << n, 0x54, 0x0);
