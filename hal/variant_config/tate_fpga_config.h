@@ -26,6 +26,10 @@
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
     #define INDIVIDUAL_RESET_BIT_OFFSET_TX 0
 
+    // Selects which JESD's registers to write to
+    #define JESD_SHIFT_RX 0
+    #define JESD_SHIFT_TX 8
+
     // Number of channels that exist on the FPGA, not all of these are necessarily installed
     #define NUM_FPGA_RX 8
     #define NUM_FPGA_TX 0
@@ -64,6 +68,10 @@
 
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
     #define INDIVIDUAL_RESET_BIT_OFFSET_TX 12
+
+    // Selects which JESD's registers to write to
+    #define JESD_SHIFT_RX 0
+    #define JESD_SHIFT_TX 8
 
     // Number of channels that exist on the FPGA, not all of these are necessarily installed
     #define NUM_FPGA_RX 4
@@ -115,6 +123,11 @@
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
     #define INDIVIDUAL_RESET_BIT_OFFSET_TX 13
 
+    // Selects which JESD's registers to write to
+    // TODO: verify
+    #define JESD_SHIFT_RX 0
+    #define JESD_SHIFT_TX 9
+
     // Number of channels that exist on the FPGA, not all of these are necessarily installed
     #define NUM_FPGA_RX 9
     #define NUM_FPGA_TX 7
@@ -163,6 +176,10 @@
 
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
     #define INDIVIDUAL_RESET_BIT_OFFSET_TX 12
+
+    // Selects which JESD's registers to write to
+    #define JESD_SHIFT_RX 0
+    #define JESD_SHIFT_TX 8
 
     // Number of channels that exist on the FPGA, not all of these are necessarily installed
     #define NUM_FPGA_RX 8
@@ -213,6 +230,10 @@
 
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
     #define INDIVIDUAL_RESET_BIT_OFFSET_TX 1
+
+    // Selects which JESD's registers to write to
+    #define JESD_SHIFT_RX 0
+    #define JESD_SHIFT_TX 8
 
     // Number of channels that exist on the FPGA, not all of these are necessarily installed
     #define NUM_FPGA_RX 4

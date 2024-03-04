@@ -52,6 +52,7 @@ static int reg_write(uint32_t addr, uint32_t *data) {
         (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
 
     *mmap_addr = *data;
+    // FIXME: This command always returns with an error, it may be the reason why so many regwrites that shouldn't need delays require them
     msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
 
     return RETURN_SUCCESS;
@@ -284,3 +285,35 @@ void mmap_fini() {
         mmap_fd = -1;
     }
 }
+
+#if defined(TATE_NRNT)
+//the jesd_shift = JESD_SHIFT_RX or JESD_SHIFT_TX + INT(ch)
+int read_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t *data) {
+    uint32_t jesd_id = 1 << jesd_shift;
+    int error_code = write_hps_reg("net6", jesd_id);
+    error_code |= write_hps_reg("net7", address/4);
+    error_code |= write_hps_reg("net9", 0x1);
+    error_code |= write_hps_reg("net9", 0x0);
+    error_code |= read_hps_reg("res_ro30", data);
+    return error_code;
+}
+
+//the jesd_shift = JESD_SHIFT_RX or JESD_SHIFT_TX + INT(ch)
+int write_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t data) {
+    uint32_t jesd_id = 1 << jesd_shift;
+    int error_code = write_hps_reg("net6", jesd_id);
+    error_code |= write_hps_reg("net7", address/4);
+    error_code |= write_hps_reg("net8", data);
+    error_code |= write_hps_reg("net9", 0x2);
+    error_code |= write_hps_reg("net9", 0x0);
+    return error_code;
+}
+
+int write_jesd_reg_mask(uint8_t jesd_shift, uint32_t address, uint32_t data, uint32_t mask) {
+    uint32_t tmp;
+    if (read_jesd_reg(jesd_shift, address, &tmp)) {
+        return RETURN_ERROR_INVALID_REGISTER;
+    }
+    return write_jesd_reg(jesd_shift, address, (tmp & ~mask) | (data & mask));
+}
+#endif
