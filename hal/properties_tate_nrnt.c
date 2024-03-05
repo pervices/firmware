@@ -1801,7 +1801,7 @@ int check_rf_pll(int ch, bool is_tx) {
     \
     static int hdlr_tx_##ch##_about_hw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -h\r");                                             \
-        ping_tx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
