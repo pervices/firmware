@@ -4392,39 +4392,52 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+int check_sfp() {
+    uint32_t sys18_val = 0;
+    read_hps_reg("sys18", &sys18_val);
+
+    // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
+    uint32_t sfp_link_established = (sys18_val >> 24 & 0xf);
+    uint32_t sfp_module_present = sys18_val >> 28;
+    // The bits used to detect which SFPs are inserted is flipped compared to which SFPs are working
+    sfp_module_present = ((sfp_module_present & 0x1) << 3) | ((sfp_module_present & 0x2) << 1) | ((sfp_module_present & 0x4) >> 1) | ((sfp_module_present & 0x8) >> 3);
+
+    if((sfp_link_established | sfp_module_present) == sfp_link_established) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
+        PRINT(ERROR, "SFP established: %x\n", sfp_link_established);
+        PRINT(ERROR, "SFP present: %x\n", sfp_module_present);
+        return RETURN_ERROR;
+    }
+}
+
+// 0: do nothing
+// 1: reset SFP
+// 2: reset SFPs only if they are down
 static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     //does not reset if the user write a 0
     int reset = 0;
     sscanf(data, "%i", &reset);
     if(!reset) return RETURN_SUCCESS;
 
+    if(reset == 2) {
+        // SFP is up, skip reset
+        if(check_sfp() == RETURN_SUCCESS) {
+            return RETURN_SUCCESS;
+        }
+    }
+
     for(int n = 0; n < sfp_max_reset_attempts; n++) {
-        uint32_t sys18_val = 0;
-        uint32_t val = 0;
-        read_hps_reg("res_rw7", &val);
-        val = val | (1 << 29);
-        write_hps_reg("res_rw7", val);
-        val = val & ~(1 << 29);
-        write_hps_reg("res_rw7", val);
 
-        wait_for_fpga_reset();
+        // Reset FPGA starting at SFPs
+        set_property("fpga/reset", "2");
 
-        read_hps_reg("sys18", &sys18_val);
-
-        // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
-        uint32_t sfp_link_established = (sys18_val >> 24 & 0xf);
-        uint32_t sfp_module_present = sys18_val >> 28;
-        // The bits used to detect which SFPs are inserted is flipped compared to which SFPs are working
-        sfp_module_present = ((sfp_module_present & 0x1) << 3) | ((sfp_module_present & 0x2) << 1) | ((sfp_module_present & 0x4) >> 1) | ((sfp_module_present & 0x8) >> 3);
-
-        if((sfp_link_established | sfp_module_present) == sfp_link_established) {
+        if(check_sfp() == RETURN_SUCCESS) {
             // Reset counter for number of failed boots
             update_interboot_variable("cons_sfp_fail_count", 0);
             return RETURN_SUCCESS;
         }
-        PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
-        PRINT(ERROR, "SFP established: %x\n", sfp_link_established);
-        PRINT(ERROR, "SFP present: %x\n", sfp_module_present);
     }
     PRINT(ERROR, "Failed to establish sfp link after %i attempts rebooting\n", sfp_max_reset_attempts);
 
@@ -5256,7 +5269,7 @@ GPIO_PINS
 
 #define DEFINE_RX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)\
-        DEFINE_FILE_PROP_P("rx/" #_c "/jesd/unmask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/unmask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)
 
 #define DEFINE_RX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
@@ -5457,7 +5470,7 @@ GPIO_PINS
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "2", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "in", SP, NAC)               \
@@ -5895,14 +5908,28 @@ int jesd_master_reset() {
         TX_CHANNELS
 #undef X
 
-        //Issue JESD master reset
+        // TODO: figure out of issuing a JESD master reset can be done since other fixes have been made
+        // Reset JESD IP
         set_property("fpga/reset", "3");
+        // Reinint rx JESD without resetting IP
+        // Resetting the IP is prefered but sometimes this works when resetting the IP doesn't
+        // for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        //     write_jesd_reg_mask(chan + JESD_SHIFT_RX, 0x54, 0x5, 0x5);
+        // }
+        // // Reinint tx JESD
+        // for(int chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+        //     write_jesd_reg_mask(chan + JESD_SHIFT_TX, 0x54, 0x5, 0x5);
+        // }
 
         //Wait for links to go down
         usleep(jesd_reset_delay);
 
         // Issues sysref pulse
         set_property("time/sync/lmk_sync_tgl_jesd", "1");
+        // Alternate nmethod of sending sysref at the same time
+        // Might help phase coherency but is not used since it may not work on old (RTM3) hardware
+        // strcpy(buf, "clk -y\r");
+        // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
         //Wait for links to re-establish
         usleep(jesd_reset_delay);
