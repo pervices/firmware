@@ -3561,14 +3561,13 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 }
 
 // Enables streaming at a target buffer level, instead of relying on start and end of burst commands
-// 0 stops all fore streaming. To start streaming set this using a value where each bit corresponds to ech channel
+// 0 stops all force streaming. To start streaming set this using a value where each bit corresponds to each channel
 // ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
 // using -1 for streaming all
 static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
     int32_t request = 0;
     sscanf(data, "%i", &request);
 
-    //Negative values indicate do nothing, positive indicate which channels to use
         for(int n = 0; n < NUM_TX_CHANNELS; n++) {
             int32_t request_bit = (request >> n) & 1;
             request_bit = request_bit << 16;

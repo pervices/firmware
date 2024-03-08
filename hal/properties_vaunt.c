@@ -2411,6 +2411,24 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 
     return RETURN_SUCCESS;
 }
+
+// Enables streaming at a target buffer level, instead of relying on start and end of burst commands
+// 0 stops all force streaming. To start streaming set this using a value where each bit corresponds to each channel
+// ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
+// using -1 for streaming all
+static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
+    int32_t request = 0;
+    sscanf(data, "%i", &request);
+
+    for(int n = 0; n < NUM_CHANNELS; n++) {
+        int32_t request_bit = (request >> n) & 1;
+        request_bit = request_bit << 16;
+        // Setting bit 16 to high enables this modes, low sets it to normal
+        write_hps_reg_mask(reg4[n + 4], request_bit, 1 << 16);
+    }
+
+    return RETURN_SUCCESS;
+}
 #endif //(!RX_40GHZ_FE)
 
 static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
@@ -4221,6 +4239,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
+    DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
     DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
