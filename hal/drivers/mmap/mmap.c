@@ -83,8 +83,10 @@ int read_hps_reg(const char *reg, uint32_t *data) {
     if (temp) {
         return reg_read(temp->addr, data);
     }
-    else
+    else {
+        *data = 0;
         return RETURN_ERROR_INVALID_REGISTER;
+    }
 }
 
 int write_hps_reg(const char *reg, uint32_t data) {
@@ -310,7 +312,7 @@ int write_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t data) {
 }
 
 int write_jesd_reg_mask(uint8_t jesd_shift, uint32_t address, uint32_t data, uint32_t mask) {
-    uint32_t tmp;
+    uint32_t tmp = 0;
     if (read_jesd_reg(jesd_shift, address, &tmp)) {
         return RETURN_ERROR_INVALID_REGISTER;
     }
