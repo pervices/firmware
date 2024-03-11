@@ -3702,8 +3702,18 @@ static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
     uint32_t old_val;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
+    // ensure pay_len is not too large
+    // JPOL: 2024-02-29 experimentally determined 8144 is the largest payload crimson will send
+    if (pay_len > 8144)
+    {
+        pay_len = 8144;
+    }
+    // ensure pay_len is a multiple of 8 (4 bytes per IQ sample and 2 samples per clock means 8 is the minimum step size)
+    pay_len -= pay_len % 8;
+
     read_hps_reg("net0", &old_val);
     write_hps_reg("net0", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    snprintf(ret, MAX_PROP_LEN, "%u\n", pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -3752,8 +3762,18 @@ static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
     uint32_t old_val;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
+    // ensure pay_len is not too large
+    // JPOL: 2024-02-29 experimentally determined 8144 is the largest payload crimson will send
+    if (pay_len > 8144)
+    {
+        pay_len = 8144;
+    }
+    // ensure pay_len is a multiple of 8 (4 bytes per IQ sample and 2 samples per clock means 8 is the minimum step size)
+    pay_len -= pay_len % 8;
+
     read_hps_reg("net15", &old_val);
     write_hps_reg("net15", (old_val & ~(0xffff0000)) | (pay_len << 16));
+    snprintf(ret, MAX_PROP_LEN, "%u\n", pay_len);
     return RETURN_SUCCESS;
 }
 
