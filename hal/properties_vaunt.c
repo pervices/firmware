@@ -2620,10 +2620,9 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     char path_buffer[MAX_PATH_LEN];
     if(stream != 0) {
         for(int n = 0; n < NUM_CHANNELS; n++) {
-            // Disables vita
-            // Without vita disabled it will wait until it reaches a start time provided by stream command packets
+            // Enables vita which is needed for another crimson to correctly read the packets
             sprintf(path_buffer, "rx/%c/link/vita_en", n+'a');
-            set_property(path_buffer, "0");
+            set_property(path_buffer, "1");
 
             //stops any existing force streaming
             sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
