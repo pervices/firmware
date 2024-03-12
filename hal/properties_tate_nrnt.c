@@ -2209,7 +2209,6 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val = 0;                                                  \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         uint16_t factor = 0;\
@@ -2245,9 +2244,6 @@ TX_CHANNELS
         write_hps_reg("rx" STR(ch) "1", factor);                      \
         /*Set whether to bypass dsp and fir*/\
         write_hps_reg("rx" STR(ch) "2", bypass);                      \
-        /*Sets whether fraction samples are used (always false)*/\
-        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);             \
-        write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));\
         \
                                                                                \
         return RETURN_SUCCESS;                                                 \

@@ -1021,8 +1021,6 @@ int check_rf_pll(int ch, bool is_tx) {
         int channel = INT(ch);                                                 \
         int shift = (channel%4)*8;                                             \
         write_hps_reg("tx" STR(ch) "1", base_factor);                          \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
-        write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));                 \
         snprintf(ret, MAX_PROP_LEN, "%lf",                                     \
             get_base_sample_rate() / (double)(base_factor + 1));               \
         /* Set gain adjustment */                                              \
@@ -1757,8 +1755,6 @@ CHANNELS
                                                                                \
         int gain_factor;                                                       \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 15));             \
             snprintf(ret, MAX_PROP_LEN, "%lf", get_base_sample_rate() / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
