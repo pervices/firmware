@@ -2209,7 +2209,6 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val = 0;                                                  \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         uint16_t factor = 0;\
@@ -2245,9 +2244,6 @@ TX_CHANNELS
         write_hps_reg("rx" STR(ch) "1", factor);                      \
         /*Set whether to bypass dsp and fir*/\
         write_hps_reg("rx" STR(ch) "2", bypass);                      \
-        /*Sets whether fraction samples are used (always false)*/\
-        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);             \
-        write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));\
         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2867,13 +2863,9 @@ TX_CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_prime_trigger_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        uint32_t val = 0;\
-        read_hps_reg(rx_reg4_map[INT(ch)], &val);\
-        val = val & ~(0x6002 | 0x100);\
         if(data[0]=='0') {\
-            /*puts the dsp in reset*/\
-            val = val | 0x6002;\
-            write_hps_reg(rx_reg4_map[INT(ch)], val);\
+            /*disables channel and puts the dsp in reset*/\
+            write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x002, 0x102);\
             rx_stream[INT(ch)] = STREAM_OFF;\
             /*Ignores sma (enabling normal stream command)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
@@ -2885,9 +2877,8 @@ TX_CHANNELS
             set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
             /*turn time disable off*/\
             set_property("rx/" STR(ch) "/trigger/time_disable", "1");\
-            /*takes the dsp out of reset*/\
-            val = val | 0x100;\
-            write_hps_reg(rx_reg4_map[INT(ch)], val);\
+            /*enable channel and take the dsp out of reset*/\
+            write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x100, 0x102);\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
@@ -3780,6 +3771,11 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     char path_buffer[MAX_PATH_LEN];
     if(stream != 0) {
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+            // Disables vita
+            // Without vita disabled it will wait until it reaches a start time provided by stream command packets
+            sprintf(path_buffer, "rx/%c/link/vita_en", n+'a');
+            set_property(path_buffer, "0");
+
             //stops any existing force streaming
             snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");

@@ -1021,8 +1021,6 @@ int check_rf_pll(int ch, bool is_tx) {
         int channel = INT(ch);                                                 \
         int shift = (channel%4)*8;                                             \
         write_hps_reg("tx" STR(ch) "1", base_factor);                          \
-        read_hps_reg("tx" STR(ch) "4", &old_val);                              \
-        write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 15));                 \
         snprintf(ret, MAX_PROP_LEN, "%lf",                                     \
             get_base_sample_rate() / (double)(base_factor + 1));               \
         /* Set gain adjustment */                                              \
@@ -1757,8 +1755,6 @@ CHANNELS
                                                                                \
         int gain_factor;                                                       \
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
-            read_hps_reg("rx" STR(ch) "4", &old_val);                          \
-            write_hps_reg("rx" STR(ch) "4", old_val & ~(1 << 15));             \
             snprintf(ret, MAX_PROP_LEN, "%lf", get_base_sample_rate() / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
             gain_factor = decim_gain_lut[(base_factor)];                       \
@@ -1924,13 +1920,9 @@ CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_prime_trigger_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        uint32_t val = 0;\
-        read_hps_reg(reg4[INT(ch)], &val);\
-        val = val & ~(0x6002 | 0x2100);\
         if(data[0]=='0') {\
-            /*puts the dsp in reset*/\
-            val = val | 0x6002;\
-            write_hps_reg(reg4[INT(ch)], val);\
+            /*disables channel and puts the dsp in reset*/\
+            write_hps_reg_mask(reg4[INT(ch)], 0x002, 0x102);\
             rx_stream[INT(ch)] = STREAM_OFF;\
             /*Ignores sma (enabling normal stream command)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
@@ -1942,9 +1934,8 @@ CHANNELS
             set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
             /*disable time trigger*/\
             set_property("rx/" STR(ch) "/trigger/time_disable", "1");\
-            /*takes the dsp out of reset*/\
-            val = val | 0x2100;\
-            write_hps_reg(reg4[INT(ch)], val);\
+            /*enable channel and take the dsp out of reset*/\
+            write_hps_reg_mask(reg4[INT(ch)], 0x100, 0x102);\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
@@ -2629,6 +2620,11 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     char path_buffer[MAX_PATH_LEN];
     if(stream != 0) {
         for(int n = 0; n < NUM_CHANNELS; n++) {
+            // Disables vita
+            // Without vita disabled it will wait until it reaches a start time provided by stream command packets
+            sprintf(path_buffer, "rx/%c/link/vita_en", n+'a');
+            set_property(path_buffer, "0");
+
             //stops any existing force streaming
             sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
