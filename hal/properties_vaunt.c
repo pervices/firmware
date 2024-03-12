@@ -1218,10 +1218,14 @@ int check_rf_pll(int ch, bool is_tx) {
             read_hps_reg(reg4[INT(CH) + 4], &old_val);                         \
             write_hps_reg(reg4[INT(CH) + 4], old_val & ~0x100);                \
                                                                                \
-            /* send sync pulse */                                              \
+            /* Resets all JESD */\
+            /* Also resets all DSPs */\
+            /* Only reset on boot to avoid resetting other channels during operation */\
             if(tx_jesd[INT(ch)] == JESD_UNINIT) {\
                 sync_channels(15);\
             }\
+            tx_jesd[INT(ch)] = JESD_INIT;\
+            /* TODO: add check/warning if JESD is down*/\
                                                                                \
             /* enable dsp channels, and reset the DSP */                       \
             read_hps_reg(reg4[INT(ch) + 4], &old_val);                         \
@@ -2002,11 +2006,14 @@ CHANNELS
             read_hps_reg(reg4[INT(CH)], &old_val);                               \
             write_hps_reg(reg4[INT(CH)], old_val & ~0x100);                      \
                                                                                \
-            /* send sync pulse */                                              \
-            /* TODO: add check and if JESD is down reinitialize JESD regardless of if it is already initialized */\
+            /* Resets all JESD */\
+            /* Also resets all DSPs */\
+            /* Only reset on boot to avoid resetting other channels during operation */\
             if(rx_jesd[INT(ch)] == JESD_UNINIT) {\
                 sync_channels(15);\
             }\
+            rx_jesd[INT(ch)] = JESD_INIT;\
+            /* TODO: add check/warning if JESD is down*/\
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
             if (rx_stream[INT(ch)] == STREAM_ON) {                               \
