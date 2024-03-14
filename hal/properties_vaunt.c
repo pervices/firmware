@@ -175,12 +175,6 @@ static uint8_t rx_power[] = {
 #undef X
 };
 
-static uint8_t rx_jesd[] = {
-#define X(ch) JESD_UNINIT,
-    CHANNELS
-#undef X
-};
-
 static uint8_t rx_stream[] = {
 #define X(ch) STREAM_OFF,
     CHANNELS
@@ -201,12 +195,6 @@ static uint8_t tx_power[] = {
     #define X(ch) PWR_OFF,
     CHANNELS
     #undef X
-};
-
-static uint8_t tx_jesd[] = {
-#define X(ch) JESD_UNINIT,
-    CHANNELS
-#undef X
 };
 
 static int i_bias[] = {
@@ -1145,8 +1133,6 @@ int check_rf_pll(int ch, bool is_tx) {
         else                                                                   \
             write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 14));             \
                                                                                \
-        /* sync_channels( 15 ); */                                             \
-                                                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1218,13 +1204,6 @@ int check_rf_pll(int ch, bool is_tx) {
             read_hps_reg(reg4[INT(CH) + 4], &old_val);                         \
             write_hps_reg(reg4[INT(CH) + 4], old_val & ~0x100);                \
                                                                                \
-            /* Resets all JESD */\
-            /* Also resets all DSPs */\
-            /* Only reset on boot to avoid resetting other channels during operation */\
-            if(tx_jesd[INT(ch)] == JESD_UNINIT) {\
-                sync_channels(15);\
-            }\
-            tx_jesd[INT(ch)] = JESD_INIT;\
             /* TODO: add check/warning if JESD is down*/\
                                                                                \
             /* enable dsp channels, and reset the DSP */                       \
@@ -2006,13 +1985,6 @@ CHANNELS
             read_hps_reg(reg4[INT(CH)], &old_val);                               \
             write_hps_reg(reg4[INT(CH)], old_val & ~0x100);                      \
                                                                                \
-            /* Resets all JESD */\
-            /* Also resets all DSPs */\
-            /* Only reset on boot to avoid resetting other channels during operation */\
-            if(rx_jesd[INT(ch)] == JESD_UNINIT) {\
-                sync_channels(15);\
-            }\
-            rx_jesd[INT(ch)] = JESD_INIT;\
             /* TODO: add check/warning if JESD is down*/\
                                                                                \
             /* Enable active dsp channels, and reset DSP */                    \
@@ -3326,10 +3298,8 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             PRINT(INFO,"system time module reset\n");
         case 16:
             PRINT(INFO,"JESD reset\n");
-            // Indiates JESD was reset and cleanup is required
+            // Indiates JESD needs to be reinitialized after reset
             jesd_reset = 1;
-            // Prepared for JESD reset (since IP block is being reset
-            sync_channels_prep(15);
         case 17:
             PRINT(INFO,"tx chain reset\n");
         case 18:
@@ -3367,9 +3337,9 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
         set_led_state(led_reset);
     }
 
-    // Cleans up JESD reset status if JESD was reset
+    // Reinitialize JESD
     if(jesd_reset) {
-        sync_channels_cleanup(15);
+        sync_channels(15);
     }
 
     snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
@@ -4535,12 +4505,6 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 // Uses zeroth file descriptor for RX And TX for now until a way is found to
 // convert the channel mask into a integer.
 void sync_channels(uint8_t chan_mask) {
-    sync_channels_prep(chan_mask);
-    sync_channels_cleanup(chan_mask);
-}
-
-// Prepares for syncing channels (should happen automatically after prepartion finished)
-void sync_channels_prep(uint8_t chan_mask) {
     char str_chan_mask[MAX_PROP_LEN] = "";
     sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
 
@@ -4562,11 +4526,6 @@ void sync_channels_prep(uint8_t chan_mask) {
     ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
     usleep(200000); // Some wait time for MCUs to be ready
-}
-
-// Cleans up state after syncing channels
-void sync_channels_cleanup(uint8_t chan_mask) {
-    char str_chan_mask[MAX_PROP_LEN] = "";
 
     // Mask SYSREF on the FPGA
     write_hps_reg("res_rw7", 0);
