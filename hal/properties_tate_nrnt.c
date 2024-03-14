@@ -2253,14 +2253,17 @@ TX_CHANNELS
         double freq = 0;                                                       \
         uint32_t old_val = 0;                                                  \
         uint8_t direction = 0;                                                 \
-        char rate_s[50];\
-        get_property("rx/" STR(ch) "/dsp/rate", rate_s, 50);\
+        char read_s[50];\
+        get_property("rx/" STR(ch) "/dsp/rate", read_s, 50);\
         double rate;\
-        sscanf(rate_s, "%lf", &rate);\
+        sscanf(read_s, "%lf", &rate);\
+        get_property("rx/" STR(ch) "/about/fw_ver", read_s, 50);\
+        /* strstr will return NULL if the Rx3 string is not found, in which case the RX board is not a 3G board*/\
+        char *rx_hw_is_3g = strstr(read_s, "Rx3");\
         \
         /* nco shift caused by hardware configuration */\
         double hardware_shift;\
-        if(USE_3G_AS_1G) {\
+        if(USE_3G_AS_1G && (rx_hw_is_3g != NULL)) {\
             hardware_shift = RX_NCO_SHIFT_3G_TO_1G;\
         } else {\
             hardware_shift = 0;\
@@ -5287,6 +5290,14 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcudevid"           , hdlr_rx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcufuses"           , hdlr_rx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_rx_##_c##_about_sw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
@@ -5338,14 +5349,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000", SP, #_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcudevid"           , hdlr_rx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcufuses"           , hdlr_rx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_rx_##_c##_about_sw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", SP, #_c)         \
