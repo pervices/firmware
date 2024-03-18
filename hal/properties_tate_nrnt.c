@@ -80,6 +80,10 @@
 // Currently it is the attenuation from the attenuator on LTC 5586
 #define MID_HIGH_MAX_ATTEN 31
 
+//Constants needed for converting raw value received from LMT87 into temperature
+#define LMT87_CONST1 2637.0
+#define LMT87_CONST2 -13.6
+
 //used for rf freq val calc when in high band
 #define HB_STAGE2_MIXER_FREQ 1800000000
 
@@ -620,14 +624,14 @@ static int valid_trig_time_disable(const char *data, uint32_t *val) {
 static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?16:13), 1, val);
 }
 
 static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?17:14), 1, val);
 }
 
@@ -3357,7 +3361,7 @@ RX_CHANNELS
             \
         }\
         return r;                                                              \
-    }                                                                          
+    }
 TX_CHANNELS
 #undef X
 
@@ -3804,6 +3808,36 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             set_property(path_buffer, "0");
         }
     }
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_power_board_temp(const char *data, char *ret) {
+    FILE *i2c_return;
+    char i2c_value1[512];
+    char i2c_value2[512];
+    char i2c_value3[512];
+    float temp1;
+    float temp2;
+    float temp3;
+
+    i2c_return = popen("cat /sys/bus/i2c/devices/2-0049/in4_input", "r");
+    fgets(i2c_value1, sizeof(i2c_value1), i2c_return);
+    temp1 = (float)atof(i2c_value1);
+    temp1 = (temp1 - LMT87_CONST1)/(LMT87_CONST2);
+
+    i2c_return = popen("cat /sys/bus/i2c/devices/2-0049/in5_input", "r");
+    fgets(i2c_value2, sizeof(i2c_value2), i2c_return);
+    temp2 = (float)atof(i2c_value2);
+    temp2 = (temp2 - LMT87_CONST1)/(LMT87_CONST2);
+
+    i2c_return = popen("cat /sys/bus/i2c/devices/2-0049/in6_input", "r");
+    fgets(i2c_value3, sizeof(i2c_value3), i2c_return);
+    temp3 = (float)atof(i2c_value3);
+    temp3 = (temp3 - LMT87_CONST1)/(LMT87_CONST2);
+
+    snprintf(ret, MAX_PROP_LEN, "Temp 0: %.0f \nTemp 1: %.0f \nTemp 2: %.0f \n", temp1, temp2, temp3);
+
+    pclose(i2c_return);
     return RETURN_SUCCESS;
 }
 
@@ -4349,6 +4383,36 @@ static int hdlr_fpga_board_temp(const char *data, char *ret) {
         snprintf(ret, MAX_PROP_LEN, "temp -%u degC\n", old_val);
     }
 
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_board_digtemp(const char *data, char *ret) {
+    FILE *i2c_return;
+    char i2c_value1[512];
+    char i2c_value2[512];
+    char i2c_value3[512];
+    float temp1;
+    float temp2;
+    float temp3;
+
+    i2c_return = popen("cat /sys/bus/i2c/devices/1-004b/in5_input", "r");
+    fgets(i2c_value1, sizeof(i2c_value1), i2c_return);
+    temp1 = (float)atof(i2c_value1);
+    temp1 = (temp1 - LMT87_CONST1)/(LMT87_CONST2);
+
+    i2c_return = popen("cat /sys/bus/i2c/devices/1-004b/in6_input", "r");
+    fgets(i2c_value2, sizeof(i2c_value2), i2c_return);
+    temp2 = (float)atof(i2c_value2);
+    temp2 = (temp2 - LMT87_CONST1)/(LMT87_CONST2);
+
+    i2c_return = popen("cat /sys/bus/i2c/devices/1-004b/in7_input", "r");
+    fgets(i2c_value3, sizeof(i2c_value3), i2c_return);
+    temp3 = (float)atof(i2c_value3);
+    temp3 = (temp3 - LMT87_CONST1)/(LMT87_CONST2);
+
+    snprintf(ret, MAX_PROP_LEN, "Temp 0: %.0f \nTemp 1: %.0f \nTemp 2: %.0f \n", temp1, temp2, temp3);
+
+    pclose(i2c_return);
     return RETURN_SUCCESS;
 }
 
@@ -5498,6 +5562,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/board/sys_rstreq"               , hdlr_fpga_board_sys_rstreq,             WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20", SP, NAC)                \
+    DEFINE_FILE_PROP_P("fpga/board/digtemp"                  , hdlr_fpga_board_digtemp,                RW, "20", SP, NAC)                \
     DEFINE_FILE_PROP_P("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/qa/ecc_a_errors"                , hdlr_fpga_qa_ecc_a_errors,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/qa/ecc_b_errors"                , hdlr_fpga_qa_ecc_b_errors,              RW, "0", SP, NAC)                 \
@@ -5539,6 +5604,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("cm/trx/fpga_nco" , hdlr_cm_trx_fpga_nco , WO, "0", SP, NAC)\
     DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
 
+#define DEFINE_POWER()\
+    DEFINE_FILE_PROP_P("power/board/temp"                , hdlr_power_board_temp,                  RW, "20", SP, NAC)\
+
 // Contians information about the configuration
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)\
@@ -5571,6 +5639,8 @@ static prop_t property_table[] = {
 #undef X
 // Initialize FPGA
     DEFINE_FPGA()
+// Initialize power board
+    DEFINE_POWER()
 // Power on rx/tx boards, but don't wait for them to finish booting
 #define X(ch) DEFINE_RX_PWR_REBOOT(ch)
     RX_CHANNELS
