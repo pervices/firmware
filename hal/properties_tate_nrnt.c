@@ -4392,7 +4392,8 @@ int check_sfp() {
     // The bits used to detect which SFPs are inserted is flipped compared to which SFPs are working
     sfp_module_present = ((sfp_module_present & 0x1) << 3) | ((sfp_module_present & 0x2) << 1) | ((sfp_module_present & 0x4) >> 1) | ((sfp_module_present & 0x8) >> 3);
 
-    if((sfp_link_established | sfp_module_present) == sfp_link_established) {
+    if( sfp_module_present == sfp_link_established) {
+        PRINT(INFO, "SFP present and established: %x\n", sfp_link_established);
         return RETURN_SUCCESS;
     } else {
         PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
