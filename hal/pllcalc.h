@@ -67,10 +67,13 @@
 #if defined(VAUNT)
     #if defined(RTM6) || defined(RTM7)
         #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
+        #define PLL_CORE_REF_FREQ_HZ_S "25000000"
     #elif defined(RTM8)
         #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
+        #define PLL_CORE_REF_FREQ_HZ_S "5000000"
     #elif defined(RTM9) || defined(RTM10)
         #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
+        #define PLL_CORE_REF_FREQ_HZ_S "10000000"
     #else
         #error "Invalid RTM specified"
     #endif

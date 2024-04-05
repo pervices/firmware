@@ -33,6 +33,10 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+// Use STRINGIFY(interger define) to convert interger defines to strings
+#define STRINGIFY(s) STRINGIFY_HELPER(s)
+#define STRINGIFY_HELPER(s) #s
+
 #ifdef VAUNT
     //directory of the state tree
     #define BASE_DIR "/var/volatile/crimson"

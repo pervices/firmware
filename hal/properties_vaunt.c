@@ -44,6 +44,10 @@
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
+// Alias PLL_CORE_REF_FREQ_HZ for clarity
+#define LO_STEPSIZE PLL_CORE_REF_FREQ_HZ
+#define LO_STEPSIZE_S PLL_CORE_REF_FREQ_HZ_S
+
 // Number to divide the base sample rate by to get the maximum rate the host can request
 int link_rate_divisor = 1;
 
@@ -866,7 +870,7 @@ int check_rf_pll(int ch, bool is_tx) {
                                                                                \
         /* Send Parameters over to the MCU */                                  \
         if(set_pll_frequency(uart_tx_fd[INT(ch)],                              \
-            (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, true, INT(ch), true))        \
+            (uint64_t)LO_STEPSIZE, &pll, true, INT(ch), true))        \
         {                                                                      \
             snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                       \
         } else {                                                               \
@@ -1571,7 +1575,7 @@ CHANNELS
                                                                                \
         /* Send Parameters over to the MCU */                                  \
         if(set_pll_frequency(uart_rx_fd[INT(ch)],                              \
-            (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, false, INT(ch), true))       \
+            (uint64_t)LO_STEPSIZE, &pll, false, INT(ch), true))       \
         {                                                                      \
             snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq + lmx_freq);            \
         } else {                                                               \
@@ -4276,6 +4280,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 #define DEFINE_SYSTEM_INFO()\
     DEFINE_FILE_PROP_P("system/max_lo"              , hdlr_invalid,                           RO, S_MAX_RF_FREQ, SP, NAC)\
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/lo_step"              , hdlr_invalid,                           RO, LO_STEPSIZE_S, SP, NAC)\
     DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_max_sample_rate,                   RW, "1", SP, NAC)\
 
 static prop_t property_table[] = {
