@@ -5030,6 +5030,36 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_link_otw_tx(const char *data, char *ret) {
+    int wire_format = 0;
+    int r = sscanf(data, "sc%i", &wire_format);
+
+    // TODO: add register writes and enable other wire formats once the FPGA supports it
+    // NOTE: this will probably be a 3Gsps specific feature
+    if(OTW_TX != wire_format || r <= 0) {
+        wire_format = OTW_TX;
+        PRINT(ERROR, "Invalid wire format selected for tx. Defaulting to sc%i\n", OTW_TX);
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "sc%i", OTW_TX);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_otw_rx(const char *data, char *ret) {
+    int wire_format = 0;
+    int r = sscanf(data, "sc%i", &wire_format);
+
+    // TODO: add register writes and enable other wire formats once the FPGA supports it
+    // NOTE: this will probably be a 3Gsps specific feature
+    if(OTW_RX != wire_format || r <= 0) {
+        wire_format = OTW_RX;
+        PRINT(ERROR, "Invalid wire format selected for rx. Defaulting to sc%i\n", OTW_RX);
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "sc%i", OTW_RX);
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
     uint32_t gps_time_lh = 0, gps_time_uh = 0;
 
@@ -5521,7 +5551,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8900", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
-    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
+    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/link/otw_tx"                    , hdlr_fpga_link_otw_tx,             RW, "sc" S_OTW_TX, SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/link/otw_rx"                    , hdlr_fpga_link_otw_rx,             RW, "sc" S_OTW_RX, SP, NAC)
 
 #define DEFINE_FPGA_POST()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"            , hdlr_jesd_reset_master,                      RW, "1", SP, NAC)               \
@@ -5547,6 +5579,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)\
     DEFINE_FILE_PROP_P("system/get_max_buffer_level"     , hdlr_system_get_max_buffer_level,       RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/get_buffer_level_multiple", hdlr_system_get_buffer_level_multiple,  RW, "1", SP, NAC)\
+    /* Wire format has been moved to the FPGA link, this is here to allow older UHD versions to still find it*/\
+    /* NOTE: only shows the default wire format, will not reflect updates*/\
     DEFINE_FILE_PROP_P("system/otw_rx"                   , hdlr_invalid,                           RO, S_OTW_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
