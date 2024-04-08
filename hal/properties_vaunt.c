@@ -4030,13 +4030,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#if defined(VAUNT)
-    #define PROJECT_NAME "crimson_tng"
-#elif defined(TATE)
-    #define PROJECT_NAME "tate" /* Name unknown for now... */
-#else
-    #error "Project name (VAUNT | TATE) not defined"
-#endif
+#define PROJECT_NAME "crimson_tng"
 
 #define DEFINE_FILE_PROP_P(n, h, p, v, e, c) \
     {                                \
