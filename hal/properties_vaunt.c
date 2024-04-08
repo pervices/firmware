@@ -61,7 +61,7 @@ double get_base_sample_rate() {
             link_rate_divisor = 1;
             return 300000000.0;
         case 325:
-            // 10G link cannot take 325Msps, so user the host is limited to 2162.5Msps
+            // 10G link cannot take 325Msps, so the user/host is limited to 2162.5Msps
             // Internal FPGA calcs can still use the base rate
             link_rate_divisor = 2;
             return 325000000.0;
@@ -1015,7 +1015,7 @@ int check_rf_pll(int ch, bool is_tx) {
             rate = fmin(rate, get_base_sample_rate() / link_rate_divisor);\
         /* Limit for quarter rate DAC */\
         } else if (INT(ch) == 2 || INT(ch) == 3){\
-            rate = fmin(rate, get_base_sample_rate() / (link_rate_divisor * 4));\
+            rate = fmin(rate, get_base_sample_rate() / (fmin(link_rate_divisor, 4)));\
         }\
                                                                                \
         /* get the error for base rate */                                      \
