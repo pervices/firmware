@@ -1626,7 +1626,7 @@ int check_rf_pll(int ch, bool is_tx) {
         if(power < 0) {\
             tx_power[INT(ch)] = PWR_NO_BOARD;\
             write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x2, 0x2);\
-            snprintf(buf, MAX_PROP_LEN, "rfe_control %d off", INT_TX(ch));\
+            snprintf(buf, 40, "rfe_control %d off n", INT_TX(ch));\
             system(buf);\
             power = 0;\
         }\
@@ -3141,7 +3141,7 @@ TX_CHANNELS
         if(power < 0) {\
             rx_power[INT(ch)] = PWR_NO_BOARD;\
             write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x2, 0x2);\
-            snprintf(buf, MAX_PROP_LEN, "rfe_control %d off", INT_RX(ch));\
+            snprintf(buf, 40, "rfe_control %d off n", INT_RX(ch));\
             system(buf);\
             return RETURN_SUCCESS;\
         }\
