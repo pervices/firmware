@@ -18,17 +18,51 @@
 #include "regmap.h"
 #include "mmap.h"
 
+// Used for mutexs for avoid contention with other processes
+#include <pthread.h>
+#include <sys/file.h>
+#include <fcntl.h>
+
 static int mmap_fd = -1;
+static int mmap_mutx_fd = -1;
+static pthread_mutex_t* mutex = NULL;
 static void *mmap_base = MAP_FAILED;
 static size_t mmap_len = 0;
 
 // Standard for linux
 #define MEM_DEV "/dev/mem"
 
+// Path to shared memory to store mutex for accessing FPGA regs
+#define MEM_MUTEX "/mmap_mutex"
+
+#define INIT_LOCK "/var/lock/mmap_init"
+
 // Options passed from server.c
 static uint8_t _options = 0;
 
 void set_mem_debug_opt(uint8_t options) { _options = options; }
+
+// Gets a lock on the mutex that controls access to FPGA regs
+// Must release it later with pthread_mutex_unlock
+// A lock is required since having 2 processes attempt to read from registers at the same time freezes Linux
+// The freeze occurs even if accessing different registers
+static inline void get_lock() {
+    time_t deadline = time(NULL) + 30;
+
+    // Flag used to only print timeout message once
+    int msg_printed = 0;
+
+    while(pthread_mutex_trylock(mutex)) {
+        if(errno == 0) {
+            usleep(1);
+        }
+        if(time(NULL) >= deadline && !msg_printed) {
+            PRINT(ERROR, "pthread_mutex_trylock has taken more than 30 seconds to get the lock. Is likely to hang forever: %s (%d)\n", strerror(errno), errno);
+            msg_printed = 1;
+            break;
+        }
+    }
+}
 
 static int reg_read(uint32_t addr, uint32_t *data) {
     if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
@@ -38,7 +72,14 @@ static int reg_read(uint32_t addr, uint32_t *data) {
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
 
+    get_lock();
+
     *data = *mmap_addr;
+
+    // Release lock
+    if(pthread_mutex_unlock(mutex)) {
+        PRINT(ERROR, "pthread_mutex_unlock failed: %s (%d)\n", strerror(errno), errno);
+    }
 
     return RETURN_SUCCESS;
 }
@@ -51,7 +92,16 @@ static int reg_write(uint32_t addr, uint32_t *data) {
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
 
+    get_lock();
+
     *mmap_addr = *data;
+
+    // Release lock
+    pthread_mutex_unlock(mutex);
+    if(pthread_mutex_unlock(mutex)) {
+        PRINT(ERROR, "pthread_mutex_unlock failed: %s (%d)\n", strerror(errno), errno);
+    }
+
     // FIXME: This command always returns with an error, it may be the reason why so many regwrites that shouldn't need delays require them
     msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
 
@@ -218,6 +268,7 @@ int check_hps_reg(void) {
 }
 
 int mmap_init() {
+    int lock_fd = -1;
     int r;
     void *rr;
 
@@ -248,10 +299,77 @@ int mmap_init() {
     }
     mmap_base = rr;
 
+    lock_fd = open(INIT_LOCK, O_CREAT | O_RDONLY);
+    if(lock_fd == -1) {
+        PRINT(ERROR, "open ( " INIT_LOCK " ) failed: %s (%d)\n", strerror(errno), errno);
+        r = lock_fd;
+        goto closefd;
+    }
+
+    // Lock to prevent race conditions when initializing mutex
+    r = flock(lock_fd, LOCK_EX);
+    if(r == -1) {
+        PRINT(ERROR, "flock ( " INIT_LOCK " ) failed: %s (%d)\n", strerror(errno), errno);
+        goto closefd;
+    }
+
+    // Attempt to open shared memory to store mutex
+    // Using O_CREAT and O_EXCL is expected to fail if another process has already created the shared memory
+    mmap_mutx_fd = shm_open(MEM_MUTEX, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
+
+    int mutex_init_required;
+    if(mmap_mutx_fd == -1) {
+        // Using O_CREAT and O_EXCL failed, meaning that another thread is handling initializing the mutex
+        mutex_init_required = 0;
+        mmap_mutx_fd = shm_open(MEM_MUTEX, O_RDWR, S_IRUSR | S_IWUSR);
+
+        if(mmap_mutx_fd == -1) {
+            PRINT(ERROR, "shm_open( " MEM_MUTEX " ) failed: %s (%d)\n", strerror(errno), errno);
+            r = errno;
+            goto closefd;
+        }
+    } else {
+        // Set the size of shared memory
+        if (ftruncate(mmap_mutx_fd, sizeof(pthread_mutex_t)) == -1) {
+            PRINT(ERROR, "ftruncate( " MEM_MUTEX " ) failed: %s (%d)\n", strerror(errno), errno);
+            r = errno;
+            goto closefd;
+        }
+        // Using O_CREAT and O_EXCL succeeded, meaning that the shared memory has not been initialized yet
+        mutex_init_required = 1;
+    }
+
+    mutex = (pthread_mutex_t*) mmap(NULL, sizeof(pthread_mutex_t), PROT_READ | PROT_WRITE, MAP_SHARED, mmap_mutx_fd, 0);
+    if(mutex == MAP_FAILED) {
+        r = errno;
+        PRINT(ERROR, "mutex mmap failed: %s (%d)\n", strerror(errno), errno);
+        goto closefd;
+    }
+
+    // Create the mutex to control access to the FPGA regs
+    if(mutex_init_required) {
+        r = pthread_mutex_init(mutex, NULL);
+        if(r == -1) {
+            PRINT(ERROR, "pthread_mutex_init failed: %s (%d)\n", strerror(errno), errno);
+            goto closefd;
+        }
+    }
+
+    // Unlock since mutex has been initialized
+    r = flock(lock_fd, LOCK_UN);
+    if(r == -1) {
+        PRINT(ERROR, "flock unlock failed: %s (%d)\n", strerror(errno), errno);
+        goto closefd;
+    }
+    close(lock_fd);
+
     r = EXIT_SUCCESS;
     goto out;
 
 closefd:
+    flock(lock_fd, LOCK_UN);
+    close(lock_fd);
+    close(mmap_mutx_fd);
     close(mmap_fd);
     mmap_fd = -1;
 

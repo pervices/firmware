@@ -35,7 +35,7 @@ fi
 	CC=$SERVER_CC \
         CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall  \
             -march=armv7-a -mtune=cortex-a9 -mfpu=neon     \
-            -Werror -lm" \
+            -Werror -lm -pthread" \
         CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
             -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
 	CXX=$SERVER_CXX \
