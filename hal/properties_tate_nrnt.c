@@ -5873,7 +5873,6 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     _save_profile_path = save_path;
 }
 
-const int jesd_max_attempts = 3;
 const int jesd_max_server_restart_attempts = 3;
 
 // Performs a master JESD reset up to 3 times
@@ -5911,7 +5910,7 @@ int jesd_master_reset() {
     }
 
     int attempts = 0;
-    while ( attempts < jesd_max_attempts ) {
+    while ( attempts < JESD_MAX_RESET_ATTEMPTS ) {
         int is_bad_attempt = 0;
 
         //Unmask all channels for next attempt
@@ -5933,10 +5932,9 @@ int jesd_master_reset() {
         TX_CHANNELS
 #undef X
 
-        // TODO: figure out of issuing a JESD master reset can be done since other fixes have been made
         // Reset JESD IP
         set_property("fpga/reset", "3");
-        // Reinint rx JESD without resetting IP
+        // Reinint rx JESD without resetting IP (alternative to resetting the IP
         // Resetting the IP is prefered but sometimes this works when resetting the IP doesn't
         // for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         //     write_jesd_reg_mask(chan + JESD_SHIFT_RX, 0x54, 0x5, 0x5);
@@ -5951,7 +5949,7 @@ int jesd_master_reset() {
 
         // Issues sysref pulse
         set_property("time/sync/lmk_sync_tgl_jesd", "1");
-        // Alternate nmethod of sending sysref at the same time
+        // Alternate method of sending sysref at the same time
         // Might help phase coherency but is not used since it may not work on old (RTM3) hardware
         // strcpy(buf, "clk -y\r");
         // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -6013,7 +6011,7 @@ int jesd_master_reset() {
         write_hps_reg_mask(tx_reg4_map[chan], original_tx4[chan], 0x2);
     }
 
-    if(attempts >= jesd_max_attempts) return 1;
+    if(attempts >= JESD_MAX_RESET_ATTEMPTS) return 1;
     else return 0;
 }
 
