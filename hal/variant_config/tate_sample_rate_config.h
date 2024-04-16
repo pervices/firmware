@@ -81,6 +81,9 @@
     // 3 For normal 1G, 1 for 3G when used as 1G
     #define JESD_MAX_RESET_ATTEMPTS (USE_3G_AS_1G ? 1 : 3)
 
+    // Maximum length of VITA for rx
+    #define RX_MAX_PAYLOAD 8896
+
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
@@ -148,6 +151,9 @@
     // Maximum number of times the server will attempt to reset JESD IP before moving on to other methods
     // 3 For normal 1G, 1 for 3G when used as 1G
     #define JESD_MAX_RESET_ATTEMPTS 1
+
+    // Maximum length of VITA for rx
+    #define RX_MAX_PAYLOAD 8848
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000

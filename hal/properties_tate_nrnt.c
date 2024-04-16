@@ -271,6 +271,28 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     return sample_factor;
 }
 
+// reg: the register to write to
+// shift: the point in the register to write the value to (the value is 16 bit)
+// desired: the target length of the VITA 49 part of the packet, not including the trailer if applicable
+uint32_t set_payload_len(char* reg, uint32_t shift, uint32_t desired) {
+    // Cap payload length
+    if(desired > RX_MAX_PAYLOAD) {
+        desired = RX_MAX_PAYLOAD;
+    }
+#ifdef S1000
+    // Restrict desired to legal values due to integer rounding
+    uint32_t actual = desired - (desired % 4);
+    actual = actual - ((actual/4 -5) % 4) * 4;
+#elif defined(S3000)
+    // payload length for 3G is hard coded
+    uint32_t actual = RX_MAX_PAYLOAD;
+#endif
+
+    write_hps_reg_mask(reg, actual << shift, 0xffff << shift);
+
+    return actual;
+}
+
 // Waits for the FPGA to finish reseting
 /* register sys[18] shows the reset status
     * the bits are [31:0] chanMode = {
@@ -4825,11 +4847,12 @@ static int hdlr_fpga_link_sfpa_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len = 0;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net0", &old_val);
-    write_hps_reg("net0", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net0", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -4878,11 +4901,12 @@ static int hdlr_fpga_link_sfpb_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net15", &old_val);
-    write_hps_reg("net15", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net15", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -4932,11 +4956,12 @@ static int hdlr_fpga_link_sfpc_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpc_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net30", &old_val);
-    write_hps_reg("net30", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net30", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -4986,11 +5011,12 @@ static int hdlr_fpga_link_sfpd_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpd_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net45", &old_val);
-    write_hps_reg("net45", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net45", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -5536,19 +5562,19 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpc/ip_addr"              , hdlr_fpga_link_sfpc_ip_addr,            RW, "10.10.12.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpc/mac_addr"             , hdlr_fpga_link_sfpc_mac_addr,           RW, "aa:00:00:00:00:02", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpc/ver"                  , hdlr_fpga_link_sfpc_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpc/pay_len"              , hdlr_fpga_link_sfpc_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpc/pay_len"              , hdlr_fpga_link_sfpc_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpd/ip_addr"              , hdlr_fpga_link_sfpd_ip_addr,            RW, "10.10.13.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpd/mac_addr"             , hdlr_fpga_link_sfpd_mac_addr,           RW, "aa:00:00:00:00:03", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpd/ver"                  , hdlr_fpga_link_sfpd_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)\
