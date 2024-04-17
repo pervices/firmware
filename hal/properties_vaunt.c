@@ -2630,16 +2630,15 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     sscanf(data, "%lli", &stream);
     char path_buffer[MAX_PATH_LEN];
     if(stream != 0) {
-        for(int n = 0; n < NUM_CHANNELS; n++) {
-            //stops any existing force streaming
-            sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
-            set_property(path_buffer, "0");
-        }
+        //stop any force streaming by bringing the trigger low
         //sets the sma trigger to act as an input
         set_property("fpga/trigger/sma_dir", "input");
-        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //force the trigger input to always read as high
+        set_property("fpga/trigger/sma_override", "1");
+        //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
+        // configure the channels specified for force streaming, and ensure others are not
         for(int n = 0; n < NUM_CHANNELS; n++) {
             if(stream & 1 << n) {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
@@ -2651,10 +2650,11 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
                 set_property(path_buffer, "0");
             }
         }
-        //sets the sma to activate when high (there is a pullup resistor so not connected is high)
+        //sets the sma to activate when high (sma_override is forcing it high)
+        // this starts the streaming for all channels at once
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
-        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
@@ -2663,6 +2663,8 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
         }
+        //stop ignoring the trigger state in case it will be used later
+        set_property("fpga/trigger/sma_override", "0");
     }
     return RETURN_SUCCESS;
 }
@@ -3478,6 +3480,14 @@ static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
     }
 }
 
+static int hdlr_fpga_trigger_sma_override(const char *data, char *ret) {
+    uint8_t val = 0;
+    sscanf(data,"%" SCNu8, &val);
+    if(val){ val = 1;} else {val=0;}
+    snprintf(ret, MAX_PROP_LEN, "%i\n", val);
+    return set_reg_bits("sys2", 8, 1, val);
+}
+
 static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
     uint32_t old_val1;
     uint32_t old_val2;
@@ -4215,6 +4225,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "in", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_override"           , hdlr_fpga_trigger_sma_override,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "", SP, NAC)                  \
