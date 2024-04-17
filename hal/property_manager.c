@@ -612,3 +612,35 @@ int property_good(char *path) {
     }
     return 1;
 }
+
+int clr_property_bit(const char *prop, int bit) {
+    int err;
+    uint32_t reg;
+    char buf[MAX_PATH_LEN];
+    err = get_property(prop, buf, MAX_PROP_LEN);
+    if (err != RETURN_SUCCESS) {
+        return err;
+    }
+    if (sscanf(buf, "0x%x", &reg) != 1) {
+        return RETURN_ERROR;
+    }
+    reg &= ~(1 << bit);
+    snprintf(buf,MAX_PROP_LEN, "0x%x",reg);
+    return set_property(prop, buf);
+}
+
+int set_property_bit(const char *prop, int bit) {
+    int err;
+    uint32_t reg;
+    char buf[MAX_PATH_LEN];
+    err = get_property(prop, buf, MAX_PROP_LEN);
+    if (err != RETURN_SUCCESS) {
+        return err;
+    }
+    if (sscanf(buf, "0x%x", &reg) != 1) {
+        return RETURN_ERROR;
+    }
+    reg |= 1 << bit;
+    snprintf(buf,MAX_PROP_LEN, "0x%x",reg);
+    return set_property(prop, buf);
+}

@@ -52,5 +52,7 @@ void pass_profile_pntr_manager(uint8_t *load, uint8_t *save, char *load_path,
 int get_property(const char *prop, char *data, size_t max_len);
 int set_property(const char *prop, const char *data);
 int property_good(char *path);
+int clr_property_bit(const char *prop, int bit);
+int set_property_bit(const char *prop, int bit);
 
 #endif
