@@ -2730,6 +2730,8 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
     return RETURN_SUCCESS;
 }
 
+// Checks if there has been a PPS in the past second
+// Poll this to verify the PPS is working
 static int hdlr_time_clk_pps_dtc(const char* data, char* ret) {
     uint32_t pps_detected;
     read_hps_reg("sys21", &pps_detected);
