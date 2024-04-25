@@ -2427,12 +2427,6 @@ static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
         request_bit = request_bit << 16;
         // Setting bit 16 to high enables this modes, low sets it to normal
         write_hps_reg_mask(reg4[n + 4], request_bit, 1 << 16);
-        // TODO: remove this once we figure out and fix what is causing the JESD link to go down when we use force stream
-        // it seems the first time we run force stream after server boot is OK, but then the link goes down for that tx channel so subsequent runs will not transmit any signal
-        if (request_bit)
-        {
-            tx_jesd[n] = JESD_UNINIT;
-        }
     }
 
     return RETURN_SUCCESS;
