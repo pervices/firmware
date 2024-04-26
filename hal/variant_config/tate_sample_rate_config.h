@@ -26,7 +26,6 @@
     #define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
     #define TX_BASE_SAMPLE_RATE   1000000000.0
     #define TX_DSP_SAMPLE_RATE   500000000.0
-    #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
     // (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
     #define RX_DSP_NCO_CONST \
         ((double)8.589934592)
@@ -95,7 +94,6 @@
     #define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE)
     #define TX_BASE_SAMPLE_RATE   3000000000.0
     #define TX_DSP_SAMPLE_RATE   3000000000.0
-    #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
     // (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
     #define RX_DSP_NCO_CONST ((double)1.43165576533)
 
