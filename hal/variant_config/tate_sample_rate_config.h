@@ -81,7 +81,7 @@
     #define JESD_MAX_RESET_ATTEMPTS (USE_3G_AS_1G ? 1 : 3)
 
     // Maximum length of VITA for rx
-    #define RX_MAX_PAYLOAD 8896
+    #define RX_MAX_PAYLOAD 8900
 
 #elif defined(S3000)
 

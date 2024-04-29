@@ -282,7 +282,6 @@ uint32_t set_payload_len(char* reg, uint32_t shift, uint32_t desired) {
 #ifdef S1000
     // Restrict desired to legal values due to integer rounding
     uint32_t actual = desired - (desired % 4);
-    actual = actual - ((actual/4 -5) % 4) * 4;
 #elif defined(S3000)
     // payload length for 3G is hard coded
     uint32_t actual = RX_MAX_PAYLOAD;
