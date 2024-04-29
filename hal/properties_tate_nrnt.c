@@ -6149,11 +6149,17 @@ int jesd_master_reset() {
     else return 0;
 }
 
+#ifdef S1000
 //sets sysref delay in VCO clock cycles
 void set_analog_sysref_delay(int analog_sysref_delay) {
     snprintf(buf, MAX_PROP_LEN, "adly -l 7 -c a -s %i\r", analog_sysref_delay);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 }
+#elif defined(S3000)
+    // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
+#else
+    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+#endif
 
 // Returns 1 is jesd links come up, 1 if any links fail
 static int hdlr_jesd_reset_master(const char *data, char *ret) {
@@ -6174,11 +6180,18 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
         analog_sysref_delay = DEFAULT_ANALOG_SYSREF_DELAY;
     }
 
+#ifdef S1000
     set_analog_sysref_delay(analog_sysref_delay);
+#elif defined(S3000)
+    // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
+#else
+    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+#endif
 
     // Note this is set to 0 for success, any other value for failure
     int jesd_master_error = jesd_master_reset();
 
+#ifdef S1000
     // Test all possible values of sysref delay until one works if the previously save/default failed
     if(jesd_master_error) {
         PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
@@ -6194,6 +6207,11 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
             PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
         }
     }
+#elif defined(S3000)
+    // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
+#else
+    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+#endif
 
     if(!jesd_master_error) {
         update_interboot_variable("cons_jesd_fail_count", 0);
