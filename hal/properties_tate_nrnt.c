@@ -1581,40 +1581,27 @@ int check_rf_pll(int ch, bool is_tx) {
     \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_tx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        int status = 0;\
         \
-        time_t current_time=0;\
-        time(&current_time);\
-        int remaining_timeout;\
-        if(tx_async_start_time[INT(ch)] + PWR_TIMEOUT > current_time) {\
-            remaining_timeout = tx_async_start_time[INT(ch)] + PWR_TIMEOUT - current_time;\
-        } else {\
-            remaining_timeout = 0;\
-        }\
-        pid_t pid = fork();\
-        if(pid==0) {\
-            char rfe_slot[10];                                                 \
-            snprintf(rfe_slot, 10, "%i", INT_TX(ch));                    \
-            char str_timeout[10];\
-            snprintf(str_timeout, 10, "%i", remaining_timeout);\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", str_timeout, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i\n", INT(ch));\
-            _Exit(EXIT_ERROR_RFE_CONTROL);\
-        }\
-        waitpid(pid, &status, 0);\
-        if( WIFEXITED(status) ) {\
-            if(WEXITSTATUS(status)) {\
+        /* Polls to check if a board has turned on */\
+        do {\
+            snprintf(buf, sizeof(buf), "/usr/bin/rfe_control %i check", INT_TX(ch));\
+            FILE *check_result;\
+            check_result = popen(buf, "r");\
+            size_t bytes_read = fread(buf, 1, sizeof(buf), check_result);\
+            if(bytes_read == 0) {\
                 tx_power[INT(ch)] = PWR_NO_BOARD;\
-                PRINT(ERROR,"Error when powering on tx board %i, the slot will not be used\n", INT(ch));\
-                PRINT(ERROR, "Exit status: %i\n", WEXITSTATUS(status));\
-            } else {\
+                PRINT(ERROR,"Error in script controlling power for tx board %i, the slot will not be used\n", INT(ch));\
+                return errno;\
+            } else if(strstr(buf, "on")) {\
                 tx_power[INT(ch)] = PWR_HALF_ON;\
-                PRINT(INFO,"Tx board %i powered on\n", INT(ch));\
+                PRINT(INFO,"Tx board %i powered on within %lus\n", INT(ch), time(NULL) - tx_async_start_time[INT(ch)]);\
+                return RETURN_SUCCESS;\
             }\
-        } else {\
-            tx_power[INT(ch)] = PWR_NO_BOARD;\
-            PRINT(ERROR,"Error in script controlling power for tx board %i, the slot will not be used\n", INT(ch));\
-        }\
+        \
+        } while (time(NULL) < tx_async_start_time[INT(ch)] + PWR_TIMEOUT);\
+        \
+        tx_power[INT(ch)] = PWR_NO_BOARD;\
+        PRINT(ERROR,"Timeout while powering tx board %i, the slot will not be used\n", INT(ch));\
         \
         return RETURN_SUCCESS;\
     }                                                                          \
@@ -3054,39 +3041,27 @@ TX_CHANNELS
     }                                                                          \
     /*waits for the rx board to turn on with a timeout. If the timeout occurs, assume the board is not connected*/\
     static int hdlr_rx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        int status = 0;\
         \
-        time_t current_time=0;\
-        time(&current_time);\
-        int remaining_timeout;\
-        if(rx_async_start_time[INT(ch)] + PWR_TIMEOUT > current_time) {\
-            remaining_timeout = rx_async_start_time[INT(ch)] + PWR_TIMEOUT - current_time;\
-        } else {\
-            remaining_timeout = 0;\
-        }\
-        pid_t pid = fork();\
-        if(pid==0) {\
-            char rfe_slot[10];                                                 \
-            snprintf(rfe_slot, 10, "%i", INT_RX(ch));                    \
-            char str_timeout[10];\
-            snprintf(str_timeout, 10, "%i", remaining_timeout);\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", str_timeout, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr rx ch: %i\n", INT(ch));\
-            _Exit(EXIT_ERROR_RFE_CONTROL);\
-        }\
-        waitpid(pid, &status, 0);\
-        if( WIFEXITED(status) ) {\
-            if(WEXITSTATUS(status)) {\
+        /* Polls to check if a board has turned on */\
+        do {\
+            snprintf(buf, sizeof(buf), "/usr/bin/rfe_control %i check", INT_RX(ch));\
+            FILE *check_result;\
+            check_result = popen(buf, "r");\
+            size_t bytes_read = fread(buf, 1, sizeof(buf), check_result);\
+            if(bytes_read == 0) {\
                 rx_power[INT(ch)] = PWR_NO_BOARD;\
-                PRINT(ERROR,"Error when powering on rx board %i, the slot will not be used\n", INT(ch));\
-            } else {\
+                PRINT(ERROR,"Error in script controlling power for rx board %i, the slot will not be used\n", INT(ch));\
+                return errno;\
+            } else if(strstr(buf, "on")) {\
                 rx_power[INT(ch)] = PWR_HALF_ON;\
-                PRINT(INFO,"Rx board %i powered on\n", INT(ch));\
+                PRINT(INFO,"Rx board %i powered on within %lus\n", INT(ch), time(NULL) - rx_async_start_time[INT(ch)]);\
+                return RETURN_SUCCESS;\
             }\
-        } else {\
-            rx_power[INT(ch)] = PWR_NO_BOARD;\
-            PRINT(ERROR,"Error in script controlling power for rx board %i, the slot will not be used\n", INT(ch));\
-        }\
+        \
+        } while (time(NULL) < rx_async_start_time[INT(ch)] + PWR_TIMEOUT);\
+        \
+        rx_power[INT(ch)] = PWR_NO_BOARD;\
+        PRINT(ERROR,"Timeout while powering rx board %i, the slot will not be used\n", INT(ch));\
         \
         return RETURN_SUCCESS;\
     }                                                                          \
