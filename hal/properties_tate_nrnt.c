@@ -6076,7 +6076,7 @@ int jesd_master_reset() {
         }
 
         //Checks if all rx JESDs are working
-        for(int chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
+        for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/status", chan+'a');
                 if(property_good(prop_path) != 1) {
@@ -6087,7 +6087,7 @@ int jesd_master_reset() {
         }
 
         //Checks if all tx JESDs are working
-        for(int chan = 0; chan < NUM_TX_CHANNELS && !is_bad_attempt; chan++) {
+        for(int chan = 0; chan < NUM_TX_CHANNELS; chan++) {
             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "tx/%c/jesd/status", chan+'a');
                 if(property_good(prop_path) != 1) {
