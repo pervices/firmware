@@ -151,7 +151,7 @@
     #define JESD_MAX_RESET_ATTEMPTS 1
 
     // Maximum length of VITA for rx
-    #define RX_MAX_PAYLOAD 8848
+    #define RX_MAX_PAYLOAD 8872
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
