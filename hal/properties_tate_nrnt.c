@@ -821,8 +821,8 @@ TX_CHANNELS
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         val = (val / NSAMPS_MULTIPLE_RX) * NSAMPS_MULTIPLE_RX;\
-        val = val * OTW_RX / 16;\
-        uint64_t actual_nsamps = val * 16 / OTW_RX;\
+        val = val * DEAULT_OTW_RX / 16;\
+        uint64_t actual_nsamps = val * 16 / DEAULT_OTW_RX;\
         snprintf(ret, MAX_PROP_LEN, "%lu", actual_nsamps);                                             \
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -1400,6 +1400,35 @@ int check_rf_pll(int ch, bool is_tx) {
         write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                     \
         usleep(10000);\
         write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x2));                   \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /* Selects the size of samples */\
+    /* Takes the size of half the complex pair (i.e. for sc16 set to 16 */\
+    static int hdlr_tx_##ch##_dsp_sample_bandwidth(const char *data, char *ret) {        \
+        int wire_format = 0;\
+        sscanf(data, "%i", &wire_format);\
+        \
+        if(MAX_SAMPLE_RATE == 1000) {\
+            /* Wire formate cannot be set on 1G*/\
+            if(wire_format != DEAULT_OTW_TX) {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, DEAULT_OTW_TX);\
+                wire_format = DEAULT_OTW_TX;\
+            }\
+        } else if(MAX_SAMPLE_RATE == 3000) {\
+            if(wire_format == 12) {\
+                write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x40000, 0x40000);\
+            } else if(wire_format == 16) {\
+                write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            } else {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, 16);\
+                wire_format = 16;\
+                write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            }\
+        } else {\
+            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
+        }\
+        snprintf(ret, MAX_PROP_LEN, "%i", wire_format);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -2380,6 +2409,35 @@ TX_CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x400);      \
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x000);      \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /* Selects the size of samples */\
+    /* Takes the size of half the complex pair (i.e. for sc16 set to 16 */\
+    static int hdlr_rx_##ch##_dsp_sample_bandwidth(const char *data, char *ret) {        \
+        int wire_format = 0;\
+        sscanf(data, "%i", &wire_format);\
+        \
+        if(MAX_SAMPLE_RATE == 1000) {\
+            /* Wire formate cannot be set on 1G*/\
+            if(wire_format != DEAULT_OTW_RX) {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, DEAULT_OTW_RX);\
+                wire_format = DEAULT_OTW_RX;\
+            }\
+        } else if(MAX_SAMPLE_RATE == 3000) {\
+            if(wire_format == 12) {\
+                write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x40000, 0x40000);\
+            } else if(wire_format == 16) {\
+                write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            } else {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, 16);\
+                wire_format = 16;\
+                write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            }\
+        } else {\
+            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
+        }\
+        snprintf(ret, MAX_PROP_LEN, "%i", wire_format);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -5145,33 +5203,47 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_link_otw_tx(const char *data, char *ret) {
-    int wire_format = 0;
-    int r = sscanf(data, "sc%i", &wire_format);
-
-    // TODO: add register writes and enable other wire formats once the FPGA supports it
-    // NOTE: this will probably be a 3Gsps specific feature
-    if(OTW_TX != wire_format || r <= 0) {
-        wire_format = OTW_TX;
-        PRINT(ERROR, "Invalid wire format selected for tx. Defaulting to sc%i\n", OTW_TX);
+static int hdlr_fpga_link_rx_sample_bandwidth(const char *data, char *ret) {
+    int result = 0;
+    for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        char prop_path[PROP_PATH_LEN];
+        snprintf(prop_path, PROP_PATH_LEN, "rx/%c/dsp/rx_sample_bandwidth", chan +'a');
+        set_property(prop_path, data);
+        char reply[50];
+        get_property(prop_path, reply, sizeof(reply));
+        int reply_i;
+        sscanf(reply, "%i", &reply_i);
+        if(chan != 0 && reply_i != result) {
+            PRINT(ERROR, "Unable to set wire format correctly. Assuming ch A is correct\n");
+        } else {
+            result = reply_i;
+        }
     }
 
-    snprintf(ret, MAX_PROP_LEN, "sc%i", OTW_TX);
+    snprintf(ret, MAX_PROP_LEN, "%i", result);
+
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_link_otw_rx(const char *data, char *ret) {
-    int wire_format = 0;
-    int r = sscanf(data, "sc%i", &wire_format);
-
-    // TODO: add register writes and enable other wire formats once the FPGA supports it
-    // NOTE: this will probably be a 3Gsps specific feature
-    if(OTW_RX != wire_format || r <= 0) {
-        wire_format = OTW_RX;
-        PRINT(ERROR, "Invalid wire format selected for rx. Defaulting to sc%i\n", OTW_RX);
+static int hdlr_fpga_link_tx_sample_bandwidth(const char *data, char *ret) {
+    int result = 0;
+    for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        char prop_path[PROP_PATH_LEN];
+        snprintf(prop_path, PROP_PATH_LEN, "tx/%c/dsp/rx_sample_bandwidth", chan +'a');
+        set_property(prop_path, data);
+        char reply[50];
+        get_property(prop_path, reply, sizeof(reply));
+        int reply_i;
+        sscanf(reply, "%i", &reply_i);
+        if(chan != 0 && reply_i != result) {
+            PRINT(ERROR, "Unable to set wire format correctly. Assuming ch A is correct\n");
+        } else {
+            result = reply_i;
+        }
     }
 
-    snprintf(ret, MAX_PROP_LEN, "sc%i", OTW_RX);
+    snprintf(ret, MAX_PROP_LEN, "%i", result);
+
     return RETURN_SUCCESS;
 }
 
@@ -5415,9 +5487,11 @@ GPIO_PINS
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
-    DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"        , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
     /* Mask sysref whenever not resetting JESD or powering on */\
-    DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP, #_c)\
+    /* This is defined here because it is set by a meta property in the FPGA section*/\
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rx_sample_bandwidth" , hdlr_rx_##_c##_dsp_sample_bandwidth, RW, "S_DEAULT_OTW_RX", SP, #_c)\
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
@@ -5508,7 +5582,10 @@ GPIO_PINS
 #define DEFINE_TX_PWR_REBOOT(_c)    \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
     DEFINE_FILE_PROP_P("tx/" #_c "/board/async_pwr"          , hdlr_tx_##_c##_async_pwr_board,      RW, "1", SP, #_c)   \
-    DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0", SP, #_c)
+    DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0", SP, #_c)\
+    /* This is defined here because it is set by a meta property in the FPGA section*/\
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/tx_sample_bandwidth" , hdlr_tx_##_c##_dsp_sample_bandwidth, RW, "S_DEAULT_OTW_TX", SP, #_c)
+
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
@@ -5670,8 +5747,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/link/otw_tx"                    , hdlr_fpga_link_otw_tx,             RW, "sc" S_OTW_TX, SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/link/otw_rx"                    , hdlr_fpga_link_otw_rx,             RW, "sc" S_OTW_RX, SP, NAC)
+    /* Size of half of a complex pair in bytes*/\
+    DEFINE_FILE_PROP_P("fpga/link/rx_sample_bandwidth"       , hdlr_fpga_link_rx_sample_bandwidth,     RW, S_DEAULT_OTW_RX, SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/link/tx_sample_bandwidth"       , hdlr_fpga_link_tx_sample_bandwidth,     RW, S_DEAULT_OTW_TX, SP, NAC)
 
 #define DEFINE_FPGA_POST()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"            , hdlr_jesd_reset_master,                      RW, "1", SP, NAC)               \
@@ -5698,9 +5776,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/get_max_buffer_level"     , hdlr_system_get_max_buffer_level,       RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/get_buffer_level_multiple", hdlr_system_get_buffer_level_multiple,  RW, "1", SP, NAC)\
     /* Wire format has been moved to the FPGA link, this is here to allow older UHD versions to still find it*/\
-    /* NOTE: only shows the default wire format, will not reflect updates*/\
-    DEFINE_FILE_PROP_P("system/otw_rx"                   , hdlr_invalid,                           RO, S_OTW_RX, SP, NAC)\
-    DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
+    DEFINE_SYMLINK_PROP("system/otw_rx", "fpga/link/rx_sample_bandwidth")\
+    DEFINE_SYMLINK_PROP("system/otw_tx", "fpga/link/tx_sample_bandwidth")\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/flags/USE_3G_AS_1G"       , hdlr_invalid,                           RO, S_USE_3G_AS_1G, SP, NAC)\
