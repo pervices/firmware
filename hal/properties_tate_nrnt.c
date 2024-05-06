@@ -6066,11 +6066,11 @@ int jesd_master_reset() {
         usleep(jesd_reset_delay);
 
         // Issues sysref pulse
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");
-        // Alternate method of sending sysref at the same time
-        // Might help phase coherency but is not used since it may not work on old (RTM3) hardware
-        // strcpy(buf, "clk -y\r");
-        // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // Old method of issuing a sysref pulse, left commented out in case the new method causes issues
+        // set_property("time/sync/lmk_sync_tgl_jesd", "1");
+        // Issues all sysref pulses simultaneously sysref at the same time
+        strcpy(buf, "clk -y\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
         //Wait for links to re-establish
         usleep(jesd_reset_delay);
