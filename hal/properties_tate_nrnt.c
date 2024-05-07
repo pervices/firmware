@@ -5716,14 +5716,14 @@ static prop_t property_table[] = {
 #undef X
 // Initialize time boards
     DEFINE_TIME()
+// Initialize FPGA
+    DEFINE_FPGA()
 // Inverts dev clock going to each rx board
 // The dev clocks to rx need a small amount of time to stabilize after inverting
 // Having them get inverted before initializing the FPGA allows them to stablize by the time the rx boards turn on
 #define X(ch) DEFINE_RX_INVERT_DEV_CLOCK(ch)
     RX_CHANNELS
 #undef X
-// Initialize FPGA
-    DEFINE_FPGA()
 // Power on rx/tx boards, but don't wait for them to finish booting
 #define X(ch) DEFINE_RX_PWR_REBOOT(ch)
     RX_CHANNELS
