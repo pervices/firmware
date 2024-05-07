@@ -1,8 +1,8 @@
 #!/bin/bash
 clear
-#max =0;
-#maxperc =0;
 max=0;
+maxperc=0;
+minperc=100;
 
 channel=0;
 mem_location="res_ro4"
