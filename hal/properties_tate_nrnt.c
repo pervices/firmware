@@ -6053,6 +6053,7 @@ int jesd_master_reset() {
         // Reset JESD IP
         set_property("fpga/reset", "3");
         // Reinint rx JESD without resetting IP (alternative to resetting the IP
+        // Reining via reg writes break RTM3 USE_3G_AS_1G
         // Resetting the IP is prefered but sometimes this works when resetting the IP doesn't
         // for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         //     write_jesd_reg_mask(chan + JESD_SHIFT_RX, 0x54, 0x5, 0x5);
