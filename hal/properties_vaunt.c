@@ -764,7 +764,7 @@ int check_rf_pll(int ch, int uart_fd) {
                                                                                \
         pllparam_t pll;                                                        \
         /* load the reference frequency and such for RF PLL*/                  \
-        if (RTM_VER <= 10) {                                                   \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
             pll = pll_def_lmx2572;                                             \
@@ -791,7 +791,8 @@ int check_rf_pll(int ch, int uart_fd) {
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        if (RTM_VER <= 10) { /* use adf5355 */                                 \
+        /* RTM10 and older, and RTM11 channel A, B use adf5355 */              \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             if(!set_pll_frequency(uart_tx_fd[INT(ch)],                         \
@@ -1330,10 +1331,10 @@ CHANNELS
                                                                                \
         pllparam_t pll;                                                        \
         /* load the reference frequency and such for RF PLL*/                  \
-        if (RTM_VER <= 10) {                                                   \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
-            pll = pll_def_lmx2572;                                             \
+                pll = pll_def_lmx2572;                                         \
         }                                                                      \
         long double outfreq = 0;                                               \
                                                                                \
@@ -1357,7 +1358,7 @@ CHANNELS
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        if (RTM_VER <= 10) { /* use adf5355 */                                 \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             if(!set_pll_frequency(uart_rx_fd[INT(ch)],                         \
@@ -1370,7 +1371,7 @@ CHANNELS
             }                                                                  \
         } else { /* RTM >= 11 use lmx2572 */                                   \
             /* TODO: check if the PLL is locked*/                              \
-            set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch));              \
+                set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch));          \
         }                                                                      \
         snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
                                                                                \
