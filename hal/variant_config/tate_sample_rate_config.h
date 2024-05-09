@@ -51,10 +51,10 @@
 
     // Over the wire format, number bits per half of the iq pair
     // Note: the FPGA was hardcoded to assume sc16 in several places. If you see any values multiplied by OWT / 16 its because the actual value needs to be scales to produce a result giving the same number of bits as would occur with sc16
-    #define OTW_RX 16
-    #define S_OTW_RX "16"
-    #define OTW_TX 16
-    #define S_OTW_TX "16"
+    #define DEAULT_OTW_RX 16
+    #define S_DEAULT_OTW_RX "16"
+    #define DEAULT_OTW_TX 16
+    #define S_DEAULT_OTW_TX "16"
 
     // Number of samples requested from rx must be a multiple of this, applies to both trigger and nsamps mode
     #define NSAMPS_MULTIPLE_RX 1
@@ -121,12 +121,13 @@
 
     // Over the wire format, number bits per half of the iq pair
     // Note: the FPGA was hardcoded to assume sc16 in several places. If you see any values multiplied by OWT / 16 its because the actual value needs to be scales to produce a result giving the same number of bits as would occur with sc16
-    #define OTW_RX 12
-    #define S_OTW_RX "12"
-    #define OTW_TX 16
-    #define S_OTW_TX "16"
+    #define DEAULT_OTW_RX 16
+    #define S_DEAULT_OTW_RX "16"
+    #define DEAULT_OTW_TX 16
+    #define S_DEAULT_OTW_TX "16"
 
     // Number of samples requested from rx must be a multiple of this, applies to both trigger and nsamps mode
+    // TODO: verify how this requirement changes with the sample size changes
     #define NSAMPS_MULTIPLE_RX 2944
     #define S_NSAMPS_MULTIPLE_RX "2944"
 
