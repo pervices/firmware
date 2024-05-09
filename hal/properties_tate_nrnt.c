@@ -5991,7 +5991,14 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     _save_profile_path = save_path;
 }
 
+#ifdef RTM3
+// JESD fails 50% of the time currently on 3G RTM3
+// As a workaround, increase the maximum number of server restarts for it
+const int jesd_max_server_restart_attempts = 10;
+#else
+// RTM4 and later have very reliable JESD, so if more than 3 attempts are required for JESD somthing is wrong
 const int jesd_max_server_restart_attempts = 3;
+#endif
 
 // Performs a master JESD reset up to 3 times
 // Returns 0 for success, not 0 for failure. This is to enable bit flags for specific error codes in the future
