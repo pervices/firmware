@@ -144,8 +144,9 @@
     //Multiples of 1000ps are meaningless at 1G
     const int possible_analog_sysref_delays[NUM_ANALOG_SYSREF_DELAYS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
 
-    // 3G does not support little endian
-    #define LITTLE_ENDIAN_SUPPORTED 0
+    // Flag indicating the unit is capable to transmitting little endian samples
+    // NOTE: prior to May 2024 3G FPGA did not support little endian
+    #define LITTLE_ENDIAN_SUPPORTED 1
 
     // Maximum number of times the server will attempt to reset JESD IP before moving on to other methods
     // 3 For normal 1G, 1 for 3G when used as 1G

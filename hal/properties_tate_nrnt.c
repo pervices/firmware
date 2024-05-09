@@ -2424,6 +2424,7 @@ TX_CHANNELS
                 PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, DEAULT_OTW_RX);\
                 wire_format = DEAULT_OTW_RX;\
             }\
+        /* NOTE: prior to May 2024 3G FPGA only supported sc12 for 3G */\
         } else if(MAX_SAMPLE_RATE == 3000) {\
             if(wire_format == 12) {\
                 write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x40000, 0x40000);\
@@ -5491,7 +5492,7 @@ GPIO_PINS
     /* Mask sysref whenever not resetting JESD or powering on */\
     DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP, #_c)\
     /* This is defined here because it is set by a meta property in the FPGA section*/\
-    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rx_sample_bandwidth" , hdlr_rx_##_c##_dsp_sample_bandwidth, RW, "S_DEAULT_OTW_RX", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rx_sample_bandwidth" , hdlr_rx_##_c##_dsp_sample_bandwidth, RW, S_DEAULT_OTW_RX, SP, #_c)\
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
@@ -5584,7 +5585,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/board/async_pwr"          , hdlr_tx_##_c##_async_pwr_board,      RW, "1", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0", SP, #_c)\
     /* This is defined here because it is set by a meta property in the FPGA section*/\
-    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/tx_sample_bandwidth" , hdlr_tx_##_c##_dsp_sample_bandwidth, RW, "S_DEAULT_OTW_TX", SP, #_c)
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/tx_sample_bandwidth" , hdlr_tx_##_c##_dsp_sample_bandwidth, RW, S_DEAULT_OTW_TX, SP, #_c)
 
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
