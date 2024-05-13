@@ -36,6 +36,7 @@
 
 #include <signal.h>
 #include "gpio_pins.h"
+#include "led.h"
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include "variant_config/tate_sample_rate_config.h"
@@ -113,6 +114,10 @@ static const char *tx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "txa4", "txb4
 #define NUM_DEVICE_SIDE_PORTS 16
 static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
 
+// Set to true after changing rx to 1G so it doesn't get set to it again
+// Only used with USE_3G_AS_1G
+static uint8_t rx_3g_set_to_1g[NUM_RX_CHANNELS] = {0};
+
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
 
@@ -172,8 +177,8 @@ const int jesd_mask_delay = 200000;
 int jesd_master_reset();
 static int hdlr_jesd_reset_master(const char *data, char *ret);
 
-void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
-void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 
 typedef enum {
     pulsed = 0,
@@ -264,6 +269,27 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
         sample_factor--;
     }
     return sample_factor;
+}
+
+// reg: the register to write to
+// shift: the point in the register to write the value to (the value is 16 bit)
+// desired: the target length of the VITA 49 part of the packet, not including the trailer if applicable
+uint32_t set_payload_len(char* reg, uint32_t shift, uint32_t desired) {
+    // Cap payload length
+    if(desired > RX_MAX_PAYLOAD) {
+        desired = RX_MAX_PAYLOAD;
+    }
+#ifdef S1000
+    // Restrict desired to legal values due to integer rounding
+    uint32_t actual = desired - (desired % 4);
+#elif defined(S3000)
+    // payload length for 3G is hard coded
+    uint32_t actual = RX_MAX_PAYLOAD;
+#endif
+
+    write_hps_reg_mask(reg, actual << shift, 0xffff << shift);
+
+    return actual;
 }
 
 // Waits for the FPGA to finish reseting
@@ -434,7 +460,7 @@ static int set_sma_pol(bool positive) {
     static int tx_set_gating_mode(const char *chan, bool dsp) {
         char reg_name[8];
         snprintf(reg_name, sizeof(reg_name), "tx%s6", chan);
-        return set_reg_bits(reg_name, 13, 1, dsp);
+        return set_reg_bits(reg_name, 18, 1, dsp);
     }
 
     static int tx_valid_gating_mode(const char *data, bool *dsp) {
@@ -590,6 +616,42 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
     }
 }
 
+static int valid_time_gate_logic(const char *data, uint32_t *val) {
+    int r;
+    r = sscanf(data, "%" PRIu32, val);
+    if (1 == r && (*val == 0 || *val == 1)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
+static int valid_trig_time_disable(const char *data, uint32_t *val) {
+    int r;
+    r = sscanf(data, "%" PRIu32, val);
+    if (1 == r && (*val == 0 || *val == 1)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
+static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 6 : 9);    
+    return set_reg_bits(reg_name, (tx?16:13), 1, val);
+}
+
+static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
+    char reg_name[8];
+    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 6 : 9);    
+    return set_reg_bits(reg_name, (tx?17:14), 1, val);
+}
+
 #define X(ch)                                                              \
     static int hdlr_tx_##ch##_trigger_sma_mode(const char *data, char *ret) {  \
         int r;                                                                 \
@@ -703,6 +765,26 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
             \
         }\
         return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
+        uint32_t val;                                                          \
+        int r = valid_trig_time_disable(data, &val);\
+        if(r == RETURN_SUCCESS) {\
+            return set_trig_time_disable(true, #ch, val);\
+        } else {\
+            return r;\
+        }\
+    }                                                                          \
+                                                                               \
+    static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
+        uint32_t val;                                                          \
+        int r = valid_time_gate_logic(data, &val);\
+        if(r == RETURN_SUCCESS) {\
+            return set_trig_time_gate_logic(true, #ch, val);\
+        } else {\
+            return r;\
+        }\
     }
 TX_CHANNELS
 #undef X
@@ -739,8 +821,8 @@ TX_CHANNELS
         uint64_t val = 0;                                                          \
         r = valid_edge_sample_num(data, &val);\
         val = (val / NSAMPS_MULTIPLE_RX) * NSAMPS_MULTIPLE_RX;\
-        val = val * OTW_RX / 16;\
-        uint64_t actual_nsamps = val * 16 / OTW_RX;\
+        val = val * DEAULT_OTW_RX / 16;\
+        uint64_t actual_nsamps = val * 16 / DEAULT_OTW_RX;\
         snprintf(ret, MAX_PROP_LEN, "%lu", actual_nsamps);                                             \
         if(r != RETURN_SUCCESS) return r;\
         else {\
@@ -796,6 +878,18 @@ TX_CHANNELS
             \
         }\
         return r;                                                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_trigger_time_disable(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_trig_time_disable(data, &val) ||                          \
+             set_trig_time_disable(false, #ch, val);                              \
+    }                                                                          \
+                                                                               \
+    static int hdlr_rx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
+        uint32_t val;                                                              \
+        return valid_time_gate_logic(data, &val) ||                                        \
+            set_trig_time_gate_logic(false, #ch, val);                             \
     }
 RX_CHANNELS
 #undef X
@@ -848,6 +942,21 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return 0;
     }
 }
+
+// Verifies the rf pll is good. Returns 1 if the pll is locked
+int check_rf_pll(int ch, bool is_tx) {
+    snprintf(buf, sizeof(buf), "status -l\r");
+    if(is_tx) {
+        ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
+    } else {
+        ping(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf));
+    }
+    int pll_chan; // dummy variable used to deal with the pll channel number being different
+    int result;
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
+    return result;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -974,17 +1083,42 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
-        if (band == 0) {                       \
-            set_property("tx/" STR(ch) "/link/iq_swap", "1");\
-            snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);\
-        } else if ((band == 1) || (band == 2)) {                       \
-            set_property("tx/" STR(ch) "/link/iq_swap", "0");\
-            snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);\
+                                                                            \
+        switch(band){                                                          \
+            case 2:                                                            \
+                /*Ensure 100MHz LMX ref is enabled for highband*/              \
+                set_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                /* Ensure 1.8GHz IF clock is enabled for highband*/            \
+                set_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
+                /* clear IQ swap because of possible previous use of low band*/\
+                set_property("tx/" STR(ch) "/link/iq_swap", "0");              \
+                break;                                                         \
+            case 1:                                                            \
+                /*Ensure 100MHz LMX ref is enabled for midband*/               \
+                set_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                /* turn off the 1.8GHz IF to reduce noise*/                    \
+                clr_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
+                /* clear IQ swap because of possible previous use of low band*/\
+                set_property("tx/" STR(ch) "/link/iq_swap", "0");              \
+                break;                                                         \
+            case 9: /*"Superbaseband" mode available on TX*/                   \
+            case 0:                                                            \
+                /* turn off the 100MHz LMX ref*/                               \
+                clr_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                /* turn off the 1.8GHz IF*/                                    \
+                clr_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
+                /*IQ swap to address layout*/                                  \
+                set_property("tx/" STR(ch) "/link/iq_swap", "1");              \
+                break;                                                         \
+            default:                                                           \
+                snprintf(buf, MAX_PROP_LEN, "rf -z\r"); /*mute the board to stop transmitting*/\
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                PRINT(ERROR,"unrecognized band\n");                            \
+                return RETURN_ERROR_PARAM;                                     \
         }                                                                      \
-        else {  /* otherwise mute the tx board */                              \
-            strcpy(buf, "rf -z\r");                                            \
-        }                                                                      \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);                       \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+                                                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1104,14 +1238,10 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
-    static int hdlr_tx_##ch##_status_lna(const char *data, char *ret) {   \
-        if(RTM_VER > 3) {\
-            snprintf(buf, 10, "rf -S\r");\
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            snprintf(ret, 50, (char *)uart_ret_buf);\
-        } else {\
-            snprintf(ret, 50, "lna status not implemented on RTM3 mcu\n");\
-        }\
+    static int hdlr_tx_##ch##_status_lna(const char *data, char *ret) {        \
+        snprintf(buf, 10, "rf -S\r");                                          \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        snprintf(ret, 50, (char *)uart_ret_buf);                               \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1270,6 +1400,35 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         write_hps_reg(tx_reg4_map[INT(ch)], old_val | 0x2);                     \
         usleep(10000);\
         write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x2));                   \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /* Selects the size of samples */\
+    /* Takes the size of half the complex pair (i.e. for sc16 set to 16 */\
+    static int hdlr_tx_##ch##_dsp_sample_bandwidth(const char *data, char *ret) {        \
+        int wire_format = 0;\
+        sscanf(data, "%i", &wire_format);\
+        \
+        if(MAX_SAMPLE_RATE == 1000) {\
+            /* Wire formate cannot be set on 1G*/\
+            if(wire_format != DEAULT_OTW_TX) {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, DEAULT_OTW_TX);\
+                wire_format = DEAULT_OTW_TX;\
+            }\
+        } else if(MAX_SAMPLE_RATE == 3000) {\
+            if(wire_format == 12) {\
+                write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x40000, 0x40000);\
+            } else if(wire_format == 16) {\
+                write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            } else {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, 16);\
+                wire_format = 16;\
+                write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            }\
+        } else {\
+            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
+        }\
+        snprintf(ret, MAX_PROP_LEN, "%i", wire_format);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1451,40 +1610,27 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     \
     /*waits for async_pwr_board to finished*/\
     static int hdlr_tx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        int status = 0;\
         \
-        time_t current_time=0;\
-        time(&current_time);\
-        int remaining_timeout;\
-        if(tx_async_start_time[INT(ch)] + PWR_TIMEOUT > current_time) {\
-            remaining_timeout = tx_async_start_time[INT(ch)] + PWR_TIMEOUT - current_time;\
-        } else {\
-            remaining_timeout = 0;\
-        }\
-        pid_t pid = fork();\
-        if(pid==0) {\
-            char rfe_slot[10];                                                 \
-            snprintf(rfe_slot, 10, "%i", INT_TX(ch));                    \
-            char str_timeout[10];\
-            snprintf(str_timeout, 10, "%i", remaining_timeout);\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", str_timeout, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr tx ch: %i\n", INT(ch));\
-            _Exit(EXIT_ERROR_RFE_CONTROL);\
-        }\
-        waitpid(pid, &status, 0);\
-        if( WIFEXITED(status) ) {\
-            if(WEXITSTATUS(status)) {\
+        /* Polls to check if a board has turned on */\
+        do {\
+            snprintf(buf, sizeof(buf), "/usr/bin/rfe_control %i check", INT_TX(ch));\
+            FILE *check_result;\
+            check_result = popen(buf, "r");\
+            size_t bytes_read = fread(buf, 1, sizeof(buf), check_result);\
+            if(bytes_read == 0) {\
                 tx_power[INT(ch)] = PWR_NO_BOARD;\
-                PRINT(ERROR,"Error when powering on tx board %i, the slot will not be used\n", INT(ch));\
-                PRINT(ERROR, "Exit status: %i\n", WEXITSTATUS(status));\
-            } else {\
+                PRINT(ERROR,"Error in script controlling power for tx board %i, the slot will not be used\n", INT(ch));\
+                return errno;\
+            } else if(strstr(buf, "on")) {\
                 tx_power[INT(ch)] = PWR_HALF_ON;\
-                PRINT(INFO,"Tx board %i powered on\n", INT(ch));\
+                PRINT(INFO,"Tx board %i powered on within %lus\n", INT(ch), time(NULL) - tx_async_start_time[INT(ch)]);\
+                return RETURN_SUCCESS;\
             }\
-        } else {\
-            tx_power[INT(ch)] = PWR_NO_BOARD;\
-            PRINT(ERROR,"Error in script controlling power for tx board %i, the slot will not be used\n", INT(ch));\
-        }\
+        \
+        } while (time(NULL) < tx_async_start_time[INT(ch)] + PWR_TIMEOUT);\
+        \
+        tx_power[INT(ch)] = PWR_NO_BOARD;\
+        PRINT(ERROR,"Timeout while powering tx board %i, the slot will not be used\n", INT(ch));\
         \
         return RETURN_SUCCESS;\
     }                                                                          \
@@ -1534,6 +1680,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     /* Positive: enable the board/finish power on process */\
     static int hdlr_tx_##ch##_pwr(const char *data, char *ret) {         \
         uint32_t old_val = 0;                                                  \
+        int num_lna_attempts = 0;                                              \
         int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
         \
@@ -1541,7 +1688,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         if(power < 0) {\
             tx_power[INT(ch)] = PWR_NO_BOARD;\
             write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x2, 0x2);\
-            snprintf(buf, MAX_PROP_LEN, "rfe_control %d off", INT_TX(ch));\
+            snprintf(buf, 40, "rfe_control %d off n", INT_TX(ch));\
             system(buf);\
             power = 0;\
         }\
@@ -1568,23 +1715,20 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                     set_property("tx/" STR(ch) "/jesd/reset", "1");\
                 }\
             }\
-            /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
-            if(RTM_VER > 3 && !(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
-                int num_lna_attempts = 0;\
-                while(1) {\
-                    hdlr_tx_##ch##_status_lna("1", buf);\
-                    if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
-                        PRINT(INFO, "LNA is good\n");\
-                        break;\
-                    } else if(num_lna_attempts >= 10){\
-                        PRINT(ERROR, "Failed to start lna after 10 attempts\n");\
-                        break;\
-                    } else {\
-                        PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
-                        num_lna_attempts ++;\
-                        snprintf(buf, 20, "rf -L r\r");\
-                        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                    }\
+            /* Check if low noise aplifier is in a good condition */           \
+            while(1) {                                                         \
+                hdlr_tx_##ch##_status_lna("1", buf);                           \
+                if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
+                    PRINT(INFO, "LNA is good\n");                              \
+                    break;                                                     \
+                } else if(num_lna_attempts >= 10){                             \
+                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");   \
+                    break;                                                     \
+                } else {                                                       \
+                    PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
+                    num_lna_attempts ++;                                       \
+                    snprintf(buf, 20, "rf -L r\r");                            \
+                    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
             }\
                                                                                \
@@ -1605,10 +1749,8 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                                                                                \
             /* Turns the power indicator light on */\
             /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
-            if(RTM_VER != 3) {\
-                snprintf(buf, 20, "board -w 1\r");\
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            }\
+            snprintf(buf, 20, "board -w 1\r");                                 \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
             /* power off */                                                    \
         } else {                                                               \
             \
@@ -1616,10 +1758,8 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                 /* mute the channel */                                             \
                 strcpy(buf, "rf -z\r");                          \
                 ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
-                if(RTM_VER != 3) {\
-                    snprintf(buf, 20, "board -w 0\r");\
-                    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                }\
+                snprintf(buf, 20, "board -w 0\r");\
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
                     tx_power[INT(ch)] = PWR_HALF_ON;\
                 } else {\
@@ -1636,6 +1776,11 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
                     tx_power[INT(ch)] = PWR_OFF | PWR_NO_BOARD;\
                 }\
             }\
+                                                                               \
+            /* turn off the 100MHz LMX ref*/                                   \
+            clr_property_bit("time/source/enable_rf_ref", INT_TX(ch));         \
+            /* turn off the 1.8GHz IF*/                                        \
+            clr_property_bit("time/source/enable_rf_if", INT_TX(ch));          \
                                                                                \
             /* disable DSP cores */                                            \
             read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
@@ -1723,7 +1868,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
     \
     static int hdlr_tx_##ch##_about_hw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -h\r");                                             \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
         snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -1791,14 +1936,18 @@ TX_CHANNELS
         }                                                                       \
                                                                                 \
         /* Send Parameters over to the MCU */                                   \
-        set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch));  \
+        if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
+            /* if HB add back in freq before printing value to state tree */        \
+            if (band == 2) {                                                        \
+                outfreq += HB_STAGE2_MIXER_FREQ;                                    \
+            }                                                                       \
+            /* Save the frequency that is being set into the property */            \
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                            \
+        } else {\
+            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
+            snprintf(ret, MAX_PROP_LEN, "0");                                  \
+        }\
                                                                                 \
-        /* if HB add back in freq before printing value to state tree */        \
-        if (band == 2) {                                                        \
-            outfreq += HB_STAGE2_MIXER_FREQ;                                    \
-        }                                                                       \
-        /* Save the frequency that is being set into the property */            \
-        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                           \
                                                                                 \
         return RETURN_SUCCESS;                                                  \
     }                                                                           \
@@ -1814,18 +1963,38 @@ TX_CHANNELS
         int16_t band = 0;                                                          \
         sscanf(data, "%hi", &band);                                             \
                                                                                \
-        /* mcu only accepts 8 bit unsigned ints */\
-        if(band < 0 || band > 0xff) band = 0xff;\
-        \
+        switch(band){                                                          \
+            case 2:                                                            \
+                /* turn on the 100MHz LMX ref*/                                \
+                set_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                /* Ensure 1.8GHz IF clock is enabled for highband*/            \
+                set_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
+                /* clear IQ swap because of possible previous use of low band*/\
+                set_property("rx/" STR(ch) "/link/iq_swap", "0");              \
+                break;                                                         \
+            case 1:                                                            \
+                /* need to set the 100MHz LMX ref*/                            \
+                set_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                /* turn off the 1.8GHz IF*/                                    \
+                clr_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
+                /* clear IQ swap because of possible previous use of low band*/\
+                set_property("rx/" STR(ch) "/link/iq_swap", "0");              \
+                break;                                                         \
+            case 0:                                                            \
+                /* turn off the 100MHz LMX ref*/                               \
+                clr_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                /* turn off the 1.8GHz IF*/                                    \
+                clr_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
+                /* IQ swap to address layout*/                                 \
+                set_property("rx/" STR(ch) "/link/iq_swap", "1");              \
+                break;                                                         \
+            default:                                                           \
+                PRINT(ERROR,"unrecognized band\n");                            \
+                return RETURN_ERROR_PARAM;                                     \
+        }                                                                      \
         snprintf(buf, MAX_PROP_LEN, "rf -b %hhx\r", (uint8_t) band);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
                                                                                \
-        /* if mid or high band swap iq to address RTM3 layout issue */         \
-        if (band == 0) {                                                       \
-            set_property("rx/" STR(ch) "/link/iq_swap", "1");                  \
-        } else {                                                               \
-            set_property("rx/" STR(ch) "/link/iq_swap", "0");                  \
-        }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1895,6 +2064,44 @@ TX_CHANNELS
             PRINT(ERROR, "Invalid band (%hhu) detected when setting gain\n", band);\
             return RETURN_ERROR;\
         }\
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+                                                                               \
+    /* Sets the digital gain amplifier*/\
+    /* NOTE: do not set when setting other gains, brings down JESD */\
+    static int hdlr_rx_##ch##_rf_gain_adc_digital(const char *data, char *ret) {      \
+        double requested_gain = 0;\
+        sscanf(data, "%lf", &requested_gain);                                             \
+        if(requested_gain < 0) {\
+            snprintf(ret, MAX_PROP_LEN, "-1\n");\
+            return RETURN_SUCCESS;\
+        } else if(rx_stream[INT(ch)] == STREAM_ON) {\
+            PRINT(ERROR, "RX is currently streaming. Setting the ADC digital gain will disrupt that. Skipping setting the ADC gain\n");\
+            /* Get existing gain without setting it */\
+            snprintf(buf, MAX_PROP_LEN, "adc -D\r");\
+        } else {\
+            /* The unit the function takes is dB*1000. i.e. 120000 = 12dB */\
+            int32_t requested_gain_int = (int32_t) (requested_gain * 1000);\
+            snprintf(buf, MAX_PROP_LEN, "adc -d %i\r", requested_gain_int);\
+        }\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        int32_t actual_gain_int_a = 0;\
+        int32_t actual_gain_int_b = 0;\
+        sscanf((char *)uart_ret_buf, "Digital gain (dB*1000): CHA: %i, CHB: %i\n", &actual_gain_int_a, &actual_gain_int_b);\
+        double actual_gain = (double)actual_gain_int_a/1000;\
+        \
+        /* Warns the user if there is a mismatch between ADC channel A or B (should be impossible when going through our API)*/\
+        if(actual_gain_int_a != actual_gain_int_b) {\
+            double actual_gain_b = (double)actual_gain_int_b/1000;\
+            PRINT(ERROR, "Mistmatch between ADC gains. A: %lf, B: %lf\n", actual_gain, actual_gain_b);\
+        }\
+        \
+        snprintf(ret, MAX_PROP_LEN, "%lf\n", actual_gain);\
+        if(rx_stream[INT(ch)] != STREAM_ON) {\
+            /* Resets JESD if the ADC digital gain was set */\
+            set_property("fpga/jesd/jesd_reset_master", "1");\
+        }\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2050,13 +2257,9 @@ TX_CHANNELS
     }                                                                          \
     \
     static int hdlr_rx_##ch##_status_lna(const char *data, char *ret) {   \
-        if(RTM_VER > 3) {\
-            snprintf(buf, 10, "rf -S\r");\
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            snprintf(ret, 50, (char *)uart_ret_buf);\
-        } else {\
-            snprintf(ret, 50, "lna status not implemented on RTM3 mcu\n");\
-        }\
+        snprintf(buf, 10, "rf -S\r");                                          \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        snprintf(ret, 50, (char *)uart_ret_buf);                               \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2090,7 +2293,6 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val = 0;                                                  \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         uint16_t factor = 0;\
@@ -2126,9 +2328,6 @@ TX_CHANNELS
         write_hps_reg("rx" STR(ch) "1", factor);                      \
         /*Set whether to bypass dsp and fir*/\
         write_hps_reg("rx" STR(ch) "2", bypass);                      \
-        /*Sets whether fraction samples are used (always false)*/\
-        read_hps_reg(rx_reg4_map[INT(ch)], &old_val);             \
-        write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 15));\
         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2138,14 +2337,17 @@ TX_CHANNELS
         double freq = 0;                                                       \
         uint32_t old_val = 0;                                                  \
         uint8_t direction = 0;                                                 \
-        char rate_s[50];\
-        get_property("rx/" STR(ch) "/dsp/rate", rate_s, 50);\
+        char read_s[50];\
+        get_property("rx/" STR(ch) "/dsp/rate", read_s, 50);\
         double rate;\
-        sscanf(rate_s, "%lf", &rate);\
+        sscanf(read_s, "%lf", &rate);\
+        get_property("rx/" STR(ch) "/about/fw_ver", read_s, 50);\
+        /* strstr will return NULL if the Rx3 string is not found, in which case the RX board is not a 3G board*/\
+        char *rx_hw_is_3g = strstr(read_s, "Rx3");\
         \
         /* nco shift caused by hardware configuration */\
         double hardware_shift;\
-        if(USE_3G_AS_1G) {\
+        if(USE_3G_AS_1G && (rx_hw_is_3g != NULL)) {\
             hardware_shift = RX_NCO_SHIFT_3G_TO_1G;\
         } else {\
             hardware_shift = 0;\
@@ -2207,6 +2409,36 @@ TX_CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x400);      \
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], (old_val & ~0x1e00) | 0x000);      \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
+    \
+    /* Selects the size of samples */\
+    /* Takes the size of half the complex pair (i.e. for sc16 set to 16 */\
+    static int hdlr_rx_##ch##_dsp_sample_bandwidth(const char *data, char *ret) {        \
+        int wire_format = 0;\
+        sscanf(data, "%i", &wire_format);\
+        \
+        if(MAX_SAMPLE_RATE == 1000) {\
+            /* Wire formate cannot be set on 1G*/\
+            if(wire_format != DEAULT_OTW_RX) {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, DEAULT_OTW_RX);\
+                wire_format = DEAULT_OTW_RX;\
+            }\
+        /* NOTE: prior to May 2024 3G FPGA only supported sc12 for 3G */\
+        } else if(MAX_SAMPLE_RATE == 3000) {\
+            if(wire_format == 12) {\
+                write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x40000, 0x40000);\
+            } else if(wire_format == 16) {\
+                write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            } else {\
+                PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, 16);\
+                wire_format = 16;\
+                write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x00000, 0x40000);\
+            }\
+        } else {\
+            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
+        }\
+        snprintf(ret, MAX_PROP_LEN, "%i", wire_format);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -2284,10 +2516,6 @@ TX_CHANNELS
     }                                                                          \
     \
     static int hdlr_rx_##ch##_iq_gain_correction(const char *data, char *ret) {      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
            double iq_gain_error = 0;                                           \
            sscanf(data, "%lf", &iq_gain_error);                                \
            PRINT(INFO,"data as entered %lf\n", iq_gain_error);\
@@ -2322,10 +2550,6 @@ TX_CHANNELS
           return RETURN_SUCCESS;                                                           \
     }                                                                                       \
     static int hdlr_rx_##ch##_iq_phase_correction(const char *data, char *ret) {            \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
         double iq_phase_error = 0;                                                          \
         /*input range: -2.5 to 2.5, output range:0x0000 to 0x01FF, offset: 0x100, */        \
         sscanf(data,"%lf",&iq_phase_error);                                                 \
@@ -2358,10 +2582,6 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                              \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_i(const char *data, char *ret) {      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
         double iq_dcoffset_i = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
         sscanf(data,"%lf",&iq_dcoffset_i);                                                 \
@@ -2394,10 +2614,6 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     static int hdlr_rx_##ch##_iq_dco_q(const char *data, char *ret) {      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
            /* To do */                                         \
         double iq_dcoffset_q = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
@@ -2432,10 +2648,6 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd2_ix(const char *data, char *ret) {                      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2454,10 +2666,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd2_iy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2476,10 +2684,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2498,10 +2702,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd2_qy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2520,10 +2720,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_ix(const char *data, char *ret) {                      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2542,10 +2738,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_hd3_iy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2564,10 +2756,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2586,10 +2774,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_hd3_qy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
@@ -2608,10 +2792,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_ix(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2630,10 +2810,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im2_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2652,10 +2828,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_ix(const char *data, char *ret) {                      \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2674,10 +2846,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                   \
     static int hdlr_rx_##ch##_iq_im3_iy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2696,10 +2864,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qx(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2718,10 +2882,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_im3_qy(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
@@ -2740,10 +2900,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                                  \
     static int hdlr_rx_##ch##_iq_ip3cc(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t cc_adj;                                               \
             sscanf(data,"%hhu",&cc_adj);                                      \
@@ -2762,10 +2918,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                                     \
     }                                                                               \
     static int hdlr_rx_##ch##_iq_ip3ic(const char *data, char *ret) {                  \
-        if(RTM_VER  < 4) {\
-            snprintf(ret, MAX_UART_RET_LEN, "not implemented on rtm: %i\n", RTM_VER);\
-            return RETURN_SUCCESS;\
-        }\
                                                                                     \
             uint8_t ic_adj;                                               \
             sscanf(data,"%hhu",&ic_adj);                                      \
@@ -2828,23 +2980,22 @@ TX_CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_prime_trigger_stream(const char *data, char *ret) {     \
         /*Forces rx to start sreaming data, only use if the conventional method using the sfp port is not possible*/\
-        uint32_t val = 0;\
-        read_hps_reg(rx_reg4_map[INT(ch)], &val);\
-        val = val & ~(0x6002 | 0x100);\
         if(data[0]=='0') {\
-            /*puts the dsp in reset*/\
-            val = val | 0x6002;\
-            write_hps_reg(rx_reg4_map[INT(ch)], val);\
+            /*disables channel and puts the dsp in reset*/\
+            write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x002, 0x102);\
             rx_stream[INT(ch)] = STREAM_OFF;\
             /*Ignores sma (enabling normal stream command)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "0");\
+            /*turn time disable off*/\
+            set_property("rx/" STR(ch) "/trigger/time_disable", "0");\
         }else {\
             rx_stream[INT(ch)] = STREAM_ON;\
             /*Stream when sma trigger (has the side effect of disabling normal stream commands)*/\
             set_property("rx/" STR(ch) "/trigger/trig_sel", "1");\
-            /*takes the dsp out of reset*/\
-            val = val | 0x100;\
-            write_hps_reg(rx_reg4_map[INT(ch)], val);\
+            /*turn time disable off*/\
+            set_property("rx/" STR(ch) "/trigger/time_disable", "1");\
+            /*enable channel and take the dsp out of reset*/\
+            write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x100, 0x102);\
         }\
         return RETURN_SUCCESS;                                                 \
     } \
@@ -2917,6 +3068,7 @@ TX_CHANNELS
             system(pwr_cmd);                                                   \
             rx_power[INT(ch)] = PWR_HALF_ON;\
         } else {\
+            rx_3g_set_to_1g[INT(ch)] = 0;\
             /* This function is meant to block until after power is either on or off. However a hardware issue can cause unpopulated boards to never be detected as off*/\
             snprintf(pwr_cmd, 40, "rfe_control %d off %i", INT_RX(ch), PWR_TIMEOUT);\
             system(pwr_cmd);                                                   \
@@ -2948,39 +3100,27 @@ TX_CHANNELS
     }                                                                          \
     /*waits for the rx board to turn on with a timeout. If the timeout occurs, assume the board is not connected*/\
     static int hdlr_rx_##ch##_wait_async_pwr(const char *data, char *ret) {               \
-        int status = 0;\
         \
-        time_t current_time=0;\
-        time(&current_time);\
-        int remaining_timeout;\
-        if(rx_async_start_time[INT(ch)] + PWR_TIMEOUT > current_time) {\
-            remaining_timeout = rx_async_start_time[INT(ch)] + PWR_TIMEOUT - current_time;\
-        } else {\
-            remaining_timeout = 0;\
-        }\
-        pid_t pid = fork();\
-        if(pid==0) {\
-            char rfe_slot[10];                                                 \
-            snprintf(rfe_slot, 10, "%i", INT_RX(ch));                    \
-            char str_timeout[10];\
-            snprintf(str_timeout, 10, "%i", remaining_timeout);\
-            execl("/usr/bin/rfe_control", "rfe_control", rfe_slot, "on", str_timeout, NULL);\
-            PRINT(ERROR, "Failed to launch rfe_control in async pwr rx ch: %i\n", INT(ch));\
-            _Exit(EXIT_ERROR_RFE_CONTROL);\
-        }\
-        waitpid(pid, &status, 0);\
-        if( WIFEXITED(status) ) {\
-            if(WEXITSTATUS(status)) {\
+        /* Polls to check if a board has turned on */\
+        do {\
+            snprintf(buf, sizeof(buf), "/usr/bin/rfe_control %i check", INT_RX(ch));\
+            FILE *check_result;\
+            check_result = popen(buf, "r");\
+            size_t bytes_read = fread(buf, 1, sizeof(buf), check_result);\
+            if(bytes_read == 0) {\
                 rx_power[INT(ch)] = PWR_NO_BOARD;\
-                PRINT(ERROR,"Error when powering on rx board %i, the slot will not be used\n", INT(ch));\
-            } else {\
+                PRINT(ERROR,"Error in script controlling power for rx board %i, the slot will not be used\n", INT(ch));\
+                return errno;\
+            } else if(strstr(buf, "on")) {\
                 rx_power[INT(ch)] = PWR_HALF_ON;\
-                PRINT(INFO,"Rx board %i powered on\n", INT(ch));\
+                PRINT(INFO,"Rx board %i powered on within %lus\n", INT(ch), time(NULL) - rx_async_start_time[INT(ch)]);\
+                return RETURN_SUCCESS;\
             }\
-        } else {\
-            rx_power[INT(ch)] = PWR_NO_BOARD;\
-            PRINT(ERROR,"Error in script controlling power for rx board %i, the slot will not be used\n", INT(ch));\
-        }\
+        \
+        } while (time(NULL) < rx_async_start_time[INT(ch)] + PWR_TIMEOUT);\
+        \
+        rx_power[INT(ch)] = PWR_NO_BOARD;\
+        PRINT(ERROR,"Timeout while powering rx board %i, the slot will not be used\n", INT(ch));\
         \
         return RETURN_SUCCESS;\
     }                                                                          \
@@ -3098,6 +3238,7 @@ TX_CHANNELS
             return RETURN_SUCCESS;\
         }\
         uint32_t old_val = 0;                                                  \
+        int num_lna_attempts = 0;                                              \
         int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
         \
@@ -3105,7 +3246,7 @@ TX_CHANNELS
         if(power < 0) {\
             rx_power[INT(ch)] = PWR_NO_BOARD;\
             write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x2, 0x2);\
-            snprintf(buf, MAX_PROP_LEN, "rfe_control %d off", INT_RX(ch));\
+            snprintf(buf, 40, "rfe_control %d off n", INT_RX(ch));\
             system(buf);\
             return RETURN_SUCCESS;\
         }\
@@ -3121,10 +3262,11 @@ TX_CHANNELS
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
             \
-            if(USE_3G_AS_1G) {\
+            if(USE_3G_AS_1G && !rx_3g_set_to_1g[INT(ch)]) {\
                 /* Tells the 3G board to operate in 1G mode */\
                 snprintf(buf, MAX_PROP_LEN, "board -i 1000\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                rx_3g_set_to_1g[INT(ch)] = 1;\
             }\
             \
             /* Sets board state to PWR_ON, jesd_reset_all will only attempt to reset boards that are set to on*/\
@@ -3134,23 +3276,20 @@ TX_CHANNELS
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
             \
-            /* Check if low noise aplifier is in a good condition, this is not not exposed in the RTM3 mcu */\
-            if(RTM_VER > 3) {\
-                int num_lna_attempts = 0;\
-                while(1) {\
-                    hdlr_rx_##ch##_status_lna("1", buf);\
-                    if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
-                        PRINT(INFO, "LNA is good\n");\
-                        break;\
-                    } else if(num_lna_attempts >= 10){\
-                        PRINT(ERROR, "Failed to start lna after 10 attempts\n");\
-                        break;\
-                    } else {\
-                        PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
-                        num_lna_attempts ++;\
-                        snprintf(buf, 20, "rf -L r\r");\
-                        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                    }\
+            /* Check if low noise aplifier is in a good condition*/            \
+            while(1) {                                                         \
+                hdlr_rx_##ch##_status_lna("1", buf);                           \
+                if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
+                    PRINT(INFO, "LNA is good\n");                              \
+                    break;                                                     \
+                } else if(num_lna_attempts >= 10){                             \
+                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");   \
+                    break;                                                     \
+                } else {                                                       \
+                    PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
+                    num_lna_attempts ++;                                       \
+                    snprintf(buf, 20, "rf -L r\r");                            \
+                    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
             }\
                                                                     \
@@ -3168,10 +3307,8 @@ TX_CHANNELS
             \
             /* Turns the power indicator light on */\
             /* The indicator light turns on when the board boots, and gets turned off without the board being turned off as a workaround for JESD links not re-establishing when rebooting boards*/\
-            if(RTM_VER > 3) {\
-                snprintf(buf, 20, "board -w 1\r");\
-                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            }\
+            snprintf(buf, 20, "board -w 1\r");                                 \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
             \
             /* power off & stream off */                                       \
         } else {                                                               \
@@ -3187,6 +3324,11 @@ TX_CHANNELS
             }\
                                                                                \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
+                                                                               \
+            /* turn off the 100MHz LMX ref*/                                   \
+            clr_property_bit("time/source/enable_rf_ref", INT_RX(ch));         \
+            /* turn off the 1.8GHz IF*/                                        \
+            clr_property_bit("time/source/enable_rf_if", INT_RX(ch));          \
                                                                                \
             /* disable DSP core */                                             \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
@@ -3325,7 +3467,7 @@ RX_CHANNELS
             \
         }\
         return r;                                                              \
-    }
+    }                                                                          
 TX_CHANNELS
 #undef X
 
@@ -3520,14 +3662,13 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 }
 
 // Enables streaming at a target buffer level, instead of relying on start and end of burst commands
-// 0 stops all fore streaming. To start streaming set this using a value where each bit corresponds to ech channel
+// 0 stops all force streaming. To start streaming set this using a value where each bit corresponds to each channel
 // ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
 // using -1 for streaming all
 static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
     int32_t request = 0;
     sscanf(data, "%i", &request);
 
-    //Negative values indicate do nothing, positive indicate which channels to use
         for(int n = 0; n < NUM_TX_CHANNELS; n++) {
             int32_t request_bit = (request >> n) & 1;
             request_bit = request_bit << 16;
@@ -3739,16 +3880,13 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     sscanf(data, "%li", &stream);
     char path_buffer[MAX_PATH_LEN];
     if(stream != 0) {
-        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
-            //stops any existing force streaming
-            snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
-            set_property(path_buffer, "0");
-        }
-        //sets the sma trigger to act as an input
-        set_property("fpga/trigger/sma_dir", "input");
-        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //stop any force streaming by bringing the trigger low
+        //force the trigger input to always read as high
+        set_property("fpga/trigger/sma_override", "1");
+        //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
+        // configure the channels specified for force streaming, and ensure others are not
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
                 snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
@@ -3760,10 +3898,11 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
                 set_property(path_buffer, "0");
             }
         }
-        //sets the sma to activate when high (there is a pullup resistor so not connected is high)
+        //sets the sma to activate when high (sma_override is forcing it high)
+        //this starts the streaming for all channels at once
         set_property("fpga/trigger/sma_pol", "positive");
     } else {
-        //sets the sma trigger to activate when it is low (pullup reistor will make it high)
+        //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
@@ -3772,6 +3911,8 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
         }
+        //stop ignoring the trigger input state in case it will be used later
+        set_property("fpga/trigger/sma_override", "0");
     }
     return RETURN_SUCCESS;
 }
@@ -3829,6 +3970,58 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
         return RETURN_ERROR_PARAM;
     }
     write_hps_reg_mask("sys13", external, 2);
+    return RETURN_SUCCESS;
+}
+
+// Controls whether the time board LMX2595 that provides the 100MHz reference to the mid and highband RF mixers is enabled
+// To track whether we can turn off the clock, we will track this as a 32-bit hex number
+// the bottom 16 bits will each correspond to an rf slot, which will be set high by band select, or low by pwr 0
+// if any of the top 16 bits are high, the clock will not be turned off
+static int hdlr_time_set_time_en_rf_ref(const char *data, char *ret) {
+    uint32_t enable;
+    if (1 != sscanf(data, "0x%x", &enable)) {
+        if (1 != sscanf(data, "%" SCNu32, &enable)) {
+            PRINT(ERROR,"Unrecognized channel (%s), persistently enabling clock\n", data);
+            enable = 0x10000;
+        }
+    }
+
+    if (enable) {
+        PRINT(VERBOSE,"enable rf_ref\n");
+        strcpy(buf, "lmx -l 2 -M 0\r");
+    } else {
+        PRINT(VERBOSE,"mute rf_ref\n");
+        strcpy(buf, "lmx -l 2 -M 1\r");
+    }
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    snprintf(ret, MAX_PROP_LEN, "0x%08x", enable);
+    return RETURN_SUCCESS;
+}
+
+// Controls enable for time board LMX2595 providing 1.8GHz IF for highband RF mixers
+// To track whether we can disable it, we will track this as a 32-bit hex number
+// bottom 16 bits each correspond to an rf slot, set high by band select or low by pwr 0
+// if any of the top 16 bits are high, the clock will not be turned off
+static int hdlr_time_set_time_en_rf_if(const char *data, char *ret) {
+    uint32_t enable;
+    if (1 != sscanf(data, "0x%x", &enable)) {
+        if (1 != sscanf(data, "%" SCNu32, &enable)) {
+            PRINT(ERROR,"Unrecognized channel (%s), persistently enabling clock\n", data);
+            enable = 0x10000;
+        }
+    }
+    
+    if (enable) {
+        PRINT(VERBOSE,"enable rf_if");
+        strcpy(buf, "lmx -l 4 -M 0\r");
+    } else {
+        PRINT(VERBOSE,"mute rf_if");
+        strcpy(buf, "lmx -l 4 -M 1\r");
+    }
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    snprintf(ret, MAX_PROP_LEN, "0x%08x", enable);
     return RETURN_SUCCESS;
 }
 
@@ -3897,15 +4090,22 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
         PRINT(INFO, "Setting clock reference source to external\n");
         strcpy(buf, "clk -t 1\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // Leave the property as what is was set to. Included for clarity, should be redundant
+        snprintf(ret, MAX_PROP_LEN, "%s", data);
     } else if (strcmp(data, "internal") == 0) {
         // ensure 10MHz reference is set
         set_property("time/source/freq_mhz", "10");
         PRINT(INFO, "Setting clock reference source to internal\n");
         strcpy(buf, "clk -t 0\r");
-    } else {
-        PRINT(ERROR, "Invalid clock source: %s\n", data);
-        snprintf(ret, MAX_PROP_LEN, "invalid_source");
-        return RETURN_ERROR_PARAM;
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // Leave the property as what is was set to. Included for clarity, should be redundant
+        snprintf(ret, MAX_PROP_LEN, "%s", data);
+    } else {  // just get the current state of the reference
+        strcpy(buf, "clk -i\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        // save the UART result to the state tree
+        strcpy(ret, (char *)uart_ret_buf);
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     // Waits for clock to stabilize
@@ -3913,9 +4113,6 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     if(property_good("time/status/status_good") != 1) {
         PRINT(ERROR, "PLL loss of lock detected after changing clock reference source\n");
         snprintf(ret, MAX_PROP_LEN, "pll_lock_failure");
-    } else {
-        // Leave the property as what is was set to. Included for clarity, should be redundant
-        snprintf(ret, MAX_PROP_LEN, "%s", data);
     }
     return RETURN_SUCCESS;
 }
@@ -4040,9 +4237,9 @@ static int hdlr_time_source_pll(const char *data, char *ret) {
 #endif
 
 static int hdlr_time_status_ld(const char *data, char *ret) {
-    // strcpy(buf, "status -l\r");
-    // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    // snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
+    strcpy(buf, "status -l\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
@@ -4347,39 +4544,53 @@ static int hdlr_fpga_board_reboot(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+int check_sfp() {
+    uint32_t sys18_val = 0;
+    read_hps_reg("sys18", &sys18_val);
+
+    // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
+    uint32_t sfp_link_established = (sys18_val >> 24 & 0xf);
+    uint32_t sfp_module_present = sys18_val >> 28;
+    // The bits used to detect which SFPs are inserted is flipped compared to which SFPs are working
+    sfp_module_present = ((sfp_module_present & 0x1) << 3) | ((sfp_module_present & 0x2) << 1) | ((sfp_module_present & 0x4) >> 1) | ((sfp_module_present & 0x8) >> 3);
+
+    if( sfp_module_present == sfp_link_established) {
+        PRINT(INFO, "SFP present and established: %x\n", sfp_link_established);
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
+        PRINT(ERROR, "SFP established: %x\n", sfp_link_established);
+        PRINT(ERROR, "SFP present: %x\n", sfp_module_present);
+        return RETURN_ERROR;
+    }
+}
+
+// 0: do nothing
+// 1: reset SFP
+// 2: reset SFPs only if they are down
 static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     //does not reset if the user write a 0
     int reset = 0;
     sscanf(data, "%i", &reset);
     if(!reset) return RETURN_SUCCESS;
 
+    if(reset == 2) {
+        // SFP is up, skip reset
+        if(check_sfp() == RETURN_SUCCESS) {
+            return RETURN_SUCCESS;
+        }
+    }
+
     for(int n = 0; n < sfp_max_reset_attempts; n++) {
-        uint32_t sys18_val = 0;
-        uint32_t val = 0;
-        read_hps_reg("res_rw7", &val);
-        val = val | (1 << 29);
-        write_hps_reg("res_rw7", val);
-        val = val & ~(1 << 29);
-        write_hps_reg("res_rw7", val);
 
-        wait_for_fpga_reset();
+        // Reset FPGA starting at SFPs
+        set_property("fpga/reset", "2");
 
-        read_hps_reg("sys18", &sys18_val);
-
-        // The first 4 bits indicate which sfp ports have cables attatched, the next 4 indicate which links are established
-        uint32_t sfp_link_established = (sys18_val >> 24 & 0xf);
-        uint32_t sfp_module_present = sys18_val >> 28;
-        // The bits used to detect which SFPs are inserted is flipped compared to which SFPs are working
-        sfp_module_present = ((sfp_module_present & 0x1) << 3) | ((sfp_module_present & 0x2) << 1) | ((sfp_module_present & 0x4) >> 1) | ((sfp_module_present & 0x8) >> 3);
-
-        if((sfp_link_established | sfp_module_present) == sfp_link_established) {
+        if(check_sfp() == RETURN_SUCCESS) {
             // Reset counter for number of failed boots
             update_interboot_variable("cons_sfp_fail_count", 0);
             return RETURN_SUCCESS;
         }
-        PRINT(ERROR, "SFP link failed to establish with status: %x, re-attempting\n", sys18_val);
-        PRINT(ERROR, "SFP established: %x\n", sfp_link_established);
-        PRINT(ERROR, "SFP present: %x\n", sfp_module_present);
     }
     PRINT(ERROR, "Failed to establish sfp link after %i attempts rebooting\n", sfp_max_reset_attempts);
 
@@ -4617,6 +4828,17 @@ static int hdlr_fpga_about_ddr_used(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Gets the speed grade of the FPGA (HU1, HU2, HU3)
+static int hdlr_fpga_about_speed_grade(const char *data, char *ret) {
+
+    uint32_t val = 0;
+    read_hps_reg("res_ro16", &val);
+
+    snprintf(ret, MAX_PROP_LEN, "%u", val);
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
     uint32_t chip_id_msb = 0;
     uint32_t chip_id_lsb = 0;
@@ -4638,6 +4860,7 @@ static int hdlr_fpga_about_serial(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Does nothing on Cyan since there are seperate input and output pins
 static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
     int r;
     bool val = 0;
@@ -4658,6 +4881,14 @@ static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
         r = set_sma_pol(val);
     }
     return r;
+}
+
+static int hdlr_fpga_trigger_sma_override(const char *data, char *ret) {
+    uint8_t val = 0;
+    sscanf(data,"%" SCNu8, &val);
+    if(val){ val = 1;} else {val=0;}
+    snprintf(ret, MAX_PROP_LEN, "%i\n", val);
+    return set_reg_bits("sys2", 8, 1, val);
 }
 
 static int hdlr_fpga_about_fw_ver(const char *data, char *ret) {
@@ -4764,11 +4995,12 @@ static int hdlr_fpga_link_sfpa_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len = 0;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net0", &old_val);
-    write_hps_reg("net0", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net0", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -4817,11 +5049,12 @@ static int hdlr_fpga_link_sfpb_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net15", &old_val);
-    write_hps_reg("net15", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net15", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -4871,11 +5104,12 @@ static int hdlr_fpga_link_sfpc_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpc_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net30", &old_val);
-    write_hps_reg("net30", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net30", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -4925,11 +5159,12 @@ static int hdlr_fpga_link_sfpd_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_link_sfpd_pay_len(const char *data, char *ret) {
-    uint32_t old_val = 0;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    read_hps_reg("net45", &old_val);
-    write_hps_reg("net45", (old_val & ~(0xffff0000)) | (pay_len << 16));
+
+    uint32_t actual_pay_len = set_payload_len("net45", 16, pay_len);
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", actual_pay_len);
     return RETURN_SUCCESS;
 }
 
@@ -4966,6 +5201,50 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     // Write to the file
     snprintf(command, MAX_PROP_LEN, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/%s/ /etc/init.d/mcu_init.sh", ip_address);
     system(command);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_rx_sample_bandwidth(const char *data, char *ret) {
+    int result = 0;
+    for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        char prop_path[PROP_PATH_LEN];
+        snprintf(prop_path, PROP_PATH_LEN, "rx/%c/dsp/rx_sample_bandwidth", chan +'a');
+        set_property(prop_path, data);
+        char reply[50];
+        get_property(prop_path, reply, sizeof(reply));
+        int reply_i;
+        sscanf(reply, "%i", &reply_i);
+        if(chan != 0 && reply_i != result) {
+            PRINT(ERROR, "Unable to set wire format correctly. Assuming ch A is correct\n");
+        } else {
+            result = reply_i;
+        }
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "%i", result);
+
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_fpga_link_tx_sample_bandwidth(const char *data, char *ret) {
+    int result = 0;
+    for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        char prop_path[PROP_PATH_LEN];
+        snprintf(prop_path, PROP_PATH_LEN, "tx/%c/dsp/rx_sample_bandwidth", chan +'a');
+        set_property(prop_path, data);
+        char reply[50];
+        get_property(prop_path, reply, sizeof(reply));
+        int reply_i;
+        sscanf(reply, "%i", &reply_i);
+        if(chan != 0 && reply_i != result) {
+            PRINT(ERROR, "Unable to set wire format correctly. Assuming ch A is correct\n");
+        } else {
+            result = reply_i;
+        }
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "%i", result);
+
     return RETURN_SUCCESS;
 }
 
@@ -5023,6 +5302,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
      * Writing 0 to the state tree will not trigger any reset
      */
     int reset_type = 0;
+    uint8_t led_state = get_led_state();
 
     sscanf(data, "%i", &reset_type);
 
@@ -5056,9 +5336,9 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // Waits for the reset sequence to finish
     wait_for_fpga_reset();
 
-    // led1 indicates Linux is booted. Reseting the FPGA results in it being reset to its default value (flashing)
-    // This sets it back to solid (since if this is running Linux must be booted)
-    write_hps_reg("led1", 0x1);
+    // Resetting the FPGA results in user visible LEDs being reset to their
+    // default value. This sets it back to the state it was in before the FPGA reset.
+    set_led_state(led_state);
 
     return RETURN_SUCCESS;
 }
@@ -5198,7 +5478,7 @@ GPIO_PINS
 
 #define DEFINE_RX_WAIT_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/wait_async_pwr", hdlr_rx_##_c##_wait_async_pwr, RW, "0", SP, #_c)\
-        DEFINE_FILE_PROP_P("rx/" #_c "/jesd/unmask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/unmask"              , hdlr_rx_##_c##_jesd_mask,            RW, "0", SP, #_c)
 
 #define DEFINE_RX_BOARD_PWR(_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/pwr_board"       , hdlr_rx_##_c##_pwr_board,               RW, "0", SP, #_c)\
@@ -5208,18 +5488,28 @@ GPIO_PINS
 
 #define DEFINE_RX_PWR_REBOOT(_c)    \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
-    DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"       , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/async_pwr"        , hdlr_rx_##_c##_async_pwr_board,         RW, "1", SP, #_c)   \
     /* Mask sysref whenever not resetting JESD or powering on */\
-    DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP, #_c)
+    DEFINE_FILE_PROP_P("rx/" #_c "/reboot"                 , hdlr_rx_##_c##_reboot,                  RW, "0", SP, #_c)\
+    /* This is defined here because it is set by a meta property in the FPGA section*/\
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rx_sample_bandwidth" , hdlr_rx_##_c##_dsp_sample_bandwidth, RW, S_DEAULT_OTW_RX, SP, #_c)\
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "1", RP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,         RW, "poke", SP, #_c)      \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcudevid"           , hdlr_rx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcufuses"           , hdlr_rx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_rx_##_c##_about_sw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
@@ -5227,12 +5517,15 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"     , hdlr_rx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iq_swap"             , hdlr_rx_##_c##_link_iq_swap,            RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "-1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/adc_digital"      , hdlr_rx_##_c##_rf_gain_adc_digital,     RW, "-1", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_gaincor"         , hdlr_rx_##_c##_iq_gain_correction,      RW, "0", RP, #_c)         \
@@ -5268,14 +5561,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000", SP, #_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcudevid"           , hdlr_rx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/mcufuses"           , hdlr_rx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_rx_##_c##_about_sw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/vita_en"             , hdlr_rx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/iface"               , hdlr_rx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/link/port"                , hdlr_rx_##_c##_link_port,               RW, "0", SP, #_c)         \
@@ -5298,7 +5583,10 @@ GPIO_PINS
 #define DEFINE_TX_PWR_REBOOT(_c)    \
     /*async_pwr_board is initializeed with a default value of on after pwr board is initialized with off to ensure the board is off at the start*/\
     DEFINE_FILE_PROP_P("tx/" #_c "/board/async_pwr"          , hdlr_tx_##_c##_async_pwr_board,      RW, "1", SP, #_c)   \
-    DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0", SP, #_c)
+    DEFINE_FILE_PROP_P("tx/" #_c "/reboot"                   , hdlr_tx_##_c##_reboot,                  RW, "0", SP, #_c)\
+    /* This is defined here because it is set by a meta property in the FPGA section*/\
+    DEFINE_FILE_PROP_P("tx/" #_c "/dsp/tx_sample_bandwidth" , hdlr_tx_##_c##_dsp_sample_bandwidth, RW, S_DEAULT_OTW_TX, SP, #_c)
+
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
@@ -5306,7 +5594,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_tx_##_c##_jesd_reset,              RW, "0", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/pll_locked"          , hdlr_tx_##_c##_jesd_pll_locked,             RW, "unlocked", SP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/pll_locked"          , hdlr_tx_##_c##_jesd_pll_locked,         RW, "poke", SP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
@@ -5314,6 +5602,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_dir"          , hdlr_tx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_mode"         , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
@@ -5357,23 +5647,25 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll2", hdlr_time_status_ld_jesd0_pll2,        RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd1_pll1", hdlr_time_status_ld_jesd1_pll1,        RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd1_pll2", hdlr_time_status_ld_jesd1_pll2,        RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd2_pll1", hdlr_time_status_ld_jesd2_pll1,        RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd2_pll2", hdlr_time_status_ld_jesd2_pll2,        RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd0_pll1", hdlr_time_status_lol_jesd0_pll1,       RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd0_pll2", hdlr_time_status_lol_jesd0_pll2,       RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll1", hdlr_time_status_lol_jesd1_pll1,       RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "internal", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll2", hdlr_time_status_ld_jesd0_pll2,        RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd1_pll1", hdlr_time_status_ld_jesd1_pll1,        RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd1_pll2", hdlr_time_status_ld_jesd1_pll2,        RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd2_pll1", hdlr_time_status_ld_jesd2_pll1,        RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd2_pll2", hdlr_time_status_ld_jesd2_pll2,        RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd0_pll1", hdlr_time_status_lol_jesd0_pll1,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd0_pll2", hdlr_time_status_lol_jesd0_pll2,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll1", hdlr_time_status_lol_jesd1_pll1,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/enable_rf_ref"           , hdlr_time_set_time_en_rf_ref,           RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/source/enable_rf_if"            , hdlr_time_set_time_en_rf_if,            RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
@@ -5394,11 +5686,12 @@ GPIO_PINS
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "1", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "2", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "out", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "in", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_override"           , hdlr_fpga_trigger_sma_override,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/sw_ver"                   , hdlr_fpga_about_sw_ver,                 RW, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "", SP, NAC)                  \
@@ -5415,6 +5708,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/imgparam/backplane_pinout", hdlr_fpga_about_backplane_pinout,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/hps_only"        , hdlr_fpga_about_hps_only,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/ddr_used"        , hdlr_fpga_about_ddr_used,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/imgparam/speed_grade"     , hdlr_fpga_about_speed_grade,            RW, "0", SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
@@ -5438,22 +5732,25 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpc/ip_addr"              , hdlr_fpga_link_sfpc_ip_addr,            RW, "10.10.12.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpc/mac_addr"             , hdlr_fpga_link_sfpc_mac_addr,           RW, "aa:00:00:00:00:02", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpc/ver"                  , hdlr_fpga_link_sfpc_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpc/pay_len"              , hdlr_fpga_link_sfpc_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpc/pay_len"              , hdlr_fpga_link_sfpc_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpd/ip_addr"              , hdlr_fpga_link_sfpd_ip_addr,            RW, "10.10.13.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpd/mac_addr"             , hdlr_fpga_link_sfpd_mac_addr,           RW, "aa:00:00:00:00:03", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpd/ver"                  , hdlr_fpga_link_sfpd_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8900", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
-    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
+    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)\
+    /* Size of half of a complex pair in bytes*/\
+    DEFINE_FILE_PROP_P("fpga/link/rx_sample_bandwidth"       , hdlr_fpga_link_rx_sample_bandwidth,     RW, S_DEAULT_OTW_RX, SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/link/tx_sample_bandwidth"       , hdlr_fpga_link_tx_sample_bandwidth,     RW, S_DEAULT_OTW_TX, SP, NAC)
 
 #define DEFINE_FPGA_POST()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"            , hdlr_jesd_reset_master,                      RW, "1", SP, NAC)               \
@@ -5479,10 +5776,11 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_invalid,                           RO, S_MAX_RATE, SP, NAC)\
     DEFINE_FILE_PROP_P("system/get_max_buffer_level"     , hdlr_system_get_max_buffer_level,       RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/get_buffer_level_multiple", hdlr_system_get_buffer_level_multiple,  RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("system/otw_rx"                   , hdlr_invalid,                           RO, S_OTW_RX, SP, NAC)\
-    DEFINE_FILE_PROP_P("system/otw_tx"                   , hdlr_invalid,                           RO, S_OTW_TX, SP, NAC)\
+    /* Wire format has been moved to the FPGA link, this is here to allow older UHD versions to still find it*/\
+    DEFINE_SYMLINK_PROP("system/otw_rx", "fpga/link/rx_sample_bandwidth")\
+    DEFINE_SYMLINK_PROP("system/otw_tx", "fpga/link/tx_sample_bandwidth")\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
-    DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "-1", SP, NAC)\
+    DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/flags/USE_3G_AS_1G"       , hdlr_invalid,                           RO, S_USE_3G_AS_1G, SP, NAC)\
 
 static prop_t property_table[] = {
@@ -5496,14 +5794,14 @@ static prop_t property_table[] = {
 #undef X
 // Initialize time boards
     DEFINE_TIME()
+// Initialize FPGA
+    DEFINE_FPGA()
 // Inverts dev clock going to each rx board
 // The dev clocks to rx need a small amount of time to stabilize after inverting
 // Having them get inverted before initializing the FPGA allows them to stablize by the time the rx boards turn on
 #define X(ch) DEFINE_RX_INVERT_DEV_CLOCK(ch)
     RX_CHANNELS
 #undef X
-// Initialize FPGA
-    DEFINE_FPGA()
 // Power on rx/tx boards, but don't wait for them to finish booting
 #define X(ch) DEFINE_RX_PWR_REBOOT(ch)
     RX_CHANNELS
@@ -5602,13 +5900,6 @@ void patch_tree(void) {
 
         TX_CHANNELS
     #undef X
-#endif
-
-#if RTM_VER == 3 || RTM_VER == 4
-    set_default_int("system/self_calibration", 1);
-
-#elif RTM_VER == 5
-    set_default_int("system/self_calibration", 0);
 #endif
 
     // Read a configuration file to overrid default values of the state tree. Must be done at adjusting the default state tree values
@@ -5778,8 +6069,14 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     _save_profile_path = save_path;
 }
 
-const int jesd_max_attempts = 3;
+#ifdef RTM3
+// JESD fails 50% of the time currently on 3G RTM3
+// As a workaround, increase the maximum number of server restarts for it
+const int jesd_max_server_restart_attempts = 10;
+#else
+// RTM4 and later have very reliable JESD, so if more than 3 attempts are required for JESD somthing is wrong
 const int jesd_max_server_restart_attempts = 3;
+#endif
 
 // Performs a master JESD reset up to 3 times
 // Returns 0 for success, not 0 for failure. This is to enable bit flags for specific error codes in the future
@@ -5816,7 +6113,7 @@ int jesd_master_reset() {
     }
 
     int attempts = 0;
-    while ( attempts < jesd_max_attempts ) {
+    while ( attempts < JESD_MAX_RESET_ATTEMPTS ) {
         int is_bad_attempt = 0;
 
         //Unmask all channels for next attempt
@@ -5838,14 +6135,28 @@ int jesd_master_reset() {
         TX_CHANNELS
 #undef X
 
-        //Issue JESD master reset
+        // Reset JESD IP
         set_property("fpga/reset", "3");
+        // Reinint rx JESD without resetting IP (alternative to resetting the IP
+        // Reining via reg writes break RTM3 USE_3G_AS_1G
+        // Resetting the IP is prefered but sometimes this works when resetting the IP doesn't
+        // for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
+        //     write_jesd_reg_mask(chan + JESD_SHIFT_RX, 0x54, 0x5, 0x5);
+        // }
+        // // Reinint tx JESD
+        // for(int chan = 0; chan < NUM_TX_CHANNELS; chan++) {
+        //     write_jesd_reg_mask(chan + JESD_SHIFT_TX, 0x54, 0x5, 0x5);
+        // }
 
         //Wait for links to go down
         usleep(jesd_reset_delay);
 
         // Issues sysref pulse
-        set_property("time/sync/lmk_sync_tgl_jesd", "1");
+        // Old method of issuing a sysref pulse, left commented out in case the new method causes issues
+        // set_property("time/sync/lmk_sync_tgl_jesd", "1");
+        // Issues all sysref pulses simultaneously sysref at the same time
+        strcpy(buf, "clk -y\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
         //Wait for links to re-establish
         usleep(jesd_reset_delay);
@@ -5860,7 +6171,7 @@ int jesd_master_reset() {
         }
 
         //Checks if all rx JESDs are working
-        for(int chan = 0; chan < NUM_RX_CHANNELS && !is_bad_attempt; chan++) {
+        for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
             if(rx_power[chan]==PWR_HALF_ON || rx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "rx/%c/jesd/status", chan+'a');
                 if(property_good(prop_path) != 1) {
@@ -5871,7 +6182,7 @@ int jesd_master_reset() {
         }
 
         //Checks if all tx JESDs are working
-        for(int chan = 0; chan < NUM_TX_CHANNELS && !is_bad_attempt; chan++) {
+        for(int chan = 0; chan < NUM_TX_CHANNELS; chan++) {
             if(tx_power[chan]==PWR_HALF_ON || tx_power[chan]==PWR_ON) {
                 snprintf(prop_path, PROP_PATH_LEN, "tx/%c/jesd/status", chan+'a');
                 if(property_good(prop_path) != 1) {
@@ -5904,15 +6215,21 @@ int jesd_master_reset() {
         write_hps_reg_mask(tx_reg4_map[chan], original_tx4[chan], 0x2);
     }
 
-    if(attempts >= jesd_max_attempts) return 1;
+    if(attempts >= JESD_MAX_RESET_ATTEMPTS) return 1;
     else return 0;
 }
 
+#ifdef S1000
 //sets sysref delay in VCO clock cycles
 void set_analog_sysref_delay(int analog_sysref_delay) {
     snprintf(buf, MAX_PROP_LEN, "adly -l 7 -c a -s %i\r", analog_sysref_delay);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 }
+#elif defined(S3000)
+    // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
+#else
+    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+#endif
 
 // Returns 1 is jesd links come up, 1 if any links fail
 static int hdlr_jesd_reset_master(const char *data, char *ret) {
@@ -5933,11 +6250,18 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
         analog_sysref_delay = DEFAULT_ANALOG_SYSREF_DELAY;
     }
 
+#ifdef S1000
     set_analog_sysref_delay(analog_sysref_delay);
+#elif defined(S3000)
+    // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
+#else
+    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+#endif
 
     // Note this is set to 0 for success, any other value for failure
     int jesd_master_error = jesd_master_reset();
 
+#ifdef S1000
     // Test all possible values of sysref delay until one works if the previously save/default failed
     if(jesd_master_error) {
         PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
@@ -5953,6 +6277,11 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
             PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
         }
     }
+#elif defined(S3000)
+    // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
+#else
+    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+#endif
 
     if(!jesd_master_error) {
         update_interboot_variable("cons_jesd_fail_count", 0);
@@ -5986,7 +6315,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     }
 }
 
-void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6023,12 +6352,50 @@ void set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int c
     // write LMX Output Frequency in MHz
     snprintf(buf, MAX_PROP_LEN, "lmx -f %" PRIu32 "\r", (uint32_t)(freq / 1000000));
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
-    usleep(100000);
+
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_rf_pll(channel, false);
+    }
+
+    int lock_failed = 0;
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, false)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            lock_failed = 1;
+            break;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    if(lock_failed) {
+        // Mute PLL to avoid transmitting with an enexpected frequency
+        strcpy(buf, "rf -c " STR(ch) " -z\r");
+        ping(uart_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+        return 0;
+    } else {
+        // success
+        return 1;
+    }
 }
 
 //At time of write, the only differences between set_lo_frequency rx and tx is the ping function used
 //which is used to avoid sending uart commands to unpopulated boards
-void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6065,7 +6432,45 @@ void set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int c
     // write LMX Output Frequency in MHz
     snprintf(buf, MAX_PROP_LEN, "lmx -f %" PRIu32 "\r", (uint32_t)(freq / 1000000));
     ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
-    usleep(100000);
+
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_rf_pll(channel, true);
+    }
+
+    int lock_failed = 0;
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, true)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            lock_failed = 1;
+            break;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    if(lock_failed) {
+        // Mute PLL to avoid transmitting with an enexpected frequency
+        strcpy(buf, "rf -c " STR(ch) " -z\r");
+        ping(uart_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+        return 0;
+    } else {
+        // success
+        return 1;
+    }
 }
 
 #endif //defined(TATE_NRNT)

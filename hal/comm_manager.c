@@ -70,6 +70,7 @@ static int uart_devices[MAX_DEVICES];
 #ifdef VAUNT
 static uint8_t used_uart_devices[MAX_DEVICES] = {FREE_DEVICE};
 
+int get_uart_synth_fd() { return uart_devices[0]; }
 int get_uart_tx_fd() { return uart_devices[1]; }
 int get_uart_rx_fd() { return uart_devices[2]; }
 #elif defined(TATE_NRNT)
@@ -100,9 +101,10 @@ static int get_next_uart_fd(int *fd) {
 }
 
 int init_uart_comm(int *fd, const char *dev, uint16_t options) {
-
-    if (get_next_uart_fd(fd) < 0)
+    if (get_next_uart_fd(fd) < 0) {
+        PRINT(ERROR, "Unable to get file descriptor for %s\n", dev);
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+    }
 
     PRINT(VERBOSE, "Found file descriptor %i\n", *fd);
     used_uart_devices[*fd] = USED_DEVICE;
@@ -148,8 +150,10 @@ int recv_uart_comm(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
 }
 
 int send_uart_comm(int fd, uint8_t *data, uint16_t size) {
-    if (fd < 0)
+    if (fd < 0) {
+        PRINT(ERROR, "File descriptor not initialized: %i\n", fd);
         return RETURN_ERROR_PARAM;
+    }
     int mydev = uart_devices[fd];
     return send_uart(mydev, data, size);
 }

@@ -13,7 +13,7 @@ pipeline {
 				label 'github_trigger'
 			}
 			steps {
-				build job: 'server-compile', parameters: [string(name: 'SERVER_TARGET', value: 'all')]
+				build job: 'server-compile', parameters: [string(name: 'SERVER_TARGET', value: 'all')], wait: false
 			}
 		}
 	}

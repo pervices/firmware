@@ -33,6 +33,10 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+// Use STRINGIFY(interger define) to convert interger defines to strings
+#define STRINGIFY(s) STRINGIFY_HELPER(s)
+#define STRINGIFY_HELPER(s) #s
+
 #ifdef VAUNT
     //directory of the state tree
     #define BASE_DIR "/var/volatile/crimson"
@@ -100,14 +104,24 @@ void pass_uart_rx_fd(int *fd);
 
 void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
                             char *save_path);
+#ifdef VAUNT
 void sync_channels(uint8_t chan_mask);
+void sync_channels_prep(uint8_t chan_mask);
+void sync_channels_cleanup(uint8_t chan_mask);
+#endif
 #ifdef TATE_NRNT
     // Only implemented on Cyan
     void jesd_reset_all();
     uint32_t is_hps_only();
 #endif
-int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
+#ifdef VAUNT
+    int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
+                       bool tx, uint32_t channel, bool use_lut_if_possible);
+#else
+    int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
+#endif
+void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan);
 
 void dump_tree(void);
 

@@ -107,11 +107,13 @@ void set_uart_blocking(int fd, int should_block) {
 
 int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
 
+#ifdef TATE_NRNT
     if(fd == 0 || fd == 1 || fd == 2)
     {
-        puts("cannot write to standard devices");
+        puts("cannot read from standard devices");
         exit(1);
     }
+#endif
 
     if(max_size < 0) {
         *size = 0;
@@ -159,11 +161,13 @@ int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
 
 int send_uart(int fd, uint8_t *data, uint16_t size) {
 
+#ifdef TATE_NRNT
     if(fd == 0 || fd == 1 || fd == 2)
     {
         puts("cannot write to standard devices");
         exit(1);
     }
+#endif
 
     //
     // NOTE:
@@ -172,8 +176,10 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
     // This was done to preserve legacy Crimson UART READ / WRITES while porting to TATE.
     //
 
-    if(fd == -1)
+    if(fd == -1) {
+        PRINT(ERROR, "send failed, uart uninitialized\n");
         return RETURN_SUCCESS;
+    }
 
     flush_uart(fd);
 

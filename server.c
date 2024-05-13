@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 
-    server_init_led();
+    set_led_state(LED_STATE_INIT);
     
     PRINT(INFO, "Started LEDs\n");
 
@@ -184,16 +184,10 @@ int main(int argc, char *argv[]) {
 // 2. check that time board plls are locked
     if (property_good("time/status/status_good") != 1) {
         PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
-        write_hps_reg("led0", 0); //turn off the bottom led so that the user knows the server has failed
-        usleep(10000000); // wait 10 seconds to make it clear that the serer has failed, in case auto-retry is enabled
+        set_led_state(LED_STATE_ERROR);
+        usleep(10000000); // wait 10 seconds to make it clear that the server has failed, in case auto-retry is enabled
         abort();
     }
-#endif
-
-#ifdef VAUNT
-    // Write the linux systemtime to the FPGA
-    // Was only implemented on Crimson. Could be implemented on Cyan with a different property, but shouldn't have an impact
-    system("date +%s.%N > /var/volatile/crimson/state/time/clk/set_time");
 #endif
 
 // Let the user know the server is ready to receive commands
@@ -205,7 +199,7 @@ int main(int argc, char *argv[]) {
     #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
 #endif
 
-    server_ready_led();
+    set_led_state(LED_STATE_READY);
 
     // Main loop, look for commands, if exists, service it and respond
     for (;;) {

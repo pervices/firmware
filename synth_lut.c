@@ -20,6 +20,7 @@
 #include "array-utils.h"
 #include "common.h"
 #include "comm_manager.h"
+#include "led.h"
 #include "synth_lut.h"
 
 #include "pllcalc.h"
@@ -31,12 +32,9 @@
 #define LUT_PATH "/var/calibration-data"
 #endif
 
+extern int get_uart_synth_fd();
 extern int get_uart_rx_fd();
 extern int get_uart_tx_fd();
-
-extern void server_init_led();
-extern void server_ready_led();
-extern void error_led(void);
 
 extern int check_rf_pll(int ch, bool is_tx);
 
@@ -377,11 +375,12 @@ static int synth_lut_recalibrate_all() {
     memset(freq_good, 0, sizeof(SYNTH_LUT_LEN));
 
     // The maximum number of
-    const int MAX_PLL_ATTEMPT_LOOPS = 3;
+    const int MAX_PLL_ATTEMPT_LOOPS = 10;
     int error_cache = 0;
 
     int pll_attempt_loops;
     for(pll_attempt_loops = 0; pll_attempt_loops < MAX_PLL_ATTEMPT_LOOPS; pll_attempt_loops++) {
+        int consecutive_pll_failures = 0;
         bool all_passed = true;
         // for each frequency, calibrate all channels
         for (i = 0; i < SYNTH_LUT_LEN; i++) {
@@ -406,19 +405,49 @@ static int synth_lut_recalibrate_all() {
                 error_cache = r;
                 all_passed = false;
 
-                // Reinit the PLL on the rx and tx boards
-                char cmd_buf[PATH_MAX];
-                char resp_buf[PATH_MAX];
-                snprintf(cmd_buf, PATH_MAX, "board -b\r");
-                synth_lut_uart_cmd(get_uart_rx_fd(), cmd_buf, resp_buf, PATH_MAX);
-                synth_lut_uart_cmd(get_uart_tx_fd(), cmd_buf, resp_buf, PATH_MAX);
+                // If more than 10 frequencies in a row fail, give up on this pass through all frequencies
+                consecutive_pll_failures++;
+                if(consecutive_pll_failures >= 10) {
+                    // Breaks the for loop passing through all frequencies
+                    break;
+                }
             } else {
                 // Records that this frequency worked on this pass, so it is not reattempted in future pass throughs the loop
                 freq_good[i] = 1;
             }
         }
         if(all_passed) {
+            // Breaks the for loop retrying lut generation after if fails
             break;
+        }
+
+        PRINT(ERROR, "Lookup table generation attempt %i failed after %i/%i frequencies\n", pll_attempt_loops, i, SYNTH_LUT_LEN);
+
+        // If not the last attempt, reboot boards before trying again
+        if(pll_attempt_loops < MAX_PLL_ATTEMPT_LOOPS) {
+            char cmd_buf[PATH_MAX];
+            char resp_buf[PATH_MAX];
+
+            // Reboots the time board
+            PRINT(INFO, "Rebooting time board\n");
+            snprintf(cmd_buf, PATH_MAX, "board -r\r");
+            synth_lut_uart_cmd(get_uart_rx_fd(), cmd_buf, resp_buf, PATH_MAX);
+            // Waits for clock to stabalize
+            sleep(15);
+            //Set sysref to continuous mode
+            snprintf(cmd_buf, PATH_MAX, "sync -c 1\r");
+            synth_lut_uart_cmd(get_uart_rx_fd(), cmd_buf, resp_buf, PATH_MAX);
+
+            // Reboots tx and rx boards
+            snprintf(cmd_buf, PATH_MAX, "board -r\r");
+            synth_lut_uart_cmd(get_uart_rx_fd(), cmd_buf, resp_buf, PATH_MAX);
+            synth_lut_uart_cmd(get_uart_tx_fd(), cmd_buf, resp_buf, PATH_MAX);
+            // Waits for boards to finish rebooting
+            sleep(15);
+
+            //Set sysref to pulsed mode
+            snprintf(cmd_buf, PATH_MAX, "sync -c 0\r");
+            synth_lut_uart_cmd(get_uart_rx_fd(), cmd_buf, resp_buf, PATH_MAX);
         }
     }
     free(freq_good);
@@ -659,7 +688,7 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
         goto out;
     }
 
-    server_init_led();
+    set_led_state(LED_STATE_INIT);
 
     PRINT(INFO, "Enabling sythesizer calibration tables on %s %c..\n",
           ctx->tx ? "TX" : "RX", 'A' + ctx->channel(ctx));
@@ -731,10 +760,10 @@ out:
 
     if(r == EXIT_SUCCESS) {
         PRINT(INFO, "Lookup table generation successfully completed\n");
-        server_ready_led();
+        set_led_state(LED_STATE_READY);
     } else {
         PRINT(ERROR, "Lookup table generation failed\n");
-        error_led();
+        set_led_state(LED_STATE_ERROR);
     }
 
     pthread_mutex_unlock(&ctx->lock);

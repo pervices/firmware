@@ -26,7 +26,6 @@
     #define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE/2.0)
     #define TX_BASE_SAMPLE_RATE   1000000000.0
     #define TX_DSP_SAMPLE_RATE   500000000.0
-    #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
     // (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
     #define RX_DSP_NCO_CONST \
         ((double)8.589934592)
@@ -52,10 +51,10 @@
 
     // Over the wire format, number bits per half of the iq pair
     // Note: the FPGA was hardcoded to assume sc16 in several places. If you see any values multiplied by OWT / 16 its because the actual value needs to be scales to produce a result giving the same number of bits as would occur with sc16
-    #define OTW_RX 16
-    #define S_OTW_RX "16"
-    #define OTW_TX 16
-    #define S_OTW_TX "16"
+    #define DEAULT_OTW_RX 16
+    #define S_DEAULT_OTW_RX "16"
+    #define DEAULT_OTW_TX 16
+    #define S_DEAULT_OTW_TX "16"
 
     // Number of samples requested from rx must be a multiple of this, applies to both trigger and nsamps mode
     #define NSAMPS_MULTIPLE_RX 1
@@ -77,6 +76,13 @@
     // Flag indicating the unit is capable to transmitting little endian samples
     #define LITTLE_ENDIAN_SUPPORTED 1
 
+    // Maximum number of times the server will attempt to reset JESD IP before moving on to other methods
+    // 3 For normal 1G, 1 for 3G when used as 1G
+    #define JESD_MAX_RESET_ATTEMPTS (USE_3G_AS_1G ? 1 : 3)
+
+    // Maximum length of VITA for rx
+    #define RX_MAX_PAYLOAD 8900
+
 #elif defined(S3000)
 
     #define S_MAX_RATE "3000000000"
@@ -88,7 +94,6 @@
     #define RX_DSP_SAMPLE_RATE   (RX_BASE_SAMPLE_RATE)
     #define TX_BASE_SAMPLE_RATE   3000000000.0
     #define TX_DSP_SAMPLE_RATE   3000000000.0
-    #define RESAMP_SAMPLE_RATE 160000000.0  //After 4/5 resampling //NB: Tate 64t does NOT support 4/5 resampling
     // (2 ^ 32) / (RX_DSP_SAMPLE_RATE)
     #define RX_DSP_NCO_CONST ((double)1.43165576533)
 
@@ -116,12 +121,13 @@
 
     // Over the wire format, number bits per half of the iq pair
     // Note: the FPGA was hardcoded to assume sc16 in several places. If you see any values multiplied by OWT / 16 its because the actual value needs to be scales to produce a result giving the same number of bits as would occur with sc16
-    #define OTW_RX 12
-    #define S_OTW_RX "12"
-    #define OTW_TX 16
-    #define S_OTW_TX "16"
+    #define DEAULT_OTW_RX 16
+    #define S_DEAULT_OTW_RX "16"
+    #define DEAULT_OTW_TX 16
+    #define S_DEAULT_OTW_TX "16"
 
     // Number of samples requested from rx must be a multiple of this, applies to both trigger and nsamps mode
+    // TODO: verify how this requirement changes with the sample size changes
     #define NSAMPS_MULTIPLE_RX 2944
     #define S_NSAMPS_MULTIPLE_RX "2944"
 
@@ -138,8 +144,16 @@
     //Multiples of 1000ps are meaningless at 1G
     const int possible_analog_sysref_delays[NUM_ANALOG_SYSREF_DELAYS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
 
-    // 3G does not support little endian
-    #define LITTLE_ENDIAN_SUPPORTED 0
+    // Flag indicating the unit is capable to transmitting little endian samples
+    // NOTE: prior to May 2024 3G FPGA did not support little endian
+    #define LITTLE_ENDIAN_SUPPORTED 1
+
+    // Maximum number of times the server will attempt to reset JESD IP before moving on to other methods
+    // 3 For normal 1G, 1 for 3G when used as 1G
+    #define JESD_MAX_RESET_ATTEMPTS 1
+
+    // Maximum length of VITA for rx
+    #define RX_MAX_PAYLOAD 8872
 
 #else
     #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000

@@ -39,11 +39,9 @@
 
 //#define DEBUG_OUTPUTS
 
-static int uart_comm_fd = 0;
 static char buf[MAX_UART_SEND_LEN] = {};
 static boolean silent = FALSE;
 static boolean console = FALSE;
-static boolean fwd = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
 
 // Crimson files
@@ -52,9 +50,12 @@ static const char *UART_CRIMSON_SN = "/dev/ttycrimson-time";
 static const char *UART_CRIMSON_TX = "/dev/ttycrimson-tx";
 static const char *UART_CRIMSON_RX = "/dev/ttycrimson-rx";
 
-static int uart_crimson_synth_fd = 3;
-static int uart_crimson_tx_fd = 4;
-static int uart_crimson_rx_fd = 5;
+enum TARGET_DEV {
+    DEV_TIME,
+    DEV_TX,
+    DEV_RX
+};
+
 #elif defined(TATE_NRNT)
 // Cyan files
 static const char *UART_CYAN_SN = "/dev/ttycyan-time";
@@ -75,11 +76,20 @@ static const char *UART_CYAN_RFE[16]  = {"/dev/ttycyan-rfe-0",
                                     "/dev/ttycyan-rfe-14",
                                     "/dev/ttycyan-rfe-15"};
 
-static int uart_cyan_synth_fd = 3;
-static int uart_cyan_rfe_fd[16] = {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+enum TARGET_DEV {
+    DEV_TIME,
+    DEV_RFE
+};
+
+static int target_rfe = -1;
+
 #else
     #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT)"
 #endif
+
+static enum TARGET_DEV target_dev;
+
+static int uart_target_fd;
 
 static int contains(const char *str, char letter, int size) {
     int cnt = 0;
@@ -98,10 +108,6 @@ static int contains(const char *str, char letter, int size) {
         for (i = 0; i < 16; i++) {
             printf("%s\n", UART_CYAN_RFE[i]);
         }
-        for (i = 0; i < 16; i++) {
-            printf("%d\n", uart_cyan_synth_fd);
-        }
-        printf("%d\n", uart_cyan_rfe_fd[i]);
     #elif defined(VAUNT)
         printf("%s\n", UART_CRIMSON_SN);
         printf("%s\n", UART_CRIMSON_TX);
@@ -112,7 +118,6 @@ static int contains(const char *str, char letter, int size) {
     #else
         #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
     #endif
-        printf("%d\n", fwd);
         printf("%d\n", uart_comm_fd);
     }
 #endif
@@ -173,18 +178,18 @@ static void parse_args(int argc, char *argv[]) {
             i++;
 #endif
         } else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
-            fwd = TRUE;
             i++;
+            if (argv[i][0] == 's') {
+                target_dev = DEV_TIME;
 #if defined(VAUNT)
-            if (argv[i][0] == 't') {
-                uart_comm_fd = uart_crimson_tx_fd;
+            } else if (argv[i][0] == 't') {
+                target_dev = DEV_TX;
             } else if (argv[i][0] == 'r') {
-                uart_comm_fd = uart_crimson_rx_fd;
-            } else if (argv[i][0] == 's') {
-                uart_comm_fd = uart_crimson_synth_fd;
+                target_dev = DEV_RX;
 #elif defined(TATE_NRNT)
-            if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
-                uart_comm_fd = uart_cyan_rfe_fd[atoi(argv[i])];
+            } else if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
+                target_dev = DEV_RFE;
+                target_rfe = atoi(argv[i]);
 #else
     #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT)"
 #endif
@@ -212,25 +217,43 @@ int main(int argc, char *argv[]) {
     #endif
 
 #if defined(TATE_NRNT)
-    if (init_uart_comm(&uart_cyan_synth_fd, UART_CYAN_SN, 0) < 0) {
-        PRINT(ERROR, "Cannot initialize uart %s. The time board will not work\n", UART_CYAN_SN);
-    }
-    for (int i = 0; i < 16; i++) {
-        if (init_uart_comm(&uart_cyan_rfe_fd[i], UART_CYAN_RFE[i], 0) < 0) {
-            PRINT(ERROR, "Failed to initialize UART %s, any board in this slot will not work\n", UART_CYAN_RFE[i]);
+    if(target_dev == DEV_TIME) {
+        if (init_uart_comm(&uart_target_fd, UART_CYAN_SN, 0) < 0) {
+            PRINT(ERROR, "Cannot initialize uart %s. The time board will not work\n", UART_CYAN_SN);
+            return RETURN_ERROR_INSUFFICIENT_RESOURCES;
         }
+    } else if(target_dev == DEV_RFE) {
+        if (init_uart_comm(&uart_target_fd, UART_CYAN_RFE[target_rfe], 0) < 0) {
+            PRINT(ERROR, "Failed to initialize UART %s, any board in this slot will not work\n", UART_CYAN_RFE[target_rfe]);
+            return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+        }
+    } else {
+        PRINT(ERROR, "Invalid target device\n");
+        return RETURN_ERROR_PARAM;
     }
 
 #elif defined(VAUNT)
     // initialize the comm port
-    if (init_uart_comm(&uart_crimson_synth_fd, UART_CRIMSON_SN, 0) < 0) {
-        PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_SN);
+    if(target_dev == DEV_TIME) {
+        if (init_uart_comm(&uart_target_fd, UART_CRIMSON_SN, 0) < 0) {
+            PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_SN);
+            return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+        }
     }
-    if (init_uart_comm(&uart_crimson_tx_fd, UART_CRIMSON_TX, 0) < 0) {
-        PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_TX);
+    else if(target_dev == DEV_TX) {
+        if (init_uart_comm(&uart_target_fd, UART_CRIMSON_TX, 0) < 0) {
+            PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_TX);
+            return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+        }
     }
-    if (init_uart_comm(&uart_crimson_rx_fd, UART_CRIMSON_RX, 0) < 0) {
-        PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_RX);
+    else if(target_dev == DEV_RX) {
+        if (init_uart_comm(&uart_target_fd, UART_CRIMSON_RX, 0) < 0) {
+            PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_RX);
+            return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+        }
+    } else {
+        PRINT(ERROR, "Invalid target device\n");
+        return RETURN_ERROR_PARAM;
     }
 #else
     #error "This file must be compiled with a valid PRODUCT (TATE_NRNT VAUNT). Confirm spelling and spaces."
@@ -239,20 +262,11 @@ int main(int argc, char *argv[]) {
 
     // initiate UART transaction
     do {
-        // read in the input from stdin
-        if (fwd == TRUE) {
-            // strcpy(buf, "fwd -b   -m '");
-            // buf[7] = fwd_board;
-            fgets(buf, MAX_UART_SEND_LEN, stdin);
-            int read_in_n = strnlen(buf, MAX_UART_SEND_LEN);
-            snprintf(buf + read_in_n, MAX_UART_SEND_LEN - read_in_n, "'\r");
-        } else {
-            fgets(buf, MAX_UART_SEND_LEN, stdin);
-            int read_in_n = strnlen(buf, MAX_UART_SEND_LEN);
-            snprintf(buf + read_in_n, MAX_UART_SEND_LEN - read_in_n, "'\r");
-        }
+        fgets(buf, MAX_UART_SEND_LEN, stdin);
+        int read_in_n = strnlen(buf, MAX_UART_SEND_LEN);
+        snprintf(buf + read_in_n, MAX_UART_SEND_LEN - read_in_n, "'\r");
 
-        send_uart_comm(uart_comm_fd, (uint8_t *)buf, strlen(buf));
+        send_uart_comm(uart_target_fd, (uint8_t *)buf, strlen(buf));
 
         // if not silent, read the output
         if (!silent) {
@@ -261,23 +275,12 @@ int main(int argc, char *argv[]) {
             uint32_t cur_bytes = 0;
 
             while (contains(buf, '>', total_bytes) < 1) {
-                if (recv_uart_comm(uart_comm_fd, ((uint8_t *)buf) + total_bytes,
+                if (recv_uart_comm(uart_target_fd, ((uint8_t *)buf) + total_bytes,
                                    &cur_bytes, MAX_UART_SEND_LEN - total_bytes)) {
                     return 0;
                 }
                 total_bytes += cur_bytes;
             }
-
-            // if fwd, remove everything prior to the second message
-            //			if (fwd == TRUE) {
-            //				uint16_t pos = 0, real_size = 0;
-            //				while (buf[pos] != '>') pos++;
-            //				pos++;
-            //				real_size = total_bytes - pos;
-            //				memcpy(buf, buf + pos, real_size);
-            //				memset(buf + real_size, 0, MAX_UART_SEND_LEN
-            //- real_size);
-            //			}
 
             printf("%s\n", buf);
         }

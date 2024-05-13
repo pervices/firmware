@@ -21,7 +21,7 @@
 
 //Decodes flags for special variant
 // Currently implemented mask values:
-// bit 0: 3G to 1G conversion, sets flag USE_3G_AS_1G
+// bit 0: sets flag USE_3G_AS_1G. Uses 1GSPS sample rate with 3GSPS backplane, can use 3GSPS or 1GSPS RFEs. The server will set 3GSPS RX boards programmed with Rx3 code to 1GSPS mode. TX boards must be programmed with regular (1GSPS) Tx mcu. Time board must be programmed with Time1on3 mcu if 3GSPS RX boards, or regular (1GSPS) time mcu if 1GSPS RX boards.
 
 // Decode bitmask
 #ifdef F1

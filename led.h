@@ -20,11 +20,14 @@
 
 #include "mmap.h"
 
-void server_init_led(void);
+#define LED_STATE_INIT  1
+#define LED_STATE_READY 2
+#define LED_STATE_ERROR 3
+#define LED_STATE_UNKNOWN 0xff
 
-void server_ready_led(void);
+void set_led_state(uint8_t state);
 
-void error_led(void);
+uint8_t get_led_state(void);
 
 /* led control codes:
 0x0     off
