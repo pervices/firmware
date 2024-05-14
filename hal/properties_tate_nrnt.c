@@ -6381,12 +6381,10 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
         usleep(1);
     }
 
-    usleep(100000);
-
     if(lock_failed) {
         // Mute PLL to avoid transmitting with an enexpected frequency
-        strcpy(buf, "rf -z\r");
-        // ping(uart_fd, (uint8_t *)buf, strlen(buf));
+        // strcpy(buf, "rf -z\r");
+        ping(uart_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
         return 0;
     } else {
@@ -6463,12 +6461,10 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
         usleep(1);
     }
 
-    usleep(100000);
-
     if(lock_failed) {
         // Mute PLL to avoid transmitting with an enexpected frequency
-        // strcpy(buf, "rf -z\r");
-        ping(uart_fd, (uint8_t *)buf, strlen(buf));
+        strcpy(buf, "rf -z\r");
+        // ping(uart_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
         return 0;
     } else {
