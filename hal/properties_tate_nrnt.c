@@ -6381,6 +6381,8 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
         usleep(1);
     }
 
+    usleep(100000);
+
     if(lock_failed) {
         // Mute PLL to avoid transmitting with an enexpected frequency
         strcpy(buf, "rf -z\r");
@@ -6460,6 +6462,8 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
         // Wait 1us between polls to avoid spamming logs
         usleep(1);
     }
+
+    usleep(100000);
 
     if(lock_failed) {
         // Mute PLL to avoid transmitting with an enexpected frequency
