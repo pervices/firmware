@@ -947,9 +947,9 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
 int check_rf_pll(int ch, bool is_tx) {
     snprintf(buf, sizeof(buf), "status -l\r");
     if(is_tx) {
-        ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
+        ping_tx(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf), ch);
     } else {
-        ping(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf));
+        ping_rx(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf), ch);
     }
     int pll_chan; // dummy variable used to deal with the pll channel number being different
     int result;
