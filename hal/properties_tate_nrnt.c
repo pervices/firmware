@@ -5230,7 +5230,7 @@ static int hdlr_fpga_link_tx_sample_bandwidth(const char *data, char *ret) {
     int result = 0;
     for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
         char prop_path[PROP_PATH_LEN];
-        snprintf(prop_path, PROP_PATH_LEN, "tx/%c/dsp/rx_sample_bandwidth", chan +'a');
+        snprintf(prop_path, PROP_PATH_LEN, "tx/%c/dsp/tx_sample_bandwidth", chan +'a');
         set_property(prop_path, data);
         char reply[50];
         get_property(prop_path, reply, sizeof(reply));
