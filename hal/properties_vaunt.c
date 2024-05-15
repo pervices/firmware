@@ -710,12 +710,21 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
 int check_rf_pll(int ch, int uart_fd) {
     snprintf(buf, sizeof(buf), "status -c %c -l\r", (char)ch + 'a');
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
-    // TODO: this read is closely linked to the MCU code and is written for TP11. This is likely to change for RTM11.
-    int pll_chan1, pll_chan2; // dummy variable used to deal with the pll channel number being different
-    int result_adf, result_lmx;
-    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, ADF5355 Lock Detect: 0x%x\nCHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan1, &result_adf, &pll_chan2, & result_lmx);
-    // TODO: for tp11 reports for both devices for each channel, when only one device is populated per channel. We expect only one result to be lock. Likely to change for RTM11.
-    return (result_adf || result_lmx);
+
+    int pll_chan; // dummy variable used to deal with the pll channel number being different
+    int result;
+    #if RTM_VER > 11    // RTM 12 and newer 
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
+    #elif RTM_VER == 11 // RTM 11
+    if (ch > 1) {
+        sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
+    } else {
+        sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, ADF5355 Lock Detect: 0x%x", &pll_chan, &result);
+    }
+    #else               // RTM 10 and older
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, ADF5355 Lock Detect: 0x%x", &pll_chan, &result);
+    #endif
+    return result;
 }
 
 /* -------------------------------------------------------------------------- */
