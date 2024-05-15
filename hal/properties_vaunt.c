@@ -882,7 +882,7 @@ int check_rf_pll(int ch, int uart_fd) {
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             if(!set_pll_frequency(uart_tx_fd[INT(ch)],                         \
-                (uint64_t)LO_STEPSIZE, &pll, true, INT(ch)))          \
+                (uint64_t)LO_STEPSIZE, &pll, true, INT(ch), true))             \
             {                                                                  \
                 PRINT(ERROR,                                                   \
                     "PLL lock failed when attempting to set freq to %lf\n",    \
@@ -1563,7 +1563,6 @@ CHANNELS
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        pllparam_t pll;                                                        \
         /* load the reference frequency and such for RF PLL*/                  \
         if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
@@ -1595,7 +1594,7 @@ CHANNELS
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             if(!set_pll_frequency(uart_rx_fd[INT(ch)],                         \
-                (uint64_t)LO_STEPSIZE, &pll, false, INT(ch)))         \
+                (uint64_t)LO_STEPSIZE, &pll, false, INT(ch), true))            \
             {                                                                  \
                 PRINT(ERROR,                                                   \
                     "PLL lock failed when attempting to set freq to %lf\n",    \
