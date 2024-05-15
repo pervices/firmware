@@ -82,8 +82,8 @@
         // RTM10 currently uses 5MHz reference, with doubler on ADF5355/LMX2572 active, LMX2595 on avery does not use the doubler so it needs a different define
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ/2
     #elif defined(RTM12)
-        #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
-        #define PLL_CORE_REF_FREQ_HZ_S "10000000"
+        #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
+        #define PLL_CORE_REF_FREQ_HZ_S "5000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
     #else
         #error "Invalid RTM specified"
@@ -246,6 +246,19 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
 
 
 // default LMX2572 constructor
+#if defined(RTM11)    // RTM11 use a 5MHz reference instead of 10MHz
+static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
+    PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ / 2,
+    PLL1_R_FIXED,           PLL1_N_DEFAULT,
+    PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+    PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+    LMX2572_RFOUT_MAX_HZ,   LMX2572_RFOUT_MIN_HZ,
+    LMX2572_VCO_MAX_HZ,     LMX2572_VCO_MIN_HZ,
+    LMX2572_DIV_MAX,        LMX2572_DIV_MIN,
+    LMX2572_N_MAX,          LMX2572_N_MIN,
+    LMX2572_R_MAX,          LMX2572_R_MIN
+};
+#else
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
     PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ,
     PLL1_R_FIXED,           PLL1_N_DEFAULT,
@@ -257,6 +270,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
     LMX2572_N_MAX,          LMX2572_N_MIN,
     LMX2572_R_MAX,          LMX2572_R_MIN
 };
+#endif
 
 #if defined(VAUNT)
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
