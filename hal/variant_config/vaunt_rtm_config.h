@@ -58,6 +58,12 @@
     #define MIN_LO_S "150000000"
     #define RTM_VER 11
 
+#elif RTM12
+    // Minimum LO in MHz
+    // TODO: Change MIN_LO to reflect real RTM12 values
+    #define MIN_LO 150000000
+    #define MIN_LO_S "150000000"
+    #define RTM_VER 12
 
 #else
     #error "This file must be compiled with a valid hardware revision (RTM6, RTM7, RTM8, RTM9)"

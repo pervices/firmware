@@ -81,6 +81,10 @@
         #define PLL_CORE_REF_FREQ_HZ_S "10000000"
         // RTM10 currently uses 5MHz reference, with doubler on ADF5355/LMX2572 active, LMX2595 on avery does not use the doubler so it needs a different define
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ/2
+    #elif defined(RTM12)
+        #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
+        #define PLL_CORE_REF_FREQ_HZ_S "10000000"
+        #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
     #else
         #error "Invalid RTM specified"
     #endif
