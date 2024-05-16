@@ -863,9 +863,6 @@ int check_rf_pll(int ch, bool is_tx) {
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
                                                                                \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* Send Parameters over to the MCU */                                  \
@@ -1567,9 +1564,6 @@ CHANNELS
             pll.R = pll.R + 1;                                                 \
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
-                                                                               \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
@@ -3144,11 +3138,11 @@ static int hdlr_fpga_board_rst_softsys(const char *data, char *ret) {
 
         //Reboot Rx board
         strcpy(buf, "board -r\r");
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+        ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
 
         //Reboot Tx board
         strcpy(buf, "board -r\r");
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
         //Issue reset request from 10G handler
         set_property("fpga/board/reg_rst_req", "12");
@@ -4521,6 +4515,9 @@ void sync_channels_cleanup(uint8_t chan_mask) {
 // Returns 1 on success, 0 on failure
 int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, size_t channel, bool use_lut_if_possible) {
+
+    snprintf(buf, MAX_PROP_LEN, "rf -c %c \r", channel + 'a');
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )
@@ -4630,7 +4627,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
             return set_pll_frequency(uart_fd, reference, pll, tx, channel, false);
         } else {
             // Mute PLL to avoid transmitting with an enexpected frequency
-            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            snprintf(buf, MAX_PROP_LEN, "rf -c %c -z\r", channel + 'a');
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
             if(tx) {
                 PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
