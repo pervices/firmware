@@ -5306,7 +5306,10 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
 
     sscanf(data, "%i", &reset_type);
 
-    if (reset_type == 1){       // global reset bit 30
+    if (reset_type == 0) {
+        // No reset requested
+    }
+    else if (reset_type == 1){       // global reset bit 30
         write_hps_reg_mask("res_rw7", (1 << 30), (1 << 30));
         write_hps_reg_mask("res_rw7", 0, (1 << 30));
     }
@@ -5321,6 +5324,9 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     else if (reset_type == 4) { // DSP reset bit 27
         write_hps_reg_mask("res_rw7", (1 << 27), (1 << 27));
         write_hps_reg_mask("res_rw7", 0, (1 << 27));
+    } else {
+        PRINT(ERROR, "Invalid reset request: %i\n", reset_type);
+        reset_type = -1;
     }
     /* register sys[18] shows the reset status
      * the bits are [31:0] chanMode = {
@@ -5340,6 +5346,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // default value. This sets it back to the state it was in before the FPGA reset.
     set_led_state(led_state);
 
+    snprintf(ret, MAX_PROP_LEN, "%u\n", reset_type);
     return RETURN_SUCCESS;
 }
 

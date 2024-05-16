@@ -3299,7 +3299,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
         sync_channels_cleanup(15);
     }
 
-    snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
+    snprintf(ret, MAX_PROP_LEN, "%u\n", reset);
     return RETURN_SUCCESS;
 }
 
