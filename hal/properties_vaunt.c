@@ -3270,8 +3270,9 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             return RETURN_SUCCESS;
     }
 
-    reset |= 0xffffffc0; // keep bits 32:6 high
-    write_hps_reg("rst_req0", reset);
+    uint32_t reset_code = reset;
+    reset_code |= 0xffffffc0; // keep bits 32:6 high
+    write_hps_reg("rst_req0", reset_code);
 
     // poll rst_stat0
     do {
