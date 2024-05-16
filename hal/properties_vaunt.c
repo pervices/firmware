@@ -4551,13 +4551,6 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
-    // write ADF4355/ADF5355 Output RF Power
-    strcpy(buf, "rf -g ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);
-    // default to lower mid power
-    strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
-
     double freq = pll->vcoFreq / pll->d;
 
     if (synth_lut_is_enabled(tx, channel) && use_lut_if_possible) {
@@ -4582,8 +4575,12 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
     }
 
-    // ADF output power level not presently specified.
+    // write ADF4355/ADF5355 Output RF Power
     strcpy(buf, "rf -g ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);
+    // default to lower mid power
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
