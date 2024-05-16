@@ -2759,91 +2759,6 @@ static int hdlr_time_clk_pps_dtc(const char* data, char* ret) {
     return RETURN_SUCCESS;
 }
 
-#if 0
-static int hdlr_time_lmx_freq(const char* data, char* ret) {
-#if defined(RTM6) || defined(RTM7)
-    // time_lmx_freq not supported by RTM6/7 hardware
-    snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);
-    return EXIT_SUCCESS;
-#elif defined(RTM8) || defined(RTM10) || defined (RTM11)
-    // check if there is a LoGen board and only set the LMX if there is
-    char prop_read[MAX_PROP_LEN];
-    char prop_path[128];
-
-    strcpy(prop_path, STATE_DIR);
-    strcat(prop_path, "/time/about/hw_ver");
-
-    // Read EEPROM, if stock unit do nothing
-    get_property(prop_path,prop_read,MAX_PROP_LEN);
-    if (strstr(prop_read,"reg 0x11 = 0x1") == NULL) {
-        snprintf(ret, sizeof("No LMX detected"), "No LMX detected");
-        return RETURN_SUCCESS;
-    }
-#elif RTM9
-    // No-op
-    // always set the LMX because there is on board, not just LoGen
-#else
-    #error "Invalid RTM specified"
-#endif
-
-    uint64_t freq = 0;
-    sscanf(data, "%" SCNd64 "", &freq);
-
-    /* if freq = 0, mute PLL */
-    if (freq == 0) {
-        strcpy(buf, "lmx -k\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        PRINT(INFO, "LMX Muted\n");
-        return RETURN_SUCCESS;
-    }
-
-    /* if freq out of bounds, mute lmx*/
-    if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {
-        strcpy(buf, "lmx -k\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-        PRINT(ERROR,"LMX Freq Invalid \n");
-        return RETURN_ERROR;
-    }
-
-    /* run the pll calc algorithm */
-    pllparam_t pll = pll_def_lmx2595;
-    pll.ref_freq = REF_FREQ;
-    double outfreq = 0;
-    outfreq = setFreq(&freq, &pll);
-
-    /* Send Parameters over to the MCU */
-    set_lo_frequency(uart_synth_fd, &pll, 0);
-
-    snprintf(ret, MAX_PROP_LEN, "%lf", outfreq);
-
-    return RETURN_SUCCESS;
-}
-#endif
-
-#if 0
-static int hdlr_time_source_vco(const char *data, char *ret) {
-    if (strcmp(data, "external") == 0) {
-        strcpy(buf, "clk -v 1\r");
-    } else if (strcmp(data, "internal") == 0) {
-        strcpy(buf, "clk -v 0\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-#endif
-
-#if 0
-static int hdlr_time_source_sync(const char *data, char *ret) {
-    if (strcmp(data, "external") == 0) {
-        strcpy(buf, "clk -n 1\r");
-    } else if (strcmp(data, "internal") == 0) {
-        strcpy(buf, "clk -n 0\r");
-    }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    return RETURN_SUCCESS;
-}
-#endif
-
 // 10 MHz clock
 static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
@@ -3378,8 +3293,9 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             return RETURN_SUCCESS;
     }
 
-    reset |= 0xffffffc0; // keep bits 32:6 high
-    write_hps_reg("rst_req0", reset);
+    uint32_t reset_code = reset;
+    reset_code |= 0xffffffc0; // keep bits 32:6 high
+    write_hps_reg("rst_req0", reset_code);
 
     // poll rst_stat0
     do {
@@ -3407,7 +3323,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
         sync_channels_cleanup(15);
     }
 
-    snprintf(ret, MAX_PROP_LEN, "0x%08" PRIu32 "\n", status);
+    snprintf(ret, MAX_PROP_LEN, "%u\n", reset);
     return RETURN_SUCCESS;
 }
 
