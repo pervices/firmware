@@ -944,16 +944,17 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
 }
 
 // Verifies the rf pll is good. Returns 1 if the pll is locked
-int check_rf_pll(int ch, bool is_tx) {
+int check_rf_pll(const int fd, bool is_tx, int ch) {
     snprintf(buf, sizeof(buf), "status -l\r");
     if(is_tx) {
-        ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
+        ping_tx(fd, (uint8_t *)buf, strlen(buf), ch);
     } else {
-        ping(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf));
+        ping_rx(fd, (uint8_t *)buf, strlen(buf), ch);
     }
     int pll_chan; // dummy variable used to deal with the pll channel number being different
     int result;
     sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
+    //TODO: handle sscanf failing
     return result;
 }
 
@@ -6368,12 +6369,12 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
     if(time_ret) {
         PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
         usleep(timeout_ns/1000);
-        return check_rf_pll(channel, false);
+        return check_rf_pll(uart_fd, false, channel);
     }
 
     int lock_failed = 0;
     // Polling loop waiting for PLL to finish locking
-    while(!check_rf_pll(channel, false)) {
+    while(!check_rf_pll(uart_fd, false, channel)) {
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
         int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
@@ -6390,7 +6391,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
 
     if(lock_failed) {
         // Mute PLL to avoid transmitting with an enexpected frequency
-        strcpy(buf, "rf -c " STR(ch) " -z\r");
+        strcpy(buf, "rf -z\r");
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
         return 0;
@@ -6448,12 +6449,12 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
     if(time_ret) {
         PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
         usleep(timeout_ns/1000);
-        return check_rf_pll(channel, true);
+        return check_rf_pll(uart_fd, true, channel);
     }
 
     int lock_failed = 0;
     // Polling loop waiting for PLL to finish locking
-    while(!check_rf_pll(channel, true)) {
+    while(!check_rf_pll(uart_fd, true, channel)) {
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
         int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
@@ -6470,7 +6471,7 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
 
     if(lock_failed) {
         // Mute PLL to avoid transmitting with an enexpected frequency
-        strcpy(buf, "rf -c " STR(ch) " -z\r");
+        strcpy(buf, "rf -z\r");
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
         return 0;
