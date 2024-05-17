@@ -71,6 +71,7 @@
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
     #elif defined(RTM8)
         #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
+        #define PLL_CORE_REF_FREQ_HZ_S "5000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
     #elif defined(RTM9)
         #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
