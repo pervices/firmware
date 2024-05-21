@@ -249,7 +249,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
 // default LMX2572 constructor
 #if defined(RTM11)    // RTM11 use a 5MHz reference instead of 10MHz
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
-    PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ / 2,
+    PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ,
     PLL1_R_FIXED,           PLL1_N_DEFAULT,
     PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
     PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
