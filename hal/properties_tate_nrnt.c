@@ -4187,7 +4187,7 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -k\r");
+        strcpy(buf, "clk -y\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -6160,11 +6160,7 @@ int jesd_master_reset() {
         usleep(jesd_reset_delay);
 
         // Issues sysref pulse
-        // Old method of issuing a sysref pulse, left commented out in case the new method causes issues
-        // set_property("time/sync/lmk_sync_tgl_jesd", "1");
-        // Issues all sysref pulses simultaneously sysref at the same time
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");
 
         //Wait for links to re-establish
         usleep(jesd_reset_delay);
