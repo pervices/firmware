@@ -35,4 +35,5 @@
 #endif
 
 // NCO shift in the ADC in 1Gsps mode of the ADC32RF45
-#define RX_NCO_SHIFT_3G_TO_1G 250000000
+// There is a fixed NCO shift (250MHz) in the ADC in this mode. It is mostly compensated for by another NCO in the ADC (249.98MHz)
+#define RX_NCO_SHIFT_3G_TO_1G (250000000 - 249984741.211)
