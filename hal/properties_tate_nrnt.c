@@ -6353,7 +6353,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
 
     // write LMX Output RF Power
     // default to high power
-    snprintf(buf, MAX_PROP_LEN, "lmx -p %" PRIu8 "\r", 60 /*TODO: pll->power*/);
+    snprintf(buf, MAX_PROP_LEN, "lmx -p %" PRIu8 "\r", 45 /*TODO: pll->power*/);
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX Output Frequency in MHz
