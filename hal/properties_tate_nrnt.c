@@ -45,6 +45,9 @@
 
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 
+// Alias PLL_CORE_REF_FREQ_HZ for clarity
+#define LO_STEPSIZE PLL_CORE_REF_FREQ_HZ
+
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
 #define RATE_ROUND_BIAS 0.75
 
@@ -1047,6 +1050,9 @@ int check_rf_pll(int ch, bool is_tx) {
             freq -= HB_STAGE2_MIXER_FREQ;                                      \
         }                                                                      \
                                                                                 \
+        \
+        freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
+        \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
             strcpy(buf, "lmx -k\r");                                            \
@@ -1058,13 +1064,28 @@ int check_rf_pll(int ch, bool is_tx) {
                                                                                \
         /* run the pll calc algorithm */                                       \
         pllparam_t pll = pll_def_lmx2595;                                      \
-        long double outfreq = 0;                                               \
-        outfreq = setFreq(&freq, &pll);                                        \
-                                                                               \
-        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
-            pll.R = pll.R + 1;                                                 \
-            outfreq = setFreq(&freq, &pll);                                    \
-        }                                                                      \
+        long double outfreq = 0;                                                \
+        /* Attempt to find an lo setting for the desired frequency using default R divider*/\
+        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* It does not actually set the frequency */\
+        outfreq = setFreq(&freq, &pll);                                         \
+                                                                                \
+        /* Attempt to find an lo setting for desired frequency using other R dividers*/\
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {                    \
+            pll.R = pll.R + 1;                                                  \
+            outfreq = setFreq(&freq, &pll);                                     \
+        }                                                                       \
+        \
+        /* Fallback to finding a close enough lo */\
+        if(outfreq != freq) {\
+            pll = pll_def_lmx2595;\
+            outfreq = setFreq(&freq, &pll);\
+            \
+            while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {\
+                pll.R = pll.R + 1;\
+                outfreq = setFreq(&freq, &pll);\
+            }\
+        }\
                                                                                \
         /* Send Parameters over to the MCU */                                  \
         set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch));  \
@@ -1908,6 +1929,8 @@ TX_CHANNELS
             snprintf(ret, MAX_PROP_LEN, "%i", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
+        \
+        freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
                                                                                 \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
@@ -1928,14 +1951,29 @@ TX_CHANNELS
         /* run the pll calc algorithm */                                        \
         pllparam_t pll = pll_def_lmx2595;                                       \
         long double outfreq = 0;                                                \
+        /* Attempt to find an lo setting for the desired frequency using default R divider*/\
+        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* It does not actually set the frequency */\
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
-        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                    \
+        /* Attempt to find an lo setting for desired frequency using other R dividers*/\
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {                    \
             pll.R = pll.R + 1;                                                  \
             outfreq = setFreq(&freq, &pll);                                     \
         }                                                                       \
+        \
+        /* Fallback to finding a close enough lo */\
+        if(outfreq != freq) {\
+            pll = pll_def_lmx2595;\
+            outfreq = setFreq(&freq, &pll);\
+            \
+            while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {\
+                pll.R = pll.R + 1;\
+                outfreq = setFreq(&freq, &pll);\
+            }\
+        }\
                                                                                 \
-        /* Send Parameters over to the MCU */                                   \
+        /* Send Parameters over to the MCU (the part that actually sets the lo)*/                                   \
         if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
             /* if HB add back in freq before printing value to state tree */        \
             if (band == 2) {                                                        \
