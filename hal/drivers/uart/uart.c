@@ -17,12 +17,12 @@
 
 #include "uart.h"
 
-// Maximum before a UART command is considered a fail
-// Longest command: board -r
+// Longest total command: board -r
 // Times for Tate RTM5:
 // rx board -r = 6s
 // tx board -r = 8s
 // time board -r = 12s
+// Maximum time since last data received before a UART command is considered a fail
 #define TIMEOUT 15000000UL // us, 15 seconds
 
 // Minimum time between UART commands
@@ -110,6 +110,10 @@ void set_uart_blocking(int fd, int should_block) {
 }
 
 int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
+    return recv_uart_timeout(fd, data, size, max_size, TIMEOUT);
+}
+
+int recv_uart_timeout(int fd, uint8_t *data, uint32_t *size, int32_t max_size, int64_t timeout_us) {
 
 #ifdef TATE_NRNT
     if(fd == 0 || fd == 1 || fd == 2)
@@ -131,7 +135,7 @@ int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
     gettimeofday(&tstart, NULL);
 
     int rd_len = 0;
-    while (!rd_len && !timeout(&tstart, TIMEOUT)) {
+    while (!rd_len && !timeout(&tstart, timeout_us)) {
         int read_return = read(fd, data+rd_len, (max_size - 1));
         if(read_return < 0) {
             data[read_return] = 0;
@@ -152,7 +156,7 @@ int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
         *(data+rd_len) = 0;
     }
 
-    if (timeout(&tstart, TIMEOUT)) {
+    if (timeout(&tstart, timeout_us)) {
         PRINT(ERROR, "%s(), timedout\n", __func__);
         *size = rd_len;
         return RETURN_ERROR_UART_TIMEOUT;

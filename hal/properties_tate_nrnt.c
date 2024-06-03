@@ -211,8 +211,15 @@ static int read_uart(int uartfd) {
     const long t0 = time_it();
 
     while (contains((char *)uart_ret_buf, '>', total_bytes) < 1) {
-        int recv_error_code = recv_uart_comm(uartfd, (uint8_t *)(uart_ret_buf + total_bytes), &cur_bytes, MAX_UART_RET_LEN -
-        total_bytes);
+
+        // Start with a short timeout to make sure the MCU is doing something
+        // Then once any data is received use long timeout to allow for long commands (such as board -r) to complete
+        int64_t uart_timeout;
+        if(cur_bytes == 0)  {uart_timeout = 4000000;}
+        else {uart_timeout = 15000000;}
+
+        int recv_error_code = recv_uart_comm_timeout(uartfd, (uint8_t *)(uart_ret_buf + total_bytes), &cur_bytes, MAX_UART_RET_LEN -
+        total_bytes, uart_timeout);
         if(recv_error_code == RETURN_ERROR_PARAM) {
             PRINT(ERROR, "UART return buffer to small, some data was lost\n");
             return RETURN_ERROR_INSUFFICIENT_BUFFER;
@@ -908,11 +915,7 @@ static int ping(const int fd, uint8_t *buf, const size_t len) {
     int error_code = read_uart(fd);
     return error_code;
 }
-static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
-    //sets the first byte of the turn buffer to null, effectively clearing it
-    uart_ret_buf[0] = 0;
-    send_uart_comm(fd, buf, len);
-}
+
 //ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
 //ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
 static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
@@ -3966,7 +3969,7 @@ static int hdlr_time_reboot(const char *data, char *ret) {
 
         if (reboot == 1) {
             strcpy(buf, "board -r\r");
-            ping_write_only(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         }
 
         return RETURN_SUCCESS;
