@@ -19,6 +19,10 @@
 
 // Maximum before a UART command is considered a fail
 // Longest command: board -r
+// Times for Tate RTM5:
+// rx board -r = 6s
+// tx board -r = 8s
+// time board -r = 12s
 #define TIMEOUT 15000000UL // us, 15 seconds
 
 // Minimum time between UART commands
