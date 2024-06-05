@@ -1047,13 +1047,17 @@ int check_rf_pll(int ch, bool is_tx) {
         }                                                                       \
         \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
+        /* also set the LMX2595 output based on band*/                          \
         get_property(fullpath,band_read,3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
             freq -= HB_STAGE2_MIXER_FREQ;                                      \
+            strcpy(buf, "lmx -C 0\r");                                          \
+        } else {                                                                \
+            strcpy(buf, "lmx -C 1\r");                                          \
         }                                                                      \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                                                                                 \
-        \
         freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
         \
         /* if freq out of bounds, mute lmx*/                                    \
@@ -1945,11 +1949,16 @@ TX_CHANNELS
         }                                                                       \
                                                                                 \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
+        /* also set the LMX2595 output based on band*/                          \
         get_property(fullpath, band_read, 3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
             freq -= HB_STAGE2_MIXER_FREQ;                                       \
+            strcpy(buf, "lmx -C 0\r");                                          \
+        } else {                                                                \
+            strcpy(buf, "lmx -C 1\r");                                          \
         }                                                                       \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                                                                                 \
         /* run the pll calc algorithm */                                        \
         pllparam_t pll = pll_def_lmx2595;                                       \
