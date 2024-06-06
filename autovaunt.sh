@@ -33,13 +33,13 @@ fi
         --prefix=/usr                                       \
         --host=x86_64                                       \
 	CC=$SERVER_CC \
-        CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall  \
+        CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors  \
             -march=armv7-a -mtune=cortex-a9 -mfpu=neon     \
             -Werror -lm -pthread" \
-        CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
+        CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors\
             -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
 	CXX=$SERVER_CXX \
-        CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wall\
+        CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors\
             -march=armv7-a -mtune=cortex-a9 -mfpu=neon"     \
         PRODUCT="VAUNT" \
         HW_REV="${1^^}" \
