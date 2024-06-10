@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
 
                 if (RETURN_SUCCESS != parse_cmd(&cmd, buffer)) {
 
-                    PRINT(VERBOSE, "failed to parse command\n");
+                    PRINT(ERROR, "failed to parse command\n");
                     ret--;
                     continue;
                 }
