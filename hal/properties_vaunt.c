@@ -2755,7 +2755,7 @@ static int hdlr_time_clk_pps_dtc(const char* data, char* ret) {
     uint32_t pps_detected;
     read_hps_reg("sys21", &pps_detected);
     
-    snprintf(ret, MAX_PROP_LEN, "%i", pps_detected);
+    snprintf(ret, MAX_PROP_LEN, "%u", pps_detected & 0x1);
     return RETURN_SUCCESS;
 }
 
