@@ -2123,6 +2123,20 @@ CHANNELS
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
+    }\
+    \
+    /* res_ro0 bits 0,1 indicate ch A, bits 2,3 indicate ch B... */\
+    static int hdlr_rx_##ch##_jesd_status(const char *data, char *ret) {       \
+        uint32_t reg_val = 0;                                                  \
+        read_hps_reg("res_ro0", &reg_val);                                    \
+        uint8_t shift = 2 * INT(ch);                                           \
+        uint32_t ch_jesd_info = 3 & (reg_val >> shift);                        \
+        if (ch_jesd_info == 3){                                                \
+            snprintf(ret, sizeof("good"), "good");                             \
+        } else {                                                               \
+            snprintf(ret, sizeof("bad"), "bad");                               \
+        }                                                                      \
+        return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
 #undef X
@@ -4062,6 +4076,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/link/endian_swap"         , hdlr_rx_##_c##_endian_swap,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
+#define DEFINE_RX_CHANNEL_POST(_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
+
 #define DEFINE_RX_40GHZFE_CHANNEL(_c)                                                           \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/lna"      , hdlr_rx_##_c##_fe_lna,    RW, "0", RP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/gain"     , hdlr_rx_##_c##_fe_gain,   RW, "0", RP, #_c)
@@ -4255,6 +4272,9 @@ static prop_t property_table[] = {
     DEFINE_CM()
     DEFINE_FPGA_POST()
     DEFINE_SYSTEM_INFO()
+#define X(ch) DEFINE_RX_CHANNEL_POST(ch)
+    CHANNELS
+#undef X
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
