@@ -1282,6 +1282,14 @@ int check_rf_pll(int ch, int uart_fd) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
+        snprintf(buf, MAX_PROP_LEN, "status -c %s -g\r", STR(ch));             \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                     \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
@@ -4137,6 +4145,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"       , hdlr_tx_##_c##_endian_swap,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
+#define DEFINE_TX_CHANNEL_POST(_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
+
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
@@ -4273,6 +4284,9 @@ static prop_t property_table[] = {
     DEFINE_FPGA_POST()
     DEFINE_SYSTEM_INFO()
 #define X(ch) DEFINE_RX_CHANNEL_POST(ch)
+    CHANNELS
+#undef X
+#define X(ch) DEFINE_TX_CHANNEL_POST(ch)
     CHANNELS
 #undef X
 };
