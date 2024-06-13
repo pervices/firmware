@@ -4286,9 +4286,11 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_CHANNEL_POST(ch)
     CHANNELS
 #undef X
+#if !(RX_40GHZ_FE)
 #define X(ch) DEFINE_TX_CHANNEL_POST(ch)
     CHANNELS
 #undef X
+#endif
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
