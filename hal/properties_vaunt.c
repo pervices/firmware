@@ -710,6 +710,17 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
         } else {\
             return r;\
         }\
+    }                                                                                 \
+                                                                                      \
+    static int hdlr_rx_##ch##_trigger_sample_counter(const char *data, char *ret) {   \
+        uint32_t val1;  \
+        uint32_t val2;  \
+        uint32_t val;   \
+        read_hps_reg("rxa13", &val2);   \
+        read_hps_reg("rxa14", &val1);   \
+        val = (val2);     \
+        snprintf(ret, MAX_PROP_LEN, "%d \n", val);     \
+        return RETURN_SUCCESS;  \
     }
 RX_CHANNELS
 #undef X
@@ -1449,7 +1460,18 @@ int check_rf_pll(int ch, int uart_fd) {
         } else {\
             return r;\
         }\
-    }                                                                        
+    }                                                                           \
+                                                                                \
+    static int hdlr_tx_##ch##_trigger_sample_counter(const char *data, char *ret) {   \
+        uint32_t val1;   \
+        uint32_t val2;   \
+        uint32_t val;    \
+        read_hps_reg("txa17", &val2);   \
+        read_hps_reg("txa18", &val1);   \
+        val = (val2); \
+        snprintf(ret, MAX_PROP_LEN, "%d \n", val); \
+        return RETURN_SUCCESS; \
+    }                                                                 
 TX_CHANNELS
 #undef X
 
@@ -4051,6 +4073,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"     , hdlr_rx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"   , hdlr_rx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
@@ -4108,6 +4131,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sample_counter"   , hdlr_tx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", TP, #_c)         \
