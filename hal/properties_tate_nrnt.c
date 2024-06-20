@@ -1909,6 +1909,16 @@ int check_rf_pll(int ch, bool is_tx) {
         snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
+    }\
+    static int hdlr_tx_##ch##_about_ddr_bank(const char *data, char *ret) {\
+        if(is_ddr_used()) {\
+            snprintf(ret, MAX_PROP_LEN, "%i\n", tx_ddr_bank[INT(ch)]);\
+        } else {\
+            /* -1 when DDR is unused */\
+            snprintf(ret, MAX_PROP_LEN, "-1\n");\
+        }\
+        \
+        return RETURN_SUCCESS;\
     }
 TX_CHANNELS
 #undef X
@@ -5698,6 +5708,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_tx_##_c##_about_sw_ver,            RW, VERSION, TP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/ddr_bank"           , hdlr_tx_##_c##_about_ddr_bank,          RW, "0", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
