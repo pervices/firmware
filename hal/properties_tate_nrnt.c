@@ -1044,6 +1044,16 @@ int check_rf_pll(int ch, bool is_tx) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
+        if(tx_power[INT(ch)] & PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        /* Setting frequency not relevant when in USER_LO mode */\
+        /* Return immediately leaving the frequency as is to avoid falsely triggering frequency mismatch errors */\
+        if(USER_LO) {\
+            return RETURN_SUCCESS;\
+        }\
+        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
         char fullpath[PROP_PATH_LEN] = "tx/" STR(ch) "/rf/band";                \
@@ -1945,6 +1955,12 @@ TX_CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
+        /* Setting frequency not relevant when in USER_LO mode */\
+        /* Return immediately leaving the frequency as is to avoid falsely triggering frequency mismatch errors */\
+        if(USER_LO) {\
+            return RETURN_SUCCESS;\
+        }\
+        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
         char fullpath[PROP_PATH_LEN] = "rx/" STR(ch) "/rf/freq/band";     \
