@@ -121,6 +121,18 @@ static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa
 // Only used with USE_3G_AS_1G
 static uint8_t rx_3g_set_to_1g[NUM_RX_CHANNELS] = {0};
 
+// Stores if the rx board is a 3G board. Used so that the server knows whether rfe boards are 1G or 3G with USE_3G_AS_1G
+static uint8_t rx_board_variant[NUM_RX_CHANNELS] = {0};
+
+typedef enum {
+    // The variant has not been obtained yet
+    rfe_unset = 0,
+    // The rfe board is 1G
+    rfe1g = 1,
+    // The rfe board is 3G
+    rfe3g = 2
+} board_variants;
+
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
 
@@ -2363,8 +2375,8 @@ TX_CHANNELS
         if(rate < MIN_RX_SAMPLE_RATE) rate = MIN_RX_SAMPLE_RATE;\
         if(rate > RX_BASE_SAMPLE_RATE) rate = RX_BASE_SAMPLE_RATE;\
         /* If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff */\
-        /* Due to issues with the 3G to 1G conversion the rate on rx is actually limited to 500Msps */\
-        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS))) && !USE_3G_AS_1G) {\
+        /* Due to issues with the 3G to 1G conversion the rate on rx with 3G boards in 1G mode is actually limited to 500Msps */\
+        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS))) && !(USE_3G_AS_1G && rx_board_variant[INT(ch)] == rfe3g)) {\
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
@@ -2402,13 +2414,10 @@ TX_CHANNELS
         get_property("rx/" STR(ch) "/dsp/rate", read_s, 50);\
         double rate;\
         sscanf(read_s, "%lf", &rate);\
-        get_property("rx/" STR(ch) "/about/fw_ver", read_s, 50);\
-        /* strstr will return NULL if the Rx3 string is not found, in which case the RX board is not a 3G board*/\
-        char *rx_hw_is_3g = strstr(read_s, "Rx3");\
         \
         /* nco shift caused by hardware configuration */\
         double hardware_shift;\
-        if(USE_3G_AS_1G && (rx_hw_is_3g != NULL)) {\
+        if(USE_3G_AS_1G && (rx_board_variant[INT(ch)] == rfe3g)) {\
             hardware_shift = RX_NCO_SHIFT_3G_TO_1G;\
         } else {\
             hardware_shift = 0;\
@@ -2548,6 +2557,23 @@ TX_CHANNELS
         }\
         return RETURN_SUCCESS;\
     }                                                                          \
+    \
+    /* The default rate the rfe board operates at (not necessarily the current rate) */\
+    static int hdlr_rx_##ch##_about_rfe_rate(const char *data, char *ret) {\
+        strcpy(buf, "board -v\r");\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        /* strstr will return NULL if the Rx3 string is not found, in which case the RX board is not a 3G board*/\
+        char *rx_hw_is_3g = strstr((char *)uart_ret_buf, "Rx3");\
+        if(rx_hw_is_3g == NULL) {\
+            rx_board_variant[INT(ch)] = rfe1g;\
+            snprintf(ret, MAX_PROP_LEN, "1000000000\n");\
+        } else {\
+            rx_board_variant[INT(ch)] = rfe3g;\
+            snprintf(ret, MAX_PROP_LEN, "3000000000\n");\
+        }\
+        \
+        return RETURN_SUCCESS;                                                 \
+    }\
     \
     static int hdlr_rx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
@@ -3323,7 +3349,8 @@ TX_CHANNELS
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
             \
-            if(USE_3G_AS_1G && !rx_3g_set_to_1g[INT(ch)]) {\
+            /* NOTE: _about_rfe_rate must be run first to set rx_board_variant */\
+            if(USE_3G_AS_1G && rx_board_variant[INT(ch)] == rfe3g && !rx_3g_set_to_1g[INT(ch)]) {\
                 /* Tells the 3G board to operate in 1G mode */\
                 snprintf(buf, MAX_PROP_LEN, "board -i 1000\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
@@ -5576,6 +5603,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", SP, #_c)\
+    /* rfe_rate rate is SP since this must be run before _pwr, the board must be on first */\
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/rfe_rate"         , hdlr_rx_##_c##_about_rfe_rate,         RW, "1", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,         RW, "poke", SP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
@@ -5859,6 +5888,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("system/otw_tx", "fpga/link/tx_sample_bandwidth")\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "1", SP, NAC)\
+    /* TODO: add seperate flag to know whether the board is a 1G or 3G board to about */\
     DEFINE_FILE_PROP_P("system/flags/USE_3G_AS_1G"       , hdlr_invalid,                           RO, S_USE_3G_AS_1G, SP, NAC)\
 
 static prop_t property_table[] = {
