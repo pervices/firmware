@@ -51,6 +51,10 @@
 // Number to divide the base sample rate by to get the maximum rate the host can request
 int link_rate_divisor = 1;
 
+// Tick rate of Crimson's internal clock
+// It is currently equal to the device's base sample sample
+#define TICK_RATE get_base_sample_rate()
+
 double get_base_sample_rate() {
     // FPGA register reports sample rate in MHz, this function returns Hz
     uint32_t read_val;
@@ -2732,11 +2736,11 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
-    write_hps_reg("sys12", (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+    write_hps_reg("sys12", (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
@@ -2757,11 +2761,11 @@ static int hdlr_time_clk_set_time(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
-    write_hps_reg("sys12", (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+    write_hps_reg("sys12", (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);

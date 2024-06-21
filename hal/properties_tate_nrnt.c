@@ -86,6 +86,9 @@
 //used for rf freq val calc when in high band
 #define HB_STAGE2_MIXER_FREQ 1800000000
 
+// Tick rate of Cyan's internal clock
+#define TICK_RATE 250000000
+
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
@@ -4048,12 +4051,12 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
     write_hps_reg("sys12",
-                  (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+                  (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
@@ -4140,12 +4143,12 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
     write_hps_reg("sys12",
-                  (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+                  (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
