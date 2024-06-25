@@ -19,7 +19,7 @@
 
 #include <stdlib.h>
 
-#if defined(TATE_NRNT)
+#if defined(TATE_NRNT) || defined(LILY)
 static const reg_t reg_table[] = {
     {0x000 + HPS2FPGA_GPR_OFST, "sys0", 0x00000000, "RW"},
     {0x010 + HPS2FPGA_GPR_OFST, "sys1", 0xffff003f, "RO"},
@@ -1267,7 +1267,7 @@ static const reg_t reg_table[] = {
     {0xff8 + HPS2FPGA_GPR_OFST, "rst_stat1", 0x00000000, "RO"}
 };
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 static size_t num_regs = sizeof(reg_table) / sizeof(reg_table[0]);

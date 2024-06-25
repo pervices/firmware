@@ -56,7 +56,7 @@ enum TARGET_DEV {
     DEV_RX
 };
 
-#elif defined(TATE_NRNT)
+#elif defined(TATE_NRNT) || defined(LILY)
 // Cyan files
 static const char *UART_CYAN_SN = "/dev/ttycyan-time";
 static const char *UART_CYAN_RFE[16]  = {"/dev/ttycyan-rfe-0",
@@ -84,7 +84,7 @@ enum TARGET_DEV {
 static int target_rfe = -1;
 
 #else
-    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT)"
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 static enum TARGET_DEV target_dev;
@@ -186,12 +186,12 @@ static void parse_args(int argc, char *argv[]) {
                 target_dev = DEV_TX;
             } else if (argv[i][0] == 'r') {
                 target_dev = DEV_RX;
-#elif defined(TATE_NRNT)
+#elif defined(TATE_NRNT) || defined(LILY)
             } else if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
                 target_dev = DEV_RFE;
                 target_rfe = atoi(argv[i]);
 #else
-    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT)"
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
             } else {
                 help();
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
         dump_args();
     #endif
 
-#if defined(TATE_NRNT)
+#if defined(TATE_NRNT) || defined(LILY)
     if(target_dev == DEV_TIME) {
         if (init_uart_comm(&uart_target_fd, UART_CYAN_SN, 0) < 0) {
             PRINT(ERROR, "Cannot initialize uart %s. The time board will not work\n", UART_CYAN_SN);
@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
         return RETURN_ERROR_PARAM;
     }
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT VAUNT). Confirm spelling and spaces."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 

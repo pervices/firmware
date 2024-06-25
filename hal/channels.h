@@ -21,11 +21,11 @@
 /* clang-format off */
 
 #include "array-utils.h"
-#if defined(TATE_NRNT)
+#if defined(TATE_NRNT) || defined(LILY)
     #include "variant_config/tate_special_config.h"
 #elif defined(VAUNT)
 #else
-    #error "Invalid product specified"
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // https://en.wikipedia.org/wiki/X_Macro.
@@ -43,12 +43,28 @@
 //channel number
 #define INT(ch) ((int)(CHR(ch) - 'a'))
 
-#if defined(VAUNT)
-    #define CHANNELS \
-        X(a) \
-        X(b) \
-        X(c) \
-        X(d)
+#if defined(LILY)
+    #if defined (S1000)
+        #define MAX_SAMPLE_RATE 1000
+        // TODO LILY: update these (rfe mappings)
+        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+        #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
+
+        // TODO LILY: see if any FPGA changes are needed
+        #if defined(R4) && defined(T4)
+            #define FPGA_4R4T_1G
+            #define NUM_RX_CHANNELS 4
+            #define NUM_TX_CHANNELS 4
+            #define S_NUM_RX "4"
+            #define S_NUM_TX "4"
+        #else
+            #error Invalid number of channels specified for LILY, must be: R4 T4
+        #endif
+    #else
+        // TODO LILY: correct sample rate
+        #error Invalid maximum sample rate specified (MHz), must be: S1000
+    #endif
+
 #elif defined(TATE_NRNT)
 
     #if defined (S1000)
@@ -152,7 +168,17 @@
     #else
         #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
     #endif
+#elif defined(VAUNT)
+//NO-OP
+#endif
 
+#if defined(VAUNT)
+    #define CHANNELS \
+        X(a) \
+        X(b) \
+        X(c) \
+        X(d)
+#elif defined(TATE_NRNT) || defined(LILY)
     #if (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS ==4)
         //TODO generate this dynamically, used by the macro to create the functions for each channel
         #define RX_CHANNELS \
@@ -258,11 +284,11 @@
             X(h)
 
     #else
-        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, R8 T0, R8 T8, R1 T1, R2 T2
+        #error Invalid configuration, currently supported configurations: R9 T7, R4 T4, R8 T0, R8 T8, R1 T1, R2 T2
     #endif
 
 #else
-    #error "Project name (VAUNT | TATE_NRNT) not specified or not recognized."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 //Below is the old way of defining some channel specific properties, new versions should be integrated into the previous macro

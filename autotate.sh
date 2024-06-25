@@ -16,7 +16,7 @@ elif [ $# -eq 2 ]; then
     echo "Example: ./autotate.sh TATE_NRNT RTM5 R4 T4 S1000 for TATE_4R4T"
     exit 80
 elif [ $# -ge 5 ]; then
-    if [ "$1" != "TATE_NRNT" ]; then
+    if [ "$1" != "TATE_NRNT" -a "$1" != "LILY" ]; then
         echo "Parameters for NRNT specified but product is not NRNT"
         exit 80
     fi

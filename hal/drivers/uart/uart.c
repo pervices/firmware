@@ -115,12 +115,16 @@ int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
 
 int recv_uart_timeout(int fd, uint8_t *data, uint32_t *size, int32_t max_size, int64_t timeout_us) {
 
-#ifdef TATE_NRNT
+#if defined(TATE_NRNT) || defined(LILY)
     if(fd == 0 || fd == 1 || fd == 2)
     {
         puts("cannot read from standard devices");
         exit(1);
     }
+#elif defined(VAUNT)
+    // NO-OP
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     if(max_size < 0) {
@@ -169,12 +173,16 @@ int recv_uart_timeout(int fd, uint8_t *data, uint32_t *size, int32_t max_size, i
 
 int send_uart(int fd, uint8_t *data, uint16_t size) {
 
-#ifdef TATE_NRNT
+#if defined(TATE_NRNT) || defined(LILY)
     if(fd == 0 || fd == 1 || fd == 2)
     {
-        puts("cannot write to standard devices");
+        puts("cannot read from standard devices");
         exit(1);
     }
+#elif defined(VAUNT)
+    // NO-OP
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     //

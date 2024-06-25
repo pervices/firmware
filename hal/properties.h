@@ -43,7 +43,7 @@
     //state tree
     #define STATE_DIR "/var/volatile/crimson/state"
     #define INTERBOOT_DATA "/var/lib/crimson-server/"
-#elif defined(TATE_NRNT)
+#elif defined(TATE_NRNT) || defined(LILY)
     //TODO: make Cyan use Volatile state tree. Probably the primary reason Crimson boots so much faster
     //directory of the state tree
     #define BASE_DIR "/var/cyan"
@@ -51,7 +51,7 @@
     #define STATE_DIR "/var/cyan/state"
     #define INTERBOOT_DATA "/var/lib/cyan-server/"
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 typedef enum { RW, RO, WO } perm_t;
@@ -105,15 +105,25 @@ void pass_uart_rx_fd(int *fd);
 void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
                             char *save_path);
 #ifdef VAUNT
-void sync_channels(uint8_t chan_mask);
-void sync_channels_prep(uint8_t chan_mask);
-void sync_channels_cleanup(uint8_t chan_mask);
+    void sync_channels(uint8_t chan_mask);
+    void sync_channels_prep(uint8_t chan_mask);
+    void sync_channels_cleanup(uint8_t chan_mask);
+#elif defined(TATE_NRNT) || defined(LILY)
+    // NO-OP
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
-#ifdef TATE_NRNT
+
+#if defined(TATE_NRNT ) || defined(LILY)
     // Only implemented on Cyan
     void jesd_reset_all();
     uint32_t is_hps_only();
+#elif defined(VAUNT)
+    // NO-OP
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
+
 #ifdef VAUNT
     int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel, bool use_lut_if_possible);

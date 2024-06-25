@@ -21,10 +21,10 @@
 
 #ifdef VAUNT
     #define MAX_DEVICES 32
-#elif defined (TATE_NRNT)
+#elif defined (TATE_NRNT) || defined(LILY)
     #define MAX_DEVICES 32
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 #define USED_DEVICE 1
 #define FREE_DEVICE 0
@@ -73,14 +73,14 @@ static uint8_t used_uart_devices[MAX_DEVICES] = {FREE_DEVICE};
 int get_uart_synth_fd() { return uart_devices[0]; }
 int get_uart_tx_fd() { return uart_devices[1]; }
 int get_uart_rx_fd() { return uart_devices[2]; }
-#elif defined(TATE_NRNT)
+#elif defined(TATE_NRNT) || defined(LILY)
     static uint8_t used_uart_devices[MAX_DEVICES] = {
     USED_DEVICE, // stdin
     USED_DEVICE, // stdout
     USED_DEVICE, // stderr
 };
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // Gets the next available file descriptor

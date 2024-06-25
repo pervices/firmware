@@ -24,7 +24,8 @@
 
 // https://en.wikipedia.org/wiki/X_Macro.
 
-#if defined(TATE_NRNT)
+//TODO LILY: check for GPIO changes
+#if defined(TATE_NRNT) || defined(LILY)
     #define GPIO_PINS \
         X(000, tx) \
         X(001, tx) \
@@ -107,7 +108,7 @@
         X(078, tx) \
         X(079, tx)
 #else
-    #error "Project name (TATE_NRNT) not specified or not recognized."
+    #error "Project name (TATE_NRNT | LILY) not specified or not recognized."
 #endif
 
 // Channel names as strings.

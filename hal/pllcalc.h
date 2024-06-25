@@ -90,10 +90,11 @@
         #error "Invalid RTM specified"
     #endif
 
-#elif defined(TATE_NRNT)
+#elif defined(TATE_NRNT) || defined(LILY)
+// TODO LILY: confirm this is correct
     #define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT VAUNT). Confirm spelling and spaces."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // PLL IDs
@@ -145,12 +146,13 @@
 #define LMX2595_VCO_MAX2_HZ 11500000000ULL      // vco frequency limit if d if 8 or more
 #define LMX2595_D_THRESH_VCO 7                  // set border between check for VCO upper limit
 #define LMX2595_VCO_MIN_HZ 7500000000ULL        // from datasheet
-#ifdef TATE_NRNT
+// TODO LILY: confirm this is correct
+#if defined(TATE_NRNT) || defined(LILY)
     #define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
 #elif defined (VAUNT)
     #define LMX2595_DIV_MAX 768
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 #define LMX2595_DIV_MIN 1       // from datasheet
 #define LMX2595_N_MAX 524287    // from datasheet

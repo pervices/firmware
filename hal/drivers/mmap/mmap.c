@@ -281,12 +281,12 @@ int mmap_init() {
     }
     mmap_fd = r;
 
-#if defined(TATE_NRNT)
+#if defined(TATE_NRNT) || defined(LILY)
     mmap_len = 0x4000;
 #elif defined(VAUNT)
     mmap_len = 0x1000;
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
@@ -406,7 +406,7 @@ void mmap_fini() {
     }
 }
 
-#if defined(TATE_NRNT)
+#if defined(TATE_NRNT) || defined(LILY)
 //the jesd_shift = JESD_SHIFT_RX or JESD_SHIFT_TX + INT(ch)
 int read_jesd_reg(uint8_t jesd_shift, uint32_t address, uint32_t *data) {
     uint32_t jesd_id = 1 << jesd_shift;
@@ -436,4 +436,8 @@ int write_jesd_reg_mask(uint8_t jesd_shift, uint32_t address, uint32_t data, uin
     }
     return write_jesd_reg(jesd_shift, address, (tmp & ~mask) | (data & mask));
 }
+#elif defined(VAUNT)
+// NO-OP
+#else
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif

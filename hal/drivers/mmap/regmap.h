@@ -27,12 +27,12 @@
 
 #define ALT_LWFPGASLVS_SPAN (ALT_LWH2F_OFST - ALT_LWFPGASLVS_OFST - 1)
 
-#if defined(TATE_NRNT)
+#if defined(TATE_NRNT) || defined(LILY)
     #define HPS2FPGA_GPR_OFST (0x80000000)
 #elif defined(VAUNT)
     #define HPS2FPGA_GPR_OFST (0xFF200000)
 #else
-    #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 typedef struct bits {

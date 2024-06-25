@@ -114,10 +114,12 @@ int main(int argc, char *argv[]) {
 
 #if defined(TATE_NRNT)
     PRINT(INFO, "Starting Cyan server\n");
+#elif defined(LILY)
+    PRINT(INFO, "Starting Lily server\n");
 #elif defined(VAUNT)
     PRINT(INFO, "Starting Crimson server\n");
 #else
-    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 
@@ -193,10 +195,12 @@ int main(int argc, char *argv[]) {
 // Let the user know the server is ready to receive commands
 #if defined(TATE_NRNT)
     PRINT(INFO, "Cyan server is up\n");
+#elif defined(LILY)
+    PRINT(INFO, "Lily server is up\n");
 #elif defined(VAUNT)
     PRINT(INFO, "Crimson server is up\n");
 #else
-    #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     set_led_state(LED_STATE_READY);

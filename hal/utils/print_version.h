@@ -9,6 +9,11 @@
     #include "variant_config/tate_special_config.h"
     #include "variant_config/tate_rtm_config.h"
     #include "../channels.h"
+#elif defined(LILY)
+//TODO LILY: decide if using same variant files or new ones
+    #include "variant_config/tate_special_config.h"
+    #include "variant_config/tate_rtm_config.h"
+    #include "../channels.h"
 #endif
 
 
@@ -22,10 +27,15 @@ void print_version() {
         printf("Rx: %i\n", NUM_RX_CHANNELS);
         printf("Tx: %i\n", NUM_TX_CHANNELS);
         printf("Rate: %i\n", MAX_SAMPLE_RATE);
+    #elif defined(LILY)
+        printf("Product: LILY\n");
+        printf("Rx: %i\n", NUM_RX_CHANNELS);
+        printf("Tx: %i\n", NUM_TX_CHANNELS);
+        printf("Rate: %i\n", MAX_SAMPLE_RATE);
     #elif defined(VAUNT)
         printf("Product: VAUNT\n");
     #else
-        #error "This file must be compiled with a valid PRODUCT (VAUNT | TATE_NRNT). Confirm spelling and spaces."
+        #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
     #endif
 
     uint32_t ver39_32, ver31_0;
@@ -35,7 +45,8 @@ void print_version() {
         printf("WARNING: unexpected non-zero bits sys3[7:4] = 0x%x\n", (ver39_32 & 0xf0) >> 4);
     }
     printf("FPGA: %01x%08x\n", (ver39_32 & 0xf), (ver31_0 & 0xffffffff));
-    #ifdef TATE_NRNT
+    //TODO LILY: confirm res_ro11 serves the same purpose
+    #if defined(TATE_NRNT) || defined(LILY)
     uint32_t verjesd;
     read_hps_reg("res_ro11", &verjesd);
     printf("JESD: %02x\n", (verjesd & 0xff0000) >> 16);

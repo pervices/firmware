@@ -17,7 +17,8 @@
 
 /* clang-format off */
 
-#if defined(TATE_NRNT)
+// This file is used by both TATE_NRNT and LILY
+#if defined(TATE_NRNT) || defined(LILY)
 
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
@@ -5574,7 +5575,13 @@ GPIO_PINS
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "cyan_nrnt"
+#if defined(TATE_NRNT)
+    #define PROJECT_NAME "cyan_nrnt"
+#elif defined(LILY)
+    #define PROJECT_NAME "chestnut"
+#else
+    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this project."
+#endif
 
 //defines the file prop using the new (2021-10-19) method of deciding whether or not to turn the board on first
 //everything using DEFINE_FILE_PROP will set rx/pwr or tx/pwr to 1 for anything contianing rx or tx in the path
