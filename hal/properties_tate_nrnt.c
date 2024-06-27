@@ -180,6 +180,15 @@ static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
     static time_t tx_async_start_time[NUM_TX_CHANNELS];
 #endif
 
+#if defined(TATE_NRNT)
+    #define MAX_RF_FREQ LMX2595_RFOUT_MAX_HZ
+#elif defined(LILY)
+    // The lo on Lily could go higher but other components in the rf chain are not rated about 9GHz
+    #define MAX_RF_FREQ 9e9
+#else
+    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this project."
+#endif
+
 uint8_t *_save_profile;
 uint8_t *_load_profile;
 char *_save_profile_path;
@@ -1087,7 +1096,7 @@ int check_rf_pll(int ch, bool is_tx) {
         freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
         \
         /* if freq out of bounds, mute lmx*/                                    \
-        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
+        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {   \
             strcpy(buf, "lmx -k\r");                                            \
             ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
@@ -1982,7 +1991,7 @@ TX_CHANNELS
         freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
                                                                                 \
         /* if freq out of bounds, mute lmx*/                                    \
-        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
+        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {   \
             strcpy(buf, "lmx -k\r");                                            \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
             PRINT(ERROR,"LMX Freq Invalid \n");                                 \
