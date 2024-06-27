@@ -314,12 +314,14 @@ uint32_t set_payload_len(char* reg, uint32_t shift, uint32_t desired) {
     if(desired > RX_MAX_PAYLOAD) {
         desired = RX_MAX_PAYLOAD;
     }
-#ifdef S1000
+#if RF_SAMPLE_RATE == 1000
     // Restrict desired to legal values due to integer rounding
     uint32_t actual = desired - (desired % 4);
-#elif defined(S3000)
+#elif RF_SAMPLE_RATE == 3000
     // payload length for 3G is hard coded
     uint32_t actual = RX_MAX_PAYLOAD;
+#else
+    #error "Invalid rf sample rate, must be 1000 or 3000"
 #endif
 
     write_hps_reg_mask(reg, actual << shift, 0xffff << shift);
@@ -721,7 +723,7 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
         \
         /* Adjustment to number of samples requested,the number written to the register and the actual number will be different */\
         /* This adjustment will result in the correct final number */\
-        if(MAX_SAMPLE_RATE == 1000) {\
+        if(RF_SAMPLE_RATE == 1000) {\
             char s_rate[100];\
             get_property("tx/" STR(ch) "/dsp/rate", s_rate, 100);\
             double rate = 0;\
@@ -743,12 +745,12 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
                 snprintf(ret, MAX_PROP_LEN, "%lu", val);\
                 val -= 2;\
             }\
-        } else if(MAX_SAMPLE_RATE == 3000) {\
+        } else if(RF_SAMPLE_RATE == 3000) {\
             val = (uint64_t)(val/8)*8;\
             snprintf(ret, MAX_PROP_LEN, "%lu", val);\
             val -= 48;\
         } else {\
-            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
+            PRINT(ERROR, "function not implemented for variants with maximum rf sample rate: %i\n", RF_SAMPLE_RATE);\
         }\
         r = set_edge_sample_num(true, #ch, val);        \
         return r;                                                              \
@@ -1005,7 +1007,7 @@ int check_rf_pll(int ch, bool is_tx) {
         if(freq < MIN_DAC_NCO) freq = MIN_DAC_NCO;\
         else if (freq > MAX_DAC_NCO) freq = MAX_DAC_NCO;\
         \
-        if(freq != 0 && MAX_SAMPLE_RATE == 3000) {\
+        if(freq != 0 && RF_SAMPLE_RATE == 3000) {\
             freq = 0;\
             PRINT(ERROR, "The DAC can only to be set to 0 when operating at 3Gsps");\
         }\
@@ -1348,7 +1350,7 @@ int check_rf_pll(int ch, bool is_tx) {
         \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
-        if(rate > TX_BASE_SAMPLE_RATE) rate = TX_BASE_SAMPLE_RATE;\
+        if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = TX_BASE_SAMPLE_RATE;\
         \
         /* bypasses dsp when at the full sample rate*/\
         if(rate > ((TX_BASE_SAMPLE_RATE-TX_DSP_SAMPLE_RATE)*(1-RATE_ROUND_BIAS))+TX_DSP_SAMPLE_RATE) {\
@@ -1472,13 +1474,13 @@ int check_rf_pll(int ch, bool is_tx) {
         int wire_format = 0;\
         sscanf(data, "%i", &wire_format);\
         \
-        if(MAX_SAMPLE_RATE == 1000) {\
+        if(RF_SAMPLE_RATE == 1000) {\
             /* Wire formate cannot be set on 1G*/\
             if(wire_format != DEAULT_OTW_TX) {\
                 PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, DEAULT_OTW_TX);\
                 wire_format = DEAULT_OTW_TX;\
             }\
-        } else if(MAX_SAMPLE_RATE == 3000) {\
+        } else if(RF_SAMPLE_RATE == 3000) {\
             if(wire_format == 12) {\
                 write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x40000, 0x40000);\
             } else if(wire_format == 16) {\
@@ -1489,7 +1491,7 @@ int check_rf_pll(int ch, bool is_tx) {
                 write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x00000, 0x40000);\
             }\
         } else {\
-            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
+            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", RF_SAMPLE_RATE);\
         }\
         snprintf(ret, MAX_PROP_LEN, "%i", wire_format);\
         return RETURN_SUCCESS;                                                 \
@@ -2402,7 +2404,7 @@ TX_CHANNELS
         \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_RX_SAMPLE_RATE) rate = MIN_RX_SAMPLE_RATE;\
-        if(rate > RX_BASE_SAMPLE_RATE) rate = RX_BASE_SAMPLE_RATE;\
+        if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = RX_BASE_SAMPLE_RATE;\
         /* If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff */\
         /* Due to issues with the 3G to 1G conversion the rate on rx with 3G boards in 1G mode is actually limited to 500Msps */\
         if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS))) && !(USE_3G_AS_1G && rx_board_variant[INT(ch)] == rfe3g)) {\
@@ -2517,14 +2519,14 @@ TX_CHANNELS
         int wire_format = 0;\
         sscanf(data, "%i", &wire_format);\
         \
-        if(MAX_SAMPLE_RATE == 1000) {\
+        if(RF_SAMPLE_RATE == 1000) {\
             /* Wire formate cannot be set on 1G*/\
             if(wire_format != DEAULT_OTW_RX) {\
                 PRINT(ERROR, "Unsupported wire format selected: sc%i. Defaulting to sc %i\n", wire_format, DEAULT_OTW_RX);\
                 wire_format = DEAULT_OTW_RX;\
             }\
         /* NOTE: prior to May 2024 3G FPGA only supported sc12 for 3G */\
-        } else if(MAX_SAMPLE_RATE == 3000) {\
+        } else if(RF_SAMPLE_RATE == 3000) {\
             if(wire_format == 12) {\
                 write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x40000, 0x40000);\
             } else if(wire_format == 16) {\
@@ -2535,7 +2537,7 @@ TX_CHANNELS
                 write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x00000, 0x40000);\
             }\
         } else {\
-            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", MAX_SAMPLE_RATE);\
+            PRINT(ERROR, "function not implemented for variants with maximum sample rate: %i\n", RF_SAMPLE_RATE);\
         }\
         snprintf(ret, MAX_PROP_LEN, "%i", wire_format);\
         return RETURN_SUCCESS;                                                 \
@@ -6358,16 +6360,16 @@ int jesd_master_reset() {
     else return 0;
 }
 
-#ifdef S1000
+#if RF_SAMPLE_RATE == 1000
 //sets sysref delay in VCO clock cycles
 void set_analog_sysref_delay(int analog_sysref_delay) {
     snprintf(buf, MAX_PROP_LEN, "adly -l 7 -c a -s %i\r", analog_sysref_delay);
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 }
-#elif defined(S3000)
+#elif RF_SAMPLE_RATE == 3000
     // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
 #else
-    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+    #error "Invalid rf sample rate, must be 1000 or 3000"
 #endif
 
 // Returns 1 is jesd links come up, 1 if any links fail
@@ -6389,18 +6391,18 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
         analog_sysref_delay = DEFAULT_ANALOG_SYSREF_DELAY;
     }
 
-#ifdef S1000
+#if RF_SAMPLE_RATE == 1000
     set_analog_sysref_delay(analog_sysref_delay);
-#elif defined(S3000)
+#elif RF_SAMPLE_RATE == 3000
     // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
 #else
-    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+    #error "Invalid rf sample rate, must be 1000 or 3000"
 #endif
 
     // Note this is set to 0 for success, any other value for failure
     int jesd_master_error = jesd_master_reset();
 
-#ifdef S1000
+#if RF_SAMPLE_RATE == 1000
     // Test all possible values of sysref delay until one works if the previously save/default failed
     if(jesd_master_error) {
         PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
@@ -6416,10 +6418,10 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
             PRINT(ERROR, "Attempt to bring up JESD with an analog sysref delay of %i failed\n", analog_sysref_delay);
         }
     }
-#elif defined(S3000)
+#elif RF_SAMPLE_RATE == 3000
     // analog sysref delay disabled on 3G since JESD reinit is not allowed without a reboot of the boards
 #else
-    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+    #error "Invalid rf sample rate, must be 1000 or 3000"
 #endif
 
     if(!jesd_master_error) {

@@ -17,9 +17,17 @@
 
 #pragma once
 
-#ifdef S1000
+// Lily will be limited to 500Msps output but the internals operate at up to 1Gsps
+#if (defined(S1000) && defined(TATE_NRNT)) || (defined(S500) && defined(LILY))
 
-    #define S_MAX_RATE "1000000000"
+// Maximum sample rate the device will output
+    #if (defined(S1000) && defined(TATE_NRNT))
+        #define S_MAX_RATE "1000000000"
+    #elif (defined(S500) && defined(LILY))
+        #define S_MAX_RATE "500000000"
+    #else
+        #error "ifdef error, this should be unreachable"
+    #endif
 
     // Sample rates are in samples per second (SPS).
     #define RX_BASE_SAMPLE_RATE   1000000000.0
@@ -83,7 +91,7 @@
     // Maximum length of VITA for rx
     #define RX_MAX_PAYLOAD 8900
 
-#elif defined(S3000)
+#elif defined(TATE_NRNT) && defined(S3000)
 
     #define S_MAX_RATE "3000000000"
 
@@ -156,5 +164,5 @@
     #define RX_MAX_PAYLOAD 8872
 
 #else
-    #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
+    #error Invalid maximum sample/product combination rate specified (MHz), must be: TATE_NRNT S1000, TATE_NRNT S3000, LILY S500
 #endif

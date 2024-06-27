@@ -44,8 +44,11 @@
 #define INT(ch) ((int)(CHR(ch) - 'a'))
 
 #if defined(LILY)
-    #if defined (S1000)
-        #define MAX_SAMPLE_RATE 1000
+    #if defined (S500)
+        // Maximum sample rate the user can request
+        #define MAX_USER_SAMPLE_RATE 500
+        // Sample rate the ADC/DAC operates at
+        #define RF_SAMPLE_RATE 1000
         #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4) + 2)
         #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 3)
 
@@ -61,13 +64,16 @@
         #endif
     #else
         // TODO LILY: correct sample rate
-        #error Invalid maximum sample rate specified (MHz), must be: S1000
+        #error Invalid maximum sample rate specified (MHz), must be: S500
     #endif
 
 #elif defined(TATE_NRNT)
 
     #if defined (S1000)
-        #define MAX_SAMPLE_RATE 1000
+        // Maximum sample rate the user can request
+        #define MAX_USER_SAMPLE_RATE 1000
+        // Sample rate the ADC/DAC operates at
+        #define RF_SAMPLE_RATE 1000
 
         //Default 1G RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
         //Some channel combinations may override it
@@ -145,7 +151,10 @@
         #endif
 
     #elif defined (S3000)
-        #define MAX_SAMPLE_RATE 3000
+        // Maximum sample rate the user can request
+        #define MAX_USER_SAMPLE_RATE 3000
+        // Sample rate the ADC/DAC operates at
+        #define RF_SAMPLE_RATE 3000
 
         //Default 3G RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
         //Some channel combinations may override it
