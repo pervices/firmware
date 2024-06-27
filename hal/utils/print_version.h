@@ -20,7 +20,7 @@
 void print_version() {
     printf("Branch: %s\n", VERSIONGITBRANCH);
     printf("Revision: %s\n", VERSIONGITREVISION);
-    printf("RTM: %i\n", RTM_VER);
+    printf("RTM: %i\n", PRODUCT_RTM_VER);
     printf("Date: %s UTC\n", VERSIONDATE);
     #if defined(TATE_NRNT)
         printf("Product: TATE_NRNT\n");

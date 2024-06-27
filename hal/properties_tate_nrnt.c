@@ -2128,7 +2128,7 @@ TX_CHANNELS
             snprintf(ret, MAX_PROP_LEN, "%i", gain);\
         /*Sets mid/high band variable amplifer*/\
         } else if(band == 1 || band == 2) {\
-            if(RTM_VER==3) {\
+            if(HARDWARE_RTM_VER==3) {\
                 /*RTM3 does not use one of the amplifiers in high and mid band*/\
                 if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
                 else if (gain < 0) gain = 0;\
@@ -2316,7 +2316,7 @@ TX_CHANNELS
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
         snprintf(mixer_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: GPIOX] %s\n", STR(ch), (char *)uart_ret_buf);\
                                                                                \
-        if( RTM_VER==3 || RTM_VER == 4 ) {\
+        if( HARDWARE_RTM_VER==3 || HARDWARE_RTM_VER == 4 ) {\
             snprintf(ret, MAX_PROP_LEN, "%s%s", adc_dump, mixer_dump);\
             return RETURN_SUCCESS;\
             /* Due to hardware issues the ADC driver cannot be read from on RTM 3 or 4*/\
@@ -4917,8 +4917,9 @@ static int hdlr_fpga_about_rtm(const char *data, char *ret) {
     uint32_t val = 0;
     read_hps_reg("res_ro12", &val);
     val = (val >> 24) & 0xf;
-    if(val != RTM_VER) {
-        PRINT(ERROR, "RTM version mismatch. Server was compiled for RTM %i but the FPGA was compiled for RTM %u\n", RTM_VER, val);
+    // TODO Lily: confirm wether the hardware RTM or product RTM is expected
+    if(val != HARDWARE_RTM_VER) {
+        PRINT(ERROR, "RTM version mismatch. Server was compiled for RTM %i but the FPGA was compiled for RTM %u\n", HARDWARE_RTM_VER, val);
     }
 
     snprintf(ret, MAX_PROP_LEN, "%u", val);

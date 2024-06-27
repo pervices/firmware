@@ -17,9 +17,35 @@
 
 #pragma once
 
-#ifdef RTM3
-    #define RTM_VER 3
+// Lily RTM1 is based off of Tate RTM6
+// PRODUCT_RTM_VER refers to the RTM that applies to the complete products
+// HARDWARE_RTM_VER refers to the RTM that applies to underlying hardware. For Tate it will match PRODUCT_RTM_VER, for Lily it will be PRODUCT_RTM_VER + 5
+#if defined(TATE_NRNT)
+    #if defined(RTM3)
+        #define PRODUCT_RTM_VER 3
+        #define HARDWARE_RTM_VER 3
+    #elif defined(RTM4)
+        #define PRODUCT_RTM_VER 4
+        #define HARDWARE_RTM_VER 4
+    #elif defined(RTM5)
+        #define PRODUCT_RTM_VER 5
+        #define HARDWARE_RTM_VER 5
+    #else
+        #error "TATE_NRNT must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
+    #endif
+#elif defined(LILY)
+    #if defined(RTM1)
+        #define PRODUCT_RTM_VER 1
+        // TODO Lily: change this to 6 once Cyan RTM6 is implemented
+        #define HARDWARE_RTM_VER 5
+    #else
+        #error "LILY must be compiled with a valid hardware revision (RTM1)"
+    #endif
+#else
+    #error "This file must be compiled with a product revision (TATE_NRNT, LILY)"
+#endif
 
+#if HARDWARE_RTM_VER == 3
     // On 1Gsps sysref is activated on the falling edge of sysref, other stuff is active on the rising edge
     // To compensate for this some revisions swapped dev clk on hardware
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 1
@@ -29,9 +55,7 @@
     // Otherwise delay = n * 300ps + 300ps
     #define DEFAULT_ANALOG_SYSREF_DELAY 0
 
-#elif RTM4
-    #define RTM_VER 4
-
+#elif HARDWARE_RTM_VER == 4
     // On 1Gsps sysref is activated on the falling edge of sysref, other stuff is active on the rising edge
     // To compensate for this some revisions swapped dev clk on hardware
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 1
@@ -41,9 +65,7 @@
     // Otherwise delay = n * 300ps + 300ps
     #define DEFAULT_ANALOG_SYSREF_DELAY 0
 
-#elif RTM5
-    #define RTM_VER 5
-
+#elif HARDWARE_RTM_VER == 5
     // On 1Gsps sysref is activated on the falling edge of sysref, other stuff is active on the rising edge
     // To compensate for this some revisions swapped dev clk on hardware
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 0
@@ -54,5 +76,5 @@
     #define DEFAULT_ANALOG_SYSREF_DELAY 0
 
 #else
-    #error "This file must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
+    #error "Invalid HARDWARE_RTM_VER, this should be unreachable"
 #endif

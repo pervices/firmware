@@ -717,9 +717,9 @@ int check_rf_pll(int ch, int uart_fd) {
 
     int pll_chan; // dummy variable used to deal with the pll channel number being different
     int result;
-    #if RTM_VER > 11    // RTM 12 and newer 
+    #if PRODUCT_RTM_VER > 11    // RTM 12 and newer
     sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
-    #elif RTM_VER == 11 // RTM 11
+    #elif PRODUCT_RTM_VER == 11 // RTM 11
     if (ch > 1) {
         sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
     } else {
@@ -854,7 +854,7 @@ int check_rf_pll(int ch, int uart_fd) {
                                                                                \
         pllparam_t pll;                                                        \
         /* load the reference frequency and such for RF PLL*/                  \
-        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
+        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
             pll = pll_def_lmx2572;                                             \
@@ -882,7 +882,7 @@ int check_rf_pll(int ch, int uart_fd) {
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* RTM10 and older, and RTM11 channel A, B use adf5355 */              \
-        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
+        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             if(!set_pll_frequency(uart_tx_fd[INT(ch)],                         \
@@ -909,7 +909,7 @@ int check_rf_pll(int ch, int uart_fd) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_common_lo(const char *data, char *ret) {      \
-        if (RTM_VER <= 7) {                                                    \
+        if (PRODUCT_RTM_VER <= 7) {                                                    \
             /* common LO not supported by RTM6/7 hardware */                   \
             snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
             return EXIT_SUCCESS;                                               \
@@ -1576,7 +1576,7 @@ CHANNELS
         }                                                                      \
                                                                                \
         /* load the reference frequency and such for RF PLL*/                  \
-        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
+        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
                 pll = pll_def_lmx2572;                                         \
@@ -1602,7 +1602,7 @@ CHANNELS
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
+        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             if(!set_pll_frequency(uart_rx_fd[INT(ch)],                         \
@@ -1647,7 +1647,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_common_lo(const char *data, char *ret) {      \
-        if (RTM_VER <= 7) {                                                    \
+        if (PRODUCT_RTM_VER <= 7) {                                                    \
             /* common LO not supported by RTM6/7 hardware */                   \
             snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
             return EXIT_SUCCESS;                                               \
