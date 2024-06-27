@@ -44,6 +44,17 @@
 #include "variant_config/tate_fpga_config.h"
 #include "variant_config/tate_rtm_config.h"
 
+// Used to determine whether the product is TATE of LILY inside macros
+#define TATE_NRNT_ID 1
+#define LILY_ID 2
+#if defined(TATE_NRNT)
+    #define PRODUCT_ID TATE_NRNT_ID
+#elif defined(LILY)
+    #define PRODUCT_ID LILY_ID
+#else
+    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
+
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 
 // Alias PLL_CORE_REF_FREQ_HZ for clarity
@@ -67,10 +78,16 @@
 //The full range is larger, but outside of this range it is very non-linear
 #define MIN_GAIN_V_TX_HB_GAIN 0.8
 #define MAX_GAIN_V_TX_HB_GAIN 2.2
-//Gain range of a high band only amplifier, note that this is in addition to the gains affecting all bands
+// Gain range of a high band only amplifier, note that this is in addition to the gains affecting all bands
+// The amplifier high band amplifier is only present in Tate, in Lily it is replaced with a fixed amplifier
 #define MIN_GAIN_TX_HB 0.0
-#define MAX_GAIN_TX_HB 23.0
-
+#if defined(TATE_NRNT)
+    #define MAX_GAIN_TX_HB 23.0
+#elif defined(LILY)
+    #define MAX_GAIN_TX_HB 0.0
+#else
+    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
 //Compnent properties in rx, used to figure out how to set up game
 //This are likely to change between variants, both thier values and how they are used
 #define AM1081_GAIN 17
@@ -1223,18 +1240,21 @@ int check_rf_pll(int ch, bool is_tx) {
         get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
         sscanf(s_atten, "%lf", &atten);\
         \
-        if(band == 2) {\
-            int gain_control_mv = 0;\
-            gain_control_mv = \
-                (int)((band_gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
-            /*Command format: debug -p <Voltage in mV>*/\
-            snprintf(buf, MAX_PROP_LEN, "debug -p %i\r", gain_control_mv);\
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        } else {\
-            /*Sets high band amplifier gain to 0 when adjusting the gain in other bands, to prevent a suprise max gain if the user is switching bands*/\
-            snprintf(buf, MAX_PROP_LEN, "debug -p 0\r");\
-            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            \
+        /* ADRF6780 (controlled by debug -b) is not present in Lily */\
+        if(PRODUCT_ID == TATE_NRNT_ID) {\
+            if(band == 2) {\
+                int gain_control_mv = 0;\
+                gain_control_mv = \
+                    (int)((band_gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
+                /*Command format: debug -p <Voltage in mV>*/\
+                snprintf(buf, MAX_PROP_LEN, "debug -p %i\r", gain_control_mv);\
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            } else {\
+                /*Sets high band amplifier gain to 0 when adjusting the gain in other bands, to prevent a suprise max gain if the user is switching bands*/\
+                snprintf(buf, MAX_PROP_LEN, "debug -p 0\r");\
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                \
+            }\
         }\
         \
         gain = (((atten)-MIN_RF_ATTEN_TX_AB)/(MAX_RF_ATTEN_TX_AB-MIN_RF_ATTEN_TX_AB)) * (MIN_RF_GAIN_TX_AB - MAX_RF_GAIN_TX_AB) + MAX_RF_GAIN_TX_AB;\
