@@ -46,9 +46,8 @@
 #if defined(LILY)
     #if defined (S1000)
         #define MAX_SAMPLE_RATE 1000
-        // TODO LILY: update these (rfe mappings)
-        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
-        #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
+        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4) + 2)
+        #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 3)
 
         // TODO LILY: see if any FPGA changes are needed
         #if defined(R4) && defined(T4)
