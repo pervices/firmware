@@ -894,7 +894,6 @@ int check_rf_pll(int ch, int uart_fd) {
                 snprintf(ret, MAX_PROP_LEN, "0");                              \
             }                                                                  \
         } else { /* RTM >= 11 use lmx2572 */                                   \
-            /* TODO: check if the PLL is locked*/                              \
             set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));              \
         }                                                                      \
         snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
@@ -1505,7 +1504,6 @@ CHANNELS
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                /* TODO: should there be a check that the LMX2595 locked? */   \
                 set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
                 /* set the lmx to use output B */                              \
                 if (lmx_freq >= 7500000000) {                                  \
@@ -1540,7 +1538,6 @@ CHANNELS
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                /* TODO: should there be a check that the LMX2595 locked? */   \
                 set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
                 /* uses output A by default */                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
@@ -1614,7 +1611,6 @@ CHANNELS
                 snprintf(ret, MAX_PROP_LEN, "0");                              \
             }                                                                  \
         } else { /* RTM >= 11 use lmx2572 */                                   \
-            /* TODO: check if the PLL is locked*/                              \
                 set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch));          \
         }                                                                      \
         snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
@@ -4776,6 +4772,9 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
+#if (!RX_40GHZ_FE)
+    // TODO: enable checking whether the LMX2595 is locked for RX_40GHZ_FE
+    // The following uses check_rf_pll() which is for the LMX2572 replacing the ADF5355
     //Wait for PLL to lock, timeout after 100ms
     struct timespec timeout_start;
     int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
@@ -4811,6 +4810,7 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
         // Wait 1us between polls to avoid spamming logs
         usleep(1);
     }
+#endif // (!RX_40GHZ_FE)
 }
 
 int set_freq_internal(const bool tx, const unsigned channel,
