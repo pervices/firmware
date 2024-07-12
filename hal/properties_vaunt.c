@@ -1613,6 +1613,7 @@ CHANNELS
         } else { /* RTM >= 11 use lmx2572 */                                   \
                 set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch));          \
         }                                                                      \
+        outfreq += (long double)lmx_freq;                                      \
         snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
                                                                                \
         return RETURN_SUCCESS;                                                 \
