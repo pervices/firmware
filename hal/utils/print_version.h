@@ -43,6 +43,9 @@ void print_version() {
     #if USE_3G_AS_1G
     printf("USE_3G_AS_1G\n");
     #endif
+    #if USER_LO
+    printf("USER_LO\n");
+    #endif
     #if RX_40GHZ_FE
     printf("RX_40GHZ_FE\n");
     #endif

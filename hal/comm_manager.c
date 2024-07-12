@@ -142,11 +142,20 @@ int close_uart_comm(int fd) {
     return RETURN_SUCCESS;
 }
 
+// Receive UART communication with default timeout
 int recv_uart_comm(int fd, uint8_t *data, uint32_t *size, int32_t max_size) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
     int mydev = uart_devices[fd];
     return recv_uart(mydev, data, size, max_size);
+}
+
+// recv_uart_comm with manual timeout duration
+int recv_uart_comm_timeout(int fd, uint8_t *data, uint32_t *size, int32_t max_size, int64_t timeout_us) {
+    if (fd < 0)
+        return RETURN_ERROR_PARAM;
+    int mydev = uart_devices[fd];
+    return recv_uart_timeout(mydev, data, size, max_size, timeout_us);
 }
 
 int send_uart_comm(int fd, uint8_t *data, uint16_t size) {

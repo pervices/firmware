@@ -45,6 +45,9 @@
 
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 
+// Alias PLL_CORE_REF_FREQ_HZ for clarity
+#define LO_STEPSIZE PLL_CORE_REF_FREQ_HZ
+
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
 #define RATE_ROUND_BIAS 0.75
 
@@ -83,6 +86,9 @@
 //used for rf freq val calc when in high band
 #define HB_STAGE2_MIXER_FREQ 1800000000
 
+// Tick rate of Cyan's internal clock
+#define TICK_RATE 250000000
+
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
@@ -117,6 +123,18 @@ static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa
 // Set to true after changing rx to 1G so it doesn't get set to it again
 // Only used with USE_3G_AS_1G
 static uint8_t rx_3g_set_to_1g[NUM_RX_CHANNELS] = {0};
+
+// Stores if the rx board is a 3G board. Used so that the server knows whether rfe boards are 1G or 3G with USE_3G_AS_1G
+static uint8_t rx_board_variant[NUM_RX_CHANNELS] = {0};
+
+typedef enum {
+    // The variant has not been obtained yet
+    rfe_unset = 0,
+    // The rfe board is 1G
+    rfe1g = 1,
+    // The rfe board is 3G
+    rfe3g = 2
+} board_variants;
 
 // Maximum user set delay for i or q
 const int max_iq_delay = 32;
@@ -208,8 +226,15 @@ static int read_uart(int uartfd) {
     const long t0 = time_it();
 
     while (contains((char *)uart_ret_buf, '>', total_bytes) < 1) {
-        int recv_error_code = recv_uart_comm(uartfd, (uint8_t *)(uart_ret_buf + total_bytes), &cur_bytes, MAX_UART_RET_LEN -
-        total_bytes);
+
+        // Start with a short timeout to make sure the MCU is doing something
+        // Then once any data is received use long timeout to allow for long commands (such as board -r) to complete
+        int64_t uart_timeout;
+        if(cur_bytes == 0)  {uart_timeout = 4000000;}
+        else {uart_timeout = 15000000;}
+
+        int recv_error_code = recv_uart_comm_timeout(uartfd, (uint8_t *)(uart_ret_buf + total_bytes), &cur_bytes, MAX_UART_RET_LEN -
+        total_bytes, uart_timeout);
         if(recv_error_code == RETURN_ERROR_PARAM) {
             PRINT(ERROR, "UART return buffer to small, some data was lost\n");
             return RETURN_ERROR_INSUFFICIENT_BUFFER;
@@ -905,11 +930,7 @@ static int ping(const int fd, uint8_t *buf, const size_t len) {
     int error_code = read_uart(fd);
     return error_code;
 }
-static void ping_write_only(const int fd, uint8_t *buf, const size_t len) {
-    //sets the first byte of the turn buffer to null, effectively clearing it
-    uart_ret_buf[0] = 0;
-    send_uart_comm(fd, buf, len);
-}
+
 //ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
 //ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
 static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
@@ -1027,6 +1048,16 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_lo_freq(const char *data, char *ret) {        \
+        if(tx_power[INT(ch)] & PWR_NO_BOARD) {\
+            /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
+            return RETURN_SUCCESS;\
+        }\
+        /* Setting frequency not relevant when in USER_LO mode */\
+        /* Return immediately leaving the frequency as is to avoid falsely triggering frequency mismatch errors */\
+        if(USER_LO) {\
+            return RETURN_SUCCESS;\
+        }\
+        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
         char fullpath[PROP_PATH_LEN] = "tx/" STR(ch) "/rf/band";                \
@@ -1042,12 +1073,19 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         }                                                                       \
         \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
+        /* also set the LMX2595 output based on band*/                          \
         get_property(fullpath,band_read,3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
             freq -= HB_STAGE2_MIXER_FREQ;                                      \
+            strcpy(buf, "lmx -C 0\r");                                          \
+        } else {                                                                \
+            strcpy(buf, "lmx -C 1\r");                                          \
         }                                                                      \
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                                                                                 \
+        freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
+        \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
             strcpy(buf, "lmx -k\r");                                            \
@@ -1059,13 +1097,28 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                                                                                \
         /* run the pll calc algorithm */                                       \
         pllparam_t pll = pll_def_lmx2595;                                      \
-        long double outfreq = 0;                                               \
-        outfreq = setFreq(&freq, &pll);                                        \
-                                                                               \
-        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                   \
-            pll.R = pll.R + 1;                                                 \
-            outfreq = setFreq(&freq, &pll);                                    \
-        }                                                                      \
+        long double outfreq = 0;                                                \
+        /* Attempt to find an lo setting for the desired frequency using default R divider*/\
+        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* It does not actually set the frequency */\
+        outfreq = setFreq(&freq, &pll);                                         \
+                                                                                \
+        /* Attempt to find an lo setting for desired frequency using other R dividers*/\
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {                    \
+            pll.R = pll.R + 1;                                                  \
+            outfreq = setFreq(&freq, &pll);                                     \
+        }                                                                       \
+        \
+        /* Fallback to finding a close enough lo */\
+        if(outfreq != freq) {\
+            pll = pll_def_lmx2595;\
+            outfreq = setFreq(&freq, &pll);\
+            \
+            while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {\
+                pll.R = pll.R + 1;\
+                outfreq = setFreq(&freq, &pll);\
+            }\
+        }\
                                                                                \
         /* Send Parameters over to the MCU */                                  \
         set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch));  \
@@ -1882,6 +1935,16 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
+    }\
+    static int hdlr_tx_##ch##_about_ddr_bank(const char *data, char *ret) {\
+        if(is_ddr_used()) {\
+            snprintf(ret, MAX_PROP_LEN, "%i\n", tx_ddr_bank[INT(ch)]);\
+        } else {\
+            /* -1 when DDR is unused */\
+            snprintf(ret, MAX_PROP_LEN, "-1\n");\
+        }\
+        \
+        return RETURN_SUCCESS;\
     }
 TX_CHANNELS
 #undef X
@@ -1896,6 +1959,12 @@ TX_CHANNELS
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
         }\
+        /* Setting frequency not relevant when in USER_LO mode */\
+        /* Return immediately leaving the frequency as is to avoid falsely triggering frequency mismatch errors */\
+        if(USER_LO) {\
+            return RETURN_SUCCESS;\
+        }\
+        \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
         char fullpath[PROP_PATH_LEN] = "rx/" STR(ch) "/rf/freq/band";     \
@@ -1909,6 +1978,8 @@ TX_CHANNELS
             snprintf(ret, MAX_PROP_LEN, "%i", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
+        \
+        freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
                                                                                 \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > LMX2595_RFOUT_MAX_HZ)) {   \
@@ -1920,23 +1991,43 @@ TX_CHANNELS
         }                                                                       \
                                                                                 \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
+        /* also set the LMX2595 output based on band*/                          \
         get_property(fullpath, band_read, 3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
             freq -= HB_STAGE2_MIXER_FREQ;                                       \
+            strcpy(buf, "lmx -C 0\r");                                          \
+        } else {                                                                \
+            strcpy(buf, "lmx -C 1\r");                                          \
         }                                                                       \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                                                                                 \
         /* run the pll calc algorithm */                                        \
         pllparam_t pll = pll_def_lmx2595;                                       \
         long double outfreq = 0;                                                \
+        /* Attempt to find an lo setting for the desired frequency using default R divider*/\
+        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* It does not actually set the frequency */\
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
-        while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {                    \
+        /* Attempt to find an lo setting for desired frequency using other R dividers*/\
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {                    \
             pll.R = pll.R + 1;                                                  \
             outfreq = setFreq(&freq, &pll);                                     \
         }                                                                       \
+        \
+        /* Fallback to finding a close enough lo */\
+        if(outfreq != freq) {\
+            pll = pll_def_lmx2595;\
+            outfreq = setFreq(&freq, &pll);\
+            \
+            while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {\
+                pll.R = pll.R + 1;\
+                outfreq = setFreq(&freq, &pll);\
+            }\
+        }\
                                                                                 \
-        /* Send Parameters over to the MCU */                                   \
+        /* Send Parameters over to the MCU (the part that actually sets the lo)*/                                   \
         if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
             /* if HB add back in freq before printing value to state tree */        \
             if (band == 2) {                                                        \
@@ -2303,8 +2394,9 @@ TX_CHANNELS
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_RX_SAMPLE_RATE) rate = MIN_RX_SAMPLE_RATE;\
         if(rate > RX_BASE_SAMPLE_RATE) rate = RX_BASE_SAMPLE_RATE;\
-        /*If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff*/\
-        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS)))) {\
+        /* If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff */\
+        /* Due to issues with the 3G to 1G conversion the rate on rx with 3G boards in 1G mode is actually limited to 500Msps */\
+        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS))) && !(USE_3G_AS_1G && rx_board_variant[INT(ch)] == rfe3g)) {\
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
@@ -2342,13 +2434,10 @@ TX_CHANNELS
         get_property("rx/" STR(ch) "/dsp/rate", read_s, 50);\
         double rate;\
         sscanf(read_s, "%lf", &rate);\
-        get_property("rx/" STR(ch) "/about/fw_ver", read_s, 50);\
-        /* strstr will return NULL if the Rx3 string is not found, in which case the RX board is not a 3G board*/\
-        char *rx_hw_is_3g = strstr(read_s, "Rx3");\
         \
         /* nco shift caused by hardware configuration */\
         double hardware_shift;\
-        if(USE_3G_AS_1G && (rx_hw_is_3g != NULL)) {\
+        if(USE_3G_AS_1G && (rx_board_variant[INT(ch)] == rfe3g)) {\
             hardware_shift = RX_NCO_SHIFT_3G_TO_1G;\
         } else {\
             hardware_shift = 0;\
@@ -2488,6 +2577,23 @@ TX_CHANNELS
         }\
         return RETURN_SUCCESS;\
     }                                                                          \
+    \
+    /* The default rate the rfe board operates at (not necessarily the current rate) */\
+    static int hdlr_rx_##ch##_about_rfe_rate(const char *data, char *ret) {\
+        strcpy(buf, "board -v\r");\
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        /* strstr will return NULL if the Rx3 string is not found, in which case the RX board is not a 3G board*/\
+        char *rx_hw_is_3g = strstr((char *)uart_ret_buf, "Rx3");\
+        if(rx_hw_is_3g == NULL) {\
+            rx_board_variant[INT(ch)] = rfe1g;\
+            snprintf(ret, MAX_PROP_LEN, "1000000000\n");\
+        } else {\
+            rx_board_variant[INT(ch)] = rfe3g;\
+            snprintf(ret, MAX_PROP_LEN, "3000000000\n");\
+        }\
+        \
+        return RETURN_SUCCESS;                                                 \
+    }\
     \
     static int hdlr_rx_##ch##_about_id(const char *data, char *ret) {          \
         /* don't need to do anything, save the ID in the file system */        \
@@ -3263,7 +3369,8 @@ TX_CHANNELS
                 set_property("rx/" STR(ch) "/board/pwr_board", "1");\
             }\
             \
-            if(USE_3G_AS_1G && !rx_3g_set_to_1g[INT(ch)]) {\
+            /* NOTE: _about_rfe_rate must be run first to set rx_board_variant */\
+            if(USE_3G_AS_1G && rx_board_variant[INT(ch)] == rfe3g && !rx_3g_set_to_1g[INT(ch)]) {\
                 /* Tells the 3G board to operate in 1G mode */\
                 snprintf(buf, MAX_PROP_LEN, "board -i 1000\r");\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
@@ -3928,7 +4035,7 @@ static int hdlr_time_reboot(const char *data, char *ret) {
 
         if (reboot == 1) {
             strcpy(buf, "board -r\r");
-            ping_write_only(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         }
 
         return RETURN_SUCCESS;
@@ -3945,12 +4052,12 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
     write_hps_reg("sys12",
-                  (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+                  (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
@@ -4037,12 +4144,12 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
     write_hps_reg("sys12",
-                  (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+                  (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
@@ -4051,6 +4158,14 @@ static int hdlr_time_clk_cur_time(const char *data, char *ret) {
 }
 
 static int hdlr_time_clk_cmd(const char *data, char *ret) {
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_clk_pps_dtc(const char* data, char* ret) {
+    uint32_t pps_detected;
+    read_hps_reg("sys21", &pps_detected);
+    
+    snprintf(ret, MAX_PROP_LEN, "%u", pps_detected & 0x1);
     return RETURN_SUCCESS;
 }
 
@@ -4187,7 +4302,7 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
-        strcpy(buf, "sync -k\r");
+        strcpy(buf, "clk -y\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
@@ -5508,6 +5623,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", SP, #_c)\
+    /* rfe_rate rate is SP since this must be run before _pwr, the board must be on first */\
+    DEFINE_FILE_PROP_P("rx/" #_c "/about/rfe_rate"         , hdlr_rx_##_c##_about_rfe_rate,         RW, "1", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,         RW, "poke", SP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
@@ -5640,6 +5757,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_tx_##_c##_about_sw_ver,            RW, VERSION, TP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/ddr_bank"           , hdlr_tx_##_c##_about_ddr_bank,          RW, "0", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
@@ -5655,6 +5773,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/clk/pps_detected"               , hdlr_time_clk_pps_dtc,                  RW, "1", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "poke", SP, NAC)      \
@@ -5789,6 +5908,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("system/otw_tx", "fpga/link/tx_sample_bandwidth")\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "1", SP, NAC)\
+    /* TODO: add seperate flag to know whether the board is a 1G or 3G board to about */\
     DEFINE_FILE_PROP_P("system/flags/USE_3G_AS_1G"       , hdlr_invalid,                           RO, S_USE_3G_AS_1G, SP, NAC)\
 
 static prop_t property_table[] = {
@@ -6160,11 +6280,7 @@ int jesd_master_reset() {
         usleep(jesd_reset_delay);
 
         // Issues sysref pulse
-        // Old method of issuing a sysref pulse, left commented out in case the new method causes issues
-        // set_property("time/sync/lmk_sync_tgl_jesd", "1");
-        // Issues all sysref pulses simultaneously sysref at the same time
-        strcpy(buf, "clk -y\r");
-        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        set_property("time/sync/lmk_sync_tgl_jesd", "1");
 
         //Wait for links to re-establish
         usleep(jesd_reset_delay);
@@ -6354,7 +6470,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
 
     // write LMX Output RF Power
     // default to high power
-    snprintf(buf, MAX_PROP_LEN, "lmx -p %" PRIu8 "\r", 60 /*TODO: pll->power*/);
+    snprintf(buf, MAX_PROP_LEN, "lmx -p %" PRIu8 "\r", 45 /*TODO: pll->power*/);
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX Output Frequency in MHz

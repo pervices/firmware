@@ -64,6 +64,8 @@
     static const char *tx_nsamp_msw_map[NUM_FPGA_TX] = {  };
     static const char *tx_nsamp_lsw_map[NUM_FPGA_TX] = {  };
 
+    static const int tx_ddr_bank[NUM_FPGA_TX] = {  };
+
 #elif defined(FPGA_4R4T_1G)
 
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
@@ -118,6 +120,8 @@
     //most significant 32 bits used to store overflow count
     static const char *tx_oflow_map_msb[NUM_FPGA_TX] = { "flc15", "flc17", "flc19", "flc21" };
 
+    static const int tx_ddr_bank[NUM_FPGA_TX] = { 0, 0, 1, 1 };
+
 #elif defined(FPGA_9R7T_1G)
 
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
@@ -171,6 +175,8 @@
     static const char *tx_oflow_map_lsb[NUM_FPGA_TX] = { "flc14", "flc16", "flc18", "flc20", "flc52", "flc54", "flc56" };
     //most significant 32 bits used to store overflow count
     static const char *tx_oflow_map_msb[NUM_FPGA_TX] = { "flc15", "flc17", "flc19", "flc21", "flc53", "flc55", "flc57" };
+
+    static const int tx_ddr_bank[NUM_FPGA_TX] = { 0, 0, 0, 1, 1, 1, 1 };
     
 #elif defined(FPGA_8R8T_1G)
 
@@ -226,6 +232,8 @@
     //most significant 32 bits used to store overflow count
     static const char *tx_oflow_map_msb[NUM_FPGA_TX] = { "flc15", "flc17", "flc19", "flc21", "flc53", "flc55", "flc57", "flc59" };
 
+    static const int tx_ddr_bank[NUM_FPGA_TX] = { 0, 0, 0, 0, 1, 1, 1, 1 };
+
 #elif defined(FPGA_4R4T_3G)
 
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4
@@ -279,6 +287,8 @@
     static const char *tx_oflow_map_lsb[NUM_FPGA_TX] = { "flc14", "flc16", "flc18", "flc20" };
     //most significant 32 bits used to store overflow count
     static const char *tx_oflow_map_msb[NUM_FPGA_TX] = { "flc15", "flc17", "flc19", "flc21" };
+
+    static const int tx_ddr_bank[NUM_FPGA_TX] = { 0, 0, 1, 1 };
 
 #else
     #error Invalid channel config, only 4R4T, 9R7T, 8R0T, 8R8T have been implemented

@@ -32,6 +32,7 @@
 int set_uart_interface_attribs(int fd, int speed, int parity);
 void set_uart_blocking(int fd, int should_block);
 int recv_uart(int fd, uint8_t *data, uint32_t *size, int32_t max_size);
+int recv_uart_timeout(int fd, uint8_t *data, uint32_t *size, int32_t max_size, int64_t timeout_us);
 int send_uart(int fd, uint8_t *data, uint16_t size);
 int flush_uart(int fd);
 void set_uart_debug_opt(uint8_t options);

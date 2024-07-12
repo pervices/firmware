@@ -197,6 +197,11 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
             pll->vcoFreq =
                 (long double)pd_freq * (uint64_t)pll->N * (uint64_t)pll->d;
         }
+    } else if (pll->id == PLL_ID_LMX2572) {
+        N1 = (double)pll->vcoFreq / (double)pd_freq;
+        pll->N = (uint32_t)N1;
+        // Set correct, actual, VCO frequency based on output frequency
+        pll->vcoFreq = (long double)pd_freq * (long double)pll->N;
     } else if (pll->id == PLL_ID_LMX2595) {
         // determine includedDivide so we know how much to divide N by
         uint8_t includedDivide = 1;
@@ -258,6 +263,10 @@ uint8_t pll_CheckParams(pllparam_t *pll, uint8_t is_pll1) {
         if ((pll->vcoFreq > LMX2595_VCO_MAX2_HZ) && (pll->d > LMX2595_D_THRESH_VCO)){    // different VCO freq limit if d is too high
             return 0;
         }
+    } else if (pll->id == PLL_ID_LMX2572) {
+        if (pll->x2en) {
+            return 0; // does not have an output doubler
+        }
     }
 
     return 1;
@@ -273,11 +282,11 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         pll->x2en = 0;
         pll->d = 1;
         pll->vcoFreq = *reqFreq;
-    } else if (pll->id == PLL_ID_ADF5355){              // determine divider for ADF5355
+    } else if ((pll->id == PLL_ID_ADF5355) || (pll->id == PLL_ID_LMX2572)) {
         pll->x2en = 0;
         double D_float = (double)pll->vco_f_min / (double)*reqFreq;
         uint16_t D = ceil(D_float);
-        { // round up to nearest power of 2 (ADF4355/ADF5355)
+        { // round up to nearest power of 2
             D--;
             D = D | (D >> 1);
             D = D | (D >> 2);
@@ -321,5 +330,9 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         pll->vcoFreq = (uint64_t)(D * (*reqFreq));
     } else {                                            // if unknown IC set d to zero, which is expected to
         pll->d = 0;                                     // cause an error because d should always be 1 or more
+    }
+    // LMX2572 n_min depends on vco frequency
+    if ((pll->id == PLL_ID_LMX2572) && (pll->vcoFreq >= LMX2572_N_DIV_HIBAND_THRESH)){
+        pll->n_min = LMX2572_N_DIV_MIN_HIBAND;
     }
 }

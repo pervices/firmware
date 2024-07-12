@@ -45,10 +45,25 @@
 
 #elif RTM10
     // Minimum LO in MHz
-    // Assumed to have equivalent lo performance to RTM8
-    #define MIN_LO 175000000
+    // Assumed to have equivalent lo performance to RTM9
+    // TODO test to determine limits, using this as the minimum since it is likely a safe value
+    #define MIN_LO 180000000
     #define MIN_LO_S "175000000"
     #define RTM_VER 10
+
+#elif RTM11
+    // Minimum LO in MHz
+    // TODO is MIN_LO even meaningful anymore as we move from ADF5355 to LMX2572 and do not generate lookup table anymore?
+    #define MIN_LO 150000000
+    #define MIN_LO_S "150000000"
+    #define RTM_VER 11
+
+#elif RTM12
+    // Minimum LO in MHz
+    // TODO: Change MIN_LO to reflect real RTM12 values
+    #define MIN_LO 150000000
+    #define MIN_LO_S "150000000"
+    #define RTM_VER 12
 
 #else
     #error "This file must be compiled with a valid hardware revision (RTM6, RTM7, RTM8, RTM9)"

@@ -36,6 +36,7 @@ int send_udp_comm(int fd, uint8_t *data, uint16_t size);
 int init_uart_comm(int *fd, const char *dev, uint16_t options);
 int close_uart_comm(int fd);
 int recv_uart_comm(int fd, uint8_t *data, uint32_t *size, int32_t max_size);
+int recv_uart_comm_timeout(int fd, uint8_t *data, uint32_t *size, int32_t max_size, int64_t timeout_us);
 int send_uart_comm(int fd, uint8_t *data, uint16_t size);
 int flush_uart_comm(int fd); // flushes UART on MCU side
 

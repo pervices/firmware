@@ -51,6 +51,10 @@
 // Number to divide the base sample rate by to get the maximum rate the host can request
 int link_rate_divisor = 1;
 
+// Tick rate of Crimson's internal clock
+// It is currently equal to the device's base sample sample
+#define TICK_RATE get_base_sample_rate()
+
 double get_base_sample_rate() {
     // FPGA register reports sample rate in MHz, this function returns Hz
     uint32_t read_val;
@@ -707,16 +711,23 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
 }
 
 // Verifies the rf pll is good. Returns 1 if the pll is locked
-int check_rf_pll(int ch, bool is_tx) {
+int check_rf_pll(int ch, int uart_fd) {
     snprintf(buf, sizeof(buf), "status -c %c -l\r", (char)ch + 'a');
-    if(is_tx) {
-        ping(uart_tx_fd[ch], (uint8_t *)buf, strlen(buf));
-    } else {
-        ping(uart_rx_fd[ch], (uint8_t *)buf, strlen(buf));
-    }
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
+
     int pll_chan; // dummy variable used to deal with the pll channel number being different
     int result;
-    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
+    #if RTM_VER > 11    // RTM 12 and newer 
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
+    #elif RTM_VER == 11 // RTM 11
+    if (ch > 1) {
+        sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
+    } else {
+        sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, ADF5355 Lock Detect: 0x%x", &pll_chan, &result);
+    }
+    #else               // RTM 10 and older
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, ADF5355 Lock Detect: 0x%x", &pll_chan, &result);
+    #endif
     return result;
 }
 
@@ -841,8 +852,13 @@ int check_rf_pll(int ch, bool is_tx) {
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* load the reference frequency and such for ADF5355*/                 \
-        pllparam_t pll = pll_def_adf5355;                                      \
+        pllparam_t pll;                                                        \
+        /* load the reference frequency and such for RF PLL*/                  \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
+            pll = pll_def_adf5355;                                             \
+        } else {                                                               \
+            pll = pll_def_lmx2572;                                             \
+        }                                                                      \
         long double outfreq = 0;                                               \
                                                                                \
         /* round the requested freq to the nearest multiple of PLL ref */      \
@@ -863,21 +879,24 @@ int check_rf_pll(int ch, bool is_tx) {
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
                                                                                \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        /* Send Parameters over to the MCU */                                  \
-        if(set_pll_frequency(uart_tx_fd[INT(ch)],                              \
-            (uint64_t)LO_STEPSIZE, &pll, true, INT(ch), true))        \
-        {                                                                      \
-            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                       \
-        } else {                                                               \
-            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n"\
-                , outfreq);                                                    \
-            snprintf(ret, MAX_PROP_LEN, "0");                                  \
+        /* RTM10 and older, and RTM11 channel A, B use adf5355 */              \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
+            strcpy(buf, "rf -c " STR(ch) " \r");                               \
+            ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+            if(!set_pll_frequency(uart_tx_fd[INT(ch)],                         \
+                (uint64_t)LO_STEPSIZE, &pll, true, INT(ch), true))             \
+            {                                                                  \
+                PRINT(ERROR,                                                   \
+                    "PLL lock failed when attempting to set freq to %lf\n",    \
+                    outfreq);                                                  \
+                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            }                                                                  \
+        } else { /* RTM >= 11 use lmx2572 */                                   \
+            set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));              \
         }                                                                      \
+        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -967,7 +986,7 @@ int check_rf_pll(int ch, bool is_tx) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_rf_pll(INT(ch), true)) {                                      \
+        if(check_rf_pll(INT(ch), uart_tx_fd[INT(ch)])) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");                           \
         } else {                                                               \
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");                         \
@@ -1266,6 +1285,14 @@ int check_rf_pll(int ch, bool is_tx) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
+        snprintf(buf, MAX_PROP_LEN, "status -c %s -g\r", STR(ch));             \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                     \
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_about_serial(const char *data, char *ret) {      \
         strcpy(buf, "status -s\r");                                            \
@@ -1477,7 +1504,6 @@ CHANNELS
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                /* TODO: should there be a check that the LMX2595 locked? */   \
                 set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
                 /* set the lmx to use output B */                              \
                 if (lmx_freq >= 7500000000) {                                  \
@@ -1512,7 +1538,6 @@ CHANNELS
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                /* TODO: should there be a check that the LMX2595 locked? */   \
                 set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
                 /* uses output A by default */                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
@@ -1547,8 +1572,12 @@ CHANNELS
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        /* load the reference frequency and such for ADF5355*/                 \
-        pll = pll_def_adf5355;                                                 \
+        /* load the reference frequency and such for RF PLL*/                  \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2)) {                 \
+            pll = pll_def_adf5355;                                             \
+        } else {                                                               \
+                pll = pll_def_lmx2572;                                         \
+        }                                                                      \
                                                                                \
         /* round the requested freq to the nearest multiple of PLL ref */      \
         float n = (float)freq / pll.ref_freq;                                  \
@@ -1568,21 +1597,23 @@ CHANNELS
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
                                                                                \
-        strcpy(buf, "rf -c " STR(ch) " \r");                                   \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-                                                                               \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        /* Send Parameters over to the MCU */                                  \
-        if(set_pll_frequency(uart_rx_fd[INT(ch)],                              \
-            (uint64_t)LO_STEPSIZE, &pll, false, INT(ch), true))       \
-        {                                                                      \
-            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq + lmx_freq);            \
-        } else {                                                               \
-            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n"\
-                , outfreq);                                                    \
-            snprintf(ret, MAX_PROP_LEN, "0");                                  \
+        if (RTM_VER <= 10 || (RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
+            strcpy(buf, "rf -c " STR(ch) " \r");                               \
+            ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
+            if(!set_pll_frequency(uart_rx_fd[INT(ch)],                         \
+                (uint64_t)LO_STEPSIZE, &pll, false, INT(ch), true))            \
+            {                                                                  \
+                PRINT(ERROR,                                                   \
+                    "PLL lock failed when attempting to set freq to %lf\n",    \
+                    outfreq);                                                  \
+                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            }                                                                  \
+        } else { /* RTM >= 11 use lmx2572 */                                   \
+                set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch));          \
         }                                                                      \
+        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1702,7 +1733,7 @@ CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_rf_pll(INT(ch), false)) {\
+        if(check_rf_pll(INT(ch), uart_rx_fd[INT(ch)])) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
@@ -2099,6 +2130,20 @@ CHANNELS
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
+        return RETURN_SUCCESS;                                                 \
+    }\
+    \
+    /* res_ro0 bits 0,1 indicate ch A, bits 2,3 indicate ch B... */\
+    static int hdlr_rx_##ch##_jesd_status(const char *data, char *ret) {       \
+        uint32_t reg_val = 0;                                                  \
+        read_hps_reg("res_ro0", &reg_val);                                    \
+        uint8_t shift = 2 * INT(ch);                                           \
+        uint32_t ch_jesd_info = 3 & (reg_val >> shift);                        \
+        if (ch_jesd_info == 3){                                                \
+            snprintf(ret, sizeof("good"), "good");                             \
+        } else {                                                               \
+            snprintf(ret, sizeof("bad"), "bad");                               \
+        }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }
 CHANNELS
@@ -2685,11 +2730,11 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
-    write_hps_reg("sys12", (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+    write_hps_reg("sys12", (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
@@ -2710,11 +2755,11 @@ static int hdlr_time_clk_set_time(const char *data, char *ret) {
                   (uint32_t)(((uint64_t)time) >> 32) & 0x00000000FFFFFFFF);
 
     // Write the fractional seconds in ticks
-    uint64_t frational_time = (time - (uint64_t)time);
+    uint64_t fractional_time = (uint64_t) round((time - (double)((uint64_t)time)) * TICK_RATE);
     // lower half
-    write_hps_reg("sys11", (uint32_t)(((uint64_t)frational_time) & 0x00000000FFFFFFFF));
+    write_hps_reg("sys11", (uint32_t)(((uint64_t)fractional_time) & 0x00000000FFFFFFFF));
     // upper half
-    write_hps_reg("sys12", (uint32_t)(((uint64_t)frational_time) >> 32) & 0x00000000FFFFFFFF);
+    write_hps_reg("sys12", (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
@@ -2732,7 +2777,7 @@ static int hdlr_time_clk_pps_dtc(const char* data, char* ret) {
     uint32_t pps_detected;
     read_hps_reg("sys21", &pps_detected);
     
-    snprintf(ret, MAX_PROP_LEN, "%i", pps_detected);
+    snprintf(ret, MAX_PROP_LEN, "%u", pps_detected & 0x1);
     return RETURN_SUCCESS;
 }
 
@@ -3144,11 +3189,11 @@ static int hdlr_fpga_board_rst_softsys(const char *data, char *ret) {
 
         //Reboot Rx board
         strcpy(buf, "board -r\r");
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+        ping(uart_rx_fd[0], (uint8_t *)buf, strlen(buf));
 
         //Reboot Tx board
         strcpy(buf, "board -r\r");
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));
+        ping(uart_tx_fd[0], (uint8_t *)buf, strlen(buf));
 
         //Issue reset request from 10G handler
         set_property("fpga/board/reg_rst_req", "12");
@@ -3270,8 +3315,9 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             return RETURN_SUCCESS;
     }
 
-    reset |= 0xffffffc0; // keep bits 32:6 high
-    write_hps_reg("rst_req0", reset);
+    uint32_t reset_code = reset;
+    reset_code |= 0xffffffc0; // keep bits 32:6 high
+    write_hps_reg("rst_req0", reset_code);
 
     // poll rst_stat0
     do {
@@ -4038,6 +4084,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/link/endian_swap"         , hdlr_rx_##_c##_endian_swap,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/delay_iq"            , hdlr_rx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
+#define DEFINE_RX_CHANNEL_POST(_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
+
 #define DEFINE_RX_40GHZFE_CHANNEL(_c)                                                           \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/lna"      , hdlr_rx_##_c##_fe_lna,    RW, "0", RP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/gain"     , hdlr_rx_##_c##_fe_gain,   RW, "0", RP, #_c)
@@ -4095,6 +4144,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"       , hdlr_tx_##_c##_endian_swap,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
+
+#define DEFINE_TX_CHANNEL_POST(_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
@@ -4231,6 +4283,14 @@ static prop_t property_table[] = {
     DEFINE_CM()
     DEFINE_FPGA_POST()
     DEFINE_SYSTEM_INFO()
+#define X(ch) DEFINE_RX_CHANNEL_POST(ch)
+    CHANNELS
+#undef X
+#if !(RX_40GHZ_FE)
+#define X(ch) DEFINE_TX_CHANNEL_POST(ch)
+    CHANNELS
+#undef X
+#endif
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
@@ -4520,6 +4580,9 @@ void sync_channels_cleanup(uint8_t chan_mask) {
 // Returns 1 on success, 0 on failure
 int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, size_t channel, bool use_lut_if_possible) {
+
+    snprintf(buf, MAX_PROP_LEN, "rf -c %c \r", channel + 'a');
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )
@@ -4553,13 +4616,6 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
-    // write ADF4355/ADF5355 Output RF Power
-    strcpy(buf, "rf -g ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);
-    // default to lower mid power
-    strcat(buf, "\r");
-    ping(uart_fd, (uint8_t *)buf, strlen(buf));
-
     double freq = pll->vcoFreq / pll->d;
 
     if (synth_lut_is_enabled(tx, channel) && use_lut_if_possible) {
@@ -4584,8 +4640,12 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
     }
 
-    // ADF output power level not presently specified.
+    // write ADF4355/ADF5355 Output RF Power
     strcpy(buf, "rf -g ");
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);
+    // default to lower mid power
+    strcat(buf, "\r");
+    ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
     // write ADF4355/ADF5355 Output Frequency
     strcpy(buf, "rf -f ");
@@ -4602,12 +4662,24 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     if(time_ret) {
         PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
         usleep(timeout_ns/1000);
-        return check_rf_pll(channel, tx);
+        if (check_rf_pll(channel, uart_fd)) {
+            return 1; //success
+        } else {
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            if(tx) {
+                PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+            } else {
+                PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+            }
+            return 0;
+        }
     }
 
     int lock_failed = 0;
     // Polling loop waiting for PLL to finish locking
-    while(!check_rf_pll(channel, tx)) {
+    while(!check_rf_pll(channel, uart_fd)) {
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
         int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
@@ -4629,7 +4701,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
             return set_pll_frequency(uart_fd, reference, pll, tx, channel, false);
         } else {
             // Mute PLL to avoid transmitting with an enexpected frequency
-            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            snprintf(buf, MAX_PROP_LEN, "rf -c %c -z\r", channel + 'a');
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
             if(tx) {
                 PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
@@ -4644,7 +4716,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     }
 }
 
-void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
+void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     // extract lo variables and pass to MCU (LMX2595)
 #if defined(RTM6) || defined(RTM7)
     // set_lo_frequency not supported by RTM6/7 hardware
@@ -4652,7 +4724,7 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
 #endif
 
     // map channel number to chan_mask
-    uint8_t chan_mask = 1 << chan_num;
+    uint8_t chan_mask = 1 << channel;
     // set the chan_mask
     snprintf(buf, MAX_PROP_LEN, "lmx -c %" PRIu8 "\r", chan_mask);
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
@@ -4700,7 +4772,45 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan_num) {
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
-    usleep(100000);
+#if (!RX_40GHZ_FE)
+    // TODO: enable checking whether the LMX2595 is locked for RX_40GHZ_FE
+    // The following uses check_rf_pll() which is for the LMX2572 replacing the ADF5355
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        if(!check_rf_pll(channel, uart_fd)){
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            PRINT(ERROR, "LMX unlocked. Muting PLL\n");
+        }
+        return;
+    }
+
+    // Polling loop waiting for PLL to finish locking
+    while(!check_rf_pll(channel, uart_fd)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            // Mute PLL to avoid transmitting with an enexpected frequency
+            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            ping(uart_fd, (uint8_t *)buf, strlen(buf));
+            PRINT(ERROR, "LMX unlocked. Muting PLL\n");
+            return;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+#endif // (!RX_40GHZ_FE)
 }
 
 int set_freq_internal(const bool tx, const unsigned channel,

@@ -71,6 +71,14 @@
             #define S_NUM_RX "1"
             #define S_NUM_TX "1"
 
+        // Note: 2R2T uses the 4R4T FPGA
+        #elif defined(R2) && defined(T2)
+            #define FPGA_4R4T_1G
+            #define NUM_RX_CHANNELS 2
+            #define NUM_TX_CHANNELS 2
+            #define S_NUM_RX "2"
+            #define S_NUM_TX "2"
+
         // Note: 4R2T uses the 4R4T FPGA
         #elif defined(R4) && defined(T2)
             #define FPGA_4R4T_1G
@@ -167,6 +175,16 @@
         #define TX_CHANNELS \
             X(a)
 
+    #elif (NUM_RX_CHANNELS == 2 && NUM_TX_CHANNELS == 2)
+        //TODO generate this dynamically, used by the macro to create the functions for each channel
+        #define RX_CHANNELS \
+            X(a) \
+            X(b)
+
+        #define TX_CHANNELS \
+            X(a) \
+            X(b)
+
     #elif (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS == 2)
         //TODO generate this dynamically, used by the macro to create the functions for each channel
         #define RX_CHANNELS \
@@ -240,7 +258,7 @@
             X(h)
 
     #else
-        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, R8 T0, R8 T8, R1 T1
+        #error Invalid configuration, currently supported configurations for NRNT: R9 T7, R4 T4, R8 T0, R8 T8, R1 T1, R2 T2
     #endif
 
 #else
