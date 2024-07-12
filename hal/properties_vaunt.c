@@ -179,53 +179,53 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 
 static uint8_t rx_power[] = {
 #define X(ch) PWR_OFF,
-    CHANNELS
+    RX_CHANNELS
 #undef X
 };
 
 static uint8_t rx_jesd[] = {
 #define X(ch) JESD_UNINIT,
-    CHANNELS
+    RX_CHANNELS
 #undef X
 };
 
 static uint8_t rx_stream[] = {
 #define X(ch) STREAM_OFF,
-    CHANNELS
+    RX_CHANNELS
 #undef X
 };
 
 static const char *reg4[] = {
 #define X(ch) "rx"STR(ch)"4",
-    CHANNELS
+    RX_CHANNELS
 #undef X
 #define X(ch) "tx"STR(ch)"4",
-    CHANNELS
+    TX_CHANNELS
 #undef X
 };
 
 #if (!RX_40GHZ_FE)
 static uint8_t tx_power[] = {
     #define X(ch) PWR_OFF,
-    CHANNELS
+    TX_CHANNELS
     #undef X
 };
 
 static uint8_t tx_jesd[] = {
 #define X(ch) JESD_UNINIT,
-    CHANNELS
+    TX_CHANNELS
 #undef X
 };
 
 static int i_bias[] = {
 #define X(ch) 17,
-    CHANNELS
+    TX_CHANNELS
 #undef X
 };
 
 static int q_bias[] = {
 #define X(ch) 17,
-    CHANNELS
+    TX_CHANNELS
 #undef X
 };
 #endif //(!RX_40GHZ_FE)
@@ -428,7 +428,7 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
     static int hdlr_rx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
         return hdlr_XX_X_rf_freq_lut_en(data, ret, false, INT(ch));            \
     }
-CHANNELS
+RX_CHANNELS
 #undef X
 
 #if (!RX_40GHZ_FE)
@@ -436,7 +436,7 @@ CHANNELS
 static int hdlr_tx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
     return hdlr_XX_X_rf_freq_lut_en(data, ret, true, INT(ch));             \
 }
-CHANNELS
+TX_CHANNELS
 #undef X
 #endif //(!RX_40GHZ_FE)
 
@@ -697,7 +697,7 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
             return r;\
         }\
     }
-CHANNELS
+RX_CHANNELS
 #undef X
 
 // Every uart send command must be accompanied by a uart read command
@@ -1443,7 +1443,7 @@ int check_rf_pll(int ch, int uart_fd) {
             return r;\
         }\
     }                                                                        
-CHANNELS
+TX_CHANNELS
 #undef X
 #endif // (!RX_40GHZ_FE)
 
@@ -2147,7 +2147,7 @@ CHANNELS
         }                                                                      \
         return RETURN_SUCCESS;                                                 \
     }
-CHANNELS
+RX_CHANNELS
 #undef X
 
 #if (RX_40GHZ_FE)
@@ -2175,7 +2175,7 @@ CHANNELS
         snprintf(ret, MAX_PROP_LEN, "%" PRIu8, gain);                          \
         return RETURN_SUCCESS;                                                 \
     }
-CHANNELS
+RX_CHANNELS
 #undef X
 #endif // (RX_40GHZ_FE)
 
@@ -2318,7 +2318,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%d", atten);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -2326,7 +2326,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 #define X(ch)                                                                  \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_atten_val;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2367,7 +2367,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", gain);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -2376,7 +2376,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 #define X(ch)                                                                  \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2431,7 +2431,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", gain);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
@@ -2440,7 +2440,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 #define X(ch)                                                                  \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_gain_val;
-        CHANNELS
+        TX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2468,7 +2468,7 @@ static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
     int32_t request = 0;
     sscanf(data, "%i", &request);
 
-    for(int n = 0; n < NUM_CHANNELS; n++) {
+    for(int n = 0; n < NUM_TX_CHANNELS; n++) {
         int32_t request_bit = (request >> n) & 1;
         request_bit = request_bit << 16;
         // Setting bit 16 to high enables this modes, low sets it to normal
@@ -2518,7 +2518,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", freq);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -2527,7 +2527,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 #define X(ch)                                                                  \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_rf_gain_val;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2544,7 +2544,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 #if (!RX_40GHZ_FE)
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
@@ -2553,7 +2553,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
 #define X(ch)                                                                  \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_tx_##ch##_rf_freq_val;
-        CHANNELS
+        TX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2612,7 +2612,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 
     sprintf(inbuf, "%lf", freq);
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
 
         if (0 == (mask_rx & (1 << i))) {
             continue;
@@ -2621,7 +2621,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 #define X(ch)                                                                  \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_rx_##ch##_dsp_nco_adj;
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2639,7 +2639,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
     }
 
 #if (!RX_40GHZ_FE)
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
             continue;
@@ -2647,7 +2647,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
 #define X(ch)                                                                  \
     if (i == INT(ch))                                                          \
         hdlr = hdlr_tx_##ch##_dsp_nco_adj;
-        CHANNELS
+        TX_CHANNELS
 #undef X
 
         // call the handler directly
@@ -2685,7 +2685,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
         // configure the channels specified for force streaming, and ensure others are not
-        for(int n = 0; n < NUM_CHANNELS; n++) {
+        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
                 sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
                 set_property(path_buffer, "1");
@@ -2704,7 +2704,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
-        for(int n = 0; n < NUM_CHANNELS; n++) {
+        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
             sprintf(path_buffer, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
@@ -3072,11 +3072,11 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
 #if (!RX_40GHZ_FE)
 #define X(ch) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
-    CHANNELS
+    TX_CHANNELS
 #undef X
 #endif //(!RX_40GHZ_FE)
 #define X(ch) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
-    CHANNELS
+    RX_CHANNELS
 #undef X
     hdlr_time_board_dump(NULL, NULL);
 
@@ -3098,14 +3098,14 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 #define X(ch)                                                                  \
     ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
         usleep(50000);
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         strcpy(buf, "board -g 1\r");
 #define X(ch)                                                                  \
     ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
         usleep(50000);
-        CHANNELS
+        TX_CHANNELS
 #undef X
     }
     if (strcmp(data, "2") == 0) {
@@ -3117,14 +3117,14 @@ static int hdlr_fpga_board_gle(const char *data, char *ret) {
 #define X(ch)                                                                  \
     ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
         usleep(50000);
-        CHANNELS
+        RX_CHANNELS
 #undef X
 
         strcpy(buf, "board -g 2\r");
 #define X(xh)                                                                  \
     ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf)),          \
         usleep(50000);
-        CHANNELS
+        TX_CHANNELS
 #undef X
     }
     return RETURN_SUCCESS;
@@ -3917,7 +3917,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
     }
 
     // Check RX JESD links
-    for (i = 0; i < NUM_CHANNELS; i++) {
+    for (i = 0; i < NUM_RX_CHANNELS; i++) {
         snprintf(prop_path, PROP_PATH_LEN, "rx/%c/status/adc_alarm", i+'a');
         set_property(prop_path, "1");
         get_property(prop_path, buf, MAX_PROP_LEN);
@@ -3945,7 +3945,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
                 PRINT(ERROR,"unexpected case. j = %hhu\n",j);
                 return RETURN_ERROR;
         }
-        for (i = 0; i < NUM_CHANNELS; i++) {
+        for (i = 0; (i < NUM_RX_CHANNELS && ch_type == 'r') || (i < NUM_TX_CHANNELS && ch_type == 'r') ; i++) {
             snprintf(prop_path, PROP_PATH_LEN, "%cx/%c/status/rfpll_lock", ch_type, i+'a');
             set_property(prop_path, "1");
             get_property(prop_path, buf, MAX_PROP_LEN);
@@ -4256,6 +4256,8 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 
 // Contians information about the configuration
 #define DEFINE_SYSTEM_INFO()\
+    DEFINE_FILE_PROP_P("system/num_rx"                   , hdlr_invalid,                           RO, S_NUM_RX, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/num_tx"                   , hdlr_invalid,                           RO, S_NUM_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/max_lo"              , hdlr_invalid,                           RO, S_MAX_RF_FREQ, SP, NAC)\
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
     DEFINE_FILE_PROP_P("system/lo_step"              , hdlr_invalid,                           RO, LO_STEPSIZE_S, SP, NAC)\
@@ -4266,15 +4268,15 @@ static prop_t property_table[] = {
     DEFINE_START_RFE_REBOOT()
     DEFINE_WAIT_RFE_REBOOT()
 #define X(ch) DEFINE_RX_CHANNEL(ch)
-    CHANNELS
+    RX_CHANNELS
 #undef X
 #if (RX_40GHZ_FE)
     #define X(ch) DEFINE_RX_40GHZFE_CHANNEL(ch)
-        CHANNELS
+        RX_CHANNELS
     #undef X
 #else
 #define X(ch) DEFINE_TX_CHANNEL(ch)
-    CHANNELS
+    TX_CHANNELS
 #undef X
 #endif
     // NOTE: unlike on Cyan, on Crimson FPGA initialization happens last
@@ -4285,11 +4287,11 @@ static prop_t property_table[] = {
     DEFINE_FPGA_POST()
     DEFINE_SYSTEM_INFO()
 #define X(ch) DEFINE_RX_CHANNEL_POST(ch)
-    CHANNELS
+    RX_CHANNELS
 #undef X
 #if !(RX_40GHZ_FE)
 #define X(ch) DEFINE_TX_CHANNEL_POST(ch)
-    CHANNELS
+    TX_CHANNELS
 #undef X
 #endif
 };
@@ -4342,19 +4344,19 @@ void patch_tree(void) {
     const int base_port = 42820;
 
 #define X(ch) set_default_int("rx/" #ch "/link/port", base_port + INT(ch));
-    CHANNELS
+    RX_CHANNELS
 #undef X
 
 #define X(ch) set_default_str("rx/" #ch "/link/ip_dest", ((INT(ch) % 2) == 0) ? "10.10.10.10" : "10.10.11.10");
-    CHANNELS
+    RX_CHANNELS
 #undef X
 
 #define X(ch) \
-    set_default_int("tx/" #ch "/link/port",   base_port + INT(ch) + NUM_CHANNELS); \
-    set_default_int("tx/" #ch "/qa/fifo_lvl", base_port + INT(ch) + NUM_CHANNELS); \
-    set_default_int("tx/" #ch "/qa/oflow",    base_port + INT(ch) + NUM_CHANNELS); \
-    set_default_int("tx/" #ch "/qa/uflow",    base_port + INT(ch) + NUM_CHANNELS);
-    CHANNELS
+    set_default_int("tx/" #ch "/link/port",   base_port + INT(ch) + NUM_TX_CHANNELS); \
+    set_default_int("tx/" #ch "/qa/fifo_lvl", base_port + INT(ch) + NUM_TX_CHANNELS); \
+    set_default_int("tx/" #ch "/qa/oflow",    base_port + INT(ch) + NUM_TX_CHANNELS); \
+    set_default_int("tx/" #ch "/qa/uflow",    base_port + INT(ch) + NUM_TX_CHANNELS);
+    TX_CHANNELS
 #undef X
 
     // Read a configuration file to overrid default values of the state tree. Must be done at adjusting the default state tree values
@@ -4824,14 +4826,14 @@ int set_freq_internal(const bool tx, const unsigned channel,
 
     static const fp_t rx_fp[] = {
 #define X(ch) hdlr_rx_##ch##_rf_freq_val,
-        CHANNELS
+        RX_CHANNELS
 #undef X
     };
 
 #if (!RX_40GHZ_FE)
     static const fp_t tx_fp[] = {
 #define X(ch) hdlr_tx_##ch##_rf_freq_val,
-        CHANNELS
+        TX_CHANNELS
 #undef X
     };
 #else

@@ -24,6 +24,7 @@
 #if defined(TATE_NRNT) || defined(LILY)
     #include "variant_config/tate_special_config.h"
 #elif defined(VAUNT)
+    #include "variant_config/vaunt_special_config.h"
 #else
     #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
@@ -177,15 +178,37 @@
         #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
     #endif
 #elif defined(VAUNT)
-//NO-OP
+    #define NUM_RX_CHANNELS 4
+    #define S_NUM_RX "4"
+
+    // In RX_40GHZ_FE mode the tx boards are replaced with the 40GHz equipment
+    #if RX_40GHZ_FE
+        #define NUM_TX_CHANNELS 0
+        #define S_NUM_TX "0"
+    #else
+        #define NUM_TX_CHANNELS 4
+        #define S_NUM_TX "4"
+    #endif
 #endif
 
 #if defined(VAUNT)
-    #define CHANNELS \
+    #define RX_CHANNELS \
         X(a) \
         X(b) \
         X(c) \
         X(d)
+
+    // In RX_40GHZ_FE mode the tx boards are replaced with the 40GHz equipment
+    #if RX_40GHZ_FE
+        #define TX_CHANNELS
+    #else
+        #define TX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d)
+    #endif
+
 #elif defined(TATE_NRNT) || defined(LILY)
     #if (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS ==4)
         //TODO generate this dynamically, used by the macro to create the functions for each channel
@@ -299,22 +322,6 @@
     #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
-//Below is the old way of defining some channel specific properties, new versions should be integrated into the previous macro
-//creates channel maps
-
-//old method used by vaunt
-#if defined (VAUNT)
-
-    // Channel names as strings.
-    static const char* const channel_names[] = {
-    #define X(ch) STR(ch),
-        CHANNELS
-    #undef X
-    };
-
-    #define NUM_CHANNELS ARRAY_SIZE(channel_names)
-
-#endif
 /* clang-format on */
 
 #endif

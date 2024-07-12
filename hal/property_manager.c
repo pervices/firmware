@@ -47,8 +47,13 @@
 
 static int uart_synth_comm_fd = 0;
 #ifdef VAUNT
-static int uart_tx_comm_fd[NUM_CHANNELS] = {0};
-static int uart_rx_comm_fd[NUM_CHANNELS] = {0};
+#ifdef RX_40GHZ_FE
+    // In RX_40GHZ_FE mode tx uart buffer are used to communicate with the 40GHz equipment
+    static int uart_tx_comm_fd[NUM_RX_CHANNELS];
+#else
+    static int uart_tx_comm_fd[NUM_TX_CHANNELS];
+#endif
+static int uart_rx_comm_fd[NUM_RX_CHANNELS];
 #elif defined(TATE_NRNT) || defined(LILY)
 // TODO: figure out why there should be 32 elements, and soft code this. It should probably be either number of channels present in the configuration, or theoretical maximum number of channles
 int uart_tx_comm_fd[32];
