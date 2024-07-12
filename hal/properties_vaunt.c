@@ -204,7 +204,7 @@ static const char *reg4[] = {
 #undef X
 };
 
-#if (!RX_40GHZ_FE)
+#if (NUM_TX_CHANNELS > 0)
 static uint8_t tx_power[] = {
     #define X(ch) PWR_OFF,
     TX_CHANNELS
@@ -228,7 +228,7 @@ static int q_bias[] = {
     TX_CHANNELS
 #undef X
 };
-#endif //(!RX_40GHZ_FE)
+#endif //(NUM_TX_CHANNELS > 0)
 
 uint8_t *_save_profile;
 uint8_t *_load_profile;
@@ -354,7 +354,7 @@ static int hdlr_rx_sync(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-#if (!RX_40GHZ_FE)
+#if (NUM_TX_CHANNELS > 0)
 static int hdlr_tx_sync(const char *data, char *ret) {
     uint32_t old_val;
 
@@ -382,7 +382,7 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     }
     return RETURN_SUCCESS;
 }
-#endif //(!RX_40GHZ_FE)
+#endif //(NUM_TX_CHANNELS > 0)
 
 static int hdlr_save_config(const char *data, char *ret) {
     *_save_profile = 1;
@@ -431,14 +431,14 @@ static int hdlr_XX_X_rf_freq_lut_en(const char *data, char *ret, const bool tx,
 RX_CHANNELS
 #undef X
 
-#if (!RX_40GHZ_FE)
+#if (NUM_TX_CHANNELS > 0)
 #define X(ch)                                                                  \
 static int hdlr_tx_##ch##_rf_freq_lut_en(const char *data, char *ret) {    \
     return hdlr_XX_X_rf_freq_lut_en(data, ret, true, INT(ch));             \
 }
 TX_CHANNELS
 #undef X
-#endif //(!RX_40GHZ_FE)
+#endif //(NUM_TX_CHANNELS > 0)
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- GATE ------------------------------------ */
@@ -734,7 +734,6 @@ int check_rf_pll(int ch, int uart_fd) {
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
-#if (!RX_40GHZ_FE)
 #define X(ch)                                                                  \
     static int hdlr_tx_##ch##_rf_dac_dither_en(const char *data, char *ret) {  \
         int en;                                                                \
@@ -1445,7 +1444,6 @@ int check_rf_pll(int ch, int uart_fd) {
     }                                                                        
 TX_CHANNELS
 #undef X
-#endif // (!RX_40GHZ_FE)
 
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- RX ------------------------------------- */
@@ -2396,7 +2394,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-#if (!RX_40GHZ_FE)
+#if (NUM_TX_CHANNELS > 0)
 static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     uint32_t mask;
     
@@ -2477,7 +2475,7 @@ static int hdlr_cm_tx_force_stream(const char *data, char *ret) {
 
     return RETURN_SUCCESS;
 }
-#endif //(!RX_40GHZ_FE)
+#endif //(NUM_TX_CHANNELS > 0)
 
 static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     int r;
@@ -2543,7 +2541,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         set_property(prop->path, inbuf);
         prop->wd = wd_backup;
     }
-#if (!RX_40GHZ_FE)
+
     for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
@@ -2569,7 +2567,7 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
         set_property(prop->path, inbuf);
         prop->wd = wd_backup;
     }
-#endif //(!RX_40GHZ_FE)
+
     return RETURN_SUCCESS;
 }
 
@@ -2638,7 +2636,6 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         prop->wd = wd_backup;
     }
 
-#if (!RX_40GHZ_FE)
     for (i = 0; i < NUM_TX_CHANNELS; i++) {
 
         if (0 == (mask_tx & (1 << i))) {
@@ -2663,7 +2660,7 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
         set_property(prop->path, inbuf);
         prop->wd = wd_backup;
     }
-#endif // (!RX_40GHZ_FE)
+
     return RETURN_SUCCESS;
 }
 
@@ -3070,11 +3067,9 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 
 // Dumps all of the board logs for TX, RX, and TIME
 static int hdlr_fpga_board_dump(const char *data, char *ret) {
-#if (!RX_40GHZ_FE)
 #define X(ch) hdlr_tx_##ch##_rf_board_dump(NULL, NULL);
     TX_CHANNELS
 #undef X
-#endif //(!RX_40GHZ_FE)
 #define X(ch) hdlr_rx_##ch##_rf_board_dump(NULL, NULL);
     RX_CHANNELS
 #undef X
@@ -4289,11 +4284,9 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_CHANNEL_POST(ch)
     RX_CHANNELS
 #undef X
-#if !(RX_40GHZ_FE)
 #define X(ch) DEFINE_TX_CHANNEL_POST(ch)
     TX_CHANNELS
 #undef X
-#endif
 };
 
 static const size_t num_properties = ARRAY_SIZE(property_table);
@@ -4830,15 +4823,11 @@ int set_freq_internal(const bool tx, const unsigned channel,
 #undef X
     };
 
-#if (!RX_40GHZ_FE)
     static const fp_t tx_fp[] = {
 #define X(ch) hdlr_tx_##ch##_rf_freq_val,
         TX_CHANNELS
 #undef X
     };
-#else
-    static const fp_t tx_fp[0];
-#endif // (!RX_40GHZ_FE)
 
     int r;
 
