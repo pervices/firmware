@@ -4759,9 +4759,6 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
-#if (!RX_40GHZ_FE)
-    // TODO: enable checking whether the LMX2595 is locked for RX_40GHZ_FE
-    // The following uses check_rf_pll() which is for the LMX2572 replacing the ADF5355
     //Wait for PLL to lock, timeout after 100ms
     struct timespec timeout_start;
     int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
@@ -4797,7 +4794,6 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
         // Wait 1us between polls to avoid spamming logs
         usleep(1);
     }
-#endif // (!RX_40GHZ_FE)
 }
 
 int set_freq_internal(const bool tx, const unsigned channel,
