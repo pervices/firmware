@@ -1002,9 +1002,10 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         ping_rx(fd, (uint8_t *)buf, strlen(buf), ch);
     }
     int pll_chan; // dummy variable used to deal with the pll channel number being different
-    int result;
-    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
-    //TODO: handle sscanf failing
+    int result = 0; // if sscanf fails, assume the PLL is unlocked
+    if (sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result) !=2 ) {
+        PRINT(ERROR, "sscanf failure in check_rf_pll()\n");
+    }
     return result;
 }
 
