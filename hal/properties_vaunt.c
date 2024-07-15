@@ -717,17 +717,8 @@ int check_rf_pll(int ch, int uart_fd) {
 
     int pll_chan; // dummy variable used to deal with the pll channel number being different
     int result;
-    #if PRODUCT_RTM_VER > 11    // RTM 12 and newer
-    sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
-    #elif PRODUCT_RTM_VER == 11 // RTM 11
-    if (ch > 1) {
-        sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, LMX2572 Lock Detect: 0x%x", &pll_chan, &result);
-    } else {
-        sscanf((char *)uart_ret_buf, "CHAN: 0x%02x, ADF5355 Lock Detect: 0x%x", &pll_chan, &result);
-    }
-    #else               // RTM 10 and older
-    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, ADF5355 Lock Detect: 0x%x", &pll_chan, &result);
-    #endif
+    sscanf((char *)uart_ret_buf, "CHAN: 0x%x, PLL Lock Detect: 0x%x", &pll_chan, &result);
+    //TODO: handle sscanf failing
     return result;
 }
 
