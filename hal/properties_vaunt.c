@@ -514,8 +514,12 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
     snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
              tx ? 8 : 11);
 
-    val_msw = num >> 32;
-    val_lsw = num & 0xffffffff;
+    // Maps from the number of samples the user requested to the value to write to the register
+    const uint64_t minus_one = num - 1;
+    const uint64_t val = minus_one - (minus_one % 4) + 8;
+
+    val_msw = val >> 32;
+    val_lsw = val & 0xffffffff;
 
     return set_reg_bits(regname_msw, 0, -1, val_msw) ||
            set_reg_bits(regname_lsw, 0, -1, val_lsw);
@@ -562,6 +566,9 @@ static int valid_edge_backoff(const char *data, uint32_t *val) {
 
 static int valid_edge_sample_num(const char *data, uint64_t *val) {
     if (1 == sscanf(data, "%" PRIu64, val)) {
+        if( *val < MIN_EDGE_SAMPLE_NUM ) {
+            *val = MIN_EDGE_SAMPLE_NUM;
+        }
         return RETURN_SUCCESS;
     } else {
         PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
@@ -632,7 +639,9 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
         uint64_t val;                                                          \
         int r = valid_edge_sample_num(data, &val);\
         if(r == RETURN_SUCCESS) {\
-            return set_edge_sample_num(false, #ch, val);\
+            r = set_edge_sample_num(false, #ch, val);\
+            snprintf(ret, MAX_PROP_LEN, "%llu", val);\
+            return r;\
         } else {\
             return r;\
         }\
@@ -1359,7 +1368,9 @@ int check_rf_pll(int ch, int uart_fd) {
         uint64_t val;                                                          \
         int r = valid_edge_sample_num(data, &val);\
         if(r == RETURN_SUCCESS) {\
-            return set_edge_sample_num(true, #ch, val);\
+            r = set_edge_sample_num(false, #ch, val);\
+            snprintf(ret, MAX_PROP_LEN, "%llu", val);\
+            return r;\
         } else {\
             return r;\
         }\

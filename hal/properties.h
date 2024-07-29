@@ -141,4 +141,6 @@ void dump_tree(void);
 
 void patch_tree(void);
 
+#define MIN_EDGE_SAMPLE_NUM 4
+
 #endif
