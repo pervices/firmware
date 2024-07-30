@@ -516,7 +516,7 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
 
     // Maps from the number of samples the user requested to the value to write to the register
     const uint64_t minus_one = num - 1;
-    const uint64_t val = minus_one - (minus_one % 4) + 8;
+    const uint64_t val = minus_one - (minus_one % 4) + 7;
 
     val_msw = val >> 32;
     val_lsw = val & 0xffffffff;
