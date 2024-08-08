@@ -710,11 +710,11 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     static int hdlr_rx_##ch##_trigger_sample_counter(const char *data, char *ret) {   \
         uint32_t val1;  \
         uint32_t val2;  \
-        uint64_t val;   \
+        uint32_t val;   \
         read_hps_reg("rxa13", &val2);   \
         read_hps_reg("rxa14", &val1);   \
         val = (val2);     \
-        snprintf(ret, MAX_PROP_LEN, "%ld \n", val);     \
+        snprintf(ret, MAX_PROP_LEN, "%d \n", val);     \
         return RETURN_SUCCESS;  \
     }
 RX_CHANNELS
@@ -1460,11 +1460,11 @@ int check_rf_pll(int ch, int uart_fd) {
     static int hdlr_tx_##ch##_trigger_sample_counter(const char *data, char *ret) {   \
         uint32_t val1;   \
         uint32_t val2;   \
-        uint64_t val;   \
+        uint32_t val;    \
         read_hps_reg("txa17", &val2);   \
         read_hps_reg("txa18", &val1);   \
         val = (val2); \
-        snprintf(ret, MAX_PROP_LEN, "%ld \n", val); \
+        snprintf(ret, MAX_PROP_LEN, "%d \n", val); \
         return RETURN_SUCCESS; \
     }                                                                 
 TX_CHANNELS
