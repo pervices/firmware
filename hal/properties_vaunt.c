@@ -713,7 +713,7 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
         uint64_t val;   \
         read_hps_reg("rxa13", &val2);   \
         read_hps_reg("rxa14", &val1);   \
-        val = (val2)     \
+        val = (val2);     \
         snprintf(ret, MAX_PROP_LEN, "%ld \n", val);     \
         return RETURN_SUCCESS;  \
     }
@@ -1463,7 +1463,7 @@ int check_rf_pll(int ch, int uart_fd) {
         uint64_t val;   \
         read_hps_reg("txa17", &val2);   \
         read_hps_reg("txa18", &val1);   \
-        val = (val2) \
+        val = (val2); \
         snprintf(ret, MAX_PROP_LEN, "%ld \n", val); \
         return RETURN_SUCCESS; \
     }                                                                 
