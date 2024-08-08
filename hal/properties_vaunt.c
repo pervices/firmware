@@ -1384,7 +1384,7 @@ int check_rf_pll(int ch, int uart_fd) {
         uint64_t val;                                                          \
         int r = valid_edge_sample_num(data, &val);\
         if(r == RETURN_SUCCESS) {\
-            r = set_edge_sample_num(false, #ch, val);\
+            r = set_edge_sample_num(true, #ch, val);\
             snprintf(ret, MAX_PROP_LEN, "%llu", val);\
             return r;\
         } else {\
