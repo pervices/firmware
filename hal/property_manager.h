@@ -28,9 +28,12 @@
 
 /* TATE ports are expanded with xmacros
 * in hal/{channels.h,property_manager.c,properties.c} */
-#if defined(TATE_NRNT) || defined(LILY)
+#if defined(TATE_NRNT)
     #define UART_SYNTH "/dev/ttycyan-time"
-    #define UART_CYAN_RFE "/dev/ttycyan-rfe-"
+    #define UART_RFE "/dev/ttycyan-rfe-"
+#elif defined(LILY)
+    #define UART_SYNTH "/dev/ttychestnut-rfe-"
+    #define UART_RFE "/dev/ttychestnut-rfe-"
 #elif defined(VAUNT)
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"

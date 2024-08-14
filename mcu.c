@@ -56,7 +56,34 @@ enum TARGET_DEV {
     DEV_RX
 };
 
-#elif defined(TATE_NRNT) || defined(LILY)
+#elif defined(LILY)
+// Cyan files
+static const char *UART_CYAN_SN = "/dev/ttychestnut-time";
+static const char *UART_CYAN_RFE[16]  = {"/dev/ttychestnut-rfe-0",
+                                    "/dev/ttychestnut-rfe-1",
+                                    "/dev/ttychestnut-rfe-2",
+                                    "/dev/ttychestnut-rfe-3",
+                                    "/dev/ttychestnut-rfe-4",
+                                    "/dev/ttychestnut-rfe-5",
+                                    "/dev/ttychestnut-rfe-6",
+                                    "/dev/ttychestnut-rfe-7",
+                                    "/dev/ttychestnut-rfe-8",
+                                    "/dev/ttychestnut-rfe-9",
+                                    "/dev/ttychestnut-rfe-10",
+                                    "/dev/ttychestnut-rfe-11",
+                                    "/dev/ttychestnut-rfe-12",
+                                    "/dev/ttychestnut-rfe-13",
+                                    "/dev/ttychestnut-rfe-14",
+                                    "/dev/ttychestnut-rfe-15"};
+
+enum TARGET_DEV {
+    DEV_TIME,
+    DEV_RFE
+};
+
+static int target_rfe = -1;
+
+#elif defined(TATE_NRNT)
 // Cyan files
 static const char *UART_CYAN_SN = "/dev/ttycyan-time";
 static const char *UART_CYAN_RFE[16]  = {"/dev/ttycyan-rfe-0",

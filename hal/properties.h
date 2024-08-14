@@ -43,7 +43,14 @@
     //state tree
     #define STATE_DIR "/var/volatile/crimson/state"
     #define INTERBOOT_DATA "/var/lib/crimson-server/"
-#elif defined(TATE_NRNT) || defined(LILY)
+#elif defined(LILY)
+    //TODO: make Lily use Volatile state tree. Probably the primary reason Crimson boots so much faster
+    //directory of the state tree
+    #define BASE_DIR "/var/chestnut"
+    //state tree
+    #define STATE_DIR "/var/chestnut/state"
+    #define INTERBOOT_DATA "/var/lib/chestnut-server/"
+#elif defined(TATE_NRNT)
     //TODO: make Cyan use Volatile state tree. Probably the primary reason Crimson boots so much faster
     //directory of the state tree
     #define BASE_DIR "/var/cyan"

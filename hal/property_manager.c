@@ -292,13 +292,13 @@ int init_property(uint8_t options) {
     static char name[512];
     #define X(ch)\
         const int chan_rx_##ch = INT_RX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_rx_##ch);                              \
+        snprintf(name, 521, UART_RFE "%d", chan_rx_##ch);                              \
         init_uart_comm(&uart_rx_comm_fd[chan_rx_##ch], name, 0);
     RX_CHANNELS
     #undef X
     #define X(ch)\
         const int chan_tx_##ch = INT_TX(ch);                                          \
-        snprintf(name, 521, UART_CYAN_RFE "%d", chan_tx_##ch);                              \
+        snprintf(name, 521, UART_RFE "%d", chan_tx_##ch);                              \
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);
     TX_CHANNELS
     #undef X
