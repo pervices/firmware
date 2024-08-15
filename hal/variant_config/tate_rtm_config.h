@@ -34,12 +34,15 @@
         #error "TATE_NRNT must be compiled with a valid hardware revision (RTM3, RTM4, RTM5)"
     #endif
 #elif defined(LILY)
-    #if defined(RTM1)
-        #define PRODUCT_RTM_VER 1
-        // TODO Lily: change this to 6 once Cyan RTM6 is implemented
+    // No actual Lily version exists based on RTM5 hardware, this option exists for testing using a converted RTM5 Tate
+    #if defined(RTM0)
+        #define PRODUCT_RTM_VER 0
         #define HARDWARE_RTM_VER 5
+    #elif defined(RTM1)
+        #define PRODUCT_RTM_VER 1
+        #define HARDWARE_RTM_VER 6
     #else
-        #error "LILY must be compiled with a valid hardware revision (RTM1)"
+        #error "LILY must be compiled with a valid hardware revision (RTM0, RTM1)"
     #endif
 #else
     #error "This file must be compiled with a product revision (TATE_NRNT, LILY)"
