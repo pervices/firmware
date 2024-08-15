@@ -10,7 +10,13 @@
 #include <sys/select.h>
 
 //Tate Paths
-char PATH_TATE_TIME[50]      = "/dev/ttycyan-time";
+#if defined(TATE_NRNT)
+    char PATH_TATE_TIME[50]      = "/dev/ttycyan-time";
+#elif defined(LILY)
+    char PATH_TATE_TIME[50]      = "/dev/ttychestnut-time";
+#else
+    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
 
 
 //MCU Command
