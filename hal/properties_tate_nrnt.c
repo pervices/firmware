@@ -49,13 +49,13 @@
 #define LILY_ID 2
 #if defined(TATE_NRNT)
     #define PRODUCT_ID TATE_NRNT_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 #elif defined(LILY)
     #define PRODUCT_ID LILY_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/chestnut/alternate_tree_defaults.cfg"
 #else
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
 #endif
-
-#define ALTERNATE_TREE_DEFAULTS_PATH "/etc/cyan/alternate_tree_defaults.cfg"
 
 // Alias PLL_CORE_REF_FREQ_HZ for clarity
 #define LO_STEPSIZE PLL_CORE_REF_FREQ_HZ
