@@ -32,7 +32,7 @@
     #define UART_SYNTH "/dev/ttycyan-time"
     #define UART_RFE "/dev/ttycyan-rfe-"
 #elif defined(LILY)
-    #define UART_SYNTH "/dev/ttychestnut-rfe-"
+    #define UART_SYNTH "/dev/ttychestnut-time"
     #define UART_RFE "/dev/ttychestnut-rfe-"
 #elif defined(VAUNT)
     #define UART_TX "/dev/ttycrimson-tx"

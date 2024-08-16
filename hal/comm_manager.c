@@ -114,7 +114,7 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
 
     uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
     if (uart_devices[*fd] < 0) {
-        PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
+        PRINT(ERROR, "Failed to open %s with error code: %s\n", dev, strerror(errno));
         return RETURN_ERROR;
     }
     int mydev = uart_devices[*fd];

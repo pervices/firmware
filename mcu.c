@@ -58,8 +58,8 @@ enum TARGET_DEV {
 
 #elif defined(LILY)
 // Cyan files
-static const char *UART_CYAN_SN = "/dev/ttychestnut-time";
-static const char *UART_CYAN_RFE[16]  = {"/dev/ttychestnut-rfe-0",
+static const char *UART_SN = "/dev/ttychestnut-time";
+static const char *UART_RFE[16]  = {"/dev/ttychestnut-rfe-0",
                                     "/dev/ttychestnut-rfe-1",
                                     "/dev/ttychestnut-rfe-2",
                                     "/dev/ttychestnut-rfe-3",
@@ -86,7 +86,7 @@ static int target_rfe = -1;
 #elif defined(TATE_NRNT)
 // Cyan files
 static const char *UART_CYAN_SN = "/dev/ttycyan-time";
-static const char *UART_CYAN_RFE[16]  = {"/dev/ttycyan-rfe-0",
+static const char *UART_RFE[16]  = {"/dev/ttycyan-rfe-0",
                                     "/dev/ttycyan-rfe-1",
                                     "/dev/ttycyan-rfe-2",
                                     "/dev/ttycyan-rfe-3",
@@ -133,7 +133,7 @@ static int contains(const char *str, char letter, int size) {
     #if defined(TATE_NRNT)
         printf("%s\n", UART_CYAN_SN);
         for (i = 0; i < 16; i++) {
-            printf("%s\n", UART_CYAN_RFE[i]);
+            printf("%s\n", UART_RFE[i]);
         }
     #elif defined(VAUNT)
         printf("%s\n", UART_CRIMSON_SN);
@@ -245,13 +245,13 @@ int main(int argc, char *argv[]) {
 
 #if defined(TATE_NRNT) || defined(LILY)
     if(target_dev == DEV_TIME) {
-        if (init_uart_comm(&uart_target_fd, UART_CYAN_SN, 0) < 0) {
-            PRINT(ERROR, "Cannot initialize uart %s. The time board will not work\n", UART_CYAN_SN);
+        if (init_uart_comm(&uart_target_fd, UART_SN, 0) < 0) {
+            PRINT(ERROR, "Cannot initialize uart %s. The time board will not work\n", UART_SN);
             return RETURN_ERROR_INSUFFICIENT_RESOURCES;
         }
     } else if(target_dev == DEV_RFE) {
-        if (init_uart_comm(&uart_target_fd, UART_CYAN_RFE[target_rfe], 0) < 0) {
-            PRINT(ERROR, "Failed to initialize UART %s, any board in this slot will not work\n", UART_CYAN_RFE[target_rfe]);
+        if (init_uart_comm(&uart_target_fd, UART_RFE[target_rfe], 0) < 0) {
+            PRINT(ERROR, "Failed to initialize UART %s, any board in this slot will not work\n", UART_RFE[target_rfe]);
             return RETURN_ERROR_INSUFFICIENT_RESOURCES;
         }
     } else {
