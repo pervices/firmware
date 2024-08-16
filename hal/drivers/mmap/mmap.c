@@ -196,8 +196,10 @@ int check_hps_reg(void) {
     uint32_t old_val[get_num_regs()];
     //generates the list of registers to exempt from the test
     for(index = 0; index < get_num_regs(); index++) {
+        // System reset
         if(strstr(get_reg_from_index(index)->name, "sys0") != 0) {
             exempt_regs[index] = CHECK_SPECIAL_SYS0;
+        // FPGA reset
         } else if(strstr(get_reg_from_index(index)->name, "rst_req0") != 0) {
             exempt_regs[index] = CHECK_SPECIAL_RST_REQ0;
         } else if(strstr(get_reg_from_index(index)->perm, "RO") != 0) {
