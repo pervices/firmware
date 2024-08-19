@@ -79,5 +79,5 @@
     #define DEFAULT_ANALOG_SYSREF_DELAY 0
 
 #else
-    #error "Invalid HARDWARE_RTM_VER, this should be unreachable"
+    #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 3, 4, 5"
 #endif

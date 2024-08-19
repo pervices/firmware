@@ -85,7 +85,7 @@ static int target_rfe = -1;
 
 #elif defined(TATE_NRNT)
 // Cyan files
-static const char *UART_CYAN_SN = "/dev/ttycyan-time";
+static const char *UART_SN = "/dev/ttycyan-time";
 static const char *UART_RFE[16]  = {"/dev/ttycyan-rfe-0",
                                     "/dev/ttycyan-rfe-1",
                                     "/dev/ttycyan-rfe-2",
@@ -131,7 +131,7 @@ static int contains(const char *str, char letter, int size) {
     static void dump_args(void) {
         int i = 0;
     #if defined(TATE_NRNT)
-        printf("%s\n", UART_CYAN_SN);
+        printf("%s\n", UART_SN);
         for (i = 0; i < 16; i++) {
             printf("%s\n", UART_RFE[i]);
         }
