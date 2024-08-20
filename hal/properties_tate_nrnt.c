@@ -1209,8 +1209,13 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             default:                                                           \
                 snprintf(buf, MAX_PROP_LEN, "rf -z\r"); /*mute the board to stop transmitting*/\
                 ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                PRINT(ERROR,"unrecognized band\n");                            \
-                return RETURN_ERROR_PARAM;                                     \
+                /* -1 indicates the user wants to select no band, otherwise the parameter was invalid*/\
+                if(band != -1) {\
+                    PRINT(ERROR, "unrecognized band\n");\
+                    return RETURN_ERROR_PARAM;\
+                } else {\
+                    return RETURN_SUCCESS;\
+                }\
         }                                                                      \
         snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);                       \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
@@ -2125,6 +2130,12 @@ TX_CHANNELS
                 /* IQ swap to address layout*/                                 \
                 set_property("rx/" STR(ch) "/link/iq_swap", "1");              \
                 break;                                                         \
+            case -1:\
+                /* Mute rf */\
+                /* TODO: update MCU to fully mute rf instead of just the LO*/\
+                snprintf(buf, MAX_PROP_LEN, "rf -z\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                return RETURN_SUCCESS;\
             default:                                                           \
                 PRINT(ERROR,"unrecognized band\n");                            \
                 return RETURN_ERROR_PARAM;                                     \
@@ -2137,7 +2148,7 @@ TX_CHANNELS
                                                                                \
     /*sets the gain on the variable amplifier*/\
     static int hdlr_rx_##ch##_rf_gain_ampl(const char *data, char *ret) {      \
-        uint8_t band = 0;                                                      \
+        int16_t band = 0;                                                      \
         int32_t gain = 0;\
         int32_t vga_gain = 0;                                               \
         int32_t atten;                                                      \
@@ -2145,10 +2156,12 @@ TX_CHANNELS
         \
         char band_read[3];                                                     \
         get_property("rx/" STR(ch) "/rf/freq/band",&band_read[0],3);                 \
-        sscanf(band_read, "%hhu", &band);                                            \
+        sscanf(band_read, "%hi", &band);                                            \
                                                                                \
+        if (band == -1 && gain == 0) {\
+            /* Do nothing if no band and a gain of 0 is selected*/\
         /*Sets low band variable amplifer*/\
-        if(band == 0) {\
+        } else if(band == 0) {\
             if (gain > LMH6401_MAX_GAIN) {                                     \
                 gain = LMH6401_MAX_GAIN;                                       \
             } else if (gain < LMH6401_MIN_GAIN) {                              \
@@ -2198,7 +2211,7 @@ TX_CHANNELS
                 snprintf(ret, MAX_PROP_LEN, "%i", gain+vga_gain);                              \
             }\
         } else {\
-            PRINT(ERROR, "Invalid band (%hhu) detected when setting gain\n", band);\
+            PRINT(ERROR, "Invalid band (%hi) detected when setting gain\n", band);\
             return RETURN_ERROR;\
         }\
         return RETURN_SUCCESS;                                                 \
