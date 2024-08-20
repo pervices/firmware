@@ -6469,7 +6469,13 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
             PRINT(ERROR, "Unable to establish JESD links despite individual resets. Attempting to restart the server\n");
             update_interboot_variable("cons_jesd_fail_count", failed_count + 1);
             PRINT(ERROR, "Restarting server\n");
+#if defined(TATE_NRNT)
             system("systemctl restart cyan-server");
+#elif defined(LILY)
+            system("systemctl restart chestnut-server");
+#else
+    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
             // Waits for the server reboot command to restart the server
             while(1) {
                 usleep(1000);
