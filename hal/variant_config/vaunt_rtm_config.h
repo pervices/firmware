@@ -48,7 +48,7 @@
     // Assumed to have equivalent lo performance to RTM9
     // TODO test to determine limits, using this as the minimum since it is likely a safe value
     #define MIN_LO 180000000
-    #define MIN_LO_S "175000000"
+    #define MIN_LO_S "180000000"
     #define PRODUCT_RTM_VER 10
 
 #elif RTM11
