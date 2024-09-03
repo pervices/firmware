@@ -17,9 +17,9 @@ do
 
     let int_ch=$n+97
     ch=$(echo -ne \\x$(printf %02x $int_ch))
-    echo 0 > "/var/cyan/state/rx/$ch/jesd/status"
+    echo 0 > "/var/volatile/cyan/state/rx/$ch/jesd/status"
     sleep 0.5
-    result=$(cat "/var/cyan/state/rx/$ch/jesd/status")
+    result=$(cat "/var/volatile/cyan/state/rx/$ch/jesd/status")
     echo "rx $ch: $result"
     let "n=$n+1"
 done
@@ -30,9 +30,9 @@ do
 
     let int_ch=$n+97
     ch=$(echo -ne \\x$(printf %02x $int_ch))
-    echo 0 > "/var/cyan/state/tx/$ch/jesd/status"
+    echo 0 > "/var/volatile/cyan/state/tx/$ch/jesd/status"
     sleep 0.1
-    result=$(cat "/var/cyan/state/tx/$ch/jesd/status")
+    result=$(cat "/var/volatile/cyan/state/tx/$ch/jesd/status")
     echo "tx $ch: $result"
     let "n=$n+1"
 done

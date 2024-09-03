@@ -89,16 +89,16 @@ do
         echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x8; mem rw net22 0x322; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
         echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x8; mem rw net22 0x508; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
         echo "Time board dump" | tee -a $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "echo 1 > /var/cyan/state/time/board/dump"; sleep 1; sudo cat /var/cyan/state/time/board/dump' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "echo 1 > /var/volatile/cyan/state/time/board/dump"; sleep 1; sudo cat /var/volatile/cyan/state/time/board/dump' >> $result_path
         n=0
         while [ $n -lt $num_rx_channels ]
         do
             let int_ch=$n+97
             ch=$(echo -ne \\x$(printf %02x $int_ch))
-            dump_command=$(printf 'sudo sh -c "echo 1 > /var/cyan/state/rx/%s/board/dump"; sleep 1; cat /var/cyan/state/rx/%s/board/dump' "$ch" "$ch")
+            dump_command=$(printf 'sudo sh -c "echo 1 > /var/volatile/cyan/state/rx/%s/board/dump"; sleep 1; cat /var/volatile/cyan/state/rx/%s/board/dump' "$ch" "$ch")
             echo "Rx board dump ch: $ch" | tee -a $result_path
             echo dev0 | ssh -tt dev0@192.168.10.2 $dump_command >> $result_path
-            jesd_command=$(printf 'sudo sh -c "echo 1 > /var/cyan/state/rx/%s/jesd/status"; sleep 1; cat /var/cyan/state/rx/%s/jesd/status' "$ch" "$ch")
+            jesd_command=$(printf 'sudo sh -c "echo 1 > /var/volatile/cyan/state/rx/%s/jesd/status"; sleep 1; cat /var/volatile/cyan/state/rx/%s/jesd/status' "$ch" "$ch")
             #The reply from jesd_result for some reason has " good" or " bad" overwrite the first few letters of password in the reply. Its not  an issue but is unexpected behaviour that turn into a problem in the future
             echo "Rx board jesd status ch: $ch" | tee -a $result_path
             echo dev0 | ssh -tt dev0@192.168.10.2 $jesd_command >> $result_path
@@ -111,10 +111,10 @@ do
         do
             let int_ch=$n+97
             ch=$(echo -ne \\x$(printf %02x $int_ch))
-            dump_command=$(printf 'sudo sh -c "echo 1 > /var/cyan/state/tx/%s/board/dump"; sleep 1; cat /var/cyan/state/tx/%s/board/dump' "$ch" "$ch")
+            dump_command=$(printf 'sudo sh -c "echo 1 > /var/volatile/cyan/state/tx/%s/board/dump"; sleep 1; cat /var/volatile/cyan/state/tx/%s/board/dump' "$ch" "$ch")
             echo "Tx board dump ch: $ch" | tee -a $result_path
             echo dev0 | ssh -tt dev0@192.168.10.2 $dump_command >> $result_path
-            jesd_command=$(printf 'sudo sh -c "echo 1 > /var/cyan/state/tx/%s/jesd/status"; sleep 1; cat /var/cyan/state/tx/%s/jesd/status' "$ch" "$ch")
+            jesd_command=$(printf 'sudo sh -c "echo 1 > /var/volatile/cyan/state/tx/%s/jesd/status"; sleep 1; cat /var/volatile/cyan/state/tx/%s/jesd/status' "$ch" "$ch")
             echo "Tx board jesd status ch: $ch" | tee -a $result_path
             echo dev0 | ssh -tt dev0@192.168.10.2 $jesd_command >> $result_path
             echo "" >> $result_path
