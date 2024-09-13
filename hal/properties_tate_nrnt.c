@@ -1813,12 +1813,6 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                 tx_power[INT(ch)] = PWR_ON | PWR_NO_BOARD;\
             }\
                                                                                \
-            /* reset JESD */                                              \
-            if(jesd_enabled && !(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
-                if(property_good("tx/" STR(ch) "/jesd/status") != 1) {\
-                    set_property("tx/" STR(ch) "/jesd/reset", "1");\
-                }\
-            }\
             /* Check if low noise aplifier is in a good condition */           \
             while(1) {                                                         \
                 hdlr_tx_##ch##_status_lna("1", buf);                           \
@@ -1858,27 +1852,15 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             /* power off */                                                    \
         } else {                                                               \
             \
-            if(property_good("tx/" STR(ch) "/jesd/status")) {\
-                /* mute the channel */                                             \
-                strcpy(buf, "rf -z\r");                          \
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
-                snprintf(buf, 20, "board -w 0\r");\
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
-                    tx_power[INT(ch)] = PWR_HALF_ON;\
-                } else {\
-                    tx_power[INT(ch)] = PWR_OFF | PWR_NO_BOARD;\
-                }\
+            /* mute the channel */                                             \
+            strcpy(buf, "rf -z\r");                          \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
+            snprintf(buf, 20, "board -w 0\r");\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
+                tx_power[INT(ch)] = PWR_HALF_ON;\
             } else {\
-                /* kill the channel */                                             \
-                strcpy(buf, "board -k\r");                          \
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));            \
-                set_property("tx/" STR(ch) "/board/pwr_board", "0");\
-                if(!(tx_power[INT(ch)] & PWR_NO_BOARD)) {\
-                    tx_power[INT(ch)] = PWR_OFF;\
-                } else {\
-                    tx_power[INT(ch)] = PWR_OFF | PWR_NO_BOARD;\
-                }\
+                tx_power[INT(ch)] = PWR_OFF | PWR_NO_BOARD;\
             }\
                                                                                \
             /* turn off the 100MHz LMX ref*/                                   \
@@ -3458,14 +3440,6 @@ TX_CHANNELS
                     ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }\
             }\
-                                                                    \
-            /* reset JESD */                                              \
-            if(jesd_enabled && !(rx_power[INT(ch)] & PWR_NO_BOARD)) {\
-                if(property_good("rx/" STR(ch) "/jesd/status") != 1) {\
-                    /* Attempts to reset JESD if it is down, but does not attempt to reboot the unit or reconfigure sysref delays*/\
-                    set_property("rx/" STR(ch) "/jesd/reset", "1");\
-                }\
-            }\
                                                                                \
             /* Puts DSP in reset (should be in reset whenever not stream, use the stream property to take it out of reset */\
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                           \
@@ -3478,16 +3452,10 @@ TX_CHANNELS
             \
             /* power off & stream off */                                       \
         } else {                                                               \
-            /* Turn the power indicator light off but not the entire board if JESD is good */\
-            /* This is a temporary solution to the issue of JESD not restablishing after rebooting boards */\
-            if(property_good("rx/" STR(ch) "/jesd/status")) {\
-                snprintf(buf, 20, "board -w 0\r");\
-                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                rx_power[INT(ch)] = PWR_HALF_ON | (rx_power[INT(ch)] & PWR_NO_BOARD);\
-            } else {\
-                set_property("rx/" STR(ch) "/board/pwr_board", "0");\
-                rx_power[INT(ch)] = PWR_OFF | (rx_power[INT(ch)] & PWR_NO_BOARD);\
-            }\
+            /* Turn the power indicator light off */\
+            snprintf(buf, 20, "board -w 0\r");\
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            rx_power[INT(ch)] = PWR_HALF_ON | (rx_power[INT(ch)] & PWR_NO_BOARD);\
                                                                                \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
