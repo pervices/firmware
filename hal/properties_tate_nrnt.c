@@ -4277,7 +4277,6 @@ static int hdlr_time_source_freq(const char *data, char *ret) {
         case 5:
             if (strstr(reply, "Internal") != NULL) {
                 PRINT(ERROR, "You must set time board reference to EXTERNAL prior to using 5MHz external reference.\n");
-                PRINT(ERROR, "AMAC DEBUG: %s", curr);
                 snprintf(ret, MAX_PROP_LEN, "not set");
                 return RETURN_ERROR_SET_PROP;
             }
