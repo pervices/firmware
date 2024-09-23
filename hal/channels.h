@@ -78,11 +78,11 @@
 
         //Default 1G RFE slots for each channel, ideally this would be in tate_fpga_config.h, but its needed for stuff that doesn't include it
         //Some channel combinations may override it
-        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4))
+        #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4) + 2)
         #if USE_3G_AS_1G
             #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 3)
         #else
-            #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
+            #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 3)
         #endif
 
         // Note: 1R1T uses the 4R4T FPGA
