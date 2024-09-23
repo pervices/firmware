@@ -53,8 +53,14 @@
         #define INT_RX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + (int)((CHR(ch) - 'a')/4) + 2)
         #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 3)
 
-        // TODO LILY: see if any FPGA changes are needed
-        #if defined(R4) && defined(T4)
+        // Note: 1R1T uses the 4R4T FPGA
+        #if defined(R1) && defined(T1)
+            #define FPGA_4R4T_1G
+            #define NUM_RX_CHANNELS 1
+            #define NUM_TX_CHANNELS 1
+            #define S_NUM_RX "1"
+            #define S_NUM_TX "1"
+        #elif defined(R4) && defined(T4)
             #define FPGA_4R4T_1G
             #define NUM_RX_CHANNELS 4
             #define NUM_TX_CHANNELS 4
