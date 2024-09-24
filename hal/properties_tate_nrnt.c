@@ -4135,6 +4135,13 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_get_time_source(const char *data, char *ret) {
+    strcpy(buf, "clk -i\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
+    return RETURN_SUCCESS;
+}
+
 // Controls whether the time board LMX2595 that provides the 100MHz reference to the mid and highband RF mixers is enabled
 // To track whether we can turn off the clock, we will track this as a 32-bit hex number
 // the bottom 16 bits will each correspond to an rf slot, which will be set high by band select, or low by pwr 0
@@ -4289,31 +4296,37 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
 
 static int hdlr_time_source_freq(const char *data, char *ret) {
     uint16_t freq;
-    bool ext = false;
     sscanf(data, "%hu", &freq);
+    set_property("time/source/get_time_source", "poke");
+    char reply[50];
+    get_property("time/source/get_time_source", reply, sizeof(reply));
 
     switch(freq){
         case 5:
-            // set to external ref
-            ext = true;
+            if (strstr(reply, "Internal") != NULL) {
+                PRINT(ERROR, "You must set time board reference to EXTERNAL prior to using 5MHz external reference.\n");
+                snprintf(ret, MAX_PROP_LEN, "not set");
+                return RETURN_ERROR_SET_PROP;
+            }
             // prep time board command for 5Mhz ref
             strcpy(buf, "clk -f 1\r");
             break;
         case 10:
         default:
+            if (strstr(reply, "External") != NULL) {
+                PRINT(ERROR, "You must set time board reference to INTERNAL prior to using 10MHz internal reference.\n");
+                snprintf(ret, MAX_PROP_LEN, "not set");
+                return RETURN_ERROR_SET_PROP;
+            }
             // prep prep time board command for 10MHz ref
             strcpy(buf, "clk -f 0\r");
             // set freq to ensure correct val when written back to state tree
             freq = 10;
             break;
     }
+
     // send command to time board
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
-    // set to external reference if appropriate
-    if (ext) {
-        set_property("time/source/ref", "external");
-    }
 
     // write actual frequency back to state tree
     snprintf(ret, MAX_PROP_LEN, "%u", freq);
@@ -5888,8 +5901,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/get_time_source"        , hdlr_time_get_time_source,         RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/source/enable_rf_ref"           , hdlr_time_set_time_en_rf_ref,           RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/source/enable_rf_if"            , hdlr_time_set_time_en_rf_if,            RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
