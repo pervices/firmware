@@ -125,6 +125,15 @@ static uint8_t tx_power[NUM_TX_CHANNELS];
     static const char *txg_map[4] = { "txga", "txge", "txgi", "txgm" };
 #endif
 
+#if NUM_RX_CHANNELS > 0
+    // Flag used to indicate if this is not the first call to hdlr_rx_##ch##_pwr
+    static uint8_t rx_not_first_pwr[NUM_RX_CHANNELS] = { 0 };
+#endif
+#if NUM_RX_CHANNELS > 0
+    // Flag used to indicate if this is not the first call to hdlr_rx_##ch##_pwr
+    static uint8_t tx_not_first_pwr[NUM_TX_CHANNELS] = { 0 };
+#endif
+
 #define MAX_POSSIBLE_CHANNELS 16
 static const char *rx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "rxa4", "rxb4", "rxc4", "rxd4", "rxe4", "rxf4", "rxg4", "rxh4", "rxi4", "rxj4", "rxk4", "rxl4", "rxm4", "rxn4", "rxo4", "rxp4" };
 static const char *tx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "txa4", "txb4", "txc4", "txd4", "txe4", "txf4", "txg4", "txh4", "txi4", "txj4", "txk4", "txl4", "txm4", "txn4", "txo4", "txp4" };
@@ -1343,9 +1352,15 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
     }                                                                          \
     \
     static int hdlr_tx_##ch##_status_lna(const char *data, char *ret) {        \
-        snprintf(buf, 10, "rf -S\r");                                          \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        snprintf(ret, 50, (char *)uart_ret_buf);                               \
+        if(PRODUCT_ID == TATE_NRNT_ID) {\
+            snprintf(buf, 10, "rf -S\r");                                          \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+            snprintf(ret, 50, (char *)uart_ret_buf);                               \
+        } else if(PRODUCT_ID == LILY_ID) {\
+            snprintf(ret, MAX_PROP_LEN, "LNA not implemented on Lily\n");\
+        } else {\
+            PRINT(ERROR, "not implemented for this variant\n");\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1814,7 +1829,9 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             }\
                                                                                \
             /* Check if low noise aplifier is in a good condition */           \
-            while(1) {                                                         \
+            /* Skip check if this is not the first time running it, attempting to reset it won't work and will cause timeouts in UHD */\
+            /* LNA arlarm not implemented on Lily */\
+            while(tx_not_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
                 hdlr_tx_##ch##_status_lna("1", buf);                           \
                 if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
                     PRINT(INFO, "LNA is good\n");                              \
@@ -1877,6 +1894,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
                                                                                \
+        tx_not_first_pwr[INT(ch)] = 1;\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2389,9 +2407,15 @@ TX_CHANNELS
     }                                                                          \
     \
     static int hdlr_rx_##ch##_status_lna(const char *data, char *ret) {   \
-        snprintf(buf, 10, "rf -S\r");                                          \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        snprintf(ret, 50, (char *)uart_ret_buf);                               \
+        if(PRODUCT_ID == TATE_NRNT_ID) {\
+            snprintf(buf, 10, "rf -S\r");                                          \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+            snprintf(ret, 50, (char *)uart_ret_buf);                               \
+        } else if(PRODUCT_ID == LILY_ID) {\
+            snprintf(ret, MAX_PROP_LEN, "LNA not implemented on Lily\n");\
+        } else {\
+            PRINT(ERROR, "not implemented for this variant\n");\
+        }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3425,7 +3449,9 @@ TX_CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
             \
             /* Check if low noise aplifier is in a good condition*/            \
-            while(1) {                                                         \
+            /* Skip check if this is not the first, attempting to reset it won't work and will cause timeouts in UHD */\
+            /* LNA arlarm not implemented on Lily */\
+            while(rx_not_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
                 hdlr_rx_##ch##_status_lna("1", buf);                           \
                 if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
                     PRINT(INFO, "LNA is good\n");                              \
@@ -3472,6 +3498,8 @@ TX_CHANNELS
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
+        \
+        rx_not_first_pwr[INT(ch)] = 1;\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \

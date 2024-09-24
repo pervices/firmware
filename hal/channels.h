@@ -67,7 +67,7 @@
             #define S_NUM_RX "4"
             #define S_NUM_TX "4"
         #else
-            #error Invalid number of channels specified for LILY, must be: R4 T4
+            #error Invalid number of channels specified for LILY, must be: R1 T1, R4 T4
         #endif
     #else
         // TODO LILY: correct sample rate
