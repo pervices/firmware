@@ -4335,40 +4335,6 @@ static int hdlr_time_source_freq(const char *data, char *ret) {
 
 // choose pulsed or continuous SYSREF
 static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
-// For unknown reasons using pulsed mode prevents JESD from establishing. As a temporary measure prevent Lily from using pulsed mode
-#if defined(LILY)
-    if ( (strcmp(data, "pulsed") == 0) || (strcmp(data, "0") == 0) ) {
-        PRINT(ERROR, "SYSREF MODE 'pulsed' does not work on Chestnut currently. Using continuous instead\n");
-        if(current_sysref_mode == continuous) {
-            PRINT(INFO, "SYSREF MODE 'continuous' already active.\n");
-            return RETURN_SUCCESS;
-        } else {
-            PRINT(INFO, "SYSREF MODE 'continuous' selected.\n");
-            strcpy(buf, "sync -c 1\r");
-            current_sysref_mode = continuous;
-            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-            usleep(1100000);
-            return RETURN_SUCCESS;
-        }
-    } else if ( (strcmp(data, "continuous") == 0) || (strcmp(data, "1") == 0) )  {
-        if(current_sysref_mode == continuous) {
-            PRINT(INFO, "SYSREF MODE 'continuous' already active.\n");
-            return RETURN_SUCCESS;
-        } else {
-            PRINT(INFO, "SYSREF MODE 'continuous' selected.\n");
-            strcpy(buf, "sync -c 1\r");
-            current_sysref_mode = continuous;
-            ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-            usleep(1100000);
-            return RETURN_SUCCESS;
-        }
-    } else {
-        PRINT(ERROR, "SYSREF MODE must be 'continuous' or 'pulsed'.\n");
-        current_sysref_mode = unspecified_sysref;
-        return RETURN_ERROR;
-    }
-    return RETURN_SUCCESS;
-#elif defined(TATE_NRNT)
     if ( (strcmp(data, "pulsed") == 0) || (strcmp(data, "0") == 0) ) {
         if(current_sysref_mode == pulsed) {
             PRINT(INFO, "SYSREF MODE 'pulsed' already active.\n");
@@ -4398,10 +4364,6 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
         current_sysref_mode = unspecified_sysref;
         return RETURN_ERROR;
     }
-    return RETURN_SUCCESS;
-#else
-    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this project."
-#endif
 }
 
 // Toggle SPI Sync
