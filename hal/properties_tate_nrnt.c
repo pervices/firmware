@@ -129,7 +129,7 @@ static uint8_t tx_power[NUM_TX_CHANNELS];
     // Flag used to indicate if this is not the first call to hdlr_rx_##ch##_pwr
     static uint8_t rx_not_first_pwr[NUM_RX_CHANNELS] = { 0 };
 #endif
-#if NUM_RX_CHANNELS > 0
+#if NUM_TX_CHANNELS > 0
     // Flag used to indicate if this is not the first call to hdlr_rx_##ch##_pwr
     static uint8_t tx_not_first_pwr[NUM_TX_CHANNELS] = { 0 };
 #endif
