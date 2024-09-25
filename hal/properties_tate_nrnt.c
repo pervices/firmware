@@ -4407,7 +4407,7 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
-        strcpy(buf, "clk -y\r");
+        strcpy(buf, "sync -k\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     return RETURN_SUCCESS;
