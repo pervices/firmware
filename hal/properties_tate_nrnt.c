@@ -1404,7 +1404,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
-        if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = TX_BASE_SAMPLE_RATE;\
+        if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = MAX_USER_SAMPLE_RATE * 1e6;\
         \
         /* bypasses dsp when at the full sample rate*/\
         if(rate > ((TX_BASE_SAMPLE_RATE-TX_DSP_SAMPLE_RATE)*(1-RATE_ROUND_BIAS))+TX_DSP_SAMPLE_RATE) {\
@@ -2457,7 +2457,7 @@ TX_CHANNELS
         \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_RX_SAMPLE_RATE) rate = MIN_RX_SAMPLE_RATE;\
-        if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = RX_BASE_SAMPLE_RATE;\
+        if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = MAX_USER_SAMPLE_RATE * 1e6;\
         /* If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff */\
         /* Due to issues with the 3G to 1G conversion the rate on rx with 3G boards in 1G mode is actually limited to 500Msps */\
         if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS))) && !(USE_3G_AS_1G && rx_board_variant[INT(ch)] == rfe3g)) {\
