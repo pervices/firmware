@@ -4303,36 +4303,17 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
 }
 
 static int hdlr_time_source_freq(const char *data, char *ret) {
-    uint16_t freq;
-    sscanf(data, "%hu", &freq);
-    set_property("time/source/get_time_source", "poke");
-    char reply[50];
-    get_property("time/source/get_time_source", reply, sizeof(reply));
-
-    switch(freq){
-        case 5:
-            if (strstr(reply, "Internal") != NULL) {
-                PRINT(ERROR, "You must set time board reference to EXTERNAL prior to using 5MHz external reference.\n");
-                snprintf(ret, MAX_PROP_LEN, "not set");
-                return RETURN_ERROR_SET_PROP;
-            }
-            // prep time board command for 5Mhz ref
-            strcpy(buf, "clk -f 1\r");
-            break;
-        case 10:
-        default:
-            // prep prep time board command for 10MHz ref
-            strcpy(buf, "clk -f 0\r");
-            // set freq to ensure correct val when written back to state tree
-            freq = 10;
-            break;
-    }
-
-    // send command to time board
+    // request source frequency from time board
+    strcpy(buf, "clk -f\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-
-    // write actual frequency back to state tree
-    snprintf(ret, MAX_PROP_LEN, "%u", freq);
+    // read time board response and write it to the state tree
+    if (strstr(uart_ret_buf, "5MHz") != NULL) {
+        snprintf(ret, MAX_PROP_LEN, "5");
+    } else if (strstr(uart_ret_buf, "10MHz") != NULL) {
+        snprintf(ret, MAX_PROP_LEN, "10");
+    } else {
+        snprintf(ret, MAX_PROP_LEN, "ERROR: unknown source frequency");
+    }
     return RETURN_SUCCESS;
 }
 
@@ -5865,11 +5846,11 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "poke", SP, NAC)      \
-    DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "bad", SP, NAC)\
+    DEFINE_FILE_PROP_P("time/status/status_good"              , hdlr_time_status_good,                 RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/get_time_source"        , hdlr_time_get_time_source,               RW, "poke", SP, NAC)      \
-    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/source/enable_rf_ref"           , hdlr_time_set_time_en_rf_ref,           RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/source/enable_rf_if"            , hdlr_time_set_time_en_rf_if,            RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
