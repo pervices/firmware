@@ -1172,15 +1172,21 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         }\
                                                                                \
         /* Send Parameters over to the MCU */                                  \
-        set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch));  \
-                                                                               \
-        /* if HB add back in freq before printing value to state tree */       \
-        if (band == 2) {                                                       \
-            outfreq += HB_STAGE2_MIXER_FREQ;                                   \
-        }                                                                      \
-        /* Save the frequency that is being set into the property */           \
-        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
-                                                                               \
+        /* PLL lock is not reliable, try 3 times. */                                  \
+        for(int i=0; i < 3; i++){\
+            if(set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))){\
+                /* if HB add back in freq before printing value to state tree */       \
+                if (band == 2) {                                                       \
+                    outfreq += HB_STAGE2_MIXER_FREQ;                                   \
+                }                                                                      \
+                /* Save the frequency that is being set into the property */           \
+                snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
+                return RETURN_SUCCESS;                                                 \
+            }\
+            usleep(10000);\
+        }\
+        PRINT(ERROR, "TXPLL lock failed when attempting to set freq to %lf\n", outfreq);\
+        snprintf(ret, MAX_PROP_LEN, "0"); \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2078,20 +2084,22 @@ TX_CHANNELS
         }\
                                                                                 \
         /* Send Parameters over to the MCU (the part that actually sets the lo)*/                                   \
-        if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
-            /* if HB add back in freq before printing value to state tree */        \
-            if (band == 2) {                                                        \
-                outfreq += HB_STAGE2_MIXER_FREQ;                                    \
-            }                                                                       \
-            /* Save the frequency that is being set into the property */            \
-            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                            \
-        } else {\
-            PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
-            snprintf(ret, MAX_PROP_LEN, "0");                                  \
+        /* Attempt to set the LO 3 times. PLL is not reliably locking so this is a dirty workaround for the time being.*/\
+        for(int i = 0; i < 3; i++) {\
+            if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
+                /* if HB add back in freq before printing value to state tree */        \
+                if (band == 2) {                                                        \
+                    outfreq += HB_STAGE2_MIXER_FREQ;                                    \
+                }                                                                       \
+                /* Save the frequency that is being set into the property */            \
+                snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                            \
+                return RETURN_SUCCESS;                                                  \
+            } \
+            usleep(10000);\
         }\
-                                                                                \
-                                                                                \
-        return RETURN_SUCCESS;                                                  \
+        PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
+        snprintf(ret, MAX_PROP_LEN, "0"); \
+        return RETURN_SUCCESS;\
     }                                                                           \
                                                                                                                                                          \
                                                                                \
@@ -6585,7 +6593,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
         // Mute PLL to avoid transmitting with an enexpected frequency
         strcpy(buf, "rf -z\r");
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
-        PRINT(ERROR, "Rx PLL unlocked. Muting PLL\n");
+        PRINT(ERROR, "Rx%i PLL unlocked. Muting PLL\n", channel);
         return 0;
     } else {
         // success
@@ -6665,7 +6673,7 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
         // Mute PLL to avoid transmitting with an enexpected frequency
         strcpy(buf, "rf -z\r");
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
-        PRINT(ERROR, "Tx PLL unlocked. Muting PLL\n");
+        PRINT(ERROR, "Tx%i PLL unlocked. Muting PLL\n", channel);
         return 0;
     } else {
         // success
