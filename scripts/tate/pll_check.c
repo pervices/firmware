@@ -39,7 +39,9 @@ int failcount=0;
 int execute(char *CMD){
 	//open device path
 	int fd = -1;
+	printf("AMAC DEBUG: Before opening file desc\n");
 	fd = open(PATH_TATE_TIME, O_RDWR);
+	printf("AMAC DEBUG: After opening file desc\n");
 	char byte = 0;
 
 	if( -1 == fd ){
@@ -51,14 +53,19 @@ int execute(char *CMD){
 	sleep(1);
 	tcflush(fd,TCIOFLUSH);
 
+	printf("AMAC DEBUG: After flush\n");
+
 	if (CMD==MCU_CMD_APPREBOOT) {
+		printf("AMAC DEBUG: Rebooting time board\n");
 		write(fd, MCU_CMD_APPREBOOT, 9);
 		sleep(10);
 		return 0;
 	}
-	
+
 	//SEND COMMAND
 	write(fd, CMD, 13);
+
+	printf("AMAC DEBUG: After command write\n");
 
 	size_t rfFD;
 	int i;
@@ -87,6 +94,7 @@ int execute(char *CMD){
 				printf("ERROR: Aborting due to invalid file handler for: %s\n", PATH_TATE_TIME);
 				return 1;
 			}
+			printf("AMAC DEBUG: Read byte %c\n", byte);
 			switch (checkBoot) {
 				case 0:
 					if (byte == 'P'){
@@ -194,7 +202,7 @@ int checkpll(void) {
 }
 int main(void) {
 	while (failcount<3) {
-		//printf("failed count is: %i\n", failcount);
+		printf("failed count is: %i\n", failcount);
 		if (!checkpll()) {
 			return 0;
 		}
