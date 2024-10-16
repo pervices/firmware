@@ -1315,20 +1315,26 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         /* send the uart commands and read back the output and write to file   \
          */                                                                    \
                                                                                \
-        char dac_dump[MAX_PROP_LEN];\
-        char gpiox_dump[MAX_PROP_LEN];\
-        \
-        /* DAC */                                                              \
-        strcpy(buf, "dac -D\r");                               \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        snprintf(dac_dump, MAX_PROP_LEN, "[Board: tx_%s Chip: DAC] %s\n", STR(ch), uart_ret_buf);\
+        if (strcmp(data, "0") == 0) {                                          \
+            /* avoid clogging logs with these reads*/                          \
+            snprintf(ret, MAX_PROP_LEN, "Write non-zero to get board dump\n"); \
+        }                                                                      \
+        else {                                                                 \
+            char dac_dump[MAX_PROP_LEN];                                       \
+            char gpiox_dump[MAX_PROP_LEN];                                     \
                                                                                \
-        /* GPIOX */                                                            \
-        strcpy(buf, "dump -g\r");                               \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        snprintf(gpiox_dump, MAX_PROP_LEN, "[Board: tx_%s Chip: GPIOX] %s\n", STR(ch), uart_ret_buf);\
-        \
-        snprintf(ret, MAX_PROP_LEN, "%s%s", dac_dump, gpiox_dump);\
+            /* DAC */                                                          \
+            strcpy(buf, "dac -D\r");                                           \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(dac_dump, MAX_PROP_LEN, "[Board: tx_%s Chip: DAC] %s\n", STR(ch), uart_ret_buf);\
+                                                                               \
+            /* GPIOX */                                                        \
+            strcpy(buf, "dump -g\r");                                          \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(gpiox_dump, MAX_PROP_LEN, "[Board: tx_%s Chip: GPIOX] %s\n", STR(ch), uart_ret_buf);\
+                                                                               \
+            snprintf(ret, MAX_PROP_LEN, "%s%s", dac_dump, gpiox_dump);         \
+        }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2357,32 +2363,38 @@ TX_CHANNELS
         /* send the uart commands and read back the output and write to file   \
          */                                                                    \
                                                                                \
-        char adc_dump[MAX_PROP_LEN];\
-        char mixer_dump[MAX_PROP_LEN];\
-        char adc_driver_dump[MAX_PROP_LEN];\
-        \
-        /* ADC */                                                              \
-        strcpy(buf, "dump -a\r");                               \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        snprintf(adc_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: ADC] %s\n", STR(ch), (char *)uart_ret_buf);\
+        if (strcmp(data, "0") == 0) {                                          \
+            /* avoid clogging logs with these reads*/                          \
+            snprintf(ret, MAX_PROP_LEN, "Write non-zero to get board dump\n"); \
+        }                                                                      \
+        else {                                                                 \
+            char adc_dump[MAX_PROP_LEN];                                       \
+            char mixer_dump[MAX_PROP_LEN];                                     \
+            char adc_driver_dump[MAX_PROP_LEN];                                \
                                                                                \
-        /* Mixer */                                                            \
-        strcpy(buf, "dump -x\r");                               \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-        snprintf(mixer_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: GPIOX] %s\n", STR(ch), (char *)uart_ret_buf);\
+            /* ADC */                                                          \
+            strcpy(buf, "dump -a\r");                                          \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf),INT(ch));\
+            snprintf(adc_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: ADC] %s\n", STR(ch), (char *)uart_ret_buf);\
                                                                                \
-        if( HARDWARE_RTM_VER==3 || HARDWARE_RTM_VER == 4 ) {\
-            snprintf(ret, MAX_PROP_LEN, "%s%s", adc_dump, mixer_dump);\
-            return RETURN_SUCCESS;\
-            /* Due to hardware issues the ADC driver cannot be read from on RTM 3 or 4*/\
-        } else {\
-            /* ADC Driver */                                                       \
-            strcpy(buf, "dump -v\r");                               \
+            /* Mixer */                                                        \
+            strcpy(buf, "dump -x\r");                                          \
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            snprintf(adc_driver_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: ADC Driver] %s\n", STR(ch), (char *)uart_ret_buf);\
-            snprintf(ret, MAX_PROP_LEN, "%s%s%s", adc_dump, mixer_dump, adc_driver_dump);\
-            return RETURN_SUCCESS;\
-        }\
+            snprintf(mixer_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: GPIOX] %s\n", STR(ch), (char *)uart_ret_buf);\
+                                                                               \
+            if( HARDWARE_RTM_VER==3 || HARDWARE_RTM_VER == 4 ) {               \
+                snprintf(ret, MAX_PROP_LEN, "%s%s", adc_dump, mixer_dump);     \
+                return RETURN_SUCCESS;                                         \
+                /* Due to hardware issues the ADC driver cannot be read from on RTM 3 or 4*/\
+            } else {                                                           \
+                /* ADC Driver */                                               \
+                strcpy(buf, "dump -v\r");                                      \
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                snprintf(adc_driver_dump, MAX_PROP_LEN, "[Board: rx_%s Chip: ADC Driver] %s\n", STR(ch), (char *)uart_ret_buf);\
+                snprintf(ret, MAX_PROP_LEN, "%s%s%s", adc_dump, mixer_dump, adc_driver_dump);\
+                return RETURN_SUCCESS;                                         \
+            }                                                                  \
+        }                                                                      \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
