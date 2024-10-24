@@ -4792,7 +4792,7 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
 
     // write LMX Output RF Power
     strcpy(buf, "lmx -p ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", 60 /*TODO: pll->power*/);
+    sprintf(buf + strlen(buf), "%" PRIu8 "", 28 /*TODO: pll->power*/);
     // default to high power
     strcat(buf, "\r");
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
