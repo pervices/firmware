@@ -248,33 +248,18 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
 };
 
 #if defined(VAUNT)
-
-    // default LMX2572 constructor
-    #if defined(RTM11)    // RTM11 use a 5MHz reference instead of 10MHz
-    static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
-        PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ / 2,
-        PLL1_R_FIXED,           PLL1_N_DEFAULT,
-        PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
-        PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
-        LMX2572_RFOUT_MAX_HZ,   LMX2572_RFOUT_MIN_HZ,
-        LMX2572_VCO_MAX_HZ,     LMX2572_VCO_MIN_HZ,
-        LMX2572_DIV_MAX,        LMX2572_DIV_MIN,
-        LMX2572_N_MAX,          LMX2572_N_MIN,
-        LMX2572_R_MAX,          LMX2572_R_MIN
-    };
-    #else
-    static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
-        PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ,
-        PLL1_R_FIXED,           PLL1_N_DEFAULT,
-        PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
-        PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
-        LMX2572_RFOUT_MAX_HZ,   LMX2572_RFOUT_MIN_HZ,
-        LMX2572_VCO_MAX_HZ,     LMX2572_VCO_MIN_HZ,
-        LMX2572_DIV_MAX,        LMX2572_DIV_MIN,
-        LMX2572_N_MAX,          LMX2572_N_MIN,
-        LMX2572_R_MAX,          LMX2572_R_MIN
-    };
-    #endif
+// default LMX2572 constructor
+static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
+    PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ,
+    PLL1_R_FIXED,           PLL1_N_DEFAULT,
+    PLL1_D_DEFAULT,         PLL1_X2EN_DEFAULT,
+    PLL1_OUTFREQ_DEFAULT,   PLL1_FB_DEFAULT,
+    LMX2572_RFOUT_MAX_HZ,   LMX2572_RFOUT_MIN_HZ,
+    LMX2572_VCO_MAX_HZ,     LMX2572_VCO_MIN_HZ,
+    LMX2572_DIV_MAX,        LMX2572_DIV_MIN,
+    LMX2572_N_MAX,          LMX2572_N_MIN,
+    LMX2572_R_MAX,          LMX2572_R_MIN
+};
 
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
     PLL_ID_LMX2595,         AVERY_REF_FREQ_HZ,
