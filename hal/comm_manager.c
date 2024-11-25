@@ -18,6 +18,8 @@
 #include "comm_manager.h"
 #include "uart.h"
 #include "udp.h"
+#include <sys/file.h>
+#include <math.h>
 
 #ifdef VAUNT
     #define MAX_DEVICES 32
@@ -117,7 +119,35 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
         PRINT(ERROR, "Failed to open %s with error code: %s\n", dev, strerror(errno));
         return RETURN_ERROR;
     }
+
     int mydev = uart_devices[*fd];
+
+    int lock_fail;
+    int failed_locks = 0;
+    do {
+        // Attempts to get a lock on the file used for UART comminication with the board. The lock will automatically be released when the server closes
+        // This is primarily used to prevent accidentally starting the server while flashing
+        lock_fail = flock(mydev, LOCK_EX | LOCK_NB);
+        if (lock_fail)
+        {
+            if (errno == EWOULDBLOCK)
+            {
+                PRINT(ERROR, "UART path: \"%s\" already has a lock. Attempt: %i\n", dev, failed_locks + 1);
+            }
+            else
+            {
+                PRINT(ERROR, "Received error: %s while attempting to lock UART. Attempt: %i\n", strerror(errno), failed_locks + 1);
+            }
+            usleep(1000 * pow(2, failed_locks));
+            failed_locks ++;
+        }
+    } while(failed_locks < 5 && lock_fail);
+
+
+    if(lock_fail) {
+        close(mydev);
+        abort();
+    }
 
     PRINT(VERBOSE, "Configuring UART\n");
 
