@@ -125,9 +125,9 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
     int lock_fail;
     int failed_locks = 0;
     do {
-        // Attempts to get a lock on the file used for UART comminication with the board. The lock will automatically be released when the server closes
-        // This is primarily used to prevent accidentally starting the server while flashing
-        lock_fail = flock(mydev, LOCK_EX | LOCK_NB);
+        // Attempts to get a shared lock on the file used for UART comminication with the board. The lock will automatically be released when the server closes
+        // The script used to flash the MCU boards requires an exclusive lock, preventing both this and said script running at the same
+        lock_fail = flock(mydev, LOCK_SH | LOCK_NB);
         if (lock_fail)
         {
             if (errno == EWOULDBLOCK)
