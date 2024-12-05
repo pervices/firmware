@@ -1828,7 +1828,7 @@ TX_CHANNELS
             write_hps_reg("rx" STR(ch) "1", base_factor);                      \
             snprintf(ret, MAX_PROP_LEN, "%lf", get_base_sample_rate() / (double)(base_factor + 1)); \
             /*Set gain adjustment*/                                            \
-            gain_factor = decim_gain_lut[(base_factor)];                       \
+            gain_factor = decim_gain_lut[(base_factor)]-40;                    \
             read_hps_reg("rxga", &old_val);                                    \
             write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
                                   (((uint16_t)gain_factor) << shift));         \
