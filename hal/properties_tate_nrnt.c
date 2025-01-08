@@ -1382,6 +1382,17 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Sends UART commands to tx, does nothing if given an empty string */\
+    /* For debugging purposes only */\
+    static int hdlr_tx_##ch##_rf_board_manual_uart(const char *data, char *ret) {\
+        if(strnlen(data, MAX_PROP_LEN) > 0) {\
+            snprintf(buf, MAX_PROP_LEN, "%s\r", data);\
+            ping(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf));\
+            snprintf(ret, MAX_PROP_LEN, "%s", uart_ret_buf);\
+        }\
+        return RETURN_SUCCESS;\
+    }\
                                                                                \
     /* 8 bits from the dsp gain register are ued for each channel (7:0 for a, 15:8 for b...)*/\
     static int hdlr_tx_##ch##_dsp_gain(const char *data, char *ret) {          \
@@ -2445,6 +2456,17 @@ TX_CHANNELS
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Sends UART commands to rx, does nothing if given an empty string */\
+    /* For debugging purposes only */\
+    static int hdlr_rx_##ch##_rf_board_manual_uart(const char *data, char *ret) {\
+        if(strnlen(data, MAX_PROP_LEN) > 0) {\
+            snprintf(buf, MAX_PROP_LEN, "%s\r", data);\
+            ping(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf));\
+            snprintf(ret, MAX_PROP_LEN, "%s", uart_ret_buf);\
+        }\
+        return RETURN_SUCCESS;\
+    }\
                                                                                \
     static int hdlr_rx_##ch##_dsp_signed(const char *data, char *ret) {        \
         uint32_t old_val, sign;                                                \
@@ -4562,6 +4584,17 @@ static int hdlr_time_board_led(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+/* Sends UART commands to time board, does nothing if given an empty string */
+/* For debugging purposes only */
+static int hdlr_time_board_manual_uart(const char *data, char *ret) {
+    if(strnlen(data, MAX_PROP_LEN) > 0) {
+        snprintf(buf, MAX_PROP_LEN, "%s\r", data);
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        snprintf(ret, MAX_PROP_LEN, "%s", uart_ret_buf);
+    }
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_time_about_id(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
@@ -5769,6 +5802,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/manual_uart"        , hdlr_rx_##_c##_rf_board_manual_uart,    RW, "", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "255", SP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
@@ -5851,6 +5885,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/manual_uart"        , hdlr_tx_##_c##_rf_board_manual_uart,    RW, "", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           RW, "0", TP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"            , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"            , hdlr_tx_##_c##_endian_swap,            RW, "0", SP, #_c)
@@ -5891,6 +5926,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/board/dump"                     , hdlr_time_board_dump,                   RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/manual_uart"              , hdlr_time_board_manual_uart,            RW, "", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001", SP, NAC)       \
