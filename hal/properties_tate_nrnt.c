@@ -244,6 +244,29 @@ sysref_modes current_sysref_mode = unspecified_sysref;
 
 /* clang-format on */
 
+// Function to map `ch` to its corresponding modified character
+char get_modified_ch(const char *ch) {
+    switch (ch) {
+        case 'a': return 'a';
+        case 'b': return 'e';
+        case 'c': return 'i';
+        case 'd': return 'm';
+        default: return '\0'; // Return null character for invalid inputs
+    }
+}
+
+// Function to handle the modified character and number
+void write_modified_hps_reg(const char *ch, const char *number, uint32_t port) {
+    char ch_modified = get_modified_ch(ch);
+    if (ch_modified != '\0') {
+        // Replace with actual `write_hps_reg` function
+        write_hps_reg("rx" ch_modified number, port);
+    } else {
+        // Handle invalid inputs gracefully
+        PRINT(ERROR, "Invalid input character \n");
+    }
+}
+
 // Also known as strchr (maybe we should replace this someday).
 static int contains(const char *str, char letter, int size) {
     int i = 0, cnt = 0;
@@ -2524,9 +2547,9 @@ TX_CHANNELS
         }\
         \
         /*Sets the resamp factor*/\
-        write_hps_reg("rx" STR(ch) "1", factor);                      \
+        write_modified_hps_reg(STR(ch), "1", factor);                   \
         /*Set whether to bypass dsp and fir*/\
-        write_hps_reg("rx" STR(ch) "2", bypass);                      \
+        write_modified_hps_reg(STR(ch), "2", bypass);                   \
         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -2569,7 +2592,7 @@ TX_CHANNELS
                                                                                 \
             /* write NCO adj */                                                    \
             uint32_t nco_steps = (uint32_t)round(freq * RX_DSP_NCO_CONST);            \
-            write_hps_reg("rx" STR(ch) "0", nco_steps);                            \
+            write_modified_hps_reg(STR(ch), "0", nco_steps);                          \
             \
             /* write direction */                                                  \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
@@ -3159,7 +3182,7 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_link_port(const char *data, char *ret) {         \
         uint32_t port;                                                         \
         sscanf(data, "%" SCNd32 "", &port);                                    \
-        write_hps_reg("rx" STR(ch) "8", port);                                 \
+        write_modified_hps_reg(STR(ch), "8", port);                            \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -3174,8 +3197,8 @@ TX_CHANNELS
         uint8_t ip[4];                                                         \
         sscanf(data, "%" SCNd8 ".%" SCNd8 ".%" SCNd8 ".%" SCNd8 "", ip,        \
                ip + 1, ip + 2, ip + 3);                                        \
-        write_hps_reg("rx" STR(ch) "5",                                        \
-                      (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3])); \
+        write_modified_hps_reg(STR(ch), "5",                                   \
+                (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]));       \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -3185,8 +3208,8 @@ TX_CHANNELS
                "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8           \
                ":%" SCNx8 "",                                                  \
                mac, mac + 1, mac + 2, mac + 3, mac + 4, mac + 5);              \
-        write_hps_reg("rx" STR(ch) "6", (mac[0] << 8) | (mac[1]));             \
-        write_hps_reg("rx" STR(ch) "7", (mac[2] << 24) | (mac[3] << 16) |      \
+        write_modified_hps_reg(STR(ch), "6", (mac[0] << 8) | (mac[1]));        \
+        write_modified_hps_reg(STR(ch), "7", (mac[2] << 24) | (mac[3] << 16) | \
                                             (mac[4] << 8) | mac[5]);           \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
