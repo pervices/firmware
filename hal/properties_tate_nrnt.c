@@ -246,16 +246,16 @@ sysref_modes current_sysref_mode = unspecified_sysref;
 
 // Function to map `ch` to its corresponding modified character
 char get_modified_ch(const char *ch) {
-    if (ch == "a") {
-        return "a";
-    } else if (ch == "b") {
-        return "e";
-    } else if (ch == "c") {
-        return "i";
-    } else if (ch == "d") {
-        return "m";
+    if (strcmp(ch, "a") == 0) {
+        return 'a';
+    } else if (strcmp(ch, "b") == 0) {
+        return 'e';
+    } else if (strcmp(ch, "c") == 0) {
+        return 'i';
+    } else if (strcmp(ch, "d") == 0) {
+        return 'm';
     } else {
-        return "\0";
+        return '\0';
     }
 }
 
