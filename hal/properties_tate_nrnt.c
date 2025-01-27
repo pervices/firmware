@@ -264,7 +264,7 @@ void write_modified_hps_reg(const char *ch, const char *number, uint32_t port) {
     const char *ch_modified = get_modified_ch(ch);
     if (ch_modified != '\0') {
         // Replace with actual `write_hps_reg` function
-        write_hps_reg("rx" ch_modified number, port);
+        write_hps_reg("rx" STR(ch_modified) STR(number) "", port);
     } else {
         // Handle invalid inputs gracefully
         PRINT(ERROR, "Invalid input character \n");
