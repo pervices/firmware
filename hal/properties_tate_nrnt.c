@@ -245,15 +245,15 @@ sysref_modes current_sysref_mode = unspecified_sysref;
 /* clang-format on */
 
 // Function to map `ch` to its corresponding modified character
-char get_modified_ch(const char *ch) {
+const char* get_modified_ch(const char *ch) {
     if (strcmp(ch, "a") == 0) {
-        return 'a';
+        return "a";
     } else if (strcmp(ch, "b") == 0) {
-        return 'e';
+        return "e";
     } else if (strcmp(ch, "c") == 0) {
-        return 'i';
+        return "i";
     } else if (strcmp(ch, "d") == 0) {
-        return 'm';
+        return "m";
     } else {
         return '\0';
     }
