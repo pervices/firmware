@@ -246,18 +246,22 @@ sysref_modes current_sysref_mode = unspecified_sysref;
 
 // Function to map `ch` to its corresponding modified character
 char get_modified_ch(const char *ch) {
-    switch (ch) {
-        case 'a': return 'a';
-        case 'b': return 'e';
-        case 'c': return 'i';
-        case 'd': return 'm';
-        default: return '\0'; // Return null character for invalid inputs
+    if (ch == "a") {
+        return "a";
+    } else if (ch == "b") {
+        return "e";
+    } else if (ch == "c") {
+        return "i";
+    } else if (ch == "d") {
+        return "m";
+    } else {
+        return "\0";
     }
 }
 
 // Function to handle the modified character and number
 void write_modified_hps_reg(const char *ch, const char *number, uint32_t port) {
-    char ch_modified = get_modified_ch(ch);
+    const char *ch_modified = get_modified_ch(ch);
     if (ch_modified != '\0') {
         // Replace with actual `write_hps_reg` function
         write_hps_reg("rx" ch_modified number, port);
