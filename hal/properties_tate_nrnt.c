@@ -2574,7 +2574,7 @@ TX_CHANNELS
             /* write direction */                                                  \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
             write_hps_reg(rx_reg4_map[INT(ch)],                                        \
-                        (old_val & ~(0x1 << 13)) | (0x1 << 13));           \
+                        (old_val & ~(0x1 << 13)) | (direction << 13));           \
             \
             double actual_freq;\
             if(direction) {\
