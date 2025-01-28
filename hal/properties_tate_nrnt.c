@@ -1493,7 +1493,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         /* write direction */                                                  \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                             \
         write_hps_reg(tx_reg4_map[INT(ch)],                                       \
-                      (old_val & ~(0x1 << 13)) | (0x1 << 13));             \
+                      (old_val & ~(0x1 << 13)) | (direction << 13));             \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
 \
@@ -2574,7 +2574,7 @@ TX_CHANNELS
             /* write direction */                                                  \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
             write_hps_reg(rx_reg4_map[INT(ch)],                                        \
-                        (old_val & ~(0x1 << 13)) | (direction << 13));           \
+                        (old_val & ~(0x1 << 13)) | (0x1 << 13));           \
             \
             double actual_freq;\
             if(direction) {\
