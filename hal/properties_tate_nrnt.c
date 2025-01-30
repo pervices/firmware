@@ -1660,7 +1660,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         sscanf(data, "%i", &swap);                                           \
         uint32_t old_val = 0;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
-        if ( swap == 1)                                            \
+        if ( swap != 1)                                            \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
         else                                                                   \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
@@ -2720,7 +2720,7 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_link_iq_swap(const char *data, char *ret) {      \
         uint32_t old_val = 0;                                                      \
         read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
-        if (strcmp(data, "1") == 0)                                            \
+        if (strcmp(data, "1") != 0)                                            \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | (1 << 12));          \
         else                                                                   \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
