@@ -416,6 +416,51 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
     fclose(data_file);
 }
 
+// Every uart send command must be accompanied by a uart read command
+// so that the command prompt '>' is respected before the next send uart
+// command can be used. This removes the need for delay calls in the uart
+// send function.
+static int ping(const int fd, uint8_t *buf, const size_t len) {
+    //sets the first byte of the turn buffer to null, effectively clearing it
+    uart_ret_buf[0] = 0;
+    send_uart_comm(fd, buf, len);
+    int error_code = read_uart(fd);
+    return error_code;
+}
+
+//ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
+//ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
+static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
+    if(!(rx_power[ch] & PWR_NO_BOARD)) {
+        int error_code = ping(fd, buf, len);
+        //Due to hardware issues some boards will report as on even when the slot is empty
+        if(error_code) {
+            rx_power[ch] = rx_power[ch] | PWR_NO_BOARD;
+            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
+        }
+        return error_code;
+    //empties the uart return buffer
+    } else {
+        uart_ret_buf[0] = 0;
+        return 0;
+    }
+}
+static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
+    if(!(tx_power[ch] & PWR_NO_BOARD)) {
+        int error_code = ping(fd, buf, len);
+        //Due to hardware issues some boards will report as on even when the slot is empty
+        if(error_code) {
+            tx_power[ch] = tx_power[ch] | PWR_NO_BOARD;
+            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
+        }
+        return error_code;
+    //empties the uart return buffer
+    } else {
+        uart_ret_buf[0] = 0;
+        return 0;
+    }
+}
+
 static int network_speed_cache = 0;
 static int is_network_speed_cached = 0;
 static int get_network_speed() {
@@ -429,6 +474,31 @@ static int get_network_speed() {
         return network_speed_cache;
     }
 }
+
+#if NUM_TX_CHANNELS > 0
+    static int is_baseband_only_cached_tx[NUM_TX_CHANNELS] = { 0 };
+    static int is_baseband_only_tx[NUM_TX_CHANNELS] = { 0 };
+
+    // Get's if a channel is baseband only
+    static int get_is_baseband_only_tx(int uart_fd, size_t ch) {
+        if(is_baseband_only_cached_tx[ch]) {
+            return is_baseband_only_tx[ch];
+        } else {
+            snprintf(buf, MAX_PROP_LEN, "board -v\r");
+            ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), ch);
+            PRINT(ERROR, "%s\n", (char*) uart_ret_buf);
+
+            char* version_location = strstr((char*) uart_ret_buf, "BBTx");
+            if(version_location == NULL) {
+                is_baseband_only_tx[ch] = 0;
+            } else {
+                is_baseband_only_tx[ch] = 1;
+            }
+            is_baseband_only_cached_tx[ch] = 1;
+            return is_baseband_only_tx[ch];
+        }
+    }
+#endif
 
 uint32_t is_hps_only() {
     // The flag is always high in old versions of the FPGA
@@ -968,51 +1038,6 @@ TX_CHANNELS
 RX_CHANNELS
 #undef X
 
-// Every uart send command must be accompanied by a uart read command
-// so that the command prompt '>' is respected before the next send uart
-// command can be used. This removes the need for delay calls in the uart
-// send function.
-static int ping(const int fd, uint8_t *buf, const size_t len) {
-    //sets the first byte of the turn buffer to null, effectively clearing it
-    uart_ret_buf[0] = 0;
-    send_uart_comm(fd, buf, len);
-    int error_code = read_uart(fd);
-    return error_code;
-}
-
-//ping with a check to see if a board is inserted into the desired channel, does nothing if there is no board
-//ch is used only to know where in the array to check if a board is present, fd is still used to say where to send the data
-static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(!(rx_power[ch] & PWR_NO_BOARD)) {
-        int error_code = ping(fd, buf, len);
-        //Due to hardware issues some boards will report as on even when the slot is empty
-        if(error_code) {
-            rx_power[ch] = rx_power[ch] | PWR_NO_BOARD;
-            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
-        }
-        return error_code;
-    //empties the uart return buffer
-    } else {
-        uart_ret_buf[0] = 0;
-        return 0;
-    }
-}
-static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
-    if(!(tx_power[ch] & PWR_NO_BOARD)) {
-        int error_code = ping(fd, buf, len);
-        //Due to hardware issues some boards will report as on even when the slot is empty
-        if(error_code) {
-            tx_power[ch] = tx_power[ch] | PWR_NO_BOARD;
-            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
-        }
-        return error_code;
-    //empties the uart return buffer
-    } else {
-        uart_ret_buf[0] = 0;
-        return 0;
-    }
-}
-
 // Verifies the rf pll is good. Returns 1 if the pll is locked
 int check_rf_pll(const int fd, bool is_tx, int ch) {
     snprintf(buf, sizeof(buf), "status -l\r");
@@ -1199,6 +1224,14 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         /* if the setting is a valid band, send to tx board*/                  \
         int band;                                                              \
         sscanf(data, "%i", &band);                                             \
+        \
+        if(get_is_baseband_only_tx(uart_tx_fd[INT_TX(ch)], INT(ch))) {\
+            /* Block mid and high band*/\
+            if(band > 0) {\
+                PRINT(ERROR, "Band: %i invalid for baseband only channel. Muting channel\n");\
+                band = -1;\
+            }\
+        }\
                                                                             \
         switch(band){                                                          \
             case 2:                                                            \
@@ -1217,7 +1250,6 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                 /* clear IQ swap because of possible previous use of low band*/\
                 set_property("tx/" STR(ch) "/link/iq_swap", "0");              \
                 break;                                                         \
-            case 9: /*"Superbaseband" mode available on TX*/                   \
             case 0:                                                            \
                 /* turn off the 100MHz LMX ref*/                               \
                 clr_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
@@ -1239,6 +1271,8 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         }                                                                      \
         snprintf(buf, MAX_PROP_LEN, "rf -b %i\r", band);                       \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
+        \
+        snprintf(ret, MAX_PROP_LEN, "%i\n", band);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2014,6 +2048,13 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }\
+    \
+    static int hdlr_tx_##ch##_about_is_bandband_only(const char *data, char *ret) {      \
+        snprintf(ret, MAX_PROP_LEN, "%i\n", get_is_baseband_only_tx(uart_tx_fd[INT_TX(ch)], INT(ch)));\
+                                                                               \
+        return RETURN_SUCCESS;                                                 \
+    }\
+    \
     static int hdlr_tx_##ch##_about_ddr_bank(const char *data, char *ret) {\
         if(is_ddr_used()) {\
             snprintf(ret, MAX_PROP_LEN, "%i\n", tx_ddr_bank[INT(ch)]);\
@@ -2140,7 +2181,7 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
         int16_t band = 0;                                                          \
         sscanf(data, "%hi", &band);                                             \
-                                                                               \
+        \
         switch(band){                                                          \
             case 2:                                                            \
                 /* turn on the 100MHz LMX ref*/                                \
@@ -2178,6 +2219,8 @@ TX_CHANNELS
         }                                                                      \
         snprintf(buf, MAX_PROP_LEN, "rf -b %hhx\r", (uint8_t) band);\
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        \
+        snprintf(ret, MAX_PROP_LEN, "%i\n", band);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -5891,6 +5934,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_tx_##_c##_about_sw_ver,            RW, VERSION, TP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/about/variant/is_baseband_only" , hdlr_tx_##_c##_about_is_bandband_only, RW, VERSION, TP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/about/ddr_bank"           , hdlr_tx_##_c##_about_ddr_bank,          RW, "0", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", TP, #_c)         \
