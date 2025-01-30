@@ -1128,7 +1128,13 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         get_property(fullpath,band_read,3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
-            freq -= HB_STAGE2_MIXER_FREQ;                                      \
+            if (freq > (HB_STAGE2_MIXER_FREQ + LO_STEPSIZE)) {                  \
+                freq -= HB_STAGE2_MIXER_FREQ;                                   \
+            } else {                                                            \
+                /* avoid infinite loop when checking if outfreq == freq when    \
+                * trying different values for R divider*/                       \
+                freq = LO_STEPSIZE;                                             \
+            }                                                                   \
             strcpy(buf, "lmx -C 0\r");                                          \
         } else {                                                                \
             strcpy(buf, "lmx -C 1\r");                                          \
@@ -2068,7 +2074,13 @@ TX_CHANNELS
         get_property(fullpath, band_read, 3);                                   \
         sscanf(band_read, "%i", &band);                                         \
         if (band == 2) {                                                        \
-            freq -= HB_STAGE2_MIXER_FREQ;                                       \
+            if (freq > (HB_STAGE2_MIXER_FREQ + LO_STEPSIZE)) {                  \
+                freq -= HB_STAGE2_MIXER_FREQ;                                   \
+            } else {                                                            \
+                /* avoid infinite loop when checking if outfreq == freq when    \
+                * trying different values for R divider*/                       \
+                freq = LO_STEPSIZE;                                             \
+            }                                                                   \
             strcpy(buf, "lmx -C 0\r");                                          \
         } else {                                                                \
             strcpy(buf, "lmx -C 1\r");                                          \
