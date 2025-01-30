@@ -164,7 +164,7 @@ typedef enum {
 } board_variants;
 
 // Maximum user set delay for i or q
-const int max_iq_delay = 32;
+static const int max_iq_delay = 32;
 
 static uint_fast8_t jesd_enabled = 0;
 
@@ -189,10 +189,9 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-int sfp_max_reset_attempts = 10;
+static int sfp_max_reset_attempts = 10;
 // SFP always came up in 90/90 tests, so reboot on SFP fail has been disabled
-int sfp_max_reboot_attempts = 5;
-int max_brd_reboot_attempts = 5;
+static int sfp_max_reboot_attempts = 5;
 
 static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 
@@ -215,24 +214,24 @@ static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this project."
 #endif
 
-uint8_t *_save_profile;
-uint8_t *_load_profile;
-char *_save_profile_path;
-char *_load_profile_path;
+static uint8_t *_save_profile;
+static uint8_t *_load_profile;
+static char *_save_profile_path;
+static char *_load_profile_path;
 
 static const uint8_t ipver[] = {
     IPVER_IPV4,
     IPVER_IPV4,
 };
 
-const int jesd_reset_delay = 100000;
-const int jesd_mask_delay = 200000;
+static const int jesd_reset_delay = 100000;
+static const int jesd_mask_delay = 200000;
 
-int jesd_master_reset();
+static int jesd_master_reset();
 static int hdlr_jesd_reset_master(const char *data, char *ret);
 
-int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
-int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+static int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+static int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 
 typedef enum {
     pulsed = 0,
@@ -240,7 +239,7 @@ typedef enum {
     unspecified_sysref
 } sysref_modes;
 
-sysref_modes current_sysref_mode = unspecified_sysref;
+static sysref_modes current_sysref_mode = unspecified_sysref;
 
 /* clang-format on */
 
@@ -335,7 +334,7 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
 // reg: the register to write to
 // shift: the point in the register to write the value to (the value is 16 bit)
 // desired: the target length of the VITA 49 part of the packet, not including the trailer if applicable
-uint32_t set_payload_len(char* reg, uint32_t shift, uint32_t desired) {
+static uint32_t set_payload_len(char* reg, uint32_t shift, uint32_t desired) {
     // Cap payload length
     if(desired > RX_MAX_PAYLOAD) {
         desired = RX_MAX_PAYLOAD;
@@ -367,7 +366,7 @@ uint32_t set_payload_len(char* reg, uint32_t shift, uint32_t desired) {
     * 13'b0
     * };
     */
-void wait_for_fpga_reset() {
+static void wait_for_fpga_reset() {
     uint32_t sys18_val;
     // Delay to avoid repeatedly reading the register to quickly, which is likely the cause of linux freezes
     do {
@@ -417,8 +416,8 @@ static void update_interboot_variable(char* data_filename, int64_t value) {
     fclose(data_file);
 }
 
-int network_speed_cache = 0;
-int is_network_speed_cached = 0;
+static int network_speed_cache = 0;
+static int is_network_speed_cached = 0;
 static int get_network_speed() {
     if(is_network_speed_cached) {
         return network_speed_cache;
@@ -449,7 +448,7 @@ uint32_t is_hps_only() {
 
 }
 
-uint32_t is_ddr_used() {
+static uint32_t is_ddr_used() {
     uint32_t val = 0;
     read_hps_reg("res_ro12", &val);
     val = (val >> 31) & 0x1;
