@@ -1482,14 +1482,6 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             snprintf(ret, MAX_PROP_LEN, "%lf", (double)nco_steps / TX_DSP_NCO_CONST);            \
         }                                                                      \
                                                                                \
-        /* Likely due to an FPGA ordering issue, enabling iq swap switches the NCO polarity */\
-        /* TODO fix the iq swap/NCO polarity in the FPGA and remove this workaround */\
-        char iq_swap[2];\
-        get_property("tx/" STR(ch) "/link/iq_swap", iq_swap, 2);\
-        if(iq_swap[0] != '0') {\
-            direction = !direction;\
-        } else {\
-        }\
         /* write direction */                                                  \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                             \
         write_hps_reg(tx_reg4_map[INT(ch)],                                       \
@@ -1660,7 +1652,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         sscanf(data, "%i", &swap);                                           \
         uint32_t old_val = 0;                                                      \
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                          \
-        if ( swap == 1)                                            \
+        if ( swap != 1)                                            \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val | (1 << 12));          \
         else                                                                   \
             write_hps_reg(tx_reg4_map[INT(ch)], old_val & ~(1 << 12));         \
