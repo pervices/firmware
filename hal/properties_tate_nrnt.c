@@ -1545,8 +1545,16 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         sscanf(data, "%lf", &target_nco);\
         char nco_s[50];\
         \
+        /* With the default configuration set the FPGA NCO to as close as possible and use the DAC NCO for the rest */\
+        /* For baseband only mode set the FPGA NCO to 0 and rely entirely on the DAC NCO*/\
+        /* Baseband only mode uses on the DAC NCO since the FPGA have less range and wouldn't add to the range due to the nyquist limit */\
+        /* Normal mode prefers the FPGA NCO since it is easier to work with */\
+        if(get_is_baseband_only_tx(uart_tx_fd[INT_TX(ch)], INT(ch))) {\
+            snprintf(nco_s, 50, "%i", 0);\
+        } else {\
+            snprintf(nco_s, 50, "%lf", target_nco - actual_nco);\
+        }\
         /*Sets the nco in the dsp*/\
-        snprintf(nco_s, 50, "%lf", target_nco - actual_nco);\
         set_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s);\
         get_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s, 50);       \
         sscanf(nco_s, "%lf", &last_nco);\
