@@ -1097,6 +1097,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
     /*Interface for setting the nco on every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_ch_nco_freq(const char *data, char *ret) {      \
         /*The channelizer nco is not used in the current configuration*/\
+        /* NOTE: add to _dsp_all_nco if this gets implemented*/\
         snprintf(ret, MAX_PROP_LEN, "0");\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1548,13 +1549,6 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         snprintf(nco_s, 50, "%lf", target_nco - actual_nco);\
         set_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s);\
         get_property("tx/" STR(ch) "/dsp/fpga_nco", nco_s, 50);       \
-        sscanf(nco_s, "%lf", &last_nco);\
-        actual_nco = actual_nco + last_nco;\
-        \
-        /*Sets the nco in the channelizer part of the dac (see page 2 of AD9176 for clarification on channels)*/\
-        snprintf(nco_s, 50, "%lf", target_nco - actual_nco);\
-        set_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s);\
-        get_property("tx/" STR(ch) "/rf/dac/nco/chfreq", nco_s, 50);\
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
         \
