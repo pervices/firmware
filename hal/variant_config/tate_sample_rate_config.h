@@ -45,9 +45,10 @@
         ((double)4.294967296)
 
     #define MAX_DSP_NCO (TX_BASE_SAMPLE_RATE / 2.0)
-    //max nco of the AD9176, higher nco's result in errors in the board
-    //the nco cna probably be rasied if those errors are fixed
-    #define MAX_DAC_NCO 4000000000
+
+    // Maximum value of the AD9176's internal NCO
+    // Previously this was limited to 4GHz due to errors observed
+    #define MAX_DAC_NCO 6000000000
 
     //RX sample rate factor must be less than this
     #define MAX_RX_SAMPLE_FACTOR 65535.0 //2^16-1
@@ -111,9 +112,10 @@
     #define TX_DSP_NCO_CONST ((double)1.43165576533)
 
     #define MAX_DSP_NCO (TX_BASE_SAMPLE_RATE / 2.0)
-    //max nco of the AD9176, higher nco's result in errors in the board
-    //the nco cna probably be rasied if those errors are fixed
-    #define MAX_DAC_NCO 4000000000
+
+    // Maximum value of the AD9176's internal NCO
+    // Previously this was limited to 4GHz due to errors observed
+    #define MAX_DAC_NCO 6000000000
 
     //RX sample rate factor must be less than this
     #define MAX_RX_SAMPLE_FACTOR 65535.0 //2^16-1
