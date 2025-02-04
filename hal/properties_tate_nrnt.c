@@ -1082,14 +1082,15 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         }                                                                      \
         else {                                                                 \
             freq_mhz = (uint32_t)(freq / 1000000);                             \
-            freq_hz = (uint32_t)(freq - freq_mhz*1000000);                     \
+            /* Cast freq_mhz to double to avoid issue with overflowing when doing 32 bit math*/\
+            freq_hz = (uint32_t)(freq - (((double) freq_mhz)*1000000));        \
         }                                                                      \
                                                                                \
         /*command format:*/\
         /*nco -t (type) -n (number) -a (?) -h (6 least significant digits of freq) -m freq in megahertz rounded down*/\
         snprintf(buf, MAX_PROP_LEN, "nco -t d -n 0 -a 0 -h %" PRIu32 " -m %" PRIu32 " -s\r", freq_hz, freq_mhz);\
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        snprintf(ret, MAX_PROP_LEN, "%lu", (uint64_t)(freq_mhz * 1000000 + freq_hz));\
+        snprintf(ret, MAX_PROP_LEN, "%lu", (uint64_t)((uint64_t)freq_mhz * 1000000 + (uint64_t)freq_hz));\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
