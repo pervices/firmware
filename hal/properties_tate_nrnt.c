@@ -1525,12 +1525,6 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         sscanf(nco_s, "%lf", &last_nco);\
         actual_nco = actual_nco + last_nco;\
         \
-        snprintf(nco_s, 50, "%lf", target_nco - actual_nco);\
-        set_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s);\
-        get_property("tx/" STR(ch) "/rf/dac/nco/dacfreq", nco_s, 50);\
-        sscanf(nco_s, "%lf", &last_nco);\
-        actual_nco = actual_nco + last_nco;\
-        \
         snprintf(ret, MAX_PROP_LEN, "%lf", actual_nco);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
