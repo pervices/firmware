@@ -230,8 +230,8 @@ static const int jesd_mask_delay = 200000;
 static int jesd_master_reset();
 static int hdlr_jesd_reset_master(const char *data, char *ret);
 
-static int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
-static int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
 
 typedef enum {
     pulsed = 0,
