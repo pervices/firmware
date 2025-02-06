@@ -1459,6 +1459,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                                                                                \
     static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
         uint32_t reg_val = 0;                                                  \
+        uint32_t old_val = 0;                                                  \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         /*The sample rate only uses 16 bits*/\
@@ -1488,6 +1489,15 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
         \
         snprintf(ret, MAX_PROP_LEN, "%lf", rate);\
+        \
+        /*Set gain adjustment*/                                            \
+        int gain_factor;                                                   \
+        gain_factor = interp_gain_lut[(base_factor)];                       \
+        int channel = INT(ch);                                                 \
+        int shift = (channel%4)*8;                                             \
+        read_hps_reg(txg_map[(int)(INT(ch)/4)], &old_val);                                    \
+        write_hps_reg(txg_map[(int)(INT(ch)/4)], (old_val & ~(0xff << shift)) |               \
+        (((uint16_t)gain_factor) << shift));         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2585,6 +2595,15 @@ TX_CHANNELS
         /*Set whether to bypass dsp and fir*/\
         write_hps_reg("rx" STR(ch) "2", bypass);                      \
         \
+        int channel = INT(ch);                                                 \
+        int shift = (channel%4)*8;                                             \
+        uint32_t old_val;                                                      \
+        int gain_factor;                                                       \
+        /*Set gain adjustment*/                                            \
+        gain_factor = decim_gain_lut[(base_factor)];                       \
+        read_hps_reg(rxg_map[(int)(INT(ch)/4)], &old_val);                                   \
+        write_hps_reg(rxg_map[(int)(INT(ch)/4)], (old_val & ~(0xff << shift)) |               \
+                                (((uint16_t)gain_factor) << shift));         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
