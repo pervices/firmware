@@ -1492,7 +1492,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         \
         /*Set gain adjustment*/                                            \
         int gain_factor;                                                   \
-        gain_factor = interp_gain_lut[(base_factor)];                       \
+        gain_factor = interp_gain_lut[(sample_factor)];                       \
         int channel = INT(ch);                                                 \
         int shift = (channel%4)*8;                                             \
         read_hps_reg(txg_map[(int)(INT(ch)/4)], &old_val);                                    \
@@ -2600,7 +2600,7 @@ TX_CHANNELS
         uint32_t old_val;                                                      \
         int gain_factor;                                                       \
         /*Set gain adjustment*/                                            \
-        gain_factor = decim_gain_lut[(base_factor)];                       \
+        gain_factor = decim_gain_lut[(factor)];                       \
         read_hps_reg(rxg_map[(int)(INT(ch)/4)], &old_val);                                   \
         write_hps_reg(rxg_map[(int)(INT(ch)/4)], (old_val & ~(0xff << shift)) |               \
                                 (((uint16_t)gain_factor) << shift));         \
