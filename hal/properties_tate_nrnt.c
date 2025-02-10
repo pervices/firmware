@@ -5650,6 +5650,9 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // Waits for the reset sequence to finish
     wait_for_fpga_reset();
 
+    // Clear reset bits
+    write_hps_reg_mask("res_rw7", 0, 0x78000000);
+
     // Resetting the FPGA results in user visible LEDs being reset to their
     // default value. This sets it back to the state it was in before the FPGA reset.
     set_led_state(led_state);
