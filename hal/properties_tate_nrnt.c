@@ -2771,7 +2771,7 @@ TX_CHANNELS
     }                                                                          \
     static int hdlr_rx_##ch##_about_eeprom(const char *data, char *ret) {          \
         strcpy(buf, "board -h\r");                              \
-        ping_tx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
+        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
         snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
