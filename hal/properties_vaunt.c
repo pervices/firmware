@@ -1624,7 +1624,7 @@ TX_CHANNELS
         }                                                                      \
                                                                                \
         /* load the reference frequency and such for RF PLL*/                  \
-        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
+        if ((PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
                 pll = pll_def_lmx2572;                                         \
@@ -1650,7 +1650,7 @@ TX_CHANNELS
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
+        if ((PRODUCT_RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             if(!set_pll_frequency(uart_rx_fd[INT(ch)],                         \
