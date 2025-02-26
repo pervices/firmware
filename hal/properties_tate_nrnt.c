@@ -2599,7 +2599,6 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_dsp_fpga_nco(const char *data, char *ret) {      \
         double freq = 0;                                                       \
         uint32_t old_val = 0;                                                  \
-        uint8_t direction = 0;                                                 \
         char read_s[50];\
         get_property("rx/" STR(ch) "/dsp/rate", read_s, 50);\
         double rate;\
@@ -2625,10 +2624,7 @@ TX_CHANNELS
             freq += hardware_shift;\
             /* NCO uses a bit on one register to direction, another for magnitude */\
             if(freq < 0) {\
-                direction = 1;\
                 freq = -freq;\
-            } else {\
-                direction = 0;\
             }\
                                                                                 \
             /* write NCO adj */                                                    \
@@ -2638,14 +2634,10 @@ TX_CHANNELS
             /* write direction */                                                  \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                              \
             write_hps_reg(rx_reg4_map[INT(ch)],                                        \
-                        (old_val & ~(0x1 << 13)) | (direction << 13));           \
+                        (old_val & ~(0x1 << 13)) | (0x0 << 13));           \
             \
             double actual_freq;\
-            if(direction) {\
-                actual_freq = (-(double)nco_steps / RX_DSP_NCO_CONST) - hardware_shift;\
-            } else {\
-                actual_freq = (double)nco_steps / RX_DSP_NCO_CONST - hardware_shift;\
-            }\
+            actual_freq = (double)nco_steps / RX_DSP_NCO_CONST - hardware_shift;\
             snprintf(ret, MAX_PROP_LEN, "%lf", actual_freq);\
         }\
         \
