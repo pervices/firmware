@@ -22,6 +22,12 @@ which is available on yaourt.
 
     Example: sh autotate.sh TATE_NRNT RTM5 R8 T8 S1000
 
+1.a.iii Chestnut Optimized Compile Commands
+
+    sh autotate.sh LILY <RTM_VERSION> R<NUM_RX> T<NUM_TX> S500
+
+    Example: sh autotate.sh LILY RTM1 R4 T4 S500
+
 2. Manually specifying Build Variant Target
 
 To specify whether to build a Cyan ("Tate") or Crimson ("Vaunt") server variant
