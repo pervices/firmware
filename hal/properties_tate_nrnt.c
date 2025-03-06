@@ -6215,7 +6215,7 @@ void patch_tree(void) {
 #define X(ch) \
     set_default_int("rx/" #ch "/link/port", base_port + INT(ch));\
     set_default_str("rx/" #ch "/link/ip_dest", rx_ip_dst[INT(ch)]); \
-    set_default_int("rx/" #ch "/link/src_port", base_port + (INT(ch)*4)); \
+    set_default_int("rx/" #ch "/link/src_port", base_port + INT(ch)); \
     set_default_int("rx/" #ch "/link/jesd_num", rx_jesd_map[INT(ch)]);
 
     RX_CHANNELS
