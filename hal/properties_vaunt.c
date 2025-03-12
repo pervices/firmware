@@ -902,24 +902,28 @@ int check_rf_pll(int ch, int uart_fd) {
         if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
-            if(!set_pll_frequency(uart_tx_fd[INT(ch)],                         \
-                (uint64_t)LO_STEPSIZE, &pll, true, INT(ch), true))             \
-            {                                                                  \
-                PRINT(ERROR,                                                   \
-                    "PLL lock failed when attempting to set freq to %lf\n",    \
-                    outfreq);                                                  \
-                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            /* PLL lock is not reliable, try 3 times. */                       \
+            for(int i=0; i < 3; i++){                                          \
+                if(set_pll_frequency(uart_tx_fd[INT(ch)],                      \
+                    (uint64_t)LO_STEPSIZE, &pll, true, INT(ch), true))         \
+                {                                                              \
+                    snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);               \
+                    return RETURN_SUCCESS;                                     \
+                }                                                              \
             }                                                                  \
         } else { /* RTM >= 11 use lmx2572 */                                   \
-            if(!set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch))) {        \
-                PRINT(ERROR,                                                   \
-                    "PLL lock failed when attempting to set freq to %lf\n",    \
-                    outfreq);                                                  \
-                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            /* PLL lock is not reliable, try 3 times. */                       \
+            for(int i=0; i < 3; i++){                                          \
+                if(set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch))) {     \
+                    snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);               \
+                    return RETURN_SUCCESS;                                     \
+                }                                                              \
             }                                                                  \
         }                                                                      \
-        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
-                                                                               \
+        PRINT(ERROR,                                                           \
+            "PLL lock failed when attempting to set freq to %lf\n",            \
+            outfreq);                                                          \
+        snprintf(ret, MAX_PROP_LEN, "0");                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1658,25 +1662,30 @@ TX_CHANNELS
         if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
-            if(!set_pll_frequency(uart_rx_fd[INT(ch)],                         \
-                (uint64_t)LO_STEPSIZE, &pll, false, INT(ch), true))            \
-            {                                                                  \
-                PRINT(ERROR,                                                   \
-                    "PLL lock failed when attempting to set freq to %lf\n",    \
-                    outfreq);                                                  \
-                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            /* PLL lock is not reliable, try 3 times. */                       \
+            for(int i=0; i < 3; i++){                                          \
+                if(set_pll_frequency(uart_rx_fd[INT(ch)],                      \
+                    (uint64_t)LO_STEPSIZE, &pll, false, INT(ch), true))        \
+                {                                                              \
+                    outfreq += (long double)lmx_freq;                          \
+                    snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);               \
+                    return RETURN_SUCCESS;                                     \
+                }                                                              \
             }                                                                  \
         } else { /* RTM >= 11 use lmx2572 */                                   \
-            if(!set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch))) {        \
-                PRINT(ERROR,                                                   \
-                    "PLL lock failed when attempting to set freq to %lf\n",    \
-                    outfreq);                                                  \
-                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            /* PLL lock is not reliable, try 3 times. */                       \
+            for(int i=0; i < 3; i++){                                          \
+                if(set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch))) {     \
+                    outfreq += (long double)lmx_freq;                          \
+                    snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);               \
+                    return RETURN_SUCCESS;                                     \
+                }                                                              \
             }                                                                  \
         }                                                                      \
-        outfreq += (long double)lmx_freq;                                      \
-        snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
-                                                                               \
+        PRINT(ERROR,                                                           \
+            "PLL lock failed when attempting to set freq to %lf\n",            \
+            outfreq);                                                          \
+        snprintf(ret, MAX_PROP_LEN, "0");                                      \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
