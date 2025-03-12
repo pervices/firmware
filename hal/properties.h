@@ -136,7 +136,7 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
 #endif
-void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan);
+int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan);
 
 void dump_tree(void);
 

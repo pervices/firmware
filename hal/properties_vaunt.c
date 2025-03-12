@@ -911,7 +911,12 @@ int check_rf_pll(int ch, int uart_fd) {
                 snprintf(ret, MAX_PROP_LEN, "0");                              \
             }                                                                  \
         } else { /* RTM >= 11 use lmx2572 */                                   \
-            set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));              \
+            if(!set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch))) {        \
+                PRINT(ERROR,                                                   \
+                    "PLL lock failed when attempting to set freq to %lf\n",    \
+                    outfreq);                                                  \
+                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            }                                                                  \
         }                                                                      \
         snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
                                                                                \
@@ -1662,7 +1667,12 @@ TX_CHANNELS
                 snprintf(ret, MAX_PROP_LEN, "0");                              \
             }                                                                  \
         } else { /* RTM >= 11 use lmx2572 */                                   \
-                set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch));          \
+            if(!set_lo_frequency(uart_rx_fd[INT(ch)], &pll, INT(ch))) {        \
+                PRINT(ERROR,                                                   \
+                    "PLL lock failed when attempting to set freq to %lf\n",    \
+                    outfreq);                                                  \
+                snprintf(ret, MAX_PROP_LEN, "0");                              \
+            }                                                                  \
         }                                                                      \
         outfreq += (long double)lmx_freq;                                      \
         snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                           \
@@ -4812,11 +4822,11 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     }
 }
 
-void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
+int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     // extract lo variables and pass to MCU (LMX2595)
 #if defined(RTM6) || defined(RTM7)
     // set_lo_frequency not supported by RTM6/7 hardware
-    return;
+    return 0;
 #endif
 
     // map channel number to chan_mask
@@ -4881,8 +4891,9 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
             strcpy(buf, "rf -c " STR(ch) " -z\r");
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
             PRINT(ERROR, "LMX unlocked. Muting PLL\n");
+            return 0;
         }
-        return;
+        return 1;   // return success
     }
 
     // Polling loop waiting for PLL to finish locking
@@ -4897,12 +4908,13 @@ void set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
             strcpy(buf, "rf -c " STR(ch) " -z\r");
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
             PRINT(ERROR, "LMX unlocked. Muting PLL\n");
-            return;
+            return 0;
         }
 
         // Wait 1us between polls to avoid spamming logs
         usleep(1);
     }
+    return 1;
 }
 
 int set_freq_internal(const bool tx, const unsigned channel,
