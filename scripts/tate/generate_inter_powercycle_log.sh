@@ -70,31 +70,31 @@ do
         fi
         #sys18 is included since it contains useful info about the FPGA notably the sfp status
         echo "sys18" | tee -a $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "mem rr sys18"' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "sudo mem rr sys18"' >> $result_path
         echo "sfpa status" | tee -a $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x1; mem rw net22 0x303; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x1; mem rw net22 0x320; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x1; mem rw net22 0x321; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x1; mem rw net22 0x322; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x1; mem rw net22 0x508; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x1; sudo mem rw net22 0x303; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x1; sudo mem rw net22 0x320; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x1; sudo mem rw net22 0x321; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x1; sudo mem rw net22 0x322; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x1; sudo mem rw net22 0x508; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
         echo "sfpb status" | tee -a $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x2; mem rw net22 0x303; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x2; mem rw net22 0x320; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x2; mem rw net22 0x321; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x2; mem rw net22 0x322; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x2; mem rw net22 0x508; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x2; sudo mem rw net22 0x303; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x2; sudo mem rw net22 0x320; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x2; sudo mem rw net22 0x321; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x2; sudo mem rw net22 0x322; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x2; sudo mem rw net22 0x508; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
         echo "sfpc status" | tee -a $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x4; mem rw net22 0x303; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x4; mem rw net22 0x320; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x4; mem rw net22 0x321; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x4; mem rw net22 0x322; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x4; mem rw net22 0x508; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x4; sudo mem rw net22 0x303; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x4; sudo mem rw net22 0x320; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x4; sudo mem rw net22 0x321; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x4; sudo mem rw net22 0x322; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x4; sudo mem rw net22 0x508; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
         echo "sfpd status" | tee -a $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x8; mem rw net22 0x303; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x8; mem rw net22 0x320; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x8; mem rw net22 0x321; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x8; mem rw net22 0x322; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
-        echo dev0 | ssh -tt dev0@192.168.10.2 'mem rw net21 0x8; mem rw net22 0x508; mem rw net24 0x1; mem rw net24 0x0; mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x8; sudo mem rw net22 0x303; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x8; sudo mem rw net22 0x320; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x8; sudo mem rw net22 0x321; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x8; sudo mem rw net22 0x322; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
+        echo dev0 | ssh -tt dev0@192.168.10.2 'sudo mem rw net21 0x8; sudo mem rw net22 0x508; sudo mem rw net24 0x1; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
         echo "Time board dump" | tee -a $result_path
         echo dev0 | ssh -tt dev0@192.168.10.2 "sudo sh -c \"echo 1 > /var/volatile/$device/state/time/board/dump\"; sleep 1; sudo cat /var/volatile/$device/state/time/board/dump" >> $result_path
         n=0
