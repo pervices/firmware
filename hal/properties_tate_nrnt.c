@@ -491,7 +491,6 @@ static int get_network_speed() {
         } else {
             snprintf(buf, MAX_PROP_LEN, "board -v\r");
             ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), ch);
-            PRINT(ERROR, "%s\n", (char*) uart_ret_buf);
 
             char* version_location = strstr((char*) uart_ret_buf, "BBTx");
             if(version_location == NULL) {
