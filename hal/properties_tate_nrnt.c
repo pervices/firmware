@@ -1337,20 +1337,20 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         snprintf(ret, 25, "%lf", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-										\
-    static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {		\
-	    float atten;							\
-	    sscanf(data, "%f", &atten);						\
-	    if(atten > MAX_RF_ATTEN_TX_AB) atten = MAX_RF_ATTEN_TX_AB;\
+                                        \
+    static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {        \
+        float atten;                            \
+        sscanf(data, "%f", &atten);                        \
+        if(atten > MAX_RF_ATTEN_TX_AB) atten = MAX_RF_ATTEN_TX_AB;\
         float codef = atten / (float)(RF_ATTEN_STEP_TX);\
         uint16_t codei = roundf(codef);\
-	    snprintf(buf, MAX_PROP_LEN, "rf -a %hu\r", codei);\
-	    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));		\
-	    atten = codei * RF_ATTEN_STEP_TX;\
-	    snprintf(ret, MAX_PROP_LEN, "%f", atten);                                     \
-										\
-	    return RETURN_SUCCESS;						\
-    }										\
+        snprintf(buf, MAX_PROP_LEN, "rf -a %hu\r", codei);\
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));        \
+        atten = codei * RF_ATTEN_STEP_TX;\
+        snprintf(ret, MAX_PROP_LEN, "%f", atten);                                     \
+                                        \
+        return RETURN_SUCCESS;                        \
+    }                                        \
                                                                                \
     static int hdlr_tx_##ch##_rf_board_dump(const char *data, char *ret) {     \
         /* send the uart commands and read back the output and write to file   \
