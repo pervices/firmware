@@ -73,6 +73,8 @@
 #define RF_ATTEN_STEP_TX 2.0
 #define MIN_RF_GAIN_TX_AB MIN_RF_ATTEN_TX_AB
 #define MAX_RF_GAIN_TX_AB MAX_RF_ATTEN_TX_AB
+// Minimum amount the gain can be changed by solely using components in all bands
+#define RF_GAIN_STEP_TX_AB RF_ATTEN_STEP_TX
 
 //The voltage range used to control and amplifier in high band
 //The full range is larger, but outside of this range it is very non-linear
@@ -83,8 +85,11 @@
 #define MIN_GAIN_TX_HB 0.0
 #if defined(TATE_NRNT)
     #define MAX_GAIN_TX_HB 23.0
+    // step = gain range / number of possible voltage values
+    #define RF_GAIN_STEP_TX_HB ((MAX_RF_GAIN_TX_AB - MIN_RF_GAIN_TX_AB) / ((MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) * 1000))
 #elif defined(LILY)
     #define MAX_GAIN_TX_HB 0.0
+    #define RF_GAIN_STEP_TX_HB RF_GAIN_STEP_TX_AB
 #else
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
 #endif
@@ -1337,6 +1342,44 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         snprintf(ret, 25, "%lf", gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Returns the range of the current band */\
+    /* Format: "min,max,step\n" */\
+    static int hdlr_tx_##ch##_rf_gain_range(const char *data, char *ret) {\
+        /* min and max for all band components */\
+        double min = MIN_RF_GAIN_TX_AB;\
+        double max = MAX_RF_GAIN_TX_AB;\
+        double step;\
+        \
+        /* Get the current band */\
+        int band;\
+        char band_read[3];\
+        get_property("tx/" STR(ch) "/rf/band", band_read,3);\
+        sscanf(band_read, "%i", &band);\
+        \
+        /* Low band and mid band only contain amplifiers/attentuators available on all channels */\
+        if(band == 0 || band == 1) {\
+            min += 0;\
+            max += 0;\
+            step = RF_GAIN_STEP_TX_AB;\
+        /* High band on Tate has an amplifier not present in other bands/Chestnut */\
+        } if(band == 2) {\
+            if(PRODUCT_ID == TATE_NRNT_ID) {\
+                min += MIN_GAIN_TX_HB;\
+                max += MAX_GAIN_TX_HB;\
+                step = RF_GAIN_STEP_TX_HB;\
+            } else if (PRODUCT_ID == LILY_ID){\
+                min += MIN_GAIN_TX_HB;\
+                max += MAX_GAIN_TX_HB;\
+                step = RF_GAIN_STEP_TX_HB;\
+            } else {\
+                PRINT(ERROR, "Function not implemented for this variant\n");\
+            }\
+        }\
+        \
+        snprintf(ret, MAX_PROP_LEN, "\"%lf,%lf,%lf\"\n", min, max, step);\
+        return RETURN_SUCCESS;\
+    }\
                                         \
     static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {        \
         float atten;                            \
@@ -2415,6 +2458,76 @@ TX_CHANNELS
         snprintf(ret, 10, "%i", current_gain);                                              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Returns the range of the current band */\
+    /* Format: "min,max,step\n" */\
+    static int hdlr_rx_##ch##_rf_gain_range(const char *data, char *ret) {\
+        /* min and max for all band components */\
+        double min;\
+        double max;\
+        double step;\
+        \
+        /* Get the current band */\
+        int band;\
+        char band_read[3];\
+        get_property("rx/" STR(ch) "/rf/freq/band", band_read,3);\
+        sscanf(band_read, "%i", &band);\
+        \
+        if(band == -1) {\
+            min = 0;\
+            max = 0;\
+            step = 0;\
+        } else if(band == 0) {\
+            min = LMH6401_MIN_GAIN;\
+            max = LMH6401_MAX_GAIN;\
+            step = 1;\
+             /* -LTC5586_MIN_GAIN is done because we shift the range to always start from 0 instead of setting min to LTC5586_MIN_GAIN */\
+        } else if(band == 1) {\
+            int lna_gain;\
+            if(PRODUCT_ID == TATE_NRNT_ID) {\
+                lna_gain = AM1081_GAIN;\
+            } else if(PRODUCT_ID == LILY_ID) {\
+                lna_gain = 0;\
+            } else {\
+                PRINT(ERROR, "Function not implemented for this variant\n");\
+            }\
+            if(HARDWARE_RTM_VER==3) {\
+                min = 0;\
+                max = LMH6401_MAX_GAIN + LTC5586_MAX_GAIN + lna_gain - LTC5586_MIN_GAIN;\
+                step = 1;\
+            } else {\
+                min = 0;\
+                max = LMH6401_MAX_GAIN + LTC5586_MAX_GAIN + lna_gain + MID_HIGH_MAX_ATTEN - LTC5586_MIN_GAIN;\
+                step = 1;\
+            }\
+        } else if(band == 2) {\
+            int lna_gain;\
+            if(PRODUCT_ID == TATE_NRNT_ID) {\
+                lna_gain = AM1075_GAIN;\
+            } else if(PRODUCT_ID == LILY_ID) {\
+                lna_gain = 0;\
+            } else {\
+                PRINT(ERROR, "Function not implemented for this variant\n");\
+            }\
+            if(HARDWARE_RTM_VER==3) {\
+                min = 0;\
+                max = LMH6401_MAX_GAIN + LTC5586_MAX_GAIN + lna_gain - LTC5586_MIN_GAIN;\
+                step = 1;\
+            } else {\
+                min = 0;\
+                max = LMH6401_MAX_GAIN + LTC5586_MAX_GAIN + lna_gain + MID_HIGH_MAX_ATTEN - LTC5586_MIN_GAIN;\
+                step = 1;\
+            }\
+        } else {\
+            min = 0;\
+            max = 0;\
+            step = 0;\
+            PRINT(ERROR, "Invalid band: %i when getting gain range\n", band);\
+        }\
+        \
+        snprintf(ret, MAX_PROP_LEN, "\"%lf,%lf,%lf\"\n", min, max, step);\
+        return RETURN_SUCCESS;\
+    }\
                                                                                \
     static int hdlr_rx_##ch##_rf_atten_val(const char *data, char *ret) {      \
         /*LTC5586 Atten Range: 0dB to 31dB*/                                   \
@@ -5854,6 +5967,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/ampl"             , hdlr_rx_##_c##_rf_gain_ampl,             RW, "0", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/adc_digital"      , hdlr_rx_##_c##_rf_gain_adc_digital,     RW, "-1", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/range"            , hdlr_rx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "31", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_gaincor"         , hdlr_rx_##_c##_iq_gain_correction,      RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_phasecor"        , hdlr_rx_##_c##_iq_phase_correction,     RW, "0", RP, #_c)         \
@@ -5951,6 +6065,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/range"            , hdlr_tx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001", TP, #_c)       \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/eeprom"             , hdlr_tx_##_c##_about_eeprom,            RW, "001", TP, #_c)       \
