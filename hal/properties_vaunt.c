@@ -981,6 +981,19 @@ int check_rf_pll(int ch, int uart_fd) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Returns the range of the current band */\
+    /* The output is in dB. Most elements use steps (equal to 0.25dB) as their unit. This is done to keep the property similar to Tate/Lil y*/\
+    /* Format: "min,max,step\n" */\
+    static int hdlr_tx_##ch##_rf_gain_range(const char *data, char *ret) {\
+        /* min and max for all band components */\
+        double min = 0;\
+        double max = 31.75;\
+        double step = 0.25;\
+        \
+        snprintf(ret, MAX_PROP_LEN, "\"%lf,%lf,%lf\"\n", min, max, step);\
+        return RETURN_SUCCESS;\
+    }\
                                                                                \
     static int hdlr_tx_##ch##_rf_board_dump(const char *data, char *ret) {     \
         /* send the uart commands and read back the output and write to file */\
@@ -1750,6 +1763,46 @@ TX_CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Returns the range of the current band */\
+    /* Format: "min,max,step\n" */\
+    static int hdlr_rx_##ch##_rf_gain_range(const char *data, char *ret) {\
+        /* min and max for all band components */\
+        double min;\
+        double max;\
+        double step;\
+        \
+        /* Get the current band */\
+        int band;\
+        char band_read[3];\
+        get_property("rx/" STR(ch) "/rf/freq/band", band_read,3);\
+        sscanf(band_read, "%i", &band);\
+        \
+        if(band == -1) {\
+            min = 0;\
+            max = 0;\
+            step = 0;\
+        } else if(band == 0) {\
+            /* Only gain/val is used in low band*/\
+            min = 0;\
+            max = 31.5;\
+            step = 0.25;\
+        } else if(band == 1) {\
+            /* gain/val, atten/val, and freq/lna are used by high band*/\
+            /* Unlike Tate/Lily, UHD is responsible for deciding what gain to set each element to*/\
+            min = 0;\
+            max = 83.25;\
+            step = 0.25;\
+        } else {\
+            min = 0;\
+            max = 0;\
+            step = 0;\
+            PRINT(ERROR, "Invalid band: %i when getting gain range\n", band);\
+        }\
+        \
+        snprintf(ret, MAX_PROP_LEN, "\"%lf,%lf,%lf\"\n", min, max, step);\
+        return RETURN_SUCCESS;\
+    }\
                                                                                \
     static int hdlr_rx_##ch##_rf_atten_val(const char *data, char *ret) {      \
         int atten;                                                             \
@@ -4163,6 +4216,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/lna"              , hdlr_rx_##_c##_rf_freq_lna,             RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/band"             , hdlr_rx_##_c##_rf_freq_band,            RW, "1", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/range"            , hdlr_rx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", SP, #_c)         \
@@ -4228,6 +4282,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/i_bias"           , hdlr_tx_##_c##_rf_freq_i_bias,          RW, "17", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/q_bias"           , hdlr_tx_##_c##_rf_freq_q_bias,          RW, "17", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/range"            , hdlr_tx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,           RW, "0", TP, #_c)         \
