@@ -526,6 +526,15 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
         val_lsw = 0;
     }
 
+    if(tx) {
+        PRINT(ERROR, "chan %c\n", *chan);
+        PRINT(ERROR, "num: %lu\n", num);
+        PRINT(ERROR, "regname_msw: %s\n", regname_msw);
+        PRINT(ERROR, "regname_msw: %s\n", regname_msw);
+        PRINT(ERROR, "val_msw: %u\n", val_msw);
+        PRINT(ERROR, "val_lsw: %u\n", val_lsw);
+    }
+
     return set_reg_bits(regname_msw, 0, -1, val_msw) ||
            set_reg_bits(regname_lsw, 0, -1, val_lsw);
 }
