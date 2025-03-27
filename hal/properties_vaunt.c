@@ -643,6 +643,7 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
                                                       char *ret) {             \
         uint64_t val;                                                          \
         int r = valid_edge_sample_num(data, &val);\
+        PRINT(ERROR, "RX Intended number of samples: val: %lu\n", val);\
         if(r == RETURN_SUCCESS) {\
             r = set_edge_sample_num(false, #ch, val);\
             snprintf(ret, MAX_PROP_LEN, "%llu", val);\
@@ -1426,6 +1427,7 @@ int check_rf_pll(int ch, int uart_fd) {
     char *ret) {                                                               \
         uint64_t val;                                                          \
         int r = valid_edge_sample_num(data, &val);\
+        PRINT(ERROR, "TX Intended number of samples: val: %lu\n", val);\
         if(r == RETURN_SUCCESS) {\
             r = set_edge_sample_num(false, #ch, val);\
             snprintf(ret, MAX_PROP_LEN, "%llu", val);\
