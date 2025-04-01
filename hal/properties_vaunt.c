@@ -70,8 +70,9 @@ double get_base_sample_rate() {
             link_rate_divisor = 2;
             return 325000000.0;
         default:
-            PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
-            return 0;
+            PRINT(INFO, "WARNING: Unexpected base sample rate reported by FPGA. Assuming 325MHz.\n",read_val);
+            link_rate_divisor = 2;
+            return 325000000.0;
     }
 }
 
@@ -86,8 +87,8 @@ double get_dsp_nco_const() {
         case 325:
             return 13.215283987692307692307692307692307692307692307692307690000;
         default:
-            PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
-            return 0;
+            PRINT(INFO, "WARNING: Unexpected base sample rate reported by FPGA. Assuming 325MHz.\n",read_val);
+            return 13.215283987692307692307692307692307692307692307692307690000;
     }
 }
 
@@ -102,8 +103,8 @@ double get_dac_nco_const() {
         case 325:
             return 216519.21285435076923076923076923076923076923076923076919296;
         default:
-            PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
-            return 0;
+            PRINT(INFO, "WARNING: Unexpected base sample rate reported by FPGA. Assuming 325MHz.\n",read_val);
+            return 216519.21285435076923076923076923076923076923076923076919296;
     }
 }
 
