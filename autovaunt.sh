@@ -14,13 +14,29 @@ else
 fi
 
 if [ -z $CC ]; then
-	SERVER_CC="arm-unknown-linux-gnueabihf-gcc"
+    if command -v arm-linux-gnueabihf-gcc 2>&1 >/dev/null; then
+        SERVER_CC="arm-linux-gnueabihf-gcc"
+    elif command -v arm-unknown-linux-gnueabihf-gcc 2>&1 >/dev/null; then
+        SERVER_CC="arm-unknown-linux-gnueabihf-gcc"
+        echo "WARNING: using different compiler than CI system" # see pvpkg/firmware-scripts/server.sh
+    else
+        echo "ERROR: GCC compiler for ARM not found"
+        exit 1
+    fi
 else 
 	SERVER_CC=$CC
 fi
 
 if [ -z $CXX ]; then
-	SERVER_CXX="arm-unknown-linux-gnueabihf-g++"
+    if command -v arm-linux-gnueabihf-g++ 2>&1 >/dev/null; then
+        SERVER_CXX="arm-linux-gnueabihf-g++"
+    elif command -v arm-unknown-linux-gnueabihf-g++ 2>&1 >/dev/null; then
+        SERVER_CXX="arm-unknown-linux-gnueabihf-g++"
+        echo "WARNING: using different compiler than CI system" # see pvpkg/firmware-scripts/server.sh
+    else
+        echo "ERROR: G++ compiler for ARM not found"
+        exit 1
+    fi
 else
 	SERVER_CXX=$CXX
 fi
