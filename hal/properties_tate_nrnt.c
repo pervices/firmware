@@ -4507,14 +4507,26 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
         strcpy(buf, "clk -i\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         // save the UART result to the state tree
-        strcpy(ret, (char *)uart_ret_buf);
+        if (strstr((char *)uart_ret_buf, "Internal") != NULL)
+        {
+            snprintf(ret, MAX_PROP_LEN, "internal");
+        }
+        else if (strstr((char *)uart_ret_buf, "External") != NULL)
+        {
+            snprintf(ret, MAX_PROP_LEN, "external");
+        }
+        else
+        {
+            PRINT(ERROR, "Unrecognized read from time board ref src\n");
+            snprintf(ret, MAX_PROP_LEN, "unknown");
+        }
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     // Waits for clock to stabilize
     sleep(4);
     if(property_good("time/status/status_good") != 1) {
         PRINT(ERROR, "PLL loss of lock detected after changing clock reference source\n");
-        snprintf(ret, MAX_PROP_LEN, "pll_lock_failure");
+        strcat(ret, ": pll_lock_failure");
     }
     return RETURN_SUCCESS;
 }
