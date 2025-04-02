@@ -138,8 +138,8 @@ static void make_prop(prop_t *prop) {
 
         // TODO: @CF: use mkdir(2)
         // mkdir -p /home/root/state/*
-        snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
-        system(cmd);
+        // snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+        // system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
         // TODO: replace with openat(2)
