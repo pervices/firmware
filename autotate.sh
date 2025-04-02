@@ -3,12 +3,14 @@
 if [ $# -eq 0 ]; then
     echo "Version unspecified"
     echo "Example: ./autotate.sh TATE_NRNT RTM5 R4 T4 S1000 for TATE_4R4T"
+    echo "Example: ./autotate.sh LILY RTM1 R4 T4 S500 for LILY"
     exit 1
 fi
 
 if [ $# -eq 1 ]; then
     echo "This mode is no longer supported, use NRNT mode"
     echo "Example: ./autotate TATE_NRNT RTM5 R4 T4 S1000 for TATE_4R4T"
+        echo "Example: ./autotate.sh LILY RTM1 R4 T4 S500 for LILY"
     echo "special variants: ./autotate.sh TATE_NRNT RTM5 R4 T4 S1000 F1"
     exit 80
 elif [ $# -eq 2 ]; then
