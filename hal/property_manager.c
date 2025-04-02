@@ -153,16 +153,19 @@ static void make_prop(prop_t *prop) {
         if (prop->permissions == RO) {
             // chmod a-w /home/root/state/*
             snprintf(cmd, CMD_LENGTH, "chmod 0444 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+            PRINT(ERROR, "1 cmd: %s\n", cmd);
             system(cmd);
         } else if (prop->permissions == WO) {
             // TODO: @CF: use fchmodat(2)
             // chmod a-r /home/root/state/*
             snprintf(cmd, CMD_LENGTH, "chmod 0222 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+            PRINT(ERROR, "2 cmd: %s\n", cmd);
             system(cmd);
         } else if (prop->permissions == RW) {
             // TODO: @CF: use fchmodat(2)
             // chmod a-r /home/root/state/*
             snprintf(cmd, CMD_LENGTH, "chmod 0666 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+            PRINT(ERROR, "3 cmd: %s\n", cmd);
             system(cmd);
         }
 
