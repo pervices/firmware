@@ -4689,9 +4689,9 @@ static int hdlr_time_status_ld_jesd2_pll2(const char *data, char *ret) {
 }
 
 static int hdlr_time_status_lol(const char *data, char *ret) {
-    // strcpy(buf, "status -o\r");
-    // ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    // snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
+    strcpy(buf, "status -o\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
