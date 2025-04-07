@@ -4525,8 +4525,11 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     // Waits for clock to stabilize
     sleep(4);
     if(property_good("time/status/status_good") != 1) {
+        char tmp[MAX_PROP_LEN];
         PRINT(ERROR, "PLL loss of lock detected after changing clock reference source\n");
-        strcat(ret, ": pll_lock_failure");
+        strcpy(tmp,ret);
+        strcpy(ret, "pll_lock_failure: ");
+        strcat(ret,tmp);
     }
     return RETURN_SUCCESS;
 }
