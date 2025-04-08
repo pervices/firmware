@@ -1153,9 +1153,9 @@ int check_time_pll(int ch) {
         \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
-        char fullpath[PROP_PATH_LEN] = "tx/" STR(ch) "/rf/band";                \
         int band;                                                               \
-        char band_read[3];                                                      \
+        char reply[MAX_PROP_LEN];                                               \
+        double hb_stage2_mixer_freq = 0;                                        \
                                                                                 \
         /* if freq = 0, mute PLL */                                             \
         if (freq == 0) {                                                        \
@@ -1165,17 +1165,37 @@ int check_time_pll(int ch) {
             return RETURN_SUCCESS;                                              \
         }                                                                       \
         \
+        /* get the reference freq from the time board property*/                \
+        pllparam_t pll = pll_def_lmx2595;                                       \
+        get_property("time/source/lo_ref_freq",reply,MAX_PROP_LEN);             \
+        if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq)){                   \
+            PRINT(ERROR, "failed to parse time/source/lo_ref_freq\n");          \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(ret, MAX_PROP_LEN, "%i", 0);                               \
+            return RETURN_ERROR;                                                \
+        }                                                                       \
+                                                                                \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
         /* also set the LMX2595 output based on band*/                          \
-        get_property(fullpath,band_read,3);                                   \
-        sscanf(band_read, "%i", &band);                                         \
+        get_property("tx/" STR(ch) "/rf/band",reply,MAX_PROP_LEN);              \
+        sscanf(reply, "%i", &band);                                             \
         if (band == 2) {                                                        \
-            if (freq > (HB_STAGE2_MIXER_FREQ + LO_STEPSIZE)) {                  \
-                freq -= HB_STAGE2_MIXER_FREQ;                                   \
+            /* read the IF frequency from the time board property*/             \
+            get_property("time/source/rf_if_freq",reply,MAX_PROP_LEN);          \
+            if(1 != sscanf(reply, "%lf", &hb_stage2_mixer_freq)){       \
+                PRINT(ERROR, "failed to parse time/source/rf_if_freq\n");       \
+                strcpy(buf, "lmx -k\r");                                        \
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                snprintf(ret, MAX_PROP_LEN, "%i", 0);                           \
+                return RETURN_ERROR;                                            \
+            }                                                                   \
+            if (freq > (hb_stage2_mixer_freq + pll.ref_freq)) {                 \
+                freq -= hb_stage2_mixer_freq;                                   \
             } else {                                                            \
                 /* avoid infinite loop when checking if outfreq == freq when    \
                 * trying different values for R divider*/                       \
-                freq = LO_STEPSIZE;                                             \
+                freq = pll.ref_freq;                                            \
             }                                                                   \
             strcpy(buf, "lmx -C 0\r");                                          \
         } else {                                                                \
@@ -1183,7 +1203,7 @@ int check_time_pll(int ch) {
         }                                                                      \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                                                                                 \
-        freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
+        freq = lround((freq / (double)pll.ref_freq)) * pll.ref_freq;            \
         \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {   \
@@ -1195,7 +1215,6 @@ int check_time_pll(int ch) {
         }                                                                       \
                                                                                \
         /* run the pll calc algorithm */                                       \
-        pllparam_t pll = pll_def_lmx2595;                                      \
         long double outfreq = 0;                                                \
         /* Attempt to find an lo setting for the desired frequency using default R divider*/\
         /* NOTE: setFreq finds the pll settings and stores then in the provided struct */\
@@ -1225,7 +1244,7 @@ int check_time_pll(int ch) {
             if(set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], &pll, INT(ch))){\
                 /* if HB add back in freq before printing value to state tree */       \
                 if (band == 2) {                                                       \
-                    outfreq += HB_STAGE2_MIXER_FREQ;                                   \
+                    outfreq += hb_stage2_mixer_freq;                                   \
                 }                                                                      \
                 /* Save the frequency that is being set into the property */           \
                 snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
