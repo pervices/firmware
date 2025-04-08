@@ -235,8 +235,8 @@ static const int jesd_mask_delay = 200000;
 static int jesd_master_reset();
 static int hdlr_jesd_reset_master(const char *data, char *ret);
 
-static int __attribute__ ((unused)) set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
-static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_rx(int uart_fd, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, pllparam_t *pll, int channel);
 
 typedef enum {
     pulsed = 0,
@@ -1210,7 +1210,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         /* Send Parameters over to the MCU */                                  \
         /* PLL lock is not reliable, try 3 times. */                                  \
         for(int i=0; i < 3; i++){\
-            if(set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))){\
+            if(set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], &pll, INT(ch))){\
                 /* if HB add back in freq before printing value to state tree */       \
                 if (band == 2) {                                                       \
                     outfreq += HB_STAGE2_MIXER_FREQ;                                   \
@@ -2207,7 +2207,7 @@ TX_CHANNELS
         /* Send Parameters over to the MCU (the part that actually sets the lo)*/                                   \
         /* Attempt to set the LO 3 times. PLL is not reliably locking so this is a dirty workaround for the time being.*/\
         for(int i = 0; i < 3; i++) {\
-            if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
+            if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], &pll, INT(ch))) {\
                 /* if HB add back in freq before printing value to state tree */        \
                 if (band == 2) {                                                        \
                     outfreq += HB_STAGE2_MIXER_FREQ;                                    \
@@ -6783,7 +6783,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     }
 }
 
-int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_rx(int uart_fd, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6797,7 +6797,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // Send Reference in MHz to MCU
-    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(reference / 1000000));
+    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(pll->ref_freq / pll->R / 1000000));
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX R
@@ -6863,7 +6863,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
 
 //At time of write, the only differences between set_lo_frequency rx and tx is the ping function used
 //which is used to avoid sending uart commands to unpopulated boards
-int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_tx(int uart_fd, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6877,7 +6877,7 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
     ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // Send Reference in MHz to MCU
-    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(reference / 1000000));
+    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(pll->ref_freq / pll->R / 1000000));
     ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX R
