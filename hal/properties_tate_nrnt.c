@@ -237,6 +237,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret);
 
 static int __attribute__ ((unused)) set_lo_frequency_rx(int uart_fd, pllparam_t *pll, int channel);
 static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_time(pllparam_t *pll, int channel);
 
 typedef enum {
     pulsed = 0,
@@ -1056,6 +1057,17 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         PRINT(ERROR, "sscanf failure in check_rf_pll()\n");
     }
     return result;
+}
+
+// Verifies the rf pll is good. Returns 1 if the pll is locked
+int check_time_pll(int ch) {
+    snprintf(buf, sizeof(buf), "lmx -l %i -L\r", ch);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    if (strstr((char *)uart_ret_buf, "Locked") != NULL)
+    {
+        return 1;
+    }
+    return 0;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2126,6 +2138,7 @@ TX_CHANNELS
 
 #define X(ch)                                                               \
     static int hdlr_rx_##ch##_rf_freq_val(const char *data, char *ret) {        \
+        /* TODO get the ref_freq and rf_if from the state tree for this function and the tx one*/\
         if(rx_power[INT(ch)] & PWR_NO_BOARD) {\
             /*Technically this should be an error, but it would trigger everytime an unused slot does anything, clogging up error logs*/\
             return RETURN_SUCCESS;\
@@ -4393,6 +4406,95 @@ static int hdlr_time_set_time_en_lo_ref(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_lo_ref_freq(const char *data, char *ret) {
+    uint64_t freq = 0;
+    uint32_t enable_lo_ref;
+    char reply[MAX_PROP_LEN];
+    sscanf(data, "%" SCNd64 "", &freq);
+
+    // Do not change the lo_ref while the lo_ref is enabled because a channel is using it
+    get_property("time/source/enable_lo_ref", reply, MAX_PROP_LEN);
+    if (1 != sscanf(reply, "0x%" SCNu32 "", &enable_lo_ref)) {
+        PRINT(ERROR,"failed to parse time/source/enable_lo_ref\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: failed to parse time/source/enable_lo_ref");
+        return RETURN_ERROR_PARAM;
+    }
+    if(enable_lo_ref)
+    {
+        PRINT(ERROR,"LO REF in use, cannot change frequency\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: LO REF in use, cannot change frequency");
+        return RETURN_ERROR;
+    }
+
+    /* if freq = 0, mute PLL */
+    if (freq == 0) {
+        strcpy(buf, "lmx -k\r");
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_SUCCESS;
+    }
+
+    /* if freq out of bounds, mute lmx*/
+    if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {
+        strcpy(buf, "lmx -k\r");
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        PRINT(ERROR,"LMX Freq Invalid\n");
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_ERROR;
+    }
+
+    // prepare the pll data structure
+    pllparam_t pll = pll_def_lmx2595;
+    get_property("time/source/freq_mhz", reply, MAX_PROP_LEN);
+    if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq))
+    {
+        PRINT(ERROR,"failed to parse time/source/freq_mhz\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: failed to parse time/source/freq_mhz");
+        return RETURN_ERROR_PARAM;
+    }
+    pll.ref_freq *= 1000000; // convert from MHz to Hz
+
+    // round requested frequency to nearest multiple of the ref_freq
+    freq = lround((freq / (double)pll.ref_freq)) * pll.ref_freq;
+
+    /* run the pll calc algorithm */
+    long double outfreq = 0;
+    /* Attempt to find an lo setting for the desired frequency using default R divider*/
+    /* NOTE: setFreq finds the pll settings and stores then in the provided struct */
+    /* It does not actually set the frequency */
+    outfreq = setFreq(&freq, &pll);
+
+    /* Attempt to find an lo setting for desired frequency using other R dividers*/
+    while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {
+        pll.R = pll.R + 1;
+        outfreq = setFreq(&freq, &pll);
+    }
+
+    /* Fallback to finding a close enough lo */
+    if(outfreq != freq) {
+        pll = pll_def_lmx2595;
+        outfreq = setFreq(&freq, &pll);
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {
+            pll.R = pll.R + 1;
+            outfreq = setFreq(&freq, &pll);
+        }
+    }
+
+    /* Send Parameters over to the MCU */
+    /* PLL lock is not reliable, try 3 times. */
+    for(int i=0; i < 3; i++){
+        if(set_lo_frequency_time(&pll, 2)){
+            /* Save the frequency that is being set into the property */
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
+            return RETURN_SUCCESS;
+        }
+        usleep(10000);
+    }
+    PRINT(ERROR, "TIME PLL LMX5 lock failed when attempting to set freq to %lf\n", outfreq);
+    snprintf(ret, MAX_PROP_LEN, "0");
+    return RETURN_SUCCESS;
+}
+
 // Controls enable for time board LMX2595 providing 1.8GHz IF for highband RF mixers
 // To track whether we can disable it, we will track this as a 32-bit hex number
 // bottom 16 bits each correspond to an rf slot, set high by band select or low by pwr 0
@@ -4416,6 +4518,95 @@ static int hdlr_time_set_time_en_rf_if(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
     snprintf(ret, MAX_PROP_LEN, "0x%08x", enable);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_rf_if_freq(const char *data, char *ret) {
+    uint64_t freq = 0;
+    uint32_t enable_rf_if;
+    char reply[MAX_PROP_LEN];
+    sscanf(data, "%" SCNd64 "", &freq);
+
+    // Do not change the lo_ref while the lo_ref is enabled because a channel is using it
+    get_property("time/source/enable_rf_if", reply, MAX_PROP_LEN);
+    if (1 != sscanf(reply, "0x%" SCNu32 "", &enable_rf_if)) {
+        PRINT(ERROR,"failed to parse time/source/enable_rf_if\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: failed to parse time/source/enable_rf_if");
+        return RETURN_ERROR_PARAM;
+    }
+    if(enable_rf_if)
+    {
+        PRINT(ERROR,"LO REF in use, cannot change frequency\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: LO REF in use, cannot change frequency");
+        return RETURN_ERROR;
+    }
+
+    /* if freq = 0, mute PLL */
+    if (freq == 0) {
+        strcpy(buf, "lmx -k\r");
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_SUCCESS;
+    }
+
+    /* if freq out of bounds, mute lmx*/
+    if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {
+        strcpy(buf, "lmx -k\r");
+        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        PRINT(ERROR,"LMX Freq Invalid \n");
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_ERROR;
+    }
+
+    // prepare the pll data structure
+    pllparam_t pll = pll_def_lmx2595;
+    get_property("time/source/freq_mhz", reply, MAX_PROP_LEN);
+    if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq))
+    {
+        PRINT(ERROR,"failed to parse time/source/freq_mhz\n");
+        snprintf(ret, MAX_PROP_LEN, "failed to parse time/source/freq_mhz");
+        return RETURN_ERROR;
+    }
+    pll.ref_freq *= 1000000; // convert from MHz to Hz
+
+    // round requested frequency to nearest multiple of the ref_freq
+    freq = lround((freq / (double)pll.ref_freq)) * pll.ref_freq;
+
+    /* run the pll calc algorithm */
+    long double outfreq = 0;
+    /* Attempt to find an lo setting for the desired frequency using default R divider*/
+    /* NOTE: setFreq finds the pll settings and stores then in the provided struct */
+    /* It does not actually set the frequency */
+    outfreq = setFreq(&freq, &pll);
+
+    /* Attempt to find an lo setting for desired frequency using other R dividers*/
+    while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {
+        pll.R = pll.R + 1;
+        outfreq = setFreq(&freq, &pll);
+    }
+
+    /* Fallback to finding a close enough lo */
+    if(outfreq != freq) {
+        pll = pll_def_lmx2595;
+        outfreq = setFreq(&freq, &pll);
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {
+            pll.R = pll.R + 1;
+            outfreq = setFreq(&freq, &pll);
+        }
+    }
+
+    /* Send Parameters over to the MCU */
+    /* PLL lock is not reliable, try 3 times. */
+    for(int i=0; i < 3; i++){
+        if(set_lo_frequency_time(&pll, 4)){
+            /* Save the frequency that is being set into the property */
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
+            return RETURN_SUCCESS;
+        }
+        usleep(10000);
+    }
+    PRINT(ERROR, "TIME PLL LMX4 lock failed when attempting to set freq to %lf\n", outfreq);
+    snprintf(ret, MAX_PROP_LEN, "0");
     return RETURN_SUCCESS;
 }
 
@@ -6123,13 +6314,15 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)        \
+    DEFINE_FILE_PROP_P("time/source/enable_lo_ref"            , hdlr_time_set_time_en_lo_ref,          RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/source/enable_rf_if"             , hdlr_time_set_time_en_rf_if,           RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/source/lo_ref_freq"              , hdlr_time_lo_ref_freq,                 RW, "100000000", SP, NAC) \
+    DEFINE_FILE_PROP_P("time/source/rf_if_freq"               , hdlr_time_rf_if_freq,                  RW, "1800000000", SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "poke", SP, NAC)\
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/get_time_source"        , hdlr_time_get_time_source,               RW, "poke", SP, NAC)      \
-    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/enable_lo_ref"           , hdlr_time_set_time_en_lo_ref,           RW, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/source/enable_rf_if"            , hdlr_time_set_time_en_rf_if,            RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
@@ -6934,6 +7127,85 @@ int set_lo_frequency_tx(int uart_fd, pllparam_t *pll, int channel) {
         strcpy(buf, "rf -z\r");
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR, "Tx%i PLL unlocked. Muting PLL\n", channel);
+        return 0;
+    } else {
+        // success
+        return 1;
+    }
+}
+
+int set_lo_frequency_time(pllparam_t *pll, int channel) {
+    // extract lo variables and pass to MCU (LMX2595)
+
+    double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
+
+    // Set the channel mask
+    snprintf(buf, MAX_PROP_LEN, "lmx -l %" PRIu8 "\r", channel);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // Ensure that the LMX is enabled
+    snprintf(buf, MAX_PROP_LEN, "lmx -O 0\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // Reinitialize the LMX
+    snprintf(buf, MAX_PROP_LEN, "lmx -k\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // Send Reference in MHz to MCU
+    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(pll->ref_freq / pll->R / 1000000));
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX R
+    snprintf(buf, MAX_PROP_LEN, "lmx -r %" PRIu16 "\r", pll->R);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX N
+    snprintf(buf, MAX_PROP_LEN, "lmx -n %" PRIu32 "\r", pll->N);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX D
+    snprintf(buf, MAX_PROP_LEN, "lmx -d %" PRIu16 "\r", pll->d);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output RF Power
+    // default to high power
+    snprintf(buf, MAX_PROP_LEN, "lmx -p %" PRIu8 "\r", TIME_LO_POWER);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output Frequency in MHz
+    snprintf(buf, MAX_PROP_LEN, "lmx -f %" PRIu32 "\r", (uint32_t)(freq / 1000000));
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_time_pll(channel);
+    }
+
+    int lock_failed = 0;
+    // Polling loop waiting for PLL to finish locking
+    while(!check_time_pll(channel)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            lock_failed = 1;
+            break;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    if(lock_failed) {
+        PRINT(ERROR, "Time LMX%i PLL unlocked.\n", channel);
         return 0;
     } else {
         // success
