@@ -1242,7 +1242,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         switch(band){                                                          \
             case 2:                                                            \
                 /*Ensure 100MHz LMX ref is enabled for highband*/              \
-                set_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_TX(ch));     \
                 /* Ensure 1.8GHz IF clock is enabled for highband*/            \
                 set_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -1250,7 +1250,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                 break;                                                         \
             case 1:                                                            \
                 /*Ensure 100MHz LMX ref is enabled for midband*/               \
-                set_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_TX(ch));     \
                 /* turn off the 1.8GHz IF to reduce noise*/                    \
                 clr_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -1258,7 +1258,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                 break;                                                         \
             case 0:                                                            \
                 /* turn off the 100MHz LMX ref*/                               \
-                clr_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                clr_property_bit("time/source/enable_lo_ref", INT_TX(ch));     \
                 /* turn off the 1.8GHz IF*/                                    \
                 clr_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
                 /*IQ swap to address layout*/                                  \
@@ -1995,7 +1995,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             }\
                                                                                \
             /* turn off the 100MHz LMX ref*/                                   \
-            clr_property_bit("time/source/enable_rf_ref", INT_TX(ch));         \
+            clr_property_bit("time/source/enable_lo_ref", INT_TX(ch));         \
             /* turn off the 1.8GHz IF*/                                        \
             clr_property_bit("time/source/enable_rf_if", INT_TX(ch));          \
                                                                                \
@@ -2237,7 +2237,7 @@ TX_CHANNELS
         switch(band){                                                          \
             case 2:                                                            \
                 /* turn on the 100MHz LMX ref*/                                \
-                set_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_RX(ch));     \
                 /* Ensure 1.8GHz IF clock is enabled for highband*/            \
                 set_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -2245,7 +2245,7 @@ TX_CHANNELS
                 break;                                                         \
             case 1:                                                            \
                 /* need to set the 100MHz LMX ref*/                            \
-                set_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_RX(ch));     \
                 /* turn off the 1.8GHz IF*/                                    \
                 clr_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -2253,7 +2253,7 @@ TX_CHANNELS
                 break;                                                         \
             case 0:                                                            \
                 /* turn off the 100MHz LMX ref*/                               \
-                clr_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                clr_property_bit("time/source/enable_lo_ref", INT_RX(ch));     \
                 /* turn off the 1.8GHz IF*/                                    \
                 clr_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
                 /* IQ swap to address layout*/                                 \
@@ -3711,7 +3711,7 @@ TX_CHANNELS
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* turn off the 100MHz LMX ref*/                                   \
-            clr_property_bit("time/source/enable_rf_ref", INT_RX(ch));         \
+            clr_property_bit("time/source/enable_lo_ref", INT_RX(ch));         \
             /* turn off the 1.8GHz IF*/                                        \
             clr_property_bit("time/source/enable_rf_if", INT_RX(ch));          \
                                                                                \
@@ -4371,7 +4371,7 @@ static int hdlr_time_get_time_source(const char *data, char *ret) {
 // To track whether we can turn off the clock, we will track this as a 32-bit hex number
 // the bottom 16 bits will each correspond to an rf slot, which will be set high by band select, or low by pwr 0
 // if any of the top 16 bits are high, the clock will not be turned off
-static int hdlr_time_set_time_en_rf_ref(const char *data, char *ret) {
+static int hdlr_time_set_time_en_lo_ref(const char *data, char *ret) {
     uint32_t enable;
     if (1 != sscanf(data, "0x%x", &enable)) {
         if (1 != sscanf(data, "%" SCNu32, &enable)) {
@@ -4381,10 +4381,10 @@ static int hdlr_time_set_time_en_rf_ref(const char *data, char *ret) {
     }
 
     if (enable) {
-        PRINT(VERBOSE,"enable rf_ref\n");
+        PRINT(VERBOSE,"enable lo_ref\n");
         strcpy(buf, "lmx -l 2 -M 0\r");
     } else {
-        PRINT(VERBOSE,"mute rf_ref\n");
+        PRINT(VERBOSE,"mute lo_ref\n");
         strcpy(buf, "lmx -l 2 -M 1\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -6128,7 +6128,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/get_time_source"        , hdlr_time_get_time_source,               RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/enable_rf_ref"           , hdlr_time_set_time_en_rf_ref,           RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/source/enable_lo_ref"           , hdlr_time_set_time_en_lo_ref,           RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/source/enable_rf_if"            , hdlr_time_set_time_en_rf_if,            RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
