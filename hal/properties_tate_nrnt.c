@@ -1186,7 +1186,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         pllparam_t pll = pll_def_lmx2595;                                      \
         long double outfreq = 0;                                                \
         /* Attempt to find an lo setting for the desired frequency using default R divider*/\
-        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* NOTE: setFreq finds the pll settings and stores then in the provided struct */\
         /* It does not actually set the frequency */\
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
@@ -2183,7 +2183,7 @@ TX_CHANNELS
         pllparam_t pll = pll_def_lmx2595;                                       \
         long double outfreq = 0;                                                \
         /* Attempt to find an lo setting for the desired frequency using default R divider*/\
-        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* NOTE: setFreq finds the pll settings and stores then in the provided struct */\
         /* It does not actually set the frequency */\
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
