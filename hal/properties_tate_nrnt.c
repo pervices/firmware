@@ -2181,7 +2181,7 @@ TX_CHANNELS
         if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq)){                   \
             PRINT(ERROR, "failed to parse time/source/lo_ref_freq\n");          \
             strcpy(buf, "lmx -k\r");                                            \
-            ping_tx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
             snprintf(ret, MAX_PROP_LEN, "%i", 0);                               \
             return RETURN_ERROR;                                                \
         }                                                                       \
@@ -2196,7 +2196,7 @@ TX_CHANNELS
             if(1 != sscanf(reply, "%lf", &hb_stage2_mixer_freq)){               \
                 PRINT(ERROR, "failed to parse time/source/rf_if_freq\n");       \
                 strcpy(buf, "lmx -k\r");                                        \
-                ping_tx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 snprintf(ret, MAX_PROP_LEN, "%i", 0);                           \
                 return RETURN_ERROR;                                            \
             }                                                                   \
@@ -4460,7 +4460,7 @@ static int hdlr_time_lo_ref_freq(const char *data, char *ret) {
     /* if freq = 0, mute PLL */
     if (freq == 0) {
         strcpy(buf, "lmx -k\r");
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         snprintf(ret, MAX_PROP_LEN, "%i", 0);
         return RETURN_SUCCESS;
     }
@@ -4468,7 +4468,7 @@ static int hdlr_time_lo_ref_freq(const char *data, char *ret) {
     /* if freq out of bounds, mute lmx*/
     if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {
         strcpy(buf, "lmx -k\r");
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR,"LMX Freq Invalid\n");
         snprintf(ret, MAX_PROP_LEN, "%i", 0);
         return RETURN_ERROR;
@@ -4575,7 +4575,7 @@ static int hdlr_time_rf_if_freq(const char *data, char *ret) {
     /* if freq = 0, mute PLL */
     if (freq == 0) {
         strcpy(buf, "lmx -k\r");
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         snprintf(ret, MAX_PROP_LEN, "%i", 0);
         return RETURN_SUCCESS;
     }
@@ -4583,7 +4583,7 @@ static int hdlr_time_rf_if_freq(const char *data, char *ret) {
     /* if freq out of bounds, mute lmx*/
     if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {
         strcpy(buf, "lmx -k\r");
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR,"LMX Freq Invalid \n");
         snprintf(ret, MAX_PROP_LEN, "%i", 0);
         return RETURN_ERROR;
