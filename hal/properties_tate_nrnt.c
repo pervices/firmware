@@ -1282,6 +1282,47 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Gain of the high band up converter (ADRF6780) */\
+    static int hdlr_tx_##ch##_rf_up_converter(const char *data, char *ret) {       \
+        /* ADRF6780 (controlled by debug -b) is not present in Lily */\
+        if(PRODUCT_ID != TATE_NRNT_ID) {\
+            snprintf(ret, MAX_PROP_LEN, "0\n");\
+            return RETURN_SUCCESS;\
+        }\
+        \
+        double gain = 0;\
+        int band;\
+        char band_read[3];\
+        sscanf(data, "%lf", &gain);\
+        get_property("tx/" STR(ch) "/rf/band", band_read,3);\
+        sscanf(band_read, "%i", &band);\
+        \
+        if(gain > MAX_GAIN_TX_HB) {\
+            gain = MAX_GAIN_TX_HB;\
+        } else if(gain < MIN_GAIN_TX_HB) {\
+            gain = MIN_GAIN_TX_HB;\
+        }\
+        \
+        if(band == 2) {\
+            int gain_control_mv = 0;\
+            gain_control_mv = \
+                (int)((gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
+            /*Command format: debug -p <Voltage in mV>*/\
+            snprintf(buf, MAX_PROP_LEN, "debug -p %i\r", gain_control_mv);\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        } else {\
+            /* Set gain to 0 instead since this is not present in other bands */\
+            gain = 0;\
+            /*Sets high band amplifier gain to 0 when adjusting the gain here in other bands, to prevent a suprise max gain if the user is switching bands*/\
+            snprintf(buf, MAX_PROP_LEN, "debug -p 0\r");\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            \
+        }\
+        \
+        snprintf(ret, MAX_PROP_LEN, "%lf\n", gain);\
+        return RETURN_SUCCESS;\
+    }\
                                                                                \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         double gain = 0;\
@@ -1294,6 +1335,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         sscanf(data, "%lf", &gain);\
         get_property("tx/" STR(ch) "/rf/band", band_read,3);\
         sscanf(band_read, "%i", &band);\
+        /* Calculate gain to use from components in all bands*/\
         if(gain>MAX_RF_GAIN_TX_AB) {\
             ab_gain = MAX_RF_GAIN_TX_AB;\
         }\
@@ -1302,43 +1344,43 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         } else {\
             ab_gain = gain;\
         }\
-        if(band == 2) {\
+        \
+        /* Calculate gain to use for band specific components */\
+        /* Only Tate tx high band has components providing gain not present in other bands*/\
+        if(band == 2 && PRODUCT_ID == TATE_NRNT_ID) {\
             band_gain = gain-ab_gain;\
             if(band_gain > MAX_GAIN_TX_HB) {\
                 band_gain = MAX_GAIN_TX_HB;\
             } else if(band_gain < MIN_GAIN_TX_HB) {\
                 band_gain = MIN_GAIN_TX_HB;\
             }\
+        } else {\
+            band_gain = 0;\
         }\
-        double atten = (((ab_gain)-MIN_RF_GAIN_TX_AB)/(MAX_RF_GAIN_TX_AB-MIN_RF_GAIN_TX_AB)) * (MIN_RF_ATTEN_TX_AB - MAX_RF_ATTEN_TX_AB) + MAX_RF_ATTEN_TX_AB;\
+        \
+        double desired_atten = (((ab_gain)-MIN_RF_GAIN_TX_AB)/(MAX_RF_GAIN_TX_AB-MIN_RF_GAIN_TX_AB)) * (MIN_RF_ATTEN_TX_AB - MAX_RF_ATTEN_TX_AB) + MAX_RF_ATTEN_TX_AB;\
         char s_atten[25];\
         \
         /*Sets and attenuator used by all bands*/\
-        snprintf(s_atten, 25, "%f", atten);\
+        double actual_atten = 0;\
+        snprintf(s_atten, 25, "%f", desired_atten);\
         set_property("tx/" STR(ch) "/rf/atten", s_atten);\
         get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
-        sscanf(s_atten, "%lf", &atten);\
+        sscanf(s_atten, "%lf", &actual_atten);\
+        double actual_ab_gain = MAX_RF_ATTEN_TX_AB - actual_atten + MIN_RF_ATTEN_TX_AB;\
         \
-        /* ADRF6780 (controlled by debug -b) is not present in Lily */\
+        /* rf/gain/up_converter does nothing in Lily */\
+        double actual_band_gain = 0;\
         if(PRODUCT_ID == TATE_NRNT_ID) {\
-            if(band == 2) {\
-                int gain_control_mv = 0;\
-                gain_control_mv = \
-                    (int)((band_gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
-                /*Command format: debug -p <Voltage in mV>*/\
-                snprintf(buf, MAX_PROP_LEN, "debug -p %i\r", gain_control_mv);\
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            } else {\
-                /*Sets high band amplifier gain to 0 when adjusting the gain in other bands, to prevent a suprise max gain if the user is switching bands*/\
-                snprintf(buf, MAX_PROP_LEN, "debug -p 0\r");\
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                \
-            }\
+            /*Sets and attenuator used by all bands*/\
+            char s_band_gain[25];\
+            snprintf(s_band_gain, 25, "%f", band_gain);\
+            set_property("tx/" STR(ch) "/rf/gain/up_converter", s_band_gain);\
+            get_property("tx/" STR(ch) "/rf/gain/up_converter", s_band_gain,25);                   \
+            sscanf(s_band_gain, "%lf", &actual_band_gain);\
         }\
         \
-        gain = (((atten)-MIN_RF_ATTEN_TX_AB)/(MAX_RF_ATTEN_TX_AB-MIN_RF_ATTEN_TX_AB)) * (MIN_RF_GAIN_TX_AB - MAX_RF_GAIN_TX_AB) + MAX_RF_GAIN_TX_AB;\
-        gain += band_gain;\
-        snprintf(ret, 25, "%lf", gain);\
+        snprintf(ret, MAX_PROP_LEN, "%lf", actual_ab_gain + actual_band_gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -6075,6 +6117,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/gain/atten"        , hdlr_tx_##_c##_dac_gain_atten,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31", TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/up_converter"     , hdlr_tx_##_c##_rf_up_converter,             RW, "0", TP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/range"            , hdlr_tx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0", TP, #_c)         \
