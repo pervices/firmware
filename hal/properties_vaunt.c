@@ -71,7 +71,7 @@ double get_base_sample_rate() {
             return 325000000.0;
         default:
             PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
-            return 0;
+            abort();
     }
 }
 
@@ -87,7 +87,7 @@ double get_dsp_nco_const() {
             return 13.215283987692307692307692307692307692307692307692307690000;
         default:
             PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
-            return 0;
+            abort();
     }
 }
 
@@ -103,7 +103,7 @@ double get_dac_nco_const() {
             return 216519.21285435076923076923076923076923076923076923076919296;
         default:
             PRINT(ERROR, "Unexpected base sample rate reported by FPGA\n",read_val);
-            return 0;
+            abort();
     }
 }
 
@@ -4144,7 +4144,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     uint16_t fpga_samp_rate, mcu_samp_rate;
     uint32_t read_val;
     read_hps_reg("res_ro3",&read_val);
-    fpga_samp_rate = ( read_val >> 20) & 0xFFF;
+    fpga_samp_rate = ( read_val >> 20) & 0xFFF; // TODO should we get the sample rate from get_base_sample_rate() rather than directly from the register? Would need to change the MHz vs Hz conversion below
     snprintf(buf, sizeof(buf), "clk -d\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     sscanf((char *)uart_ret_buf, "DEVCLK: %" SCNu32 "Hz", &read_val);
@@ -4155,7 +4155,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     } else {
         PRINT(ERROR, "FPGA for %uMHz; TIME board for %uMHz\n", fpga_samp_rate, mcu_samp_rate);
         snprintf(ret, MAX_PROP_LEN, "ERROR: FPGA for %uMHz; TIME board for %uMHz\n", fpga_samp_rate, mcu_samp_rate);
-        return RETURN_ERROR;
+        abort();
     }
 }
 
