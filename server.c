@@ -52,6 +52,9 @@
 
 int main(int argc, char *argv[]) {
 
+    // DEBUG
+    sleep(10);
+
     int ret = 0;
     int i = 0;
     cmd_t cmd = {0};
