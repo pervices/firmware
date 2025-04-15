@@ -90,11 +90,12 @@
 #else
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
 #endif
-//Compnent properties in rx, used to figure out how to set up game
-//This are likely to change between variants, both thier values and how they are used
+// Compnent properties in rx, used to figure out how to set up game
+// Which of the AM chips are used change often between variants
 #define AM1081_GAIN 17
 #define AM1075_GAIN 18
-//The actual range of the LMH6401 vga is -6 to 26, but the MCU cannot accept negative numbers
+#define AM1065_GAIN 21
+// The actual range of the LMH6401 vga is -6 to 26, but the MCU cannot accept negative numbers
 #define LMH6401_MAX_GAIN 32
 #define LMH6401_MIN_GAIN 0
 #define LTC5586_MAX_GAIN 15
@@ -2514,7 +2515,13 @@ TX_CHANNELS
                 if(band == 1) {\
                     current_gain += AM1081_GAIN;\
                 } else if(band == 2) {\
-                    current_gain += AM1075_GAIN;\
+                    if(PRODUCT_ID == TATE_NRNT_ID) {\
+                        current_gain += AM1075_GAIN;\
+                    } else if(PRODUCT_ID == LILY_ID) {\
+                        current_gain += AM1065_GAIN;\
+                    } else {\
+                        PRINT(ERROR, "Function not fully implemented for this variant\n");\
+                    }\
                 } else {\
                     PRINT(ERROR, "Band changed mid function. This code should be unreachable.\n");\
                     set_property("rx/" STR(ch) "/rf/freq/lna", "1");\
@@ -2590,7 +2597,7 @@ TX_CHANNELS
             if(PRODUCT_ID == TATE_NRNT_ID) {\
                 lna_gain = AM1075_GAIN;\
             } else if(PRODUCT_ID == LILY_ID) {\
-                lna_gain = 0;\
+                lna_gain = AM1065_GAIN;\
             } else {\
                 PRINT(ERROR, "Function not implemented for this variant\n");\
             }\
