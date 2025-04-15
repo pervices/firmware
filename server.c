@@ -192,6 +192,9 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
+// Let systemd know that the server has come up
+system("systemd-notify --ready");
+
 // Let the user know the server is ready to receive commands
 #if defined(TATE_NRNT)
     PRINT(INFO, "Cyan server is up\n");

@@ -57,9 +57,6 @@
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
 #endif
 
-// Alias PLL_CORE_REF_FREQ_HZ for clarity
-#define LO_STEPSIZE PLL_CORE_REF_FREQ_HZ
-
 //a factor used to biased sample rate rounding to round down closer to 1 encourages rounding down, closer to 0 encourages rounding up
 #define RATE_ROUND_BIAS 0.75
 
@@ -105,9 +102,6 @@
 // Maximum setting on the variable attenuator(s) in mid and high band
 // Currently it is the attenuation from the attenuator on LTC 5586
 #define MID_HIGH_MAX_ATTEN 31
-
-//used for rf freq val calc when in high band
-#define HB_STAGE2_MIXER_FREQ 1800000000
 
 // Tick rate of Cyan's internal clock
 #define TICK_RATE 250000000
@@ -235,8 +229,9 @@ static const int jesd_mask_delay = 200000;
 static int jesd_master_reset();
 static int hdlr_jesd_reset_master(const char *data, char *ret);
 
-static int __attribute__ ((unused)) set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
-static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_rx(int uart_fd, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, pllparam_t *pll, int channel);
+static int __attribute__ ((unused)) set_lo_frequency_time(pllparam_t *pll, int channel);
 
 typedef enum {
     pulsed = 0,
@@ -1058,6 +1053,17 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
     return result;
 }
 
+// Verifies the rf pll is good. Returns 1 if the pll is locked
+int check_time_pll(int ch) {
+    snprintf(buf, sizeof(buf), "lmx -l %i -L\r", ch);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    if (strstr((char *)uart_ret_buf, "Locked") != NULL)
+    {
+        return 1;
+    }
+    return 0;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- TX ------------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -1141,9 +1147,9 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
-        char fullpath[PROP_PATH_LEN] = "tx/" STR(ch) "/rf/band";                \
         int band;                                                               \
-        char band_read[3];                                                      \
+        char reply[MAX_PROP_LEN];                                               \
+        double hb_stage2_mixer_freq = 0;                                        \
                                                                                 \
         /* if freq = 0, mute PLL */                                             \
         if (freq == 0) {                                                        \
@@ -1153,17 +1159,37 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             return RETURN_SUCCESS;                                              \
         }                                                                       \
         \
+        /* get the reference freq from the time board property*/                \
+        pllparam_t pll = pll_def_lmx2595;                                       \
+        get_property("time/source/lo_ref_freq",reply,MAX_PROP_LEN);             \
+        if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq)){                   \
+            PRINT(ERROR, "failed to parse time/source/lo_ref_freq\n");          \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(ret, MAX_PROP_LEN, "%i", 0);                               \
+            return RETURN_ERROR;                                                \
+        }                                                                       \
+                                                                                \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
         /* also set the LMX2595 output based on band*/                          \
-        get_property(fullpath,band_read,3);                                   \
-        sscanf(band_read, "%i", &band);                                         \
+        get_property("tx/" STR(ch) "/rf/band",reply,MAX_PROP_LEN);              \
+        sscanf(reply, "%i", &band);                                             \
         if (band == 2) {                                                        \
-            if (freq > (HB_STAGE2_MIXER_FREQ + LO_STEPSIZE)) {                  \
-                freq -= HB_STAGE2_MIXER_FREQ;                                   \
+            /* read the IF frequency from the time board property*/             \
+            get_property("time/source/rf_if_freq",reply,MAX_PROP_LEN);          \
+            if(1 != sscanf(reply, "%lf", &hb_stage2_mixer_freq)){       \
+                PRINT(ERROR, "failed to parse time/source/rf_if_freq\n");       \
+                strcpy(buf, "lmx -k\r");                                        \
+                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                snprintf(ret, MAX_PROP_LEN, "%i", 0);                           \
+                return RETURN_ERROR;                                            \
+            }                                                                   \
+            if (freq > (hb_stage2_mixer_freq + pll.ref_freq)) {                 \
+                freq -= hb_stage2_mixer_freq;                                   \
             } else {                                                            \
                 /* avoid infinite loop when checking if outfreq == freq when    \
                 * trying different values for R divider*/                       \
-                freq = LO_STEPSIZE;                                             \
+                freq = pll.ref_freq;                                            \
             }                                                                   \
             strcpy(buf, "lmx -C 0\r");                                          \
         } else {                                                                \
@@ -1171,7 +1197,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         }                                                                      \
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                                                                                 \
-        freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
+        freq = lround((freq / (double)pll.ref_freq)) * pll.ref_freq;            \
         \
         /* if freq out of bounds, mute lmx*/                                    \
         if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {   \
@@ -1183,10 +1209,9 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         }                                                                       \
                                                                                \
         /* run the pll calc algorithm */                                       \
-        pllparam_t pll = pll_def_lmx2595;                                      \
         long double outfreq = 0;                                                \
         /* Attempt to find an lo setting for the desired frequency using default R divider*/\
-        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* NOTE: setFreq finds the pll settings and stores then in the provided struct */\
         /* It does not actually set the frequency */\
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
@@ -1210,10 +1235,10 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         /* Send Parameters over to the MCU */                                  \
         /* PLL lock is not reliable, try 3 times. */                                  \
         for(int i=0; i < 3; i++){\
-            if(set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))){\
+            if(set_lo_frequency_tx(uart_tx_fd[INT_TX(ch)], &pll, INT(ch))){\
                 /* if HB add back in freq before printing value to state tree */       \
                 if (band == 2) {                                                       \
-                    outfreq += HB_STAGE2_MIXER_FREQ;                                   \
+                    outfreq += hb_stage2_mixer_freq;                                   \
                 }                                                                      \
                 /* Save the frequency that is being set into the property */           \
                 snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
@@ -1242,7 +1267,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         switch(band){                                                          \
             case 2:                                                            \
                 /*Ensure 100MHz LMX ref is enabled for highband*/              \
-                set_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_TX(ch));     \
                 /* Ensure 1.8GHz IF clock is enabled for highband*/            \
                 set_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -1250,7 +1275,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                 break;                                                         \
             case 1:                                                            \
                 /*Ensure 100MHz LMX ref is enabled for midband*/               \
-                set_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_TX(ch));     \
                 /* turn off the 1.8GHz IF to reduce noise*/                    \
                 clr_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -1258,7 +1283,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                 break;                                                         \
             case 0:                                                            \
                 /* turn off the 100MHz LMX ref*/                               \
-                clr_property_bit("time/source/enable_rf_ref", INT_TX(ch));     \
+                clr_property_bit("time/source/enable_lo_ref", INT_TX(ch));     \
                 /* turn off the 1.8GHz IF*/                                    \
                 clr_property_bit("time/source/enable_rf_if", INT_TX(ch));      \
                 /*IQ swap to address layout*/                                  \
@@ -1282,6 +1307,47 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
+    \
+    /* Gain of the high band up converter (ADRF6780) */\
+    static int hdlr_tx_##ch##_rf_up_converter(const char *data, char *ret) {       \
+        /* ADRF6780 (controlled by debug -b) is not present in Lily */\
+        if(PRODUCT_ID != TATE_NRNT_ID) {\
+            snprintf(ret, MAX_PROP_LEN, "0\n");\
+            return RETURN_SUCCESS;\
+        }\
+        \
+        double gain = 0;\
+        int band;\
+        char band_read[3];\
+        sscanf(data, "%lf", &gain);\
+        get_property("tx/" STR(ch) "/rf/band", band_read,3);\
+        sscanf(band_read, "%i", &band);\
+        \
+        if(gain > MAX_GAIN_TX_HB) {\
+            gain = MAX_GAIN_TX_HB;\
+        } else if(gain < MIN_GAIN_TX_HB) {\
+            gain = MIN_GAIN_TX_HB;\
+        }\
+        \
+        if(band == 2) {\
+            int gain_control_mv = 0;\
+            gain_control_mv = \
+                (int)((gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
+            /*Command format: debug -p <Voltage in mV>*/\
+            snprintf(buf, MAX_PROP_LEN, "debug -p %i\r", gain_control_mv);\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+        } else {\
+            /* Set gain to 0 instead since this is not present in other bands */\
+            gain = 0;\
+            /*Sets high band amplifier gain to 0 when adjusting the gain here in other bands, to prevent a suprise max gain if the user is switching bands*/\
+            snprintf(buf, MAX_PROP_LEN, "debug -p 0\r");\
+            ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            \
+        }\
+        \
+        snprintf(ret, MAX_PROP_LEN, "%lf\n", gain);\
+        return RETURN_SUCCESS;\
+    }\
                                                                                \
     static int hdlr_tx_##ch##_rf_gain_val(const char *data, char *ret) {       \
         double gain = 0;\
@@ -1294,6 +1360,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         sscanf(data, "%lf", &gain);\
         get_property("tx/" STR(ch) "/rf/band", band_read,3);\
         sscanf(band_read, "%i", &band);\
+        /* Calculate gain to use from components in all bands*/\
         if(gain>MAX_RF_GAIN_TX_AB) {\
             ab_gain = MAX_RF_GAIN_TX_AB;\
         }\
@@ -1302,43 +1369,43 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
         } else {\
             ab_gain = gain;\
         }\
-        if(band == 2) {\
+        \
+        /* Calculate gain to use for band specific components */\
+        /* Only Tate tx high band has components providing gain not present in other bands*/\
+        if(band == 2 && PRODUCT_ID == TATE_NRNT_ID) {\
             band_gain = gain-ab_gain;\
             if(band_gain > MAX_GAIN_TX_HB) {\
                 band_gain = MAX_GAIN_TX_HB;\
             } else if(band_gain < MIN_GAIN_TX_HB) {\
                 band_gain = MIN_GAIN_TX_HB;\
             }\
+        } else {\
+            band_gain = 0;\
         }\
-        double atten = (((ab_gain)-MIN_RF_GAIN_TX_AB)/(MAX_RF_GAIN_TX_AB-MIN_RF_GAIN_TX_AB)) * (MIN_RF_ATTEN_TX_AB - MAX_RF_ATTEN_TX_AB) + MAX_RF_ATTEN_TX_AB;\
+        \
+        double desired_atten = (((ab_gain)-MIN_RF_GAIN_TX_AB)/(MAX_RF_GAIN_TX_AB-MIN_RF_GAIN_TX_AB)) * (MIN_RF_ATTEN_TX_AB - MAX_RF_ATTEN_TX_AB) + MAX_RF_ATTEN_TX_AB;\
         char s_atten[25];\
         \
         /*Sets and attenuator used by all bands*/\
-        snprintf(s_atten, 25, "%f", atten);\
+        double actual_atten = 0;\
+        snprintf(s_atten, 25, "%f", desired_atten);\
         set_property("tx/" STR(ch) "/rf/atten", s_atten);\
         get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
-        sscanf(s_atten, "%lf", &atten);\
+        sscanf(s_atten, "%lf", &actual_atten);\
+        double actual_ab_gain = MAX_RF_ATTEN_TX_AB - actual_atten + MIN_RF_ATTEN_TX_AB;\
         \
-        /* ADRF6780 (controlled by debug -b) is not present in Lily */\
+        /* rf/gain/up_converter does nothing in Lily */\
+        double actual_band_gain = 0;\
         if(PRODUCT_ID == TATE_NRNT_ID) {\
-            if(band == 2) {\
-                int gain_control_mv = 0;\
-                gain_control_mv = \
-                    (int)((band_gain * (MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) / (MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) + MIN_GAIN_V_TX_HB_GAIN) * 1000);\
-                /*Command format: debug -p <Voltage in mV>*/\
-                snprintf(buf, MAX_PROP_LEN, "debug -p %i\r", gain_control_mv);\
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-            } else {\
-                /*Sets high band amplifier gain to 0 when adjusting the gain in other bands, to prevent a suprise max gain if the user is switching bands*/\
-                snprintf(buf, MAX_PROP_LEN, "debug -p 0\r");\
-                ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                \
-            }\
+            /*Sets and attenuator used by all bands*/\
+            char s_band_gain[25];\
+            snprintf(s_band_gain, 25, "%f", band_gain);\
+            set_property("tx/" STR(ch) "/rf/gain/up_converter", s_band_gain);\
+            get_property("tx/" STR(ch) "/rf/gain/up_converter", s_band_gain,25);                   \
+            sscanf(s_band_gain, "%lf", &actual_band_gain);\
         }\
         \
-        gain = (((atten)-MIN_RF_ATTEN_TX_AB)/(MAX_RF_ATTEN_TX_AB-MIN_RF_ATTEN_TX_AB)) * (MIN_RF_GAIN_TX_AB - MAX_RF_GAIN_TX_AB) + MAX_RF_GAIN_TX_AB;\
-        gain += band_gain;\
-        snprintf(ret, 25, "%lf", gain);\
+        snprintf(ret, MAX_PROP_LEN, "%lf", actual_ab_gain + actual_band_gain);\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
     \
@@ -1995,7 +2062,7 @@ int check_rf_pll(const int fd, bool is_tx, int ch) {
             }\
                                                                                \
             /* turn off the 100MHz LMX ref*/                                   \
-            clr_property_bit("time/source/enable_rf_ref", INT_TX(ch));         \
+            clr_property_bit("time/source/enable_lo_ref", INT_TX(ch));         \
             /* turn off the 1.8GHz IF*/                                        \
             clr_property_bit("time/source/enable_rf_if", INT_TX(ch));          \
                                                                                \
@@ -2138,9 +2205,9 @@ TX_CHANNELS
         \
         uint64_t freq = 0;                                                      \
         sscanf(data, "%" SCNd64 "", &freq);                                     \
-        char fullpath[PROP_PATH_LEN] = "rx/" STR(ch) "/rf/freq/band";     \
         int band;                                                               \
-        char band_read[3];                                                      \
+        char reply[MAX_PROP_LEN];                                               \
+        double hb_stage2_mixer_freq = 0;                                        \
                                                                                 \
         /* if freq = 0, mute PLL */                                             \
         if (freq == 0) {                                                        \
@@ -2149,29 +2216,38 @@ TX_CHANNELS
             snprintf(ret, MAX_PROP_LEN, "%i", 0);                                             \
             return RETURN_SUCCESS;                                              \
         }                                                                       \
-        \
-        freq = lround((freq / (double)LO_STEPSIZE)) * LO_STEPSIZE;\
                                                                                 \
-        /* if freq out of bounds, mute lmx*/                                    \
-        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {   \
+        /* get the reference freq from the time board property*/                \
+        pllparam_t pll = pll_def_lmx2595;                                       \
+        get_property("time/source/lo_ref_freq",reply,MAX_PROP_LEN);             \
+        if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq)){                   \
+            PRINT(ERROR, "failed to parse time/source/lo_ref_freq\n");          \
             strcpy(buf, "lmx -k\r");                                            \
-            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));          \
-            PRINT(ERROR,"LMX Freq Invalid \n");                                 \
-            snprintf(ret, MAX_PROP_LEN, "%i", 0);                                             \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            snprintf(ret, MAX_PROP_LEN, "%i", 0);                               \
             return RETURN_ERROR;                                                \
         }                                                                       \
                                                                                 \
         /* check band: if HB, subtract freq to account for cascaded mixers*/    \
         /* also set the LMX2595 output based on band*/                          \
-        get_property(fullpath, band_read, 3);                                   \
-        sscanf(band_read, "%i", &band);                                         \
+        get_property("rx/" STR(ch) "/rf/freq/band", reply, MAX_PROP_LEN);       \
+        sscanf(reply, "%i", &band);                                             \
         if (band == 2) {                                                        \
-            if (freq > (HB_STAGE2_MIXER_FREQ + LO_STEPSIZE)) {                  \
-                freq -= HB_STAGE2_MIXER_FREQ;                                   \
+            /* read the IF frequency from the time board property*/             \
+            get_property("time/source/rf_if_freq",reply,MAX_PROP_LEN);          \
+            if(1 != sscanf(reply, "%lf", &hb_stage2_mixer_freq)){               \
+                PRINT(ERROR, "failed to parse time/source/rf_if_freq\n");       \
+                strcpy(buf, "lmx -k\r");                                        \
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                snprintf(ret, MAX_PROP_LEN, "%i", 0);                           \
+                return RETURN_ERROR;                                            \
+            }                                                                   \
+            if (freq > (hb_stage2_mixer_freq + pll.ref_freq)) {                 \
+                freq -= hb_stage2_mixer_freq;                                   \
             } else {                                                            \
                 /* avoid infinite loop when checking if outfreq == freq when    \
                 * trying different values for R divider*/                       \
-                freq = LO_STEPSIZE;                                             \
+                freq = pll.ref_freq;                                            \
             }                                                                   \
             strcpy(buf, "lmx -C 0\r");                                          \
         } else {                                                                \
@@ -2179,11 +2255,21 @@ TX_CHANNELS
         }                                                                       \
         ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                                                                                 \
+        freq = lround((freq / (double)pll.ref_freq)) * pll.ref_freq;            \
+                                                                                \
+        /* if freq out of bounds, mute lmx*/                                    \
+        if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {            \
+            strcpy(buf, "lmx -k\r");                                            \
+            ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            PRINT(ERROR,"LMX Freq Invalid \n");                                 \
+            snprintf(ret, MAX_PROP_LEN, "%i", 0);                               \
+            return RETURN_ERROR;                                                \
+        }                                                                       \
+                                                                                \
         /* run the pll calc algorithm */                                        \
-        pllparam_t pll = pll_def_lmx2595;                                       \
         long double outfreq = 0;                                                \
         /* Attempt to find an lo setting for the desired frequency using default R divider*/\
-        /* NOTE: setFreq finds the pll settings and sores then in the provided struct */\
+        /* NOTE: setFreq finds the pll settings and stores then in the provided struct */\
         /* It does not actually set the frequency */\
         outfreq = setFreq(&freq, &pll);                                         \
                                                                                 \
@@ -2207,10 +2293,10 @@ TX_CHANNELS
         /* Send Parameters over to the MCU (the part that actually sets the lo)*/                                   \
         /* Attempt to set the LO 3 times. PLL is not reliably locking so this is a dirty workaround for the time being.*/\
         for(int i = 0; i < 3; i++) {\
-            if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll, INT(ch))) {\
+            if(set_lo_frequency_rx(uart_rx_fd[INT_RX(ch)], &pll, INT(ch))) {\
                 /* if HB add back in freq before printing value to state tree */        \
                 if (band == 2) {                                                        \
-                    outfreq += HB_STAGE2_MIXER_FREQ;                                    \
+                    outfreq += hb_stage2_mixer_freq;                                    \
                 }                                                                       \
                 /* Save the frequency that is being set into the property */            \
                 snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                            \
@@ -2218,7 +2304,7 @@ TX_CHANNELS
             } \
             usleep(10000);\
         }\
-        PRINT(ERROR, "PLL lock failed when attempting to set freq to %lf\n", outfreq);\
+        PRINT(ERROR, "RXPLL lock failed when attempting to set freq to %lf\n", outfreq);\
         snprintf(ret, MAX_PROP_LEN, "0"); \
         return RETURN_SUCCESS;\
     }                                                                           \
@@ -2237,7 +2323,7 @@ TX_CHANNELS
         switch(band){                                                          \
             case 2:                                                            \
                 /* turn on the 100MHz LMX ref*/                                \
-                set_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_RX(ch));     \
                 /* Ensure 1.8GHz IF clock is enabled for highband*/            \
                 set_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -2245,7 +2331,7 @@ TX_CHANNELS
                 break;                                                         \
             case 1:                                                            \
                 /* need to set the 100MHz LMX ref*/                            \
-                set_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                set_property_bit("time/source/enable_lo_ref", INT_RX(ch));     \
                 /* turn off the 1.8GHz IF*/                                    \
                 clr_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
                 /* clear IQ swap because of possible previous use of low band*/\
@@ -2253,7 +2339,7 @@ TX_CHANNELS
                 break;                                                         \
             case 0:                                                            \
                 /* turn off the 100MHz LMX ref*/                               \
-                clr_property_bit("time/source/enable_rf_ref", INT_RX(ch));     \
+                clr_property_bit("time/source/enable_lo_ref", INT_RX(ch));     \
                 /* turn off the 1.8GHz IF*/                                    \
                 clr_property_bit("time/source/enable_rf_if", INT_RX(ch));      \
                 /* IQ swap to address layout*/                                 \
@@ -3711,7 +3797,7 @@ TX_CHANNELS
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
             /* turn off the 100MHz LMX ref*/                                   \
-            clr_property_bit("time/source/enable_rf_ref", INT_RX(ch));         \
+            clr_property_bit("time/source/enable_lo_ref", INT_RX(ch));         \
             /* turn off the 1.8GHz IF*/                                        \
             clr_property_bit("time/source/enable_rf_if", INT_RX(ch));          \
                                                                                \
@@ -4371,7 +4457,7 @@ static int hdlr_time_get_time_source(const char *data, char *ret) {
 // To track whether we can turn off the clock, we will track this as a 32-bit hex number
 // the bottom 16 bits will each correspond to an rf slot, which will be set high by band select, or low by pwr 0
 // if any of the top 16 bits are high, the clock will not be turned off
-static int hdlr_time_set_time_en_rf_ref(const char *data, char *ret) {
+static int hdlr_time_set_time_en_lo_ref(const char *data, char *ret) {
     uint32_t enable;
     if (1 != sscanf(data, "0x%x", &enable)) {
         if (1 != sscanf(data, "%" SCNu32, &enable)) {
@@ -4381,15 +4467,104 @@ static int hdlr_time_set_time_en_rf_ref(const char *data, char *ret) {
     }
 
     if (enable) {
-        PRINT(VERBOSE,"enable rf_ref\n");
+        PRINT(VERBOSE,"enable lo_ref\n");
         strcpy(buf, "lmx -l 2 -M 0\r");
     } else {
-        PRINT(VERBOSE,"mute rf_ref\n");
+        PRINT(VERBOSE,"mute lo_ref\n");
         strcpy(buf, "lmx -l 2 -M 1\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
     snprintf(ret, MAX_PROP_LEN, "0x%08x", enable);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_lo_ref_freq(const char *data, char *ret) {
+    uint64_t freq = 0;
+    uint32_t enable_lo_ref;
+    char reply[MAX_PROP_LEN];
+    sscanf(data, "%" SCNd64 "", &freq);
+
+    // Do not change the lo_ref while the lo_ref is enabled because a channel is using it
+    get_property("time/source/enable_lo_ref", reply, MAX_PROP_LEN);
+    if (1 != sscanf(reply, "0x%" SCNu32 "", &enable_lo_ref)) {
+        PRINT(ERROR,"failed to parse time/source/enable_lo_ref\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: failed to parse time/source/enable_lo_ref");
+        return RETURN_ERROR_PARAM;
+    }
+    if(enable_lo_ref)
+    {
+        PRINT(ERROR,"LO REF in use, cannot change frequency\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: LO REF in use, cannot change frequency");
+        return RETURN_ERROR;
+    }
+
+    /* if freq = 0, mute PLL */
+    if (freq == 0) {
+        strcpy(buf, "lmx -k\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_SUCCESS;
+    }
+
+    /* if freq out of bounds, mute lmx*/
+    if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {
+        strcpy(buf, "lmx -k\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(ERROR,"LMX Freq Invalid\n");
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_ERROR;
+    }
+
+    // prepare the pll data structure
+    pllparam_t pll = pll_def_lmx2595;
+    get_property("time/source/freq_mhz", reply, MAX_PROP_LEN);
+    if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq))
+    {
+        PRINT(ERROR,"failed to parse time/source/freq_mhz\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: failed to parse time/source/freq_mhz");
+        return RETURN_ERROR_PARAM;
+    }
+    pll.ref_freq *= 1000000; // convert from MHz to Hz
+
+    // round requested frequency to nearest multiple of the ref_freq
+    freq = lround((freq / (double)pll.ref_freq)) * pll.ref_freq;
+
+    /* run the pll calc algorithm */
+    long double outfreq = 0;
+    /* Attempt to find an lo setting for the desired frequency using default R divider*/
+    /* NOTE: setFreq finds the pll settings and stores then in the provided struct */
+    /* It does not actually set the frequency */
+    outfreq = setFreq(&freq, &pll);
+
+    /* Attempt to find an lo setting for desired frequency using other R dividers*/
+    while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {
+        pll.R = pll.R + 1;
+        outfreq = setFreq(&freq, &pll);
+    }
+
+    /* Fallback to finding a close enough lo */
+    if(outfreq != freq) {
+        pll = pll_def_lmx2595;
+        outfreq = setFreq(&freq, &pll);
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {
+            pll.R = pll.R + 1;
+            outfreq = setFreq(&freq, &pll);
+        }
+    }
+
+    /* Send Parameters over to the MCU */
+    /* PLL lock is not reliable, try 3 times. */
+    for(int i=0; i < 3; i++){
+        if(set_lo_frequency_time(&pll, 2)){
+            /* Save the frequency that is being set into the property */
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
+            return RETURN_SUCCESS;
+        }
+        usleep(10000);
+    }
+    PRINT(ERROR, "TIME PLL LMX5 lock failed when attempting to set freq to %lf\n", outfreq);
+    snprintf(ret, MAX_PROP_LEN, "0");
     return RETURN_SUCCESS;
 }
 
@@ -4416,6 +4591,95 @@ static int hdlr_time_set_time_en_rf_if(const char *data, char *ret) {
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
 
     snprintf(ret, MAX_PROP_LEN, "0x%08x", enable);
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_time_rf_if_freq(const char *data, char *ret) {
+    uint64_t freq = 0;
+    uint32_t enable_rf_if;
+    char reply[MAX_PROP_LEN];
+    sscanf(data, "%" SCNd64 "", &freq);
+
+    // Do not change the lo_ref while the lo_ref is enabled because a channel is using it
+    get_property("time/source/enable_rf_if", reply, MAX_PROP_LEN);
+    if (1 != sscanf(reply, "0x%" SCNu32 "", &enable_rf_if)) {
+        PRINT(ERROR,"failed to parse time/source/enable_rf_if\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: failed to parse time/source/enable_rf_if");
+        return RETURN_ERROR_PARAM;
+    }
+    if(enable_rf_if)
+    {
+        PRINT(ERROR,"LO REF in use, cannot change frequency\n");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: LO REF in use, cannot change frequency");
+        return RETURN_ERROR;
+    }
+
+    /* if freq = 0, mute PLL */
+    if (freq == 0) {
+        strcpy(buf, "lmx -k\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_SUCCESS;
+    }
+
+    /* if freq out of bounds, mute lmx*/
+    if ((freq < LMX2595_RFOUT_MIN_HZ) || (freq > MAX_RF_FREQ)) {
+        strcpy(buf, "lmx -k\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+        PRINT(ERROR,"LMX Freq Invalid \n");
+        snprintf(ret, MAX_PROP_LEN, "%i", 0);
+        return RETURN_ERROR;
+    }
+
+    // prepare the pll data structure
+    pllparam_t pll = pll_def_lmx2595;
+    get_property("time/source/freq_mhz", reply, MAX_PROP_LEN);
+    if(1 != sscanf(reply, "%" SCNu64 "", &pll.ref_freq))
+    {
+        PRINT(ERROR,"failed to parse time/source/freq_mhz\n");
+        snprintf(ret, MAX_PROP_LEN, "failed to parse time/source/freq_mhz");
+        return RETURN_ERROR;
+    }
+    pll.ref_freq *= 1000000; // convert from MHz to Hz
+
+    // round requested frequency to nearest multiple of the ref_freq
+    freq = lround((freq / (double)pll.ref_freq)) * pll.ref_freq;
+
+    /* run the pll calc algorithm */
+    long double outfreq = 0;
+    /* Attempt to find an lo setting for the desired frequency using default R divider*/
+    /* NOTE: setFreq finds the pll settings and stores then in the provided struct */
+    /* It does not actually set the frequency */
+    outfreq = setFreq(&freq, &pll);
+
+    /* Attempt to find an lo setting for desired frequency using other R dividers*/
+    while (((pll.N < pll.n_min) && (pll.R < pll.r_max)) || (uint64_t)outfreq != freq) {
+        pll.R = pll.R + 1;
+        outfreq = setFreq(&freq, &pll);
+    }
+
+    /* Fallback to finding a close enough lo */
+    if(outfreq != freq) {
+        pll = pll_def_lmx2595;
+        outfreq = setFreq(&freq, &pll);
+        while (((pll.N < pll.n_min) && (pll.R < pll.r_max))) {
+            pll.R = pll.R + 1;
+            outfreq = setFreq(&freq, &pll);
+        }
+    }
+
+    /* Send Parameters over to the MCU */
+    /* PLL lock is not reliable, try 3 times. */
+    for(int i=0; i < 3; i++){
+        if(set_lo_frequency_time(&pll, 4)){
+            /* Save the frequency that is being set into the property */
+            snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);
+            return RETURN_SUCCESS;
+        }
+        usleep(10000);
+    }
+    PRINT(ERROR, "TIME PLL LMX4 lock failed when attempting to set freq to %lf\n", outfreq);
+    snprintf(ret, MAX_PROP_LEN, "0");
     return RETURN_SUCCESS;
 }
 
@@ -4525,8 +4789,11 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     // Waits for clock to stabilize
     sleep(4);
     if(property_good("time/status/status_good") != 1) {
+        char tmp[MAX_PROP_LEN];
         PRINT(ERROR, "PLL loss of lock detected after changing clock reference source\n");
-        strcat(ret, ": pll_lock_failure");
+        strcpy(tmp,ret);
+        strcpy(ret, "pll_lock_failure: ");
+        strcat(ret,tmp);
     }
     return RETURN_SUCCESS;
 }
@@ -6075,6 +6342,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/gain/atten"        , hdlr_tx_##_c##_dac_gain_atten,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/band"                  , hdlr_tx_##_c##_rf_band,                 RW, "-1", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/atten"                 , hdlr_tx_##_c##_rf_atten,                RW, "31", TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/up_converter"     , hdlr_tx_##_c##_rf_up_converter,             RW, "0", TP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/range"            , hdlr_tx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/lo_freq"               , hdlr_tx_##_c##_rf_lo_freq,              RW, "0", TP, #_c)         \
@@ -6120,13 +6388,15 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd1_pll2", hdlr_time_status_lol_jesd1_pll2,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll1", hdlr_time_status_lol_jesd2_pll1,       RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd2_pll2", hdlr_time_status_lol_jesd2_pll2,       RW, "poke", SP, NAC)      \
+    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)        \
+    DEFINE_FILE_PROP_P("time/source/enable_lo_ref"            , hdlr_time_set_time_en_lo_ref,          RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/source/enable_rf_if"             , hdlr_time_set_time_en_rf_if,           RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/source/lo_ref_freq"              , hdlr_time_lo_ref_freq,                 RW, "100000000", SP, NAC) \
+    DEFINE_FILE_PROP_P("time/source/rf_if_freq"               , hdlr_time_rf_if_freq,                  RW, "1800000000", SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "poke", SP, NAC)\
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/get_time_source"        , hdlr_time_get_time_source,               RW, "poke", SP, NAC)      \
-    DEFINE_FILE_PROP_P("time/source/freq_mhz"                 , hdlr_time_source_freq,                 RW, "10", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/enable_rf_ref"           , hdlr_time_set_time_en_rf_ref,           RW, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/source/enable_rf_if"            , hdlr_time_set_time_en_rf_if,            RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_resync_jesd"      , hdlr_time_sync_lmk_resync_jesd,         WO, "0", SP, NAC)         \
@@ -6780,7 +7050,7 @@ static int hdlr_jesd_reset_master(const char *data, char *ret) {
     }
 }
 
-int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_rx(int uart_fd, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6794,7 +7064,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // Send Reference in MHz to MCU
-    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(reference / 1000000));
+    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(pll->ref_freq / pll->R / 1000000));
     ping_rx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX R
@@ -6860,7 +7130,7 @@ int set_lo_frequency_rx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
 
 //At time of write, the only differences between set_lo_frequency rx and tx is the ping function used
 //which is used to avoid sending uart commands to unpopulated boards
-int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int channel) {
+int set_lo_frequency_tx(int uart_fd, pllparam_t *pll, int channel) {
     // extract lo variables and pass to MCU (LMX2595)
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
@@ -6874,7 +7144,7 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
     ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // Send Reference in MHz to MCU
-    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(reference / 1000000));
+    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(pll->ref_freq / pll->R / 1000000));
     ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), channel);
 
     // write LMX R
@@ -6931,6 +7201,85 @@ int set_lo_frequency_tx(int uart_fd, uint64_t reference, pllparam_t *pll, int ch
         strcpy(buf, "rf -z\r");
         ping(uart_fd, (uint8_t *)buf, strlen(buf));
         PRINT(ERROR, "Tx%i PLL unlocked. Muting PLL\n", channel);
+        return 0;
+    } else {
+        // success
+        return 1;
+    }
+}
+
+int set_lo_frequency_time(pllparam_t *pll, int channel) {
+    // extract lo variables and pass to MCU (LMX2595)
+
+    double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
+
+    // Set the channel mask
+    snprintf(buf, MAX_PROP_LEN, "lmx -l %" PRIu8 "\r", channel);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // Ensure that the LMX is enabled
+    snprintf(buf, MAX_PROP_LEN, "lmx -O 0\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // Reinitialize the LMX
+    snprintf(buf, MAX_PROP_LEN, "lmx -k\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // Send Reference in MHz to MCU
+    snprintf(buf, MAX_PROP_LEN, "lmx -o %" PRIu32 "\r", (uint32_t)(pll->ref_freq / pll->R / 1000000));
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX R
+    snprintf(buf, MAX_PROP_LEN, "lmx -r %" PRIu16 "\r", pll->R);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX N
+    snprintf(buf, MAX_PROP_LEN, "lmx -n %" PRIu32 "\r", pll->N);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX D
+    snprintf(buf, MAX_PROP_LEN, "lmx -d %" PRIu16 "\r", pll->d);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output RF Power
+    // default to high power
+    snprintf(buf, MAX_PROP_LEN, "lmx -p %" PRIu8 "\r", TIME_LO_POWER);
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    // write LMX Output Frequency in MHz
+    snprintf(buf, MAX_PROP_LEN, "lmx -f %" PRIu32 "\r", (uint32_t)(freq / 1000000));
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
+    //Wait for PLL to lock, timeout after 100ms
+    struct timespec timeout_start;
+    int time_ret = clock_gettime(CLOCK_MONOTONIC_COARSE, &timeout_start);
+    const int timeout_ns = 100000000;
+
+    if(time_ret) {
+        PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
+        usleep(timeout_ns/1000);
+        return check_time_pll(channel);
+    }
+
+    int lock_failed = 0;
+    // Polling loop waiting for PLL to finish locking
+    while(!check_time_pll(channel)) {
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
+        int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
+
+        // Timout occured, print error message and
+        if(time_difference_ns > timeout_ns) {
+            lock_failed = 1;
+            break;
+        }
+
+        // Wait 1us between polls to avoid spamming logs
+        usleep(1);
+    }
+
+    if(lock_failed) {
+        PRINT(ERROR, "Time LMX%i PLL unlocked.\n", channel);
         return 0;
     } else {
         // success

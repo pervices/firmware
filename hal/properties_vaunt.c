@@ -4145,7 +4145,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     uint16_t fpga_samp_rate, mcu_samp_rate;
     uint32_t read_val;
     read_hps_reg("res_ro3",&read_val);
-    fpga_samp_rate = ( read_val >> 20) & 0xFFF;
+    fpga_samp_rate = ( read_val >> 20) & 0xFFF; // TODO should we get the sample rate from get_base_sample_rate() rather than directly from the register? Would need to change the MHz vs Hz conversion below
     snprintf(buf, sizeof(buf), "clk -d\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     sscanf((char *)uart_ret_buf, "DEVCLK: %" SCNu32 "Hz", &read_val);

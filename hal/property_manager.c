@@ -140,6 +140,12 @@ static void make_prop(prop_t *prop) {
         // mkdir -p /home/root/state/*
         snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
         system(cmd);
+        // Enables execute and read for the directory containing the property
+        // execute allow you to enter the directory
+        // read allows you to list the contents
+        // Not having write enabled prevents creating new files but does not affect writing to existing files
+        snprintf(cmd, CMD_LENGTH, "chmod 0555 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+        system(cmd);
         // PRINT( VERBOSE,"executing: %s\n", cmd);
 
         // TODO: replace with openat(2)
@@ -151,18 +157,18 @@ static void make_prop(prop_t *prop) {
         // TODO: @CF: use fchmodat(2)
         // if read only property, change permissions
         if (prop->permissions == RO) {
-            // chmod a-w /home/root/state/*
-            snprintf(cmd, CMD_LENGTH, "chmod 0444 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+            // chmod a-w
+            snprintf(cmd, CMD_LENGTH, "chmod 0444 %s", get_abs_path(prop, path, MAX_PATH_LEN));
             system(cmd);
         } else if (prop->permissions == WO) {
             // TODO: @CF: use fchmodat(2)
-            // chmod a-r /home/root/state/*
-            snprintf(cmd, CMD_LENGTH, "chmod 0222 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+            // chmod a-r
+            snprintf(cmd, CMD_LENGTH, "chmod 0222 %s", get_abs_path(prop, path, MAX_PATH_LEN));
             system(cmd);
         } else if (prop->permissions == RW) {
             // TODO: @CF: use fchmodat(2)
-            // chmod a-r /home/root/state/*
-            snprintf(cmd, CMD_LENGTH, "chmod 0666 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
+            // chmod a-r
+            snprintf(cmd, CMD_LENGTH, "chmod 0666 %s", get_abs_path(prop, path, MAX_PATH_LEN));
             system(cmd);
         }
 
