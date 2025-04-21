@@ -494,9 +494,35 @@ static int get_network_speed() {
         if(is_baseband_only_cached_tx[ch]) {
             return is_baseband_only_tx[ch];
         } else {
+            // Get eeprom info
+            snprintf(buf, MAX_PROP_LEN, "board -h\r");
+            ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), ch);
+
+            // Check if the
+            char* baseband_location = strstr((char*) uart_ret_buf, "0x20 = 0x8");
+            // eeprom register 0x20 == 0x0008, therefore it is baseband only
+            if(baseband_location != NULL) {
+                is_baseband_only_cached_tx[ch] = 1;
+                is_baseband_only_tx[ch] = 1;
+                return is_baseband_only_tx[ch];
+            }
+
+            // Location of the start of the string containing the hardware revision
+            char* normal_location = strstr((char*) uart_ret_buf, "0x20 = 0x7");
+            // eeprom register 0x20 == 0x0007, therefore it is not baseband only
+            if(normal_location != NULL) {
+                is_baseband_only_cached_tx[ch] = 1;
+                is_baseband_only_tx[ch] = 0;
+                return is_baseband_only_tx[ch];
+            }
+
+            // Failed to check eeprom (probably due to old MCU)
+            // Check MCU variant instead
+
             snprintf(buf, MAX_PROP_LEN, "board -v\r");
             ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), ch);
 
+            // Location of teh start of the string containing BBTx
             char* version_location = strstr((char*) uart_ret_buf, "BBTx");
             if(version_location == NULL) {
                 is_baseband_only_tx[ch] = 0;
