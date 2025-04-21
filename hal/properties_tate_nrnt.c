@@ -66,8 +66,17 @@
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
 //AB in this variable names stands for all bands, and they are relevant to all bands
 #define MIN_RF_ATTEN_TX_AB 0.0
-#define MAX_RF_ATTEN_TX_AB 30.0
-#define RF_ATTEN_STEP_TX 2.0
+#if defined(TATE_NRNT)
+    // ADRF5721
+    #define MAX_RF_ATTEN_TX_AB 30.0
+    #define RF_ATTEN_STEP_TX 2.0
+#elif defined(LILY)
+    // PE43610
+    #define MAX_RF_ATTEN_TX_AB 31.5
+    #define RF_ATTEN_STEP_TX 0.5
+#else
+    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
 #define MIN_RF_GAIN_TX_AB MIN_RF_ATTEN_TX_AB
 #define MAX_RF_GAIN_TX_AB MAX_RF_ATTEN_TX_AB
 // Minimum amount the gain can be changed by solely using components in all bands
