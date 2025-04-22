@@ -1778,11 +1778,9 @@ TX_CHANNELS
         get_property("rx/" STR(ch) "/rf/freq/band", band_read,3);\
         sscanf(band_read, "%i", &band);\
         \
-        if(band == -1) {\
-            min = 0;\
-            max = 0;\
-            step = 0;\
-        } else if(band == 0) {\
+        /* Range for low band */\
+        /* If no band is selected (-1) then return the range for low band*/\
+        if(band == -1 || band == 0) {\
             /* Only gain/val is used in low band*/\
             min = 0;\
             max = 31.5;\

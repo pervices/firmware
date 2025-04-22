@@ -63,24 +63,12 @@
 // Minimum NCO for the NCO on the DAC (not the FPGA)
 #define MIN_DAC_NCO 0
 
-//the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
-//AB in this variable names stands for all bands, and they are relevant to all bands
-#define MIN_RF_ATTEN_TX_AB 0.0
-#if defined(TATE_NRNT)
-    // ADRF5721
-    #define MAX_RF_ATTEN_TX_AB 30.0
-    #define RF_ATTEN_STEP_TX 2.0
-#elif defined(LILY)
-    // PE43610
-    #define MAX_RF_ATTEN_TX_AB 31.5
-    #define RF_ATTEN_STEP_TX 0.5
-#else
-    #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
-#endif
-#define MIN_RF_GAIN_TX_AB MIN_RF_ATTEN_TX_AB
-#define MAX_RF_GAIN_TX_AB MAX_RF_ATTEN_TX_AB
-// Minimum amount the gain can be changed by solely using components in all bands
-#define RF_GAIN_STEP_TX_AB RF_ATTEN_STEP_TX
+// Maximum attenuation and step size of ADRF5721
+#define ADRF5721_MAX_ATTEN 30.0
+#define ADRF5721_STEP 2.0
+// Maxumum attenuation of step size and PE43610
+#define PE43610_MAX_ATTEN 31.5
+#define PE43610_STEP 0.5
 
 //The voltage range used to control and amplifier in high band
 //The full range is larger, but outside of this range it is very non-linear
@@ -92,10 +80,10 @@
 #if defined(TATE_NRNT)
     #define MAX_GAIN_TX_HB 23.0
     // step = gain range / number of possible voltage values
-    #define RF_GAIN_STEP_TX_HB ((MAX_RF_GAIN_TX_AB - MIN_RF_GAIN_TX_AB) / ((MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) * 1000))
+    #define RF_GAIN_STEP_TX_HB ((MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) / ((MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) * 1000))
 #elif defined(LILY)
     #define MAX_GAIN_TX_HB 0.0
-    #define RF_GAIN_STEP_TX_HB RF_GAIN_STEP_TX_AB
+    #define RF_GAIN_STEP_TX_HB PE43610_STEP
 #else
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
 #endif
@@ -494,9 +482,35 @@ static int get_network_speed() {
         if(is_baseband_only_cached_tx[ch]) {
             return is_baseband_only_tx[ch];
         } else {
+            // Get eeprom info
+            snprintf(buf, MAX_PROP_LEN, "board -h\r");
+            ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), ch);
+
+            // Check if the
+            char* baseband_location = strstr((char*) uart_ret_buf, "0x20 = 0x8");
+            // eeprom register 0x20 == 0x0008, therefore it is baseband only
+            if(baseband_location != NULL) {
+                is_baseband_only_cached_tx[ch] = 1;
+                is_baseband_only_tx[ch] = 1;
+                return is_baseband_only_tx[ch];
+            }
+
+            // Location of the start of the string containing the hardware revision
+            char* normal_location = strstr((char*) uart_ret_buf, "0x20 = 0x7");
+            // eeprom register 0x20 == 0x0007, therefore it is not baseband only
+            if(normal_location != NULL) {
+                is_baseband_only_cached_tx[ch] = 1;
+                is_baseband_only_tx[ch] = 0;
+                return is_baseband_only_tx[ch];
+            }
+
+            // Failed to check eeprom (probably due to old MCU)
+            // Check MCU variant instead
+
             snprintf(buf, MAX_PROP_LEN, "board -v\r");
             ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), ch);
 
+            // Location of teh start of the string containing BBTx
             char* version_location = strstr((char*) uart_ret_buf, "BBTx");
             if(version_location == NULL) {
                 is_baseband_only_tx[ch] = 0;
@@ -507,6 +521,67 @@ static int get_network_speed() {
             return is_baseband_only_tx[ch];
         }
     }
+
+    // Minimum attenuation in tx
+    // Currently we map everything from 0 to it's limit, this function is here in case we want to change it
+    double get_min_rf_atten_tx() {
+        return 0;
+    }
+
+    double get_max_rf_atten_tx(int uart_fd, size_t ch) {
+#if defined(TATE_NRNT)
+        if(get_is_baseband_only_tx(uart_fd, ch)) {
+            // Baseband only Tate uses PE43610
+            return PE43610_MAX_ATTEN;
+        } else {
+            // Normal Tate uses ADRF5721
+            return ADRF5721_MAX_ATTEN;
+        }
+#elif defined LILY
+        // All Lily configurations use PE43610
+        return PE43610_MAX_ATTEN;
+#else
+        #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
+    }
+
+    // Gets the minimum rf gain in tx
+    // ab stands for all bands
+    double get_min_rf_gain_tx_ab() {
+        // Only the variable attenuator is present in all bands
+        return get_min_rf_atten_tx();
+    }
+
+    // Gets the maximum rf gain in tx
+    // ab stands for all bands
+    double get_max_rf_gain_tx_ab(int uart_fd, size_t ch) {
+        // Only the variable attenuator is present in all bands
+        return get_max_rf_atten_tx(uart_fd, ch);
+    }
+
+    // Gets the step size of tx gain in all bands
+    double get_rf_atten_tx_step_ab(int uart_fd, size_t ch) {
+#if defined(TATE_NRNT)
+        if(get_is_baseband_only_tx(uart_fd, ch)) {
+            // Baseband only Tate uses PE43610
+            return PE43610_STEP;
+        } else {
+            // Normal Tate uses ADRF5721
+            return ADRF5721_STEP;
+        }
+#elif defined LILY
+        // All Lily configurations use PE43610
+        return PE43610_STEP;
+#else
+        #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
+    }
+    // Gets the step size of tx gain in all bands of tx
+    double get_rf_gain_tx_step_ab(int uart_fd, size_t ch) {
+        // The only variable gain device in all bands is the attenuator
+        return get_rf_atten_tx_step_ab(uart_fd, ch);
+    }
+
 #endif
 
 uint32_t is_hps_only() {
@@ -1371,11 +1446,11 @@ int check_time_pll(int ch) {
         get_property("tx/" STR(ch) "/rf/band", band_read,3);\
         sscanf(band_read, "%i", &band);\
         /* Calculate gain to use from components in all bands*/\
-        if(gain>MAX_RF_GAIN_TX_AB) {\
-            ab_gain = MAX_RF_GAIN_TX_AB;\
+        if(gain>get_max_rf_gain_tx_ab(uart_tx_fd[INT_TX(ch)], INT(ch)) ) {\
+            ab_gain = get_max_rf_gain_tx_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
         }\
-        else if (gain<MIN_RF_GAIN_TX_AB) {\
-            ab_gain = MIN_RF_GAIN_TX_AB;\
+        else if (gain<get_min_rf_gain_tx_ab()) {\
+            ab_gain = get_min_rf_gain_tx_ab();\
         } else {\
             ab_gain = gain;\
         }\
@@ -1393,7 +1468,7 @@ int check_time_pll(int ch) {
             band_gain = 0;\
         }\
         \
-        double desired_atten = (((ab_gain)-MIN_RF_GAIN_TX_AB)/(MAX_RF_GAIN_TX_AB-MIN_RF_GAIN_TX_AB)) * (MIN_RF_ATTEN_TX_AB - MAX_RF_ATTEN_TX_AB) + MAX_RF_ATTEN_TX_AB;\
+        double desired_atten = (((ab_gain)-get_min_rf_gain_tx_ab())/(get_max_rf_gain_tx_ab(uart_tx_fd[INT_TX(ch)], INT(ch))-get_min_rf_gain_tx_ab())) * (get_min_rf_atten_tx() - get_max_rf_atten_tx(uart_tx_fd[INT_TX(ch)], INT(ch))) + get_max_rf_atten_tx(uart_tx_fd[INT_TX(ch)], INT(ch));\
         char s_atten[25];\
         \
         /*Sets and attenuator used by all bands*/\
@@ -1402,7 +1477,7 @@ int check_time_pll(int ch) {
         set_property("tx/" STR(ch) "/rf/atten", s_atten);\
         get_property("tx/" STR(ch) "/rf/atten", s_atten,3);                   \
         sscanf(s_atten, "%lf", &actual_atten);\
-        double actual_ab_gain = MAX_RF_ATTEN_TX_AB - actual_atten + MIN_RF_ATTEN_TX_AB;\
+        double actual_ab_gain = get_max_rf_atten_tx(uart_tx_fd[INT_TX(ch)], INT(ch)) - actual_atten + get_min_rf_atten_tx();\
         \
         /* rf/gain/up_converter does nothing in Lily */\
         double actual_band_gain = 0;\
@@ -1423,8 +1498,8 @@ int check_time_pll(int ch) {
     /* Format: "min,max,step\n" */\
     static int hdlr_tx_##ch##_rf_gain_range(const char *data, char *ret) {\
         /* min and max for all band components */\
-        double min = MIN_RF_GAIN_TX_AB;\
-        double max = MAX_RF_GAIN_TX_AB;\
+        double min = get_min_rf_gain_tx_ab();\
+        double max = get_max_rf_gain_tx_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
         double step;\
         \
         /* Get the current band */\
@@ -1434,12 +1509,13 @@ int check_time_pll(int ch) {
         sscanf(band_read, "%i", &band);\
         \
         /* Low band and mid band only contain amplifiers/attentuators available on all channels */\
-        if(band == 0 || band == 1) {\
+        /* If no band (-1) is set return the range for low band */\
+        if(band == -1 || band == 0 || band == 1) {\
             min += 0;\
             max += 0;\
-            step = RF_GAIN_STEP_TX_AB;\
+            step = get_rf_gain_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
         /* High band on Tate has an amplifier not present in other bands/Chestnut */\
-        } if(band == 2) {\
+        } else if(band == 2) {\
             if(PRODUCT_ID == TATE_NRNT_ID) {\
                 min += MIN_GAIN_TX_HB;\
                 max += MAX_GAIN_TX_HB;\
@@ -1451,6 +1527,11 @@ int check_time_pll(int ch) {
             } else {\
                 PRINT(ERROR, "Function not implemented for this variant\n");\
             }\
+        } else {\
+            PRINT(ERROR, "Invalid band detected\n");\
+            step = 0;\
+            min = 0;\
+            max = 0;\
         }\
         \
         snprintf(ret, MAX_PROP_LEN, "\"%lf,%lf,%lf\"\n", min, max, step);\
@@ -1460,12 +1541,12 @@ int check_time_pll(int ch) {
     static int hdlr_tx_##ch##_rf_atten(const char *data, char *ret) {        \
         float atten;                            \
         sscanf(data, "%f", &atten);                        \
-        if(atten > MAX_RF_ATTEN_TX_AB) atten = MAX_RF_ATTEN_TX_AB;\
-        float codef = atten / (float)(RF_ATTEN_STEP_TX);\
+        if(atten > get_max_rf_atten_tx(uart_tx_fd[INT_TX(ch)], INT(ch))) atten = get_max_rf_atten_tx(uart_tx_fd[INT_TX(ch)], INT(ch));\
+        float codef = atten / (float)( get_rf_atten_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch)) );\
         uint16_t codei = roundf(codef);\
         snprintf(buf, MAX_PROP_LEN, "rf -a %hu\r", codei);\
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));        \
-        atten = codei * RF_ATTEN_STEP_TX;\
+        atten = codei * get_rf_atten_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
         snprintf(ret, MAX_PROP_LEN, "%f", atten);                                     \
                                         \
         return RETURN_SUCCESS;                        \
@@ -2574,11 +2655,9 @@ TX_CHANNELS
         get_property("rx/" STR(ch) "/rf/freq/band", band_read,3);\
         sscanf(band_read, "%i", &band);\
         \
-        if(band == -1) {\
-            min = 0;\
-            max = 0;\
-            step = 0;\
-        } else if(band == 0) {\
+        /* Range for low band */\
+        /* If no band is selected (-1) then return the range for low band*/\
+        if(band == -1 || band == 0) {\
             min = LMH6401_MIN_GAIN;\
             max = LMH6401_MAX_GAIN;\
             step = 1;\
