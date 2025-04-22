@@ -63,24 +63,27 @@
 // Minimum NCO for the NCO on the DAC (not the FPGA)
 #define MIN_DAC_NCO 0
 
+// Maximum attenuation and step size of ADRF5721
+#define ADRF5721_MAX_ATTEN 30.0
+#define ADRF5721_STEP 2.0
+// Maxumum attenuation of step size and PE43610
+#define PE43610_MAX_ATTEN 31.5
+#define PE43610_STEP 0.5
+
 //the code that uses these assumes the tx mcu is expecting an attenuator code (attenuation = step size * code)
 //AB in this variable names stands for all bands, and they are relevant to all bands
 #define MIN_RF_ATTEN_TX_AB 0.0
 #if defined(TATE_NRNT)
     // ADRF5721
     #define MAX_RF_ATTEN_TX_AB 30.0
-    #define RF_ATTEN_STEP_TX 2.0
 #elif defined(LILY)
     // PE43610
     #define MAX_RF_ATTEN_TX_AB 31.5
-    #define RF_ATTEN_STEP_TX 0.5
 #else
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
 #endif
 #define MIN_RF_GAIN_TX_AB MIN_RF_ATTEN_TX_AB
 #define MAX_RF_GAIN_TX_AB MAX_RF_ATTEN_TX_AB
-// Minimum amount the gain can be changed by solely using components in all bands
-#define RF_GAIN_STEP_TX_AB RF_ATTEN_STEP_TX
 
 //The voltage range used to control and amplifier in high band
 //The full range is larger, but outside of this range it is very non-linear
@@ -95,7 +98,7 @@
     #define RF_GAIN_STEP_TX_HB ((MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) / ((MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) * 1000))
 #elif defined(LILY)
     #define MAX_GAIN_TX_HB 0.0
-    #define RF_GAIN_STEP_TX_HB RF_GAIN_STEP_TX_AB
+    #define RF_GAIN_STEP_TX_HB PE43610_STEP
 #else
     #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
 #endif
@@ -533,6 +536,43 @@ static int get_network_speed() {
             return is_baseband_only_tx[ch];
         }
     }
+
+    // double get_min_rf_atten_tx(size_t ch) {
+    //     get_is_baseband_only_tx
+    // }
+    // double get_max_rf_atten_tx(size_t ch) {
+    //
+    // }
+
+    // double get_min_rf_gain_tx_ab(size_t ch) {
+    //     get_is_baseband_only_tx
+    // }
+    // double get_max_rf_gain_tx_ab(size_t ch) {
+    //
+    // }
+    // Gets the step size of tx gain in all bands
+    double get_rf_atten_tx_step_ab(int uart_fd, size_t ch) {
+#if defined(TATE_NRNT)
+        if(get_is_baseband_only_tx(uart_fd, ch)) {
+            // Baseband only Tate uses PE43610
+            return PE43610_STEP;
+        } else {
+            // Normal Tate uses ADRF5721
+            return ADRF5721_STEP;
+        }
+#elif defined LILY
+        // All Lily configurations use PE43610
+        return PE43610_STEP;
+#else
+        #error "You must specify either ( TATE_NRNT | LILY ) when compiling this file."
+#endif
+    }
+    // Gets the step size of tx gain in all bands of tx
+    double get_rf_gain_tx_step_ab(int uart_fd, size_t ch) {
+        // The only variable gain device in all bands is the attenuator
+        return get_rf_atten_tx_step_ab(uart_fd, ch);
+    }
+
 #endif
 
 uint32_t is_hps_only() {
@@ -1463,7 +1503,7 @@ int check_time_pll(int ch) {
         if(band == 0 || band == 1) {\
             min += 0;\
             max += 0;\
-            step = RF_GAIN_STEP_TX_AB;\
+            step = get_rf_gain_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
         /* High band on Tate has an amplifier not present in other bands/Chestnut */\
         } if(band == 2) {\
             if(PRODUCT_ID == TATE_NRNT_ID) {\
@@ -1477,6 +1517,11 @@ int check_time_pll(int ch) {
             } else {\
                 PRINT(ERROR, "Function not implemented for this variant\n");\
             }\
+        } else {\
+            PRINT(ERROR, "Invalid band detected\n");\
+            step = 0;\
+            min = 0;\
+            max = 0;\
         }\
         \
         snprintf(ret, MAX_PROP_LEN, "\"%lf,%lf,%lf\"\n", min, max, step);\
@@ -1487,11 +1532,11 @@ int check_time_pll(int ch) {
         float atten;                            \
         sscanf(data, "%f", &atten);                        \
         if(atten > MAX_RF_ATTEN_TX_AB) atten = MAX_RF_ATTEN_TX_AB;\
-        float codef = atten / (float)(RF_ATTEN_STEP_TX);\
+        float codef = atten / (float)( get_rf_atten_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch)) );\
         uint16_t codei = roundf(codef);\
         snprintf(buf, MAX_PROP_LEN, "rf -a %hu\r", codei);\
         ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));        \
-        atten = codei * RF_ATTEN_STEP_TX;\
+        atten = codei * get_rf_atten_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
         snprintf(ret, MAX_PROP_LEN, "%f", atten);                                     \
                                         \
         return RETURN_SUCCESS;                        \
