@@ -1514,7 +1514,7 @@ int check_time_pll(int ch) {
             max += 0;\
             step = get_rf_gain_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
         /* High band on Tate has an amplifier not present in other bands/Chestnut */\
-        } if(band == 2) {\
+        } else if(band == 2) {\
             if(PRODUCT_ID == TATE_NRNT_ID) {\
                 min += MIN_GAIN_TX_HB;\
                 max += MAX_GAIN_TX_HB;\
