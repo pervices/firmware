@@ -1509,7 +1509,8 @@ int check_time_pll(int ch) {
         sscanf(band_read, "%i", &band);\
         \
         /* Low band and mid band only contain amplifiers/attentuators available on all channels */\
-        if(band == 0 || band == 1) {\
+        /* If no band (-1) is set return the range for low band */\
+        if(band == -1 || band == 0 || band == 1) {\
             min += 0;\
             max += 0;\
             step = get_rf_gain_tx_step_ab(uart_tx_fd[INT_TX(ch)], INT(ch));\
@@ -2654,11 +2655,9 @@ TX_CHANNELS
         get_property("rx/" STR(ch) "/rf/freq/band", band_read,3);\
         sscanf(band_read, "%i", &band);\
         \
-        if(band == -1) {\
-            min = 0;\
-            max = 0;\
-            step = 0;\
-        } else if(band == 0) {\
+        /* Range for low band */\
+        /* If no band is selected (-1) then return the range for low band*/\
+        if(band == -1 || band == 0) {\
             min = LMH6401_MIN_GAIN;\
             max = LMH6401_MAX_GAIN;\
             step = 1;\
