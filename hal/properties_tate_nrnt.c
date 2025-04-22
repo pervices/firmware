@@ -92,7 +92,7 @@
 #if defined(TATE_NRNT)
     #define MAX_GAIN_TX_HB 23.0
     // step = gain range / number of possible voltage values
-    #define RF_GAIN_STEP_TX_HB ((MAX_RF_GAIN_TX_AB - MIN_RF_GAIN_TX_AB) / ((MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) * 1000))
+    #define RF_GAIN_STEP_TX_HB ((MAX_GAIN_TX_HB - MIN_GAIN_TX_HB) / ((MAX_GAIN_V_TX_HB_GAIN - MIN_GAIN_V_TX_HB_GAIN) * 1000))
 #elif defined(LILY)
     #define MAX_GAIN_TX_HB 0.0
     #define RF_GAIN_STEP_TX_HB RF_GAIN_STEP_TX_AB
