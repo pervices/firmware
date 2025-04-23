@@ -487,8 +487,8 @@ static int get_network_speed() {
             ping_tx(uart_fd, (uint8_t *)buf, strlen(buf), ch);
 
             // Check if the
-            char* baseband_location = strstr((char*) uart_ret_buf, "0x20 = 0x8");
-            // eeprom register 0x20 == 0x0008, therefore it is baseband only
+            char* baseband_location = strstr((char*) uart_ret_buf, "0x20 = 0x9");
+            // eeprom register 0x20 == 0x0009, therefore it is baseband only
             if(baseband_location != NULL) {
                 is_baseband_only_cached_tx[ch] = 1;
                 is_baseband_only_tx[ch] = 1;
