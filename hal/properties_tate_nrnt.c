@@ -434,7 +434,7 @@ static int ping_rx(const int fd, uint8_t *buf, const size_t len, int ch) {
         //Due to hardware issues some boards will report as on even when the slot is empty
         if(error_code) {
             rx_power[ch] = rx_power[ch] | PWR_NO_BOARD;
-            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
+            PRINT(ERROR, "Board %i failed to repond to uart, assuming the slot is empty\n", ch);
         }
         return error_code;
     //empties the uart return buffer
@@ -449,7 +449,7 @@ static int ping_tx(const int fd, uint8_t *buf, const size_t len, int ch) {
         //Due to hardware issues some boards will report as on even when the slot is empty
         if(error_code) {
             tx_power[ch] = tx_power[ch] | PWR_NO_BOARD;
-            PRINT(ERROR, "Board %i failed to repond to uart, assumming the slot is empty\n", ch);
+            PRINT(ERROR, "Board %i failed to repond to uart, assuming the slot is empty\n", ch);
         }
         return error_code;
     //empties the uart return buffer
