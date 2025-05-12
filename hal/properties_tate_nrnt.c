@@ -186,9 +186,8 @@ static int uart_synth_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
-static int sfp_max_reset_attempts = 10;
-// SFP always came up in 90/90 tests, so reboot on SFP fail has been disabled
-static int sfp_max_reboot_attempts = 5;
+static int sfp_max_reset_attempts = 5;
+static int sfp_max_reboot_attempts = 0;
 
 static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 
