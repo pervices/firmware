@@ -38,6 +38,7 @@ do
     echo dev0 | ssh -o "ServerAliveInterval 2" -tt dev0@192.168.10.2 'sudo sh -c "systemctl reboot"'
     echo "Waiting for system reboot $num_system_restarts" | tee -a $result_path
 
+    # Experimentally with server bc7d14f2 booting takes 90s
     sleep 120
     #Format: year, month, day, hour (24 hour clock), minute, second. Every part takes 2 digits
     time=$(date +"%y%m%d%H%M%S")
@@ -57,7 +58,7 @@ do
     #Do 3 times
 
     num_server_restarts=0
-    while [ $num_server_restarts -lt 3 ]
+    while [ $num_server_restarts -lt 2 ]
     do
         echo "Server run $num_server_restarts" | tee -a $result_path
         if [ $num_server_restarts -ne 0 ]
