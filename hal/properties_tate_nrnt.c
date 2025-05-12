@@ -6146,6 +6146,115 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Checks for issues with SFPs that are currently present provided as an error code
+static int hdlr_debug_sfp_current_errors_code(const char *data, char *ret) {
+    uint32_t reg = 0;
+    read_hps_reg("res_ro0", &reg);
+    // The codes are in bits 31:23
+    uint32_t code = (reg >> 23) & 0x1ff;
+    // 0x1ff indicates every possible error
+    // 0x0 indicates good
+    snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+}
+
+// Checks for issues with SFPs that are currently present provided as list of errors
+static int hdlr_debug_sfp_current_errors_string(const char *data, char *ret) {
+    uint32_t reg = 0;
+    read_hps_reg("res_ro0", &reg);
+    // The codes are in bits 31:23
+
+    snprintf(ret, MAX_PROP_LEN, "");
+    if(reg & 0x80000000) {
+        strncat(ret, MAX_PROP_LEN, "JesdCorePllUnlocked");
+    }
+    if(reg & 0x40000000) {
+        strncat(ret, MAX_PROP_LEN, "XgRxAmNoLock");
+    }
+    if(reg & 0x20000000) {
+        strncat(ret, MAX_PROP_LEN, "XgRxBlockNoLock");
+    }
+    if(reg & 0x10000000) {
+        strncat(ret, MAX_PROP_LEN, "XgRxPcsNotReady");
+    }
+    if(reg & 0x8000000) {
+        strncat(ret, MAX_PROP_LEN, "XgTxLanesUnstable");
+    }
+    if(reg & 0x4000000) {
+        strncat(ret, MAX_PROP_LEN, "XgTxPllUnlocked");
+    }
+    if(reg & 0x2000000) {
+        strncat(ret, MAX_PROP_LEN, "XgModuleNotPresent");
+    }
+    if(reg & 0x1000000) {
+        strncat(ret, MAX_PROP_LEN, "MgmtPllUnlocked");
+    }
+    if(reg & 0x800000) {
+        strncat(ret, MAX_PROP_LEN, "FpgaRefPllUnlocked");
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+}
+
+// Checks for issues with SFPs that are currently present provided as an error code
+// 1 = read only
+// 2 = reset latch then read
+// 3 = read then reset latch
+// Any other value: reserved
+static int hdlr_debug_sfp_latched_errors_code(const char *data, char *ret) {
+    uint32_t reg = 0;
+    read_hps_reg("res_ro0", &reg);
+    // The codes are in bits 15:7
+    uint32_t code = (reg >> 7) & 0x1ff;
+    // 0x1ff indicates every possible error
+    // 0x0 indicates good
+    snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+}
+
+// Checks for issues with SFPs that are currently present provided as list of errors
+// Checks for issues with SFPs that are currently present provided as an error code
+// 1 = read only
+// 2 = reset latch then read
+// 3 = read then reset latch
+// Any other value: reserved
+static int hdlr_debug_sfp_latched_errors_string(const char *data, char *ret) {
+    uint32_t reg = 0;
+    read_hps_reg("res_ro3", &reg);
+    // The codes are in bits 31:23
+
+    // TODO: implement resetting the latch
+
+    snprintf(ret, MAX_PROP_LEN, "");
+    if(reg & 0x8000) {
+        strncat(ret, MAX_PROP_LEN, "JesdCorePllUnlocked");
+    }
+    if(reg & 0x4000) {
+        strncat(ret, MAX_PROP_LEN, "XgRxAmNoLock");
+    }
+    if(reg & 0x2000) {
+        strncat(ret, MAX_PROP_LEN, "XgRxBlockNoLock");
+    }
+    if(reg & 0x1000) {
+        strncat(ret, MAX_PROP_LEN, "XgRxPcsNotReady");
+    }
+    if(reg & 0x800) {
+        strncat(ret, MAX_PROP_LEN, "XgTxLanesUnstable");
+    }
+    if(reg & 0x400) {
+        strncat(ret, MAX_PROP_LEN, "XgTxPllUnlocked");
+    }
+    if(reg & 0x200) {
+        strncat(ret, MAX_PROP_LEN, "XgModuleNotPresent");
+    }
+    if(reg & 0x100) {
+        strncat(ret, MAX_PROP_LEN, "MgmtPllUnlocked");
+    }
+    if(reg & 0x80) {
+        strncat(ret, MAX_PROP_LEN, "FpgaRefPllUnlocked");
+    }
+
+    snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+}
+
 static int hdlr_system_get_max_buffer_level(const char *data, char *ret) {
     uint32_t max_buffer_level = 0;
     read_hps_reg("res_ro14", &max_buffer_level);
@@ -6580,6 +6689,10 @@ GPIO_PINS
 
 #define DEFINE_FPGA_POST()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"            , hdlr_jesd_reset_master,                      RW, "1", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/debug/sfp_current_error_code"      , hdlr_debug_sfp_current_errors_code,          RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/sfp_current_error_string"    , hdlr_debug_sfp_current_errors_string,        RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/sfp_latched_error_code"      , hdlr_debug_sfp_latched_errors_code,          RW, "0", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/sfp_latched_error_string"    , hdlr_debug_sfp_latched_errors_string,        RW, "1", SP, NAC)\
 
 #define DEFINE_GPIO(_p)                                                                                                        \
     DEFINE_FILE_PROP_P("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0", SP, NAC)
