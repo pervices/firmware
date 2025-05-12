@@ -65,8 +65,8 @@ if $show_jesd
 then
     echo "JESD status results. Each file is from one power cycle"
 
-    let expected_rx_good=3*$num_rx
-    let expected_tx_good=3*$num_tx
+    let expected_rx_good=2*$num_rx
+    let expected_tx_good=2*$num_tx
 
     # Number of times all jesd came up every server reboot
     perfect_rx_jesd=0
@@ -114,7 +114,7 @@ then
             then
                 grep -A 3 "Tx board jesd status" $result
             fi
-            echo "The expected number of channel JESD's established is <number of channel> * <3 (which is the number of sever reboots)>"
+            echo "The expected number of channel JESD's established is <number of channel> * <2 (which is the number of sever reboots)>"
             echo "If the number of failed runs is a multiple of the number of channels, it is likely all channels failed on a server boot"
             echo "If the number of times rx and tx failed to reply is a multiple of the number of channels, it is likely the sever didn't finish booting"
             echo "Number times an rx channel's JESD established: $num_rx_jesd_good"
@@ -184,7 +184,7 @@ then
 
         invalid_cycle=0
 
-        if [ $sfp_checks -ne 3 ]
+        if [ $sfp_checks -ne 2 ]
         then
             let invalid_cycle=$invalid_cycle+1
             echo "$result: this power cycle had an incorect number of SFP checks. This is usually sign of corruption in the test itself, skipping result"
