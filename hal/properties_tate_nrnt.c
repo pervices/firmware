@@ -6152,9 +6152,16 @@ static int hdlr_debug_sfp_current_errors_code(const char *data, char *ret) {
     read_hps_reg("res_ro0", &reg);
     // The codes are in bits 31:23
     uint32_t code = (reg >> 23) & 0x1ff;
+
+    if(code > 0) {
+        PRINT(ERROR, "SFP ERRORS present: %u\n", code);
+    }
+
     // 0x1ff indicates every possible error
     // 0x0 indicates good
     snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+
+    return RETURN_SUCCESS;
 }
 
 // Checks for issues with SFPs that are currently present provided as list of errors
@@ -6163,51 +6170,64 @@ static int hdlr_debug_sfp_current_errors_string(const char *data, char *ret) {
     read_hps_reg("res_ro0", &reg);
     // The codes are in bits 31:23
 
-    snprintf(ret, MAX_PROP_LEN, "");
+    // Sets the return string to empty
+    *ret = '\0';
+
     if(reg & 0x80000000) {
-        strncat(ret, MAX_PROP_LEN, "JesdCorePllUnlocked");
+        strncat(ret, "JesdCorePllUnlocked", MAX_PROP_LEN);
     }
     if(reg & 0x40000000) {
-        strncat(ret, MAX_PROP_LEN, "XgRxAmNoLock");
+        strncat(ret, "XgRxAmNoLock", MAX_PROP_LEN);
     }
     if(reg & 0x20000000) {
-        strncat(ret, MAX_PROP_LEN, "XgRxBlockNoLock");
+        strncat(ret, "XgRxBlockNoLock", MAX_PROP_LEN);
     }
     if(reg & 0x10000000) {
-        strncat(ret, MAX_PROP_LEN, "XgRxPcsNotReady");
+        strncat(ret, "XgRxPcsNotReady", MAX_PROP_LEN);
     }
     if(reg & 0x8000000) {
-        strncat(ret, MAX_PROP_LEN, "XgTxLanesUnstable");
+        strncat(ret, "XgTxLanesUnstable", MAX_PROP_LEN);
     }
     if(reg & 0x4000000) {
-        strncat(ret, MAX_PROP_LEN, "XgTxPllUnlocked");
+        strncat(ret, "XgTxPllUnlocked", MAX_PROP_LEN);
     }
     if(reg & 0x2000000) {
-        strncat(ret, MAX_PROP_LEN, "XgModuleNotPresent");
+        strncat(ret, "XgModuleNotPresent", MAX_PROP_LEN);
     }
     if(reg & 0x1000000) {
-        strncat(ret, MAX_PROP_LEN, "MgmtPllUnlocked");
+        strncat(ret, "MgmtPllUnlocked", MAX_PROP_LEN);
     }
     if(reg & 0x800000) {
-        strncat(ret, MAX_PROP_LEN, "FpgaRefPllUnlocked");
+        strncat(ret, "FpgaRefPllUnlocked", MAX_PROP_LEN);
     }
 
-    snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+    if(strnlen(ret, 1) > 0) {
+        PRINT(ERROR, "SFP ERRORS present: %s\n", ret);
+    }
+
+    return RETURN_SUCCESS;
 }
 
 // Checks for issues with SFPs that are currently present provided as an error code
 // 1 = read only
 // 2 = reset latch then read
 // 3 = read then reset latch
-// Any other value: reserved
+// Any other value: reserved, will behave as read only
 static int hdlr_debug_sfp_latched_errors_code(const char *data, char *ret) {
     uint32_t reg = 0;
     read_hps_reg("res_ro0", &reg);
     // The codes are in bits 15:7
     uint32_t code = (reg >> 7) & 0x1ff;
+
+    if(code > 0) {
+        PRINT(ERROR, "SFP ERRORS detected: %u\n", code);
+    }
+
     // 0x1ff indicates every possible error
     // 0x0 indicates good
     snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+
+    return RETURN_SUCCESS;
 }
 
 // Checks for issues with SFPs that are currently present provided as list of errors
@@ -6215,7 +6235,7 @@ static int hdlr_debug_sfp_latched_errors_code(const char *data, char *ret) {
 // 1 = read only
 // 2 = reset latch then read
 // 3 = read then reset latch
-// Any other value: reserved
+// Any other value: reserved, will behave as read only
 static int hdlr_debug_sfp_latched_errors_string(const char *data, char *ret) {
     uint32_t reg = 0;
     read_hps_reg("res_ro3", &reg);
@@ -6223,36 +6243,42 @@ static int hdlr_debug_sfp_latched_errors_string(const char *data, char *ret) {
 
     // TODO: implement resetting the latch
 
-    snprintf(ret, MAX_PROP_LEN, "");
+    // Sets the return string to empty
+    *ret = '\0';
+
     if(reg & 0x8000) {
-        strncat(ret, MAX_PROP_LEN, "JesdCorePllUnlocked");
+        strncat(ret, "JesdCorePllUnlocked", MAX_PROP_LEN);
     }
     if(reg & 0x4000) {
-        strncat(ret, MAX_PROP_LEN, "XgRxAmNoLock");
+        strncat(ret, "XgRxAmNoLock", MAX_PROP_LEN);
     }
     if(reg & 0x2000) {
-        strncat(ret, MAX_PROP_LEN, "XgRxBlockNoLock");
+        strncat(ret, "XgRxBlockNoLock", MAX_PROP_LEN);
     }
     if(reg & 0x1000) {
-        strncat(ret, MAX_PROP_LEN, "XgRxPcsNotReady");
+        strncat(ret, "XgRxPcsNotReady", MAX_PROP_LEN);
     }
     if(reg & 0x800) {
-        strncat(ret, MAX_PROP_LEN, "XgTxLanesUnstable");
+        strncat(ret, "XgTxLanesUnstable", MAX_PROP_LEN);
     }
     if(reg & 0x400) {
-        strncat(ret, MAX_PROP_LEN, "XgTxPllUnlocked");
+        strncat(ret, "XgTxPllUnlocked", MAX_PROP_LEN);
     }
     if(reg & 0x200) {
-        strncat(ret, MAX_PROP_LEN, "XgModuleNotPresent");
+        strncat(ret, "XgModuleNotPresent", MAX_PROP_LEN);
     }
     if(reg & 0x100) {
-        strncat(ret, MAX_PROP_LEN, "MgmtPllUnlocked");
+        strncat(ret, "MgmtPllUnlocked", MAX_PROP_LEN);
     }
     if(reg & 0x80) {
-        strncat(ret, MAX_PROP_LEN, "FpgaRefPllUnlocked");
+        strncat(ret, "FpgaRefPllUnlocked", MAX_PROP_LEN);
     }
 
-    snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+    if(strnlen(ret, 1) > 0) {
+        PRINT(ERROR, "SFP ERRORS detected: %s\n", ret);
+    }
+
+    return RETURN_SUCCESS;
 }
 
 static int hdlr_system_get_max_buffer_level(const char *data, char *ret) {
