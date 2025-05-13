@@ -72,6 +72,10 @@ do
         #sys18 is included since it contains useful info about the FPGA notably the sfp status
         echo "sys18" | tee -a $result_path
         echo dev0 | ssh -tt dev0@192.168.10.2 'sudo sh -c "sudo mem rr sys18"' >> $result_path
+        # Read a counter and post-increments it
+        # If it not 0 on the first reboot then the time board did not reboot
+        echo "time heartbeat" | tee -a $result_path
+        ssh -tt dev0@192.168.10.2 'echo "status -h" | mcu -f s' >> $result_path
         echo "sfpa status" | tee -a $result_path
         echo dev0 | ssh -tt dev0@192.168.10.2 'sleep 0.01; sudo mem rw net21 0x1; sleep 0.01; sudo mem rw net22 0x303; sleep 0.01; sudo mem rw net24 0x1; sleep 0.01; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
         echo dev0 | ssh -tt dev0@192.168.10.2 'sleep 0.01; sudo mem rw net21 0x1; sleep 0.01; sudo mem rw net22 0x320; sleep 0.01; sudo mem rw net24 0x1; sleep 0.01; sudo mem rw net24 0x0; sudo mem rr res_ro27' >> $result_path
