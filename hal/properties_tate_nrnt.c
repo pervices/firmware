@@ -6154,7 +6154,10 @@ static const char* latched_feedback_reg = "res_ro3";
 static const uint8_t current_feedback_start = 23;
 static const uint8_t latched_feedback_start = 7;
 
+static const uint32_t feedback_mask = 0x1ff;
+
 // Which bit relative to the start a specifc feedback is located
+// Bits are high when there is a problem
 static const uint8_t bit_JesdCorePllLocked = 8;
 static const uint8_t bit_XgRxAmLock = 7;
 static const uint8_t bit_XgRxBlockLock = 6;
@@ -6171,7 +6174,7 @@ static int hdlr_debug_feedback_current_alll_errors_codes(const char *data, char 
     uint32_t reg = 0;
     read_hps_reg(current_feedback_reg, &reg);
     // The codes are in bits 31:23
-    uint32_t code = (reg >> 23) & 0x1ff;
+    uint32_t code = (reg >> 23) & feedback_mask;
 
     if(code > 0) {
         PRINT(ERROR, "SFP ERRORS present: %u\n", code);
@@ -6194,31 +6197,33 @@ static int hdlr_debug_feedback_current_all_errors_strings(const char *data, char
     // Sets the return string to empty
     *ret = '\0';
 
-    if(reg & 0x80000000) {
+    uint32_t codes = (reg >> current_feedback_start) & feedback_mask;
+
+    if(codes & (((uint32_t) 1) << bit_JesdCorePllLocked)) {
         strncat(ret, "JesdCorePllUnlocked", MAX_PROP_LEN);
     }
-    if(reg & 0x40000000) {
+    if(codes & (((uint32_t) 1) << bit_XgRxAmLock)) {
         strncat(ret, "XgRxAmNoLock", MAX_PROP_LEN);
     }
-    if(reg & 0x20000000) {
+    if(codes & (((uint32_t) 1) << bit_XgRxBlockLock)) {
         strncat(ret, "XgRxBlockNoLock", MAX_PROP_LEN);
     }
-    if(reg & 0x10000000) {
+    if(codes & (((uint32_t) 1) << bit_XgRxPcsReady)) {
         strncat(ret, "XgRxPcsNotReady", MAX_PROP_LEN);
     }
-    if(reg & 0x8000000) {
+    if(codes & (((uint32_t) 1) << bit_XgTxLanesStable)) {
         strncat(ret, "XgTxLanesUnstable", MAX_PROP_LEN);
     }
-    if(reg & 0x4000000) {
+    if(codes & (((uint32_t) 1) << bit_XgTxPllLocked)) {
         strncat(ret, "XgTxPllUnlocked", MAX_PROP_LEN);
     }
-    if(reg & 0x2000000) {
+    if(codes & (((uint32_t) 1) << bit_XgModulePresent)) {
         strncat(ret, "XgModuleNotPresent", MAX_PROP_LEN);
     }
-    if(reg & 0x1000000) {
+    if(codes & (((uint32_t) 1) << bit_MgmtPllLocked)) {
         strncat(ret, "MgmtPllUnlocked", MAX_PROP_LEN);
     }
-    if(reg & 0x800000) {
+    if(codes & (((uint32_t) 1) << bit_FpgaRefPllLocked)) {
         strncat(ret, "FpgaRefPllUnlocked", MAX_PROP_LEN);
     }
 
@@ -6237,9 +6242,7 @@ static int hdlr_debug_feedback_latched_all_errors_codes(const char *data, char *
     uint32_t reg = 0;
     read_hps_reg(latched_feedback_reg, &reg);
     // The codes are in bits 15:7
-    uint32_t code = (reg >> 7) & 0x1ff;
-
-    // TODO: implement resetting the latch
+    uint32_t code = (reg >> 7) & feedback_mask;
 
     if(code > 0) {
         PRINT(ERROR, "SFP ERRORS detected: %u\n", code);
@@ -6248,6 +6251,11 @@ static int hdlr_debug_feedback_latched_all_errors_codes(const char *data, char *
     // 0x1ff indicates every possible error
     // 0x0 indicates good
     snprintf(ret, MAX_PROP_LEN, "%u\n", code);
+
+    if(strcmp(data, "2")) {
+        // TODO reset latch
+        PRINT(ERROR, "Resetting latched feedback bits not implemented yet\n");
+    }
 
     return RETURN_SUCCESS;
 }
@@ -6262,36 +6270,36 @@ static int hdlr_debug_feedback_latched_all_error_strings(const char *data, char 
     read_hps_reg(latched_feedback_reg, &reg);
     // The codes are in bits 31:23
 
-    // TODO: implement resetting the latch
-
     // Sets the return string to empty
     *ret = '\0';
 
-    if(reg & 0x8000) {
+    uint32_t codes = (reg >> current_feedback_start) & feedback_mask;
+
+    if(codes & (((uint32_t) 1) << bit_JesdCorePllLocked)) {
         strncat(ret, "JesdCorePllUnlocked", MAX_PROP_LEN);
     }
-    if(reg & 0x4000) {
+    if(codes & (((uint32_t) 1) << bit_XgRxAmLock)) {
         strncat(ret, "XgRxAmNoLock", MAX_PROP_LEN);
     }
-    if(reg & 0x2000) {
+    if(codes & (((uint32_t) 1) << bit_XgRxBlockLock)) {
         strncat(ret, "XgRxBlockNoLock", MAX_PROP_LEN);
     }
-    if(reg & 0x1000) {
+    if(codes & (((uint32_t) 1) << bit_XgRxPcsReady)) {
         strncat(ret, "XgRxPcsNotReady", MAX_PROP_LEN);
     }
-    if(reg & 0x800) {
+    if(codes & (((uint32_t) 1) << bit_XgTxLanesStable)) {
         strncat(ret, "XgTxLanesUnstable", MAX_PROP_LEN);
     }
-    if(reg & 0x400) {
+    if(codes & (((uint32_t) 1) << bit_XgTxPllLocked)) {
         strncat(ret, "XgTxPllUnlocked", MAX_PROP_LEN);
     }
-    if(reg & 0x200) {
+    if(codes & (((uint32_t) 1) << bit_XgModulePresent)) {
         strncat(ret, "XgModuleNotPresent", MAX_PROP_LEN);
     }
-    if(reg & 0x100) {
+    if(codes & (((uint32_t) 1) << bit_MgmtPllLocked)) {
         strncat(ret, "MgmtPllUnlocked", MAX_PROP_LEN);
     }
-    if(reg & 0x80) {
+    if(codes & (((uint32_t) 1) << bit_FpgaRefPllLocked)) {
         strncat(ret, "FpgaRefPllUnlocked", MAX_PROP_LEN);
     }
 
@@ -6299,6 +6307,10 @@ static int hdlr_debug_feedback_latched_all_error_strings(const char *data, char 
         PRINT(ERROR, "SFP ERRORS detected: %s\n", ret);
     }
 
+    if(strcmp(data, "2")) {
+        // TODO reset latch
+        PRINT(ERROR, "Resetting latched feedback bits not implemented yet\n");
+    }
     return RETURN_SUCCESS;
 }
 
