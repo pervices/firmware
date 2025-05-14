@@ -6167,7 +6167,7 @@ static const uint8_t bit_FpgaRefPllLocked = 0;
 
 // Checks for issues with SFPs that are currently present provided as an error code
 // Shows all errors so you can easily check which ones exist. Use the properties for invidiual errors if you want to check a specific error
-static int hdlr_debug_feedback_current_errors_codes(const char *data, char *ret) {
+static int hdlr_debug_feedback_current_alll_errors_codes(const char *data, char *ret) {
     uint32_t reg = 0;
     read_hps_reg(current_feedback_reg, &reg);
     // The codes are in bits 31:23
@@ -6186,7 +6186,7 @@ static int hdlr_debug_feedback_current_errors_codes(const char *data, char *ret)
 
 // Checks for issues with SFPs that are currently present provided as list of errors
 // Shows all errors so you can easily check which ones exist. Use the properties for invidiual errors if you want to check a specific error
-static int hdlr_debug_feedback_current_errors_strings(const char *data, char *ret) {
+static int hdlr_debug_feedback_current_all_errors_strings(const char *data, char *ret) {
     uint32_t reg = 0;
     read_hps_reg(current_feedback_reg, &reg);
     // The codes are in bits 31:23
@@ -6233,7 +6233,7 @@ static int hdlr_debug_feedback_current_errors_strings(const char *data, char *re
 // 1 = read only
 // 2 = read then reset latch
 // Any other value: reserved, will behave as read only
-static int hdlr_debug_feedback_latched_errors_codes(const char *data, char *ret) {
+static int hdlr_debug_feedback_latched_all_errors_codes(const char *data, char *ret) {
     uint32_t reg = 0;
     read_hps_reg(latched_feedback_reg, &reg);
     // The codes are in bits 15:7
@@ -6257,7 +6257,7 @@ static int hdlr_debug_feedback_latched_errors_codes(const char *data, char *ret)
 // 1 = read only
 // 2 = read then reset latch
 // Any other value: reserved, will behave as read only
-static int hdlr_debug_feedback_latched_errors_strings(const char *data, char *ret) {
+static int hdlr_debug_feedback_latched_all_error_strings(const char *data, char *ret) {
     uint32_t reg = 0;
     read_hps_reg(latched_feedback_reg, &reg);
     // The codes are in bits 31:23
@@ -6848,10 +6848,10 @@ GPIO_PINS
 
 #define DEFINE_FPGA_POST()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"             , hdlr_jesd_reset_master,                           RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/debug/feedback/current_error_codes"  , hdlr_debug_feedback_current_errors_codes,          RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/debug/feedback/current_error_strings", hdlr_debug_feedback_current_errors_strings,        RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched_error_codes"  , hdlr_debug_feedback_latched_errors_codes,          RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched_error_strings", hdlr_debug_feedback_latched_errors_strings,        RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/all_error_codes"  , hdlr_debug_feedback_current_alll_errors_codes,          RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/all_error_strings", hdlr_debug_feedback_current_all_errors_strings,        RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/all_error_codes"  , hdlr_debug_feedback_latched_all_errors_codes,          RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/all_error_strings", hdlr_debug_feedback_latched_all_error_strings,        RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/debug/feedback/current/JesdCorePllUnlocked", hdlr_debug_feedback_current_JesdCorePllUnlocked, RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgRxAmNoLock", hdlr_debug_feedback_current_XgRxAmNoLock, RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgRxBlockNoLock", hdlr_debug_feedback_current_XgRxBlockNoLock, RW, "1", SP, NAC)\
