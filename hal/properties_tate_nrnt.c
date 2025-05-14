@@ -6146,10 +6146,30 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// The register that contains error feedback
+static const char* current_feedback_reg = "res_ro0";
+static const char* latched_feedback_reg = "res_ro3";
+
+// Which bit the feedback starts at with the register
+static const uint8_t current_feedback_start = 23;
+// static const uint8_t latched_feedback_start = 7;
+
+// Which bit relative to the start a specifc feedback is located
+static const uint8_t bit_JesdCorePllLocked = 8;
+static const uint8_t bit_XgRxAmLock = 7;
+static const uint8_t bit_XgRxBlockLock = 6;
+static const uint8_t bit_XgRxPcsReady = 5;
+static const uint8_t bit_XgTxLanesStable = 4;
+static const uint8_t bit_XgTxPllLocked = 3;
+static const uint8_t bit_XgModulePresent = 2;
+static const uint8_t bit_MgmtPllLocked = 1;
+static const uint8_t bit_FpgaRefPllLocked = 0;
+
 // Checks for issues with SFPs that are currently present provided as an error code
-static int hdlr_debug_sfp_current_errors_code(const char *data, char *ret) {
+// Shows all errors so you can easily check which ones exist. Use the properties for invidiual errors if you want to check a specific error
+static int hdlr_debug_feedback_current_errors_codes(const char *data, char *ret) {
     uint32_t reg = 0;
-    read_hps_reg("res_ro0", &reg);
+    read_hps_reg(current_feedback_reg, &reg);
     // The codes are in bits 31:23
     uint32_t code = (reg >> 23) & 0x1ff;
 
@@ -6165,9 +6185,10 @@ static int hdlr_debug_sfp_current_errors_code(const char *data, char *ret) {
 }
 
 // Checks for issues with SFPs that are currently present provided as list of errors
-static int hdlr_debug_sfp_current_errors_string(const char *data, char *ret) {
+// Shows all errors so you can easily check which ones exist. Use the properties for invidiual errors if you want to check a specific error
+static int hdlr_debug_feedback_current_errors_strings(const char *data, char *ret) {
     uint32_t reg = 0;
-    read_hps_reg("res_ro0", &reg);
+    read_hps_reg(current_feedback_reg, &reg);
     // The codes are in bits 31:23
 
     // Sets the return string to empty
@@ -6213,11 +6234,13 @@ static int hdlr_debug_sfp_current_errors_string(const char *data, char *ret) {
 // 2 = reset latch then read
 // 3 = read then reset latch
 // Any other value: reserved, will behave as read only
-static int hdlr_debug_sfp_latched_errors_code(const char *data, char *ret) {
+static int hdlr_debug_feedback_latched_errors_codes(const char *data, char *ret) {
     uint32_t reg = 0;
-    read_hps_reg("res_ro0", &reg);
+    read_hps_reg(latched_feedback_reg, &reg);
     // The codes are in bits 15:7
     uint32_t code = (reg >> 7) & 0x1ff;
+
+    // TODO: implement resetting the latch
 
     if(code > 0) {
         PRINT(ERROR, "SFP ERRORS detected: %u\n", code);
@@ -6236,9 +6259,9 @@ static int hdlr_debug_sfp_latched_errors_code(const char *data, char *ret) {
 // 2 = reset latch then read
 // 3 = read then reset latch
 // Any other value: reserved, will behave as read only
-static int hdlr_debug_sfp_latched_errors_string(const char *data, char *ret) {
+static int hdlr_debug_feedback_latched_errors_strings(const char *data, char *ret) {
     uint32_t reg = 0;
-    read_hps_reg("res_ro3", &reg);
+    read_hps_reg(latched_feedback_reg, &reg);
     // The codes are in bits 31:23
 
     // TODO: implement resetting the latch
@@ -6278,6 +6301,58 @@ static int hdlr_debug_sfp_latched_errors_string(const char *data, char *ret) {
         PRINT(ERROR, "SFP ERRORS detected: %s\n", ret);
     }
 
+    return RETURN_SUCCESS;
+}
+
+// Gets the flag for a specifc error
+static uint8_t get_fpga_current_feedback_bit(uint8_t error_loc) {
+    uint32_t reg = 0;
+    read_hps_reg(current_feedback_reg, &reg);
+    return (reg >> (current_feedback_start + error_loc)) & 0x1;
+}
+
+static int hdlr_debug_feedback_current_JesdCorePllUnlocked(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_JesdCorePllLocked));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_XgRxAmNoLock(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_XgRxAmLock));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_XgRxBlockNoLock(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_XgRxBlockLock));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_XgRxPcsNotReady(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_XgRxPcsReady));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_XgTxLanesUnstable(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_XgTxLanesStable));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_XgTxPllUnlocked(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_XgTxPllLocked));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_XgModuleNotPresent(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_XgModulePresent));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_MgmtPllUnlocked(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_MgmtPllLocked));
+    return RETURN_SUCCESS;
+}
+
+static int hdlr_debug_feedback_current_FpgaRefPllUnlocked(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%u\n", get_fpga_current_feedback_bit(bit_FpgaRefPllLocked));
     return RETURN_SUCCESS;
 }
 
@@ -6714,11 +6789,30 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/tx_sample_bandwidth"       , hdlr_fpga_link_tx_sample_bandwidth,     RW, S_DEAULT_OTW_TX, SP, NAC)
 
 #define DEFINE_FPGA_POST()                                                                                                         \
-    DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"            , hdlr_jesd_reset_master,                      RW, "1", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/debug/sfp_current_error_code"      , hdlr_debug_sfp_current_errors_code,          RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/debug/sfp_current_error_string"    , hdlr_debug_sfp_current_errors_string,        RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/debug/sfp_latched_error_code"      , hdlr_debug_sfp_latched_errors_code,          RW, "0", SP, NAC)\
-    DEFINE_FILE_PROP_P("fpga/debug/sfp_latched_error_string"    , hdlr_debug_sfp_latched_errors_string,        RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/jesd/jesd_reset_master"             , hdlr_jesd_reset_master,                           RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current_error_codes"  , hdlr_debug_feedback_current_errors_codes,          RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current_error_strings", hdlr_debug_feedback_current_errors_strings,        RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched_error_codes"  , hdlr_debug_feedback_latched_errors_codes,          RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched_error_strings", hdlr_debug_feedback_latched_errors_strings,        RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/JesdCorePllUnlocked", hdlr_debug_feedback_current_JesdCorePllUnlocked, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgRxAmNoLock", hdlr_debug_feedback_current_XgRxAmNoLock, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgRxBlockNoLock", hdlr_debug_feedback_current_XgRxBlockNoLock, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgRxPcsNotReady", hdlr_debug_feedback_current_XgRxPcsNotReady, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgTxLanesUnstable", hdlr_debug_feedback_current_XgTxLanesUnstable, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgTxPllUnlocked", hdlr_debug_feedback_current_XgTxPllUnlocked, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/XgModuleNotPresent", hdlr_debug_feedback_current_XgModuleNotPresent, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/MgmtPllUnlocked", hdlr_debug_feedback_current_MgmtPllUnlocked, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/current/FpgaRefPllUnlocked", hdlr_debug_feedback_current_FpgaRefPllUnlocked, RW, "1", SP, NAC)\
+
+/*    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/JesdCorePllUnlocked", hdlr_debug_feedback_latched_JesdCorePllUnlocked, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/XgRxAmNoLock", hdlr_debug_feedback_latched_XgRxAmNoLock, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/XgRxBlockNoLock", hdlr_debug_feedback_latched_XgRxBlockNoLock, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/XgRxPcsNotReady", hdlr_debug_feedback_latched_XgRxPcsNotReady, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/XgTxLanesUnstable", hdlr_debug_feedback_latched_XgTxLanesUnstable, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/XgTxPllUnlocked", hdlr_debug_feedback_latched_XgTxPllUnlocked RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/XgModuleNotPresent", hdlr_debug_feedback_latched_XgModuleNotPresent, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/MgmtPllUnlocked", hdlr_debug_feedback_latched_MgmtPllUnlocked, RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("fpga/debug/feedback/latched/FpgaRefPllUnlocked", hdlr_debug_feedback_latched_FpgaRefPllUnlocked, RW, "1", SP, NAC)\*/
 
 #define DEFINE_GPIO(_p)                                                                                                        \
     DEFINE_FILE_PROP_P("gpio/gpio" #_p                       , hdlr_gpio_##_p##_pin,                   RW, "0", SP, NAC)
