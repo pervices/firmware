@@ -81,9 +81,8 @@
     #define TIME_LO_POWER 0
 
 #elif HARDWARE_RTM_VER == 6
-    // TODO: optimize lo power for RTM6
     #define TX_LO_POWER 60
-    #define RX_LO_POWER 45
+    #define RX_LO_POWER 60
     #define TIME_LO_POWER 0
 #else
     #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 3, 4, 5, 6"

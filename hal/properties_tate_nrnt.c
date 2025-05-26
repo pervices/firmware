@@ -1324,6 +1324,13 @@ int check_time_pll(int ch) {
                 /* if HB add back in freq before printing value to state tree */       \
                 if (band == 2) {                                                       \
                     outfreq += hb_stage2_mixer_freq;                                   \
+                    /* IF is weak so turn on Logen amp for highband */                 \
+                    strcpy(buf, "lmx -E 1\r");                                         \
+                    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                } else if (outfreq > 5000000000) {                                     \
+                    /* turn on Logen amp when frequency high enough that LO needs it */\
+                    strcpy(buf, "lmx -E 1\r");                                         \
+                    ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 }                                                                      \
                 /* Save the frequency that is being set into the property */           \
                 snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                                          \
@@ -2389,6 +2396,9 @@ TX_CHANNELS
                 if (band == 2) {                                                        \
                     outfreq += hb_stage2_mixer_freq;                                    \
                 }                                                                       \
+                /* RX mixer LTC5586 benefits from strong LO so always turn on Lo amp*/  \
+                strcpy(buf, "lmx -E 1\r");                                              \
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));  \
                 /* Save the frequency that is being set into the property */            \
                 snprintf(ret, MAX_PROP_LEN, "%Lf", outfreq);                            \
                 return RETURN_SUCCESS;                                                  \
