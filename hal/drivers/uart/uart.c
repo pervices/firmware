@@ -229,5 +229,5 @@ int flush_uart(int fd) {
         return RETURN_SUCCESS;
     else
         PRINT(ERROR, "UART flush error: %s\n", strerror(errno));
-        return RETURN_ERROR_UART_FLUSH;
+    return RETURN_ERROR_UART_FLUSH;
 }
