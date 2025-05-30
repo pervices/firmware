@@ -4342,6 +4342,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/led_blink_enable"         , hdlr_time_board_led_blink_enable        RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/manual_uart"              , hdlr_time_board_manual_uart,            RW, "", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/eeprom"                   , hdlr_time_about_eeprom,                 RW, "001", SP, NAC)       \
