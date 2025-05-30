@@ -3152,6 +3152,14 @@ static int hdlr_time_board_led(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_board_led_blink_enable(const char *data, char *ret) {
+	strcpy(buf, "debug -b ");
+	strcat(buf, data);
+	strcat(buf, "\r");
+	ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+	return RETURN_SUCCESS;
+}
+
 /* Sends UART commands to time board, does nothing if given an empty string */
 /* For debugging purposes only */
 static int hdlr_time_board_manual_uart(const char *data, char *ret) {
@@ -4342,6 +4350,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/led_blink_enable"         , hdlr_time_board_led_blink_enable,       RW, "1", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/manual_uart"              , hdlr_time_board_manual_uart,            RW, "", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/eeprom"                   , hdlr_time_about_eeprom,                 RW, "001", SP, NAC)       \
