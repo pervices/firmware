@@ -382,7 +382,20 @@ static int valid_gating_mode(const char *data, bool *dsp) {
     }
     return RETURN_SUCCESS;
 }
+
 #endif //(NUM_TX_CHANNELS > 0)
+
+// Check if the unit is configured so all tx can handle max rate but rx C and D don't work
+static int is_full_tx() {
+    uint32_t val;
+    return read_hps_reg("sys18", &val) & 0x1;
+}
+
+// Check if the unit is configured so all tx can handle max rate but rx C and D don't work
+static int hdlr_is_full_tx(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%i\n", is_full_tx());
+    return RETURN_SUCCESS;
+}
 
 static int hdlr_save_config(const char *data, char *ret) {
     *_save_profile = 1;
@@ -1081,11 +1094,15 @@ int check_rf_pll(int ch, int uart_fd) {
         sscanf(data, "%lf", &rate);                                            \
         \
         /* Limit for full rate DAC */\
-        if(INT(ch) == 0 || INT(ch) == 1) {\
+        /* On normal units ch 0 and 1 use maximum*/\
+        if(INT(ch) == 0 || INT(ch) == 1 || is_full_tx()) {\
             rate = fmin(rate, get_base_sample_rate() / link_rate_divisor);\
         /* Limit for quarter rate DAC */\
         } else if (INT(ch) == 2 || INT(ch) == 3){\
             rate = fmin(rate, get_base_sample_rate() / (fmin(link_rate_divisor, 4)));\
+        } else {\
+            /* This error should be unreachable */\
+            PRINT(ERROR, "Tx channel not implemented\n");\
         }\
                                                                                \
         /* get the error for base rate */                                      \
@@ -4429,6 +4446,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
     DEFINE_FILE_PROP_P("system/lo_step"              , hdlr_invalid,                           RO, LO_STEPSIZE_S, SP, NAC)\
     DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_max_sample_rate,                   RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("system/is_full_tx"                 , hdlr_is_full_tx,                   RW, "1", SP, NAC)\
 
 static prop_t property_table[] = {
     DEFINE_TIME()
