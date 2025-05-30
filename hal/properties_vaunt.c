@@ -3223,6 +3223,14 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_time_led_blink_enable(const char *data, char *ret) {
+    strcpy(buf, "board -v\r");
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+
+    return RETURN_SUCCESS;
+}
+
 /* -------------------------------------------------------------------------- */
 /* --------------------------------- FPGA ----------------------------------- */
 /* -------------------------------------------------------------------------- */
@@ -4340,6 +4348,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,          WO, "continuous", SP, NAC)    \
     DEFINE_FILE_PROP_P("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/board/led_blink_enable"         , hdlr_time_led_blink_enable,             RW, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/manual_uart"              , hdlr_time_board_manual_uart,            RW, "", SP, NAC)         \
