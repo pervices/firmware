@@ -3153,11 +3153,15 @@ static int hdlr_time_board_led(const char *data, char *ret) {
 }
 
 static int hdlr_time_board_led_blink_enable(const char *data, char *ret) {
-	strcpy(buf, "debug -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+    if (strcmp(data, "0") == 0 || strcmp(data, "off") == 0) {
+	strcpy(buf, "debug -b 0\r");
 	ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-	return RETURN_SUCCESS;
+    }
+    if (strcmp(data, "1") == 0 || strcmp(data, "on") == 0) {
+	strcpy(buf, "debug -b 1\r");
+	ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    }
+    return RETURN_SUCCESS;
 }
 
 /* Sends UART commands to time board, does nothing if given an empty string */
