@@ -3224,7 +3224,7 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_time_led_blink_enable(const char *data, char *ret) {
-    strcpy(buf, "debug -b");                                             \
+    strcpy(buf, "debug -b ");                                             \
     strcat(buf, data);                                                     \
     strcat(buf, "\r");                                                     \
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));      \
