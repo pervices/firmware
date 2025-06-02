@@ -3229,6 +3229,8 @@ static int hdlr_time_led_blink_enable(const char *data, char *ret) {
     strcat(buf, "\r");                                             
     if (strcmp(data, "1") == 0)
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf)); 
+    if (strcmp(data, "0") == 0)
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf)); 
     return RETURN_SUCCESS;
 }
 
