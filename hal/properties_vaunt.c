@@ -3224,15 +3224,10 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_time_led_blink_enable(const char *data, char *ret) {
-    //strcpy(buf, "board -v\r");
-    //ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    //strcpy(ret, (char *)uart_ret_buf);
-
-    strcpy(buf, "debug -b\r");                                             \
+    strcpy(buf, "debug -b");                                             \
     strcat(buf, data);                                                     \
     strcat(buf, "\r");                                                     \
-    ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
-
+    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));      \
     return RETURN_SUCCESS;
 }
 
