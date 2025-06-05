@@ -387,8 +387,9 @@ static int valid_gating_mode(const char *data, bool *dsp) {
 
 // Check if the unit is configured so all tx can handle max rate but rx C and D don't work
 static int is_full_tx() {
-    uint32_t val;
-    return read_hps_reg("sys18", &val) & 0x1;
+    // uint32_t val;
+    // return read_hps_reg("sys18", &val) & 0x1;
+    return 1;
 }
 
 // Check if the unit is configured so all tx can handle max rate but rx C and D don't work
