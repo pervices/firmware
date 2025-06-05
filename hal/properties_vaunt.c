@@ -1140,9 +1140,9 @@ int check_rf_pll(int ch, int uart_fd) {
         }                                                                      \
                                                                                \
         /* Cap to allowable range */                                           \
-        if(INT(ch) == 0 || INT(ch) == 1) {                                     \
+        if(INT(ch) == 0 || INT(ch) == 1 || is_full_tx()) {                                     \
             freq = fmin(freq, get_base_sample_rate() / 2.0);                   \
-        /* On Crimson tx c/d operate at quarter rate*/                         \
+        /* On Crimson non full tx tx c/d operate at quarter rate*/                         \
         } else if(INT(ch) == 2 || INT(ch) == 3) {                              \
             freq = fmin(freq, get_base_sample_rate() / 8.0);                   \
         } else {                                                               \
