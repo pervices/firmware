@@ -144,12 +144,16 @@ static const char *tx_possible_reg4_map[MAX_POSSIBLE_CHANNELS] = { "txa4", "txb4
 #define NUM_DEVICE_SIDE_PORTS 16
 static const char *device_side_port_map[NUM_DEVICE_SIDE_PORTS] = { "txa15", "txa16", "txa17", "txa18", "txb15", "txb16", "txb17", "txb18", "txc15", "txc16", "txc17", "txc18", "txd15", "txd16", "txd17", "txd18", };
 
+#if NUM_RX_CHANNELS > 0
 // Set to true after changing rx to 1G so it doesn't get set to it again
 // Only used with USE_3G_AS_1G
 static uint8_t rx_3g_set_to_1g[NUM_RX_CHANNELS] = {0};
 
 // Stores if the rx board is a 3G board. Used so that the server knows whether rfe boards are 1G or 3G with USE_3G_AS_1G
 static uint8_t rx_board_variant[NUM_RX_CHANNELS] = {0};
+
+static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
+#endif
 
 typedef enum {
     // The variant has not been obtained yet
@@ -189,8 +193,6 @@ static char buf[MAX_PROP_LEN] = { '\0' };
 static int sfp_max_reset_attempts = 10;
 // SFP always came up in 90/90 tests, so reboot on SFP fail has been disabled
 static int sfp_max_reboot_attempts = 5;
-
-static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
 
 //the time async_pwr started running, used when calculating if it timed out
 //pwr_board_timeout is in seconds

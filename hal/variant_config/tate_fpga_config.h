@@ -84,11 +84,11 @@
     #define LR_NUM_RX(ch) (INT(ch))
     #define LR_NUM_TX(ch) (INT(ch) + 8)
 
-    static const char *rx_sfp_map[NUM_FPGA_RX] = { "sfpa", "sfpb", "sfpc", "sfpd" };
+    __attribute__ ((unused)) static const char *rx_sfp_map[NUM_FPGA_RX] = { "sfpa", "sfpb", "sfpc", "sfpd" };
 
     static const char *tx_sfp_map[NUM_FPGA_TX] = { "sfpa", "sfpb", "sfpc", "sfpd" };
 
-    static const char *rx_ip_dst[NUM_FPGA_RX] = { "10.10.10.10", "10.10.11.10", "10.10.12.10", "10.10.13.10" };
+    __attribute__ ((unused)) static const char *rx_ip_dst[NUM_FPGA_RX] = { "10.10.10.10", "10.10.11.10", "10.10.12.10", "10.10.13.10" };
 
     static const int rx_jesd_map[NUM_FPGA_RX] = { 0, 0, 0, 0 };
 
@@ -196,10 +196,10 @@
     #define LR_NUM_RX(ch) (INT(ch))
     #define LR_NUM_TX(ch) (INT(ch) + 8)
 
-    static const char *rx_sfp_map[NUM_FPGA_RX] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
+    __attribute__ ((unused)) static const char *rx_sfp_map[NUM_FPGA_RX] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
     static const char *tx_sfp_map[NUM_FPGA_TX] = { "sfpa", "sfpa", "sfpb", "sfpb", "sfpc", "sfpc", "sfpd", "sfpd" };
 
-    static const char *rx_ip_dst[NUM_FPGA_RX] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10" };
+    __attribute__ ((unused)) static const char *rx_ip_dst[NUM_FPGA_RX] = { "10.10.10.10", "10.10.10.10", "10.10.11.10", "10.10.11.10", "10.10.12.10", "10.10.12.10", "10.10.13.10", "10.10.13.10" };
 
     static const int rx_jesd_map[NUM_FPGA_RX] = { 0, 1, 0, 1, 0, 1, 0, 1 };
 
@@ -252,11 +252,11 @@
     #define LR_NUM_RX(ch) (INT(ch))
     #define LR_NUM_TX(ch) (INT(ch) + 8)
 
-    static const char *rx_sfp_map[NUM_FPGA_RX] = { "sfpa", "sfpb", "sfpc", "sfpd" };
+    __attribute__ ((unused)) static const char *rx_sfp_map[NUM_FPGA_RX] = { "sfpa", "sfpb", "sfpc", "sfpd" };
 
     static const char *tx_sfp_map[NUM_FPGA_TX] = { "sfpa", "sfpb", "sfpc", "sfpd" };
 
-    static const char *rx_ip_dst[NUM_FPGA_RX] = { "10.10.10.10", "10.10.11.10", "10.10.12.10", "10.10.13.10" };
+    __attribute__ ((unused)) static const char *rx_ip_dst[NUM_FPGA_RX] = { "10.10.10.10", "10.10.11.10", "10.10.12.10", "10.10.13.10" };
 
     static const int rx_jesd_map[NUM_FPGA_RX] = { 0, 0, 0, 0 };
 

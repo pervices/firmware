@@ -91,8 +91,16 @@
             #define INT_TX(ch) ((int)(4*((CHR(ch) - 'a')%4)) + ((int)(CHR(ch) - 'a')/4) + 2)
         #endif
 
+        // Note: 0R4T uses the 4R4T FPGA
+        #if defined(R0) && defined(T4)
+            #define FPGA_4R4T_1G
+            #define NUM_RX_CHANNELS 0
+            #define NUM_TX_CHANNELS 4
+            #define S_NUM_RX "0"
+            #define S_NUM_TX "4"
+
         // Note: 1R1T uses the 4R4T FPGA
-        #if defined(R1) && defined(T1)
+        #elif defined(R1) && defined(T1)
             #define FPGA_4R4T_1G
             #define NUM_RX_CHANNELS 1
             #define NUM_TX_CHANNELS 1
@@ -154,7 +162,7 @@
                 #error "Invalid channel combination with USE_3G_AS_1G"
             #endif
         #else
-            #error Invalid number of channels specified for 1G, must be: R4 T4, R8 T0, R9 T7, R8 T8, R4 T2
+            #error Invalid number of channels specified for 1G, must be: R0 T4, R1 T1, R2 T2, R4 T2, R4 T4, R8 T0, R8 T8, R9 T7
         #endif
 
     #elif defined (S3000)
