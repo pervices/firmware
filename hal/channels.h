@@ -216,52 +216,28 @@
     #endif
 
 #elif defined(TATE_NRNT) || defined(LILY)
-    #if (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS ==4)
-        //TODO generate this dynamically, used by the macro to create the functions for each channel
-        #define RX_CHANNELS \
-            X(a) \
-            X(b) \
-            X(c) \
-            X(d)
+    // Create RX channel list used by XMACRO to create the functions for all the channels in the state tree
+    // TODO is there a better way to do this?
+    #if (NUM_RX_CHANNELS == 0)
+        #define RX_CHANNELS
 
-        #define TX_CHANNELS \
-            X(a) \
-            X(b) \
-            X(c) \
-            X(d)
-
-    #elif (NUM_RX_CHANNELS == 1 && NUM_TX_CHANNELS == 1)
-        //TODO generate this dynamically, used by the macro to create the functions for each channel
+    #elif (NUM_RX_CHANNELS == 1)
         #define RX_CHANNELS \
             X(a)
 
-        #define TX_CHANNELS \
-            X(a)
-
-    #elif (NUM_RX_CHANNELS == 2 && NUM_TX_CHANNELS == 2)
-        //TODO generate this dynamically, used by the macro to create the functions for each channel
+    #elif (NUM_RX_CHANNELS == 2)
         #define RX_CHANNELS \
             X(a) \
             X(b)
 
-        #define TX_CHANNELS \
-            X(a) \
-            X(b)
-
-    #elif (NUM_RX_CHANNELS == 4 && NUM_TX_CHANNELS == 2)
-        //TODO generate this dynamically, used by the macro to create the functions for each channel
+    #elif (NUM_RX_CHANNELS == 4)
         #define RX_CHANNELS \
             X(a) \
             X(b) \
             X(c) \
             X(d)
 
-        #define TX_CHANNELS \
-            X(a) \
-            X(b)
-
-    #elif (NUM_RX_CHANNELS == 8 && NUM_TX_CHANNELS == 0)
-        //TODO generate this dynamically, used by the macro to create the functions for each channel
+    #elif (NUM_RX_CHANNELS == 8)
         #define RX_CHANNELS \
             X(a) \
             X(b) \
@@ -272,11 +248,7 @@
             X(g) \
             X(h)
 
-        #define TX_CHANNELS
-
-    // Configuration for 9R7T
-    #elif (NUM_RX_CHANNELS == 9 && NUM_TX_CHANNELS ==7)
-        //TODO generate this dynamically, used by the macro to create the functions for each channel
+    #elif (NUM_RX_CHANNELS == 9)
         #define RX_CHANNELS \
             X(a) \
             X(b) \
@@ -288,6 +260,31 @@
             X(h) \
             X(i)
 
+    #else
+        #error Invalid configuration, unexpected number of RX channels
+    #endif
+
+    // Create TX channel list used by XMACRO to create the functions for all the channels in the state tree
+    #if (NUM_TX_CHANNELS == 0)
+        #define TX_CHANNELS
+
+    #elif (NUM_TX_CHANNELS == 1)
+        #define TX_CHANNELS \
+            X(a)
+
+    #elif (NUM_TX_CHANNELS == 2)
+        #define TX_CHANNELS \
+            X(a) \
+            X(b)
+
+    #elif (NUM_TX_CHANNELS ==4)
+        #define TX_CHANNELS \
+            X(a) \
+            X(b) \
+            X(c) \
+            X(d)
+
+    #elif (NUM_TX_CHANNELS ==7)
         #define TX_CHANNELS \
             X(a) \
             X(b) \
@@ -296,20 +293,8 @@
             X(e) \
             X(f) \
             X(g)
-            
-    // Configuration for 8R8T
-    #elif (NUM_RX_CHANNELS == 8 && NUM_TX_CHANNELS ==8)
-        //TODO generate this dynamically, used by the macro to create the functions for each channel
-        #define RX_CHANNELS \
-            X(a) \
-            X(b) \
-            X(c) \
-            X(d) \
-            X(e) \
-            X(f) \
-            X(g) \
-            X(h)
 
+    #elif (NUM_TX_CHANNELS ==8)
         #define TX_CHANNELS \
             X(a) \
             X(b) \
@@ -321,7 +306,7 @@
             X(h)
 
     #else
-        #error Invalid configuration, currently supported configurations: R9 T7, R4 T4, R8 T0, R8 T8, R1 T1, R2 T2
+        #error Invalid configuration, unexpected number of TX channels
     #endif
 
 #else
