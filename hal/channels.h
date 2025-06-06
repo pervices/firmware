@@ -70,7 +70,6 @@
             #error Invalid number of channels specified for LILY, must be: R1 T1, R4 T4
         #endif
     #else
-        // TODO LILY: correct sample rate
         #error Invalid maximum sample rate specified (MHz), must be: S500
     #endif
 
@@ -225,7 +224,6 @@
 
 #elif defined(TATE_NRNT) || defined(LILY)
     // Create RX channel list used by XMACRO to create the functions for all the channels in the state tree
-    // TODO is there a better way to do this?
     #if (NUM_RX_CHANNELS == 0)
         #define RX_CHANNELS
 
