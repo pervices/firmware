@@ -33,8 +33,11 @@
     #elif defined(RTM6)
         #define PRODUCT_RTM_VER 6
         #define HARDWARE_RTM_VER 6
+    #elif defined(RTM7)
+        #define PRODUCT_RTM_VER 7
+        #define HARDWARE_RTM_VER 7
     #else
-        #error "TATE_NRNT must be compiled with a valid hardware revision (RTM3, RTM4, RTM6)"
+        #error "TATE_NRNT must be compiled with a valid hardware revision (RTM3, RTM4, RTM5, RTM6, RTM7)"
     #endif
 #elif defined(LILY)
     // No actual Lily version exists based on RTM5 hardware, this option exists for testing using a converted RTM5 Tate
@@ -61,7 +64,7 @@
     // Otherwise delay = n * 300ps + 300ps
     #define DEFAULT_ANALOG_SYSREF_DELAY 0
 
-#elif HARDWARE_RTM_VER == 5 || HARDWARE_RTM_VER == 6
+#elif HARDWARE_RTM_VER == 5 || HARDWARE_RTM_VER == 6 || HARDWARE_RTM_VER == 7
     // On 1Gsps sysref is activated on the falling edge of sysref, other stuff is active on the rising edge
     // To compensate for this some revisions swapped dev clk on hardware
     #define INVERT_DEV_CLOCK_HARDWARE_SWAP 0
@@ -80,7 +83,7 @@
     #define RX_LO_POWER 45
     #define TIME_LO_POWER 0
 
-#elif HARDWARE_RTM_VER == 6
+#elif HARDWARE_RTM_VER == 6 || HARDWARE_RTM_VER == 7
     #define TX_LO_POWER 60
     #define RX_LO_POWER 60
     #define TIME_LO_POWER 0
