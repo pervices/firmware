@@ -4335,7 +4335,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/clk/set_time"                   , hdlr_time_clk_set_time,                 WO, "0.0", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/clk/set_time"                   , hdlr_time_clk_set_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/pps_detected"               , hdlr_time_clk_pps_dtc,                  RW, "1", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
