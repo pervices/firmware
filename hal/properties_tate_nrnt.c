@@ -1687,6 +1687,7 @@ int check_time_pll(int ch) {
         } else {\
             bypass = 0;\
             sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
+            sample_factor = sample_factor >> 1; \
         }\
         /*bit 0 of tx_0 is used to determine whether or not to bypass the dsp*/\
         read_hps_reg("tx" STR(ch) "2", &reg_val);\
