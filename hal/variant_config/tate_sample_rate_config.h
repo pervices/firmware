@@ -70,7 +70,7 @@
     #define S_NSAMPS_MULTIPLE_RX "1"
 
     // Number of samples for tx must be a multiple of this
-    #define NSAMPS_MULTIPLE_TX 1
+    #define NSAMPS_MULTIPLE_TX "1"
 
     // On 1Gsps sysref is sampled on the falling edge of devclk
     // Most of the system activates on the rising edge of devclk
@@ -145,7 +145,7 @@
     #define S_NSAMPS_MULTIPLE_RX "2944"
 
     // Number of samples for tx must be a multiple of this
-    #define NSAMPS_MULTIPLE_TX 1
+    #define NSAMPS_MULTIPLE_TX "1"
 
     // On 3Gsps sysref is sampled on the falling edge of devclk
     // Most of the system activates on the rising edge of devclk
