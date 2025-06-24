@@ -1685,6 +1685,12 @@ int check_time_pll(int ch) {
         /* Whether to bypass the dsp*/\
         uint32_t bypass;\
         \
+        /* Enables x2 interpolator */\
+        /* The x2 interpolator improves FPGA performance */\
+        /* It should be active when SR factor is equal to or greater than 3 (250Msps and below on 1Gsps unit */\
+        /* It is ignored when SR factor is 2 or lower (500Msps and above on 1Gsps unit) */\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], 1 << 18, 1 << 18);\
+        \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
         if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = MAX_USER_SAMPLE_RATE * 1e6;\
