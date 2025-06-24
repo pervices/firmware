@@ -3246,12 +3246,15 @@ static int hdlr_time_about_fw_ver(const char *data, char *ret) {
 
 //cjoh 14843, interface w/ blink_en on MCU
 static int hdlr_time_board_ledblink(const char *data, char *ret) {
-    if (strcmp(data, "1") == 1 || strcmp(data, "on") == 1) {
+    if ( ( strcmp(data, "1") == 0 ) || ( strcmp(data, "on") == 0) ) {
         strcpy(buf, "debug -b 1\r");
     } else if (strcmp(data, "0") == 0 || strcmp(data, "off") == 0) {
         strcpy(buf, "debug -b 0\r");
     }
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+    strcpy(ret, (char *)uart_ret_buf);
+    
+    
     return RETURN_SUCCESS;
 }
 
