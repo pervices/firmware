@@ -331,6 +331,16 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     return sample_factor;
 }
 
+// Gets the number of commits on the FPGA branch this was compiled from (0 if using an older FPGA)
+// Use this when determining if an FPGA is new enough to support the requested feature
+static int get_commit_counter() {
+    uint32_t reg_val;
+    read_hps_reg("sys3", &reg_val);
+
+    uint16_t commit_counter = reg_val >> 16;
+    return commit_counter;
+}
+
 // reg: the register to write to
 // shift: the point in the register to write the value to (the value is 16 bit)
 // desired: the target length of the VITA 49 part of the packet, not including the trailer if applicable
@@ -1674,6 +1684,12 @@ int check_time_pll(int ch) {
         uint16_t sample_factor;\
         /* Whether to bypass the dsp*/\
         uint32_t bypass;\
+        \
+        /* Enables x2 interpolator */\
+        /* The x2 interpolator improves FPGA performance */\
+        /* It should be active when SR factor is equal to or greater than 3 (250Msps and below on 1Gsps unit */\
+        /* It is ignored when SR factor is 2 or lower (500Msps and above on 1Gsps unit) */\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], 1 << 18, 1 << 18);\
         \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_TX_SAMPLE_RATE) rate = MIN_TX_SAMPLE_RATE;\
@@ -5557,6 +5573,12 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_about_commit_counter(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%i\n", get_commit_counter());
+
+    return RETURN_SUCCESS;
+}
+
 // Note: this is the rate the FPGA build has, not what the server has
 // This property exists for FPGA versioning, actual behaviour will depend on what the server was compiled with
 static int hdlr_fpga_about_rate(const char *data, char *ret) {
@@ -6806,6 +6828,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
     DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/commit_counter"           , hdlr_fpga_about_commit_counter,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/rate"            , hdlr_fpga_about_rate,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/num_rx"          , hdlr_fpga_about_num_rx,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/num_tx"          , hdlr_fpga_about_num_tx,              RW, "0", SP, NAC)                 \

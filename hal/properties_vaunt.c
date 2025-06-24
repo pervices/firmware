@@ -111,6 +111,16 @@ double get_dac_nco_const() {
     }
 }
 
+// Gets the number of commits on the FPGA branch this was compiled from (0 if using an older FPGA)
+// Use this when determining if an FPGA is new enough to support the requested feature
+static int get_commit_counter() {
+    uint32_t reg_val;
+    read_hps_reg("sys3", &reg_val);
+
+    uint16_t commit_counter = reg_val >> 16;
+    return commit_counter;
+}
+
 #define AVERY_IF 650000000UL
 
 #define REF_FREQ 5000000 // core reference frequency is 5MHz, needed by LMX2595
@@ -1096,6 +1106,11 @@ int check_rf_pll(int ch, int uart_fd) {
         double base_err = 0.0;                                                 \
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
+        \
+        \
+        /* Enables x2 interpolator on Tate, does nothing on Vaunt */\
+        /* It is set here even though it does nothing on Vaunt to maximize similarity to Tate */\
+        write_hps_reg_mask(reg4[INT(ch)], 1 << 18, 1 << 18);\
         \
         /* Limit for full rate DAC */\
         /* On normal units ch 0 and 1 use maximum*/\
@@ -3577,6 +3592,12 @@ static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_about_commit_counter(const char *data, char *ret) {
+    snprintf(ret, MAX_PROP_LEN, "%i\n", get_commit_counter());
+
+    return RETURN_SUCCESS;
+}
+
 // Currently our units do not have serial numbers burned into them
 // As a workaround the serial number will be rtm followed by serial number of the time mcu
 static int hdlr_fpga_about_serial(const char *data, char *ret) {
@@ -4391,6 +4412,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
     DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/about/commit_counter"           , hdlr_fpga_about_commit_counter,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
