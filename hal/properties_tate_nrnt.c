@@ -6934,6 +6934,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("system/otw_rx", "fpga/link/rx_sample_bandwidth")\
     DEFINE_SYMLINK_PROP("system/otw_tx", "fpga/link/tx_sample_bandwidth")\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/nsamps_multiple_tx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_TX, SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "1", SP, NAC)\
     /* TODO: add seperate flag to know whether the board is a 1G or 3G board to about */\
     DEFINE_FILE_PROP_P("system/flags/USE_3G_AS_1G"       , hdlr_invalid,                           RO, S_USE_3G_AS_1G, SP, NAC)\
