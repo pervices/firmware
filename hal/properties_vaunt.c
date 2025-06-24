@@ -4359,10 +4359,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
-    DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/clk/set_time"                   , hdlr_time_clk_set_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
-    DEFINE_FILE_PROP_P("time/clk/pps_detected"               , hdlr_time_clk_pps_dtc,                  RW, "1", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked", SP, NAC)  \
@@ -4370,7 +4367,6 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/source/vtune"                   , hdlr_time_source_vtune,                 RW, "1403", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
@@ -4395,10 +4391,18 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 
     // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
 
-#define DEFINE_FPGA()                                                                                                         \
+#define DEFINE_TIME_REGS()                                                                                                         \
+    DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/clk/set_time"                   , hdlr_time_clk_set_time,                 RW, "0.0", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/clk/pps_detected"               , hdlr_time_clk_pps_dtc,                  RW, "1", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/source/set_time_source"         , hdlr_time_set_time_source,              RW, "internal", SP, NAC)
+
+#define DEFINE_FPGA_PRE()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/board/init_regs"                , hdlr_fpga_board_init_regs,              RW, "1", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/reg_rst_req"              , hdlr_fpga_board_reg_rst_req,            RW, "8", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/board/reg_rst_status"           , hdlr_fpga_board_reg_rst_status,         RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/reg_rst_status"           , hdlr_fpga_board_reg_rst_status,         RW, "0", SP, NAC)
+
+#define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "in", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "negative", SP, NAC)          \
@@ -4476,6 +4480,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 
 static prop_t property_table[] = {
     DEFINE_TIME()
+    DEFINE_FPGA_PRE()
+    DEFINE_TIME_REGS()
+
     DEFINE_START_RFE_REBOOT()
     DEFINE_WAIT_RFE_REBOOT()
 #define X(ch) DEFINE_RX_CHANNEL(ch)
