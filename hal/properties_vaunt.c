@@ -1103,6 +1103,11 @@ int check_rf_pll(int ch, int uart_fd) {
         double rate;                                                           \
         sscanf(data, "%lf", &rate);                                            \
         \
+        \
+        /* Enables x2 interpolator on Tate, does nothing on Vaunt */\
+        /* It is set here even though it does nothing on Vaunt to maximize similarity to Tate */\
+        write_hps_reg_mask(reg4[INT(ch)], 1 << 18, 1 << 18);\
+        \
         /* Limit for full rate DAC */\
         /* On normal units ch 0 and 1 use maximum*/\
         if(INT(ch) == 0 || INT(ch) == 1 || is_full_tx()) {\
