@@ -45,8 +45,15 @@
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
 // Default payload length
-// = Highest multiple of 512 (for future UHD optimizations) + 16 that is less than 8192 (length of a buffer within the FPGA)
-#define DEFAULT_PAY_LEN_S "7696"
+// JPOL: 2024-02-29 experimentally determined 8144 is the largest payload crimson will send
+// = Highest multiple of 512 (for future UHD optimizations) + 16 that is less than 8192 (length of a buffer within the FPGA (theoretcial limit)) and 8144 (experimental limit)
+#define MAX_PAY_LEN_S "7696"
+#define MAX_PAY_LEN 7696
+// Represents the earliest version this packet size is known to be supported
+// It was supported earlier but the commit counter wasn't implemented
+#define MIN_FPGA_FOR_MAX_PAY_LEN 5524
+// Fallback pay_len for older FPGAs
+#define LEGACY_MAX_PAY_LEN 1400
 
 // Alias PLL_CORE_REF_FREQ_HZ for clarity
 #define LO_STEPSIZE PLL_CORE_REF_FREQ_HZ
@@ -3885,11 +3892,17 @@ static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
     uint32_t old_val;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    // ensure pay_len is not too large
-    // JPOL: 2024-02-29 experimentally determined 8144 is the largest payload crimson will send
-    if (pay_len > 8144)
-    {
-        pay_len = 8144;
+
+    // Limit pay_len for current FPGA
+    if(get_commit_counter() >= MIN_FPGA_FOR_MAX_PAY_LEN) {
+        if(pay_len > MAX_PAY_LEN) {
+            pay_len = MAX_PATH_LEN;
+        }
+    // Limit pay_len for legacy FPGA
+    } else {
+        if(pay_len > LEGACY_MAX_PAY_LEN) {
+            pay_len = LEGACY_MAX_PAY_LEN;
+        }
     }
     // ensure pay_len is a multiple of 8 (4 bytes per IQ sample and 2 samples per clock means 8 is the minimum step size)
     pay_len -= pay_len % 8;
@@ -3945,11 +3958,17 @@ static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
     uint32_t old_val;
     uint32_t pay_len;
     sscanf(data, "%" SCNd32 "", &pay_len);
-    // ensure pay_len is not too large
-    // JPOL: 2024-02-29 experimentally determined 8144 is the largest payload crimson will send
-    if (pay_len > 8144)
-    {
-        pay_len = 8144;
+
+    // Limit pay_len for current FPGA
+    if(get_commit_counter() >= MIN_FPGA_FOR_MAX_PAY_LEN) {
+        if(pay_len > MAX_PAY_LEN) {
+            pay_len = MAX_PATH_LEN;
+        }
+    // Limit pay_len for legacy FPGA
+    } else {
+        if(pay_len > LEGACY_MAX_PAY_LEN) {
+            pay_len = LEGACY_MAX_PAY_LEN;
+        }
     }
     // ensure pay_len is a multiple of 8 (4 bytes per IQ sample and 2 samples per clock means 8 is the minimum step size)
     pay_len -= pay_len % 8;
@@ -4431,11 +4450,11 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/mac_addr"             , hdlr_fpga_link_sfpa_mac_addr,           RW, "aa:00:00:00:00:00", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ver"                  , hdlr_fpga_link_sfpa_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, DEFAULT_PAY_LEN_S, SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpa/pay_len"              , hdlr_fpga_link_sfpa_pay_len,            RW, MAX_PAY_LEN_S, SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ip_addr"              , hdlr_fpga_link_sfpb_ip_addr,            RW, "10.10.11.2", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/mac_addr"             , hdlr_fpga_link_sfpb_mac_addr,           RW, "aa:00:00:00:00:01", SP, NAC) \
     DEFINE_FILE_PROP_P("fpga/link/sfpb/ver"                  , hdlr_fpga_link_sfpb_ver,                RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, DEFAULT_PAY_LEN_S, SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, MAX_PAY_LEN_S, SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
