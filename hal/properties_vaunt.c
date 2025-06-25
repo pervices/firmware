@@ -4385,7 +4385,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)    \
-    DEFINE_FILE_PROP_P("time/board/ledblink"                 , hdlr_time_board_ledblink,               WO, "0", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/board/ledblink"                 , hdlr_time_board_ledblink,               RW, "0", SP, NAC)       \
 
     //^^cjoh 14843, add ledblink to access blink_en on MCU
     // time/source/vtune must be set to 1403 for time boards populated with AOCJY and 1250 for boards with OX-174
