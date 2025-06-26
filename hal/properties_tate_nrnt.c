@@ -6765,10 +6765,7 @@ GPIO_PINS
 
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/reboot"                         , hdlr_time_reboot,                       RW, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
-    DEFINE_FILE_PROP_P("time/clk/pps_detected"               , hdlr_time_clk_pps_dtc,                  RW, "1", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd0_pll1", hdlr_time_status_ld_jesd0_pll1,        RW, "poke", SP, NAC)      \
@@ -6790,7 +6787,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/source/rf_if_freq"               , hdlr_time_rf_if_freq,                  RW, "1800000000", SP, NAC)\
     DEFINE_FILE_PROP_P("time/status/status_good"             , hdlr_time_status_good,                  RW, "poke", SP, NAC)\
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/source/set_time_source"        , hdlr_time_set_time_source,               RW, "internal", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/get_time_source"        , hdlr_time_get_time_source,               RW, "poke", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"             , hdlr_time_sync_sysref_mode,             RW, "continuous", SP, NAC)   \
     DEFINE_FILE_PROP_P("time/sync/lmk_sync_tgl_jesd"         , hdlr_time_sync_lmk_sync_tgl_jesd,       WO, "0", SP, NAC)         \
@@ -6810,6 +6806,12 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)\
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "0", SP, NAC)
+
+#define DEFINE_TIME_REGS()                                                                                                 \
+    DEFINE_FILE_PROP_P("time/clk/pps"                        , hdlr_time_clk_pps,                      RW, "0", SP, NAC)         \
+    DEFINE_FILE_PROP_P("time/clk/cur_time"                   , hdlr_time_clk_cur_time,                 RW, "0.0", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/clk/pps_detected"               , hdlr_time_clk_pps_dtc,                  RW, "1", SP, NAC)       \
+    DEFINE_FILE_PROP_P("time/source/set_time_source"         , hdlr_time_set_time_source,              RW, "internal", SP, NAC)
 
 #define DEFINE_FPGA()                                                                                                         \
     DEFINE_FILE_PROP_P("fpga/reset"                          , hdlr_fpga_reset,                        RW, "1", SP, NAC)                 \
@@ -6947,6 +6949,8 @@ static prop_t property_table[] = {
     DEFINE_TIME()
 // Initialize FPGA
     DEFINE_FPGA()
+// Initialize time board-related registers
+    DEFINE_TIME_REGS()
 // Inverts dev clock going to each rx board
 // The dev clocks to rx need a small amount of time to stabilize after inverting
 // Having them get inverted before initializing the FPGA allows them to stablize by the time the rx boards turn on
