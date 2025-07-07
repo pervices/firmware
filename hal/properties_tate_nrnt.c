@@ -2133,7 +2133,7 @@ int check_time_pll(int ch) {
                 if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                           \
                     PRINT(INFO, "LNA is good\n");                                   \
                     break;                                                          \
-                } else if(strncmp(buf, "error: LNA monitoring not supported\n")){   \
+                } else if(strncmp(buf, "error: LNA monitoring not supported\n") == 25){   \
                    break;                                                           \
                 } else if(num_lna_attempts >= 10){                                  \
                     PRINT(ERROR, "Failed to start lna after 10 attempts\n");        \
