@@ -2454,7 +2454,7 @@ TX_CHANNELS
                 /* turn off the 1.8GHz IF*/                                    \
                 /*clr_property_bit("time/source/enable_rf_if", INT_RX(ch));   */   \
                 /* clear IQ swap because of possible previous use of low band*/\
-                /*set_property("rx/" STR(ch) "/link/iq_swap", "0");          */    \
+                set_property("rx/" STR(ch) "/link/iq_swap", "0");              \
                 break;                                                         \
             case 0:                                                            \
                 /* turn off the 100MHz LMX ref*/                               \
