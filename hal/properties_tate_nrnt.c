@@ -2126,17 +2126,19 @@ int check_time_pll(int ch) {
             }\
                                                                                \
             /* Check if low noise aplifier is in a good condition */           \
-            /* Skip check if this is not the first time running it, attempting to reset it won't work and will cause timeouts in UHD */\
+            /* Skip check if this is not the first time running it or if unsupported, attempting to reset it won't work and will cause timeouts in UHD */\
             /* LNA arlarm not implemented on Lily */\
             while(tx_not_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
-                hdlr_tx_##ch##_status_lna("1", buf);                           \
-                if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
-                    PRINT(INFO, "LNA is good\n");                              \
-                    break;                                                     \
-                } else if(num_lna_attempts >= 10){                             \
-                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");   \
-                    break;                                                     \
-                } else {                                                       \
+                hdlr_tx_##ch##_status_lna("1", buf);                                \
+                if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                           \
+                    PRINT(INFO, "LNA is good\n");                                   \
+                    break;                                                          \
+                } else if(strncmp(buf, "error: LNA monitoring not supported\n")){   \
+                   break;                                                           \
+                } else if(num_lna_attempts >= 10){                                  \
+                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");        \
+                    break;                                                          \
+                } else {                                                            \
                     PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
                     num_lna_attempts ++;                                       \
                     snprintf(buf, 20, "rf -L r\r");                            \
