@@ -44,7 +44,6 @@
 #ifdef VAUNT
     //sync_lut is used to deal with Crimson specific hardware limitations
     #include "synth_lut.h"
-    #include "variant_config/vaunt_special_config.h"
     #include "variant_config/vaunt_rtm_config.h"
 #endif
 

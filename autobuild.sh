@@ -13,15 +13,15 @@ LILY_RATES=('500')
 function print_help() {
     echo "Compiles server for device with provided configuration options."
     echo "Usage:"
-    echo "  ./autobuild.sh -p <TATE_NRNT|LILY|VAUNT> -v <RTMx> -r <num_rx> -t <num_tx> -s <max_sample_rate> [optional flags]..."
+    echo "  ./autobuild.sh -p <PRODUCT> -v <RTM_VERSION> -r <NUM_RX> -t <NUM_TX> -s <MAX_RATE_MHZ> [optional flags]..."
     echo "  ./autobuild.sh [-h|--help]  # Prints this help menu"
     echo ""
     echo "Required:"
     echo "  -p, --product       The product to compile the server for (TATE_NRNT|LILY|VAUNT)"
-    echo "  -v, --hw-revision   The hardware revision to compile for (RTM5, RTM10, etc...)"
+    echo "  -v, --hw-revision   The hardware revision to compile for (RTM5, RTM6, etc...)"
     echo "  -r, --rx-channels   The number of Rx channels on the device"
     echo "  -t, --tx-channels   The number of Tx channels on the device"
-    echo "  -s, --max-rate      The max sample rate of the device (3000|1000|500|162M5)"
+    echo "  -s, --max-rate      The max sample rate of the device in MHz (3000|1000|500|162M5)"
     echo ""
     echo "Optional:"
     echo "  --rx_40ghz_fe       Indicates the device Tx board has been replaced by a 40GHz Rx frontend"
@@ -34,9 +34,31 @@ function print_help() {
     echo "  ./autobuild.sh -p LILY -v RTM1 -r 4 -t 4 -s 500                         # Lily RTM1"
 }
 
-# Validate the value provided for an argument
+# Compares a value to an array of valid values
 function validate_value() {
+    local val=$1
+    shift
+    local valid_values=("$@")
 
+    local is_valid=0
+    for v in ${valid_values[@]}; do
+        if [ "${val}" == "$v" ]; then
+            is_valid=1
+            break
+        fi
+    done
+
+    return $is_valid
+}
+
+function check_argument_exists() {
+    local name=$1
+    local arg=$2
+
+    if [ -z $arg ]; then
+        echo "[ERROR] $name was not specified but is required for compilation."
+        exit 1
+    fi
 }
 
 # Required arguments
@@ -50,6 +72,7 @@ RX_40GHZ_FE=0
 USE_3G_AS_1G=0
 USER_LO=0
 
+# Parse arguments/flags
 while [ $# -gt 0 ]; do
     key="$1"
     case $key in
@@ -108,10 +131,15 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --rx_40ghz_fe)
+            # Indicates the unit is an avery rx where the tx board has been replaced by a 40GHz RX front end
             RX_40GHZ_FE=1
             shift
             ;;
         --use_3g_as_1g)
+            # Uses 1GSPS sample rate with 3GSPS backplane, can use 3GSPS or 1GSPS RFEs.
+            # The server will set 3GSPS RX boards programmed with Rx3 code to 1GSPS mode.
+            # TX boards must be programmed with regular (1GSPS) Tx mcu.
+            # Time board must be programmed with Time1on3 mcu if 3GSPS RX boards, or regular (1GSPS) time mcu if 1GSPS RX boards.
             USE_3G_AS_1G=1
             shift
             ;;
@@ -129,28 +157,11 @@ while [ $# -gt 0 ]; do
     let n=$n+1
 done
 
-# Check for all required arguments
-if [ -z $PRODUCT ]; then
-    echo "[ERROR] Product was not specified but is required for compilation."
-    exit 1
-fi
-
-is_valid=0
-for product_cmp in ${VALID_PRODUCTS[@]}; do
-    if [ "${PRODUCT}" == "$product_cmp" ]; then
-        is_valid=1
-        break
-    fi
-done
-
-if [ ${!is_valid} ]; then
+# Validate values and check that required arguments were included
+check_argument_exists "Product" $PRODUCT
+if validate_value $PRODUCT ${VALID_PRODUCTS[@]}; then
     echo "[ERROR] Invalid product: $PRODUCT"
     echo "  Valid products are: ${VALID_PRODUCTS[@]}"
-    exit 1
-fi
-
-if [ -z $HW_REV ]; then
-    echo "[ERROR] Hardware revision was not specified but is required for compilation."
     exit 1
 fi
 
@@ -165,50 +176,26 @@ elif [ $PRODUCT == "LILY" ]; then
     VALID_RATES=${LILY_RATES[@]}
 fi
 
-is_valid=0
-for rtm in ${VALID_RTMS[@]}; do
-    if [ $HW_REV == $rtm ]; then
-        is_valid=1
-        break
-    fi
-done
-
-if [ ${!is_valid} ]; then
+check_argument_exists "Hardware revision" $HW_REV
+if validate_value $HW_REV ${VALID_RTMS[@]}; then
     echo "[ERROR] Invalid RTM: $HW_REV"
-    echo "  Valid RTMS for specified product are: ${VALID_RTMS[@]}"
+    echo "        Valid RTMS for specified product are: ${VALID_RTMS[@]}"
     exit 1
 fi
 
-if [ -z $NUM_RX ]; then
-    echo "[ERROR] Number of RX channels was not specified but is required for compilation."
-    exit 1
-fi
 
-if [ -z $NUM_TX ]; then
-    echo "[ERROR] Number of TX channels was not specified but is required for compilation."
-    exit 1
-fi
+check_argument_exists "Number of Rx channels" $NUM_RX
 
-if [ -z $MAX_RATE ]; then
-    echo "[ERROR] Max sample rate was not specified but is required for compilation."
-    exit 1
-fi
+check_argument_exists "Number of Tx channels" $NUM_TX
 
-# TODO: Move validation to function
-is_valid=0
-for rate in ${VALID_RATES[@]}; do
-    if [ $MAX_RATE == $rate ]; then
-        is_valid=1
-        break
-    fi
-done
-
-if [ ${!is_valid} ]; then
+check_argument_exists "Max sample rate" $MAX_RATE
+if validate_value $MAX_RATE ${VALID_RATES[@]}; then
     echo "[ERROR] Invalid max sample rate: $MAX_RATE"
-    echo "  Valid rates for specified product are: ${VALID_RATES[@]}"
+    echo "        Valid rates for specified product are: ${VALID_RATES[@]}"
     exit 1
 fi
 
+# Determine compiler info
 if [ "${PRODUCT}" == "VAUNT" ]; then
     if [ -z $CC ]; then
     if command -v arm-linux-gnueabihf-gcc 2>&1 >/dev/null; then
