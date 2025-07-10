@@ -10,26 +10,13 @@ which is available on yaourt.
 
 1.a Automatic Compile Routines
 
-1.a.i Crimson Optimized Compile Commands
+    sh autobuild.sh -p <PRODUCT> -v <RTM_VERSION> -r <NUM_RX> -t <NUM_TX> -s <MAX_RATE_MHZ> (optional) --rx_40ghz_fe --use_3g_as_1g --user_lo
 
-   sh autovaunt.sh <RTM> (optional) F<Special flag>
+    List options: sh autobuild.sh --help
 
-   Example 1: sh autovaunt.sh RTM9
-   Example 2: sh autovaunt.sh RTM9 F0
-
-1.a.ii Cyan Optimized Compile Commands
-
-    sh autotate.sh <TATE_VERSION> <RTM_VERSION> R<NUM_RX> T<NUM_TX> S<MAX_RATE_MHZ> (optional) F<Special flag>
-
-    Example 1: sh autotate.sh TATE_NRNT RTM5 R8 T8 S1000
-    Example 2: sh autotate.sh TATE_NRNT RTM5 R8 T8 S1000 F0
-
-1.a.iii Chestnut Optimized Compile Commands
-
-    sh autotate.sh LILY <RTM_VERSION> R<NUM_RX> T<NUM_TX> S500 (optional) F<Special flag>
-
-    Example 1: sh autotate.sh LILY RTM1 R4 T4 S500
-    Example 2: sh autotate.sh LILY RTM1 R4 T4 S500 F0
+    Example 1: sh autobuild.sh -p VAUNT -v RTM10 -r 4 -t 4 -s 162M5
+    Example 2: sh autobuild.sh -p TATE_NRNT -v RTM5 -r 4 -t 4 -s 1000 --use_3g_as_1g --user_lo
+    Example 3: sh autobuild.sh -p LILY -v RTM1 -r 4 -t 4 -s 500
 
 2. Manually specifying Build Variant Target
 
@@ -71,7 +58,7 @@ For the internal PV machines that haven't been configured with the new toolchain
    CXX="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-g++" \
    CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
 
-And then add the CFLAGS and instructions appropriate for either crimson or cyan.
+And then add the CFLAGS and instructions appropriate for either Crimson or Cyan.
    
 3. Compile Optimizations
 
