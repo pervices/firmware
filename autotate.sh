@@ -1,4 +1,5 @@
 #!/bin/sh
+echo "The ./autotate.sh script is deprecated. Calling ./autobuild.sh instead..."
 
 if [ $# -eq 0 ]; then
     echo "Version unspecified"
@@ -23,9 +24,6 @@ elif [ $# -ge 5 ]; then
         exit 80
     fi
     
-    ./autogen.sh clean
-    ./autogen.sh
-
     # SPECIAL_FLAGS is a hex bitmask with an F before it (optional)
     # see firmware/hal/variant_config/tate_special_config.h for details
     if [ $# -ge 6 ]; then
@@ -34,27 +32,15 @@ elif [ $# -ge 5 ]; then
         special_flags="F0"
     fi
 
-    ./configure                         \
-            --prefix=/usr                   \
-            --host=x86_64                   \
-            CC=aarch64-linux-gnu-gcc        \
-            CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors \
-                    -march=armv8-a -mtune=cortex-a53 \
-                    -Werror -lm -pthread" \
-            CPPFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            CXX=aarch64-linux-gnu-g++       \
-            CXXFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors \
-                    -march=armv8-a -mtune=cortex-a53 " \
-            PRODUCT=$1 \
-            HW_REV=$2 \
-            NRX=$3 \
-            NTX=$4 \
-            MAX_RATE=$5 \
-            SPECIAL_FLAGS=$special_flags
-else
-    echo "No valid configuration specified"
-    exit 80
-fi
+    OPTIONAL_FLAGS=
+    if [ $special_flags == "F1" ]; then
+        OPTIONAL_FLAGS="--use_3g_as_1g"
+    elif [ $special_flags == "F2" ]; then
+        OPTIONAL_FLAGS="--user_lo"
+    elif [ $special_flags == "F3" ]; then
+        OPTIONAL_FLAGS="--use_3g_as_1g --user_lo"
+    fi
 
-make -j$(nproc)
+    ./autobuild.sh -p $1 -v $2 -r ${3#R} -t ${4#T} -s ${5#S} ${OPTIONAL_FLAGS}
+
+fi
