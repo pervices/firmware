@@ -19,4 +19,4 @@ if [ $special_flags == "F1" ]; then
     OPTIONAL_FLAGS="--rx_40ghz_fe"
 fi
 
-./autobuild.sh -p VAUNT -v $1 -r 4 -t 4 -s 162M5 ${OPTIONAL_FLAGS}
+./autobuild.sh -p VAUNT -v $1 -r 4 -t 4 -s NA ${OPTIONAL_FLAGS}
