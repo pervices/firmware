@@ -49,6 +49,7 @@ install-sh
 mcu
 mem
 server
+flash
 
 #Ignore generated headers
 config.status

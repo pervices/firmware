@@ -6,7 +6,8 @@ SUBDIRS = \
 bin_PROGRAMS = \
 	server \
 	mcu \
-	mem
+	mem \
+	flash
 
 server_SOURCES = \
 	server.c \
@@ -37,3 +38,6 @@ mem_LDADD = \
 	common/libcommon.la \
 	hal/libhal.la \
 	hal/drivers/mmap/libmmap.la
+
+flash_SOURCES = \
+	flash.c
