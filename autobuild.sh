@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # DIAGNOSTICS
 SCRIPT_USER=`whoami`
-SCRIPT_HM=`hostname`
+SCRIPT_HM=`hostname` || ""
 SCRIPT_DATE=`date +%Y%M%dT%H%M%S.%N`
 SCRIPT_DIR=`pwd`
 SCRIPT_PROG=$0
