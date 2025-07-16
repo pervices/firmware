@@ -3,7 +3,6 @@
 #include "../drivers/mmap/mmap.h"
 
 #ifdef VAUNT
-    #include "variant_config/vaunt_special_config.h"
     #include "variant_config/vaunt_rtm_config.h"
 #elif defined(TATE_NRNT)
     #include "variant_config/tate_special_config.h"

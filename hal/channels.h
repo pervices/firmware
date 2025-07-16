@@ -24,7 +24,6 @@
 #if defined(TATE_NRNT) || defined(LILY)
     #include "variant_config/tate_special_config.h"
 #elif defined(VAUNT)
-    #include "variant_config/vaunt_special_config.h"
 #else
     #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
