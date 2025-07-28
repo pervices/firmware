@@ -32,9 +32,11 @@ function print_diagnostics() {
 
 
 # Used for validating values from user
-VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT')
+VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT' 'AVERY')
 VAUNT_RTMS=('RTM6' 'RTM7' 'RTM8' 'RTM9' 'RTM10' 'RTM11' 'RTM12')
 VAUNT_RATES=('NA')  # Vaunt detects sample rate at runtime
+AVERY_RTMS=('RTM10')
+AVERY_RATES=('NA')  # Vaunt detects sample rate at runtime
 TATE_RTMS=('RTM3' 'RTM4' 'RTM5' 'RTM6' 'RTM7')
 TATE_RATES=('1000' '3000')
 LILY_RTMS=('RTM0' 'RTM1')
@@ -207,6 +209,9 @@ fi
 if [ $PRODUCT == "VAUNT" ]; then
     VALID_RTMS=${VAUNT_RTMS[@]}
     VALID_RATES=${VAUNT_RATES[@]}
+elif [ $PRODUCT == "AVERY" ]; then
+    VALID_RTMS=${AVERY_RTMS[@]}
+    VALID_RATES=${AVERY_RATES[@]}
 elif [ $PRODUCT == "TATE_NRNT" ]; then
     VALID_RTMS=${TATE_RTMS[@]}
     VALID_RATES=${TATE_RATES[@]}
@@ -223,7 +228,6 @@ if validate_value $HW_REV ${VALID_RTMS[@]}; then
     exit 1
 fi
 
-
 check_argument_exists "Number of Rx channels" $NUM_RX
 
 check_argument_exists "Number of Tx channels" $NUM_TX
@@ -237,7 +241,7 @@ if validate_value $MAX_RATE ${VALID_RATES[@]}; then
 fi
 
 # Determine compiler info
-if [ "${PRODUCT}" == "VAUNT" ]; then
+if [[ "${PRODUCT}" == "VAUNT" || "${PRODUCT}" == "AVERY" ]]; then
     if [ -z "${CC:-}" ]; then
         if command -v arm-linux-gnueabihf-gcc 2>&1 >/dev/null; then
             SERVER_CC="arm-linux-gnueabihf-gcc"
