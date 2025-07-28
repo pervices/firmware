@@ -408,7 +408,8 @@ static int valid_gating_mode(const char *data, bool *dsp) {
 // Check if the unit is configured so all tx can handle max rate but rx C and D don't work
 static int is_full_tx() {
     uint32_t val;
-    return read_hps_reg("sys18", &val) & 0x1;
+    read_hps_reg("sys18", &val);
+    return val & 0x1;
 }
 
 // Check if the unit is configured so all tx can handle max rate but rx C and D don't work
@@ -4494,7 +4495,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("system/min_lo"                   , hdlr_invalid,                           RO, MIN_LO_S, SP, NAC)\
     DEFINE_FILE_PROP_P("system/lo_step"              , hdlr_invalid,                           RO, LO_STEPSIZE_S, SP, NAC)\
     DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_max_sample_rate,                   RW, "1", SP, NAC)\
-    DEFINE_FILE_PROP_P("system/is_full_tx"                 , hdlr_is_full_tx,                   RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("system/is_full_tx"                 , hdlr_is_full_tx,                   RW, "POKE", SP, NAC)\
 
 static prop_t property_table[] = {
     DEFINE_TIME()
