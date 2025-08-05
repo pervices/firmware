@@ -22,7 +22,8 @@ char PATH_TNG_TIME[50] = "/dev/ttycrimson-time";
 char HEX_TNG_RX[50] = "vaunt-rx.hex";
 char HEX_TNG_TX[50] = "vaunt-tx.hex";
 char HEX_TNG_TIME[50] = "vaunt-synth.hex";
-char HEX_TNG_AVERY_RX[50] = "vaunt-avery-rx.hex";
+char HEX_TNG_AVERY_RX[50] = "avery-rx.hex";
+char HEX_TNG_FULLTX[50] = "vaunt-fulltx.hex";
 
 // Tate Paths
 char PATH_TATE_RX[50] = "/dev/ttycyan-rfe-";
@@ -69,16 +70,16 @@ char BOOT_ENTRY_SEQUENCE[30] = "abcdefghijklmnopqrstuvwxyz";
 
 int help_summary(char *this)
 {
-    printf("Usage: %s [ w(rite) | v(erify) ] [ rx | rx3 | bbrx | tx | tx3 | bbtx| time | time3 | time1on3 | avery-rx | "
+    printf("Usage: %s [ w(rite) | v(erify) ] [ rx | rx3 | bbrx | tx | tx3 | bbtx| time | time3 | time1on3 | avery-rx | fulltx | "
            "all ] "
-           "[crimson | tate | lily] [0..15]\n",
+           "[crimson | tate | lily | avery] [0..15]\n",
            this);
     printf("Example: \n");
     printf("\tWrite MCU to all crimson boards: \n \t%s w all crimson\n", this);
     printf("\tVerify time board tate mcu code: \n \t%s v time tate\n", this);
     printf("\tWrite tate tx MCU to rfe-7: \n \t%s w tx tate 7\n", this);
     printf("\tWrite lily rx MCU to rfe-2: \n \t%s w rx lily 2\n", this);
-
+    printf("\tWrite avery rx: \n \t%s w avery-rx avery\n", this);
     return 0;
 }
 
@@ -128,7 +129,7 @@ int main(int argc, char *argv[])
     if ((strcmp(argv[2], "time") == 0) || (strcmp(argv[2], "time3") == 0) || (strcmp(argv[2], "time1on3") == 0) ||
         (strcmp(argv[2], "rx") == 0) || (strcmp(argv[2], "rx3") == 0) || (strcmp(argv[2], "bbrx") == 0) ||
         (strcmp(argv[2], "tx") == 0) || (strcmp(argv[2], "tx3") == 0) || (strcmp(argv[2], "bbtx") == 0) ||
-        (strcmp(argv[2], "avery-rx") == 0) || (strcmp(argv[2], "all") == 0))
+        (strcmp(argv[2], "avery-rx") == 0) || (strcmp(argv[2], "fulltx") == 0) || (strcmp(argv[2], "all") == 0))
     {
         fflush(stdout);
     }
@@ -139,7 +140,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if ((strcmp(argv[3], "crimson") == 0) || (strcmp(argv[3], "tate") == 0) || (strcmp(argv[3], "lily") == 0))
+    if ((strcmp(argv[3], "crimson") == 0) || (strcmp(argv[3], "tate") == 0) || (strcmp(argv[3], "lily") == 0) || (strcmp(argv[3], "avery") == 0))
     {
         fflush(stdout);
         if ((strcmp(argv[2], "all") == 0) && (strcmp(argv[3], "tate") == 0))
@@ -185,6 +186,11 @@ int main(int argc, char *argv[])
         if ((strcmp(argv[2], "avery-rx") == 0) && ((strcmp(argv[3], "tate") == 0 || strcmp(argv[3], "lily") == 0)))
         {
             printf("ERROR: avery-rx currently unsupported for tate, chestnut.\n");
+            return 1;
+        }
+        if ((strcmp(argv[2], "fulltx") == 0) && ((strcmp(argv[3], "tate") == 0 || strcmp(argv[3], "lily") == 0)))
+        {
+            printf("ERROR: fulltx currently unsupported for tate, chestnut.\n");
             return 1;
         }
     }
@@ -336,11 +342,23 @@ int main(int argc, char *argv[])
                 return 1;
             }
         }
-        else
+        }else if (strcmp(argv[3], "avery") == 0)
         {
+            if (!system("systemctl is-active --quiet crimson-server.service"))
+            {
+                printf("Avery server is active, stopping avery server\n");
+                if (system("systemctl stop crimson-website.service") == -1)
+                {
+                    return 1;
+                }
+                if (system("systemctl stop crimson-server.service") == -1)
+                {
+                    return 1;
+                }
+            }else{
             printf("Crimson server is not active\n");
             server_status = 0;
-        }
+            }
     }
     // Closes all minicom instances, since they will interfere with flashing
     system("killall minicom");
@@ -362,7 +380,24 @@ int main(int argc, char *argv[])
             printf("Flashing TX\n");
             program(PATH_TNG_TX, HEX_TNG_TX, argv[1]);
         }
-        if (strcmp(argv[2], "avery-rx") == 0)
+        if (strcmp(argv[2], "fulltx") == 0)
+        {
+            printf("Flashing FULLTX\n");
+            program(PATH_TNG_TX, HEX_TNG_FULLTX, argv[1]);
+        }
+    } else if ((strcmp(argv[3], "avery") == 0))
+    {
+        if ((strcmp(argv[2], "time") == 0) || (strcmp(argv[2], "all") == 0))
+        {
+            printf("Flashing TIME\n");
+            program(PATH_TNG_TIME, HEX_TNG_TIME, argv[1]);
+        }
+        if ((strcmp(argv[2], "rx") == 0) || (strcmp(argv[2], "all") == 0))
+        {
+            printf("Flashing RX\n");
+            program(PATH_TNG_RX, HEX_TNG_RX, argv[1]);
+        }
+        if ((strcmp(argv[2], "avery-rx") == 0) || (strcmp(argv[2], "all") == 0))
         {
             printf("Flashing AVERY-RX\n");
             program(PATH_TNG_TX, HEX_TNG_AVERY_RX, argv[1]);
@@ -437,39 +472,14 @@ int main(int argc, char *argv[])
 
     if (server_status)
     {
-        if (strcmp(argv[3], "tate") == 0)
-        {
-            printf("Restarting cyan server\n");
-            if (system("systemctl start cyan-server.service") == -1)
-            {
-                // TODO: if/when cyan-website is implemented use it to activate server
-                // if (system("systemctl start cyan-website.service") == -1) {
-                return 1;
-            }
-        }
-        else if (strcmp(argv[3], "lily") == 0)
-        {
-            printf("Restarting chestnut server\n");
-            if (system("systemctl start chestnut-server.service") == -1)
-            {
-                return 1;
-            }
-        }
-        else if (strcmp(argv[3], "crimson") == 0)
-        {
-            printf("Restarting crimson server\n");
-            if (system("systemctl start crimson-website.service") == -1)
-            {
-                return 1;
-            }
-        }
+        printf("INFO: Flashing complete. Reboot the server if you flashed an RF board. "
+               "Reboot the unit if you flashed the time board\n");
     };
 
     return 0;
 }
 
-int program(char *PATH_DEV, char *BOARD_HEX, char *MODE)
-{
+int program(char *PATH_DEV, char *BOARD_HEX, char *MODE){
 
     // open device path
     int fd = -1;
