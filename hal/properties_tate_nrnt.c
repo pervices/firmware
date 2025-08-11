@@ -4584,8 +4584,11 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
     write_hps_reg("sys12",
                   (uint32_t)(((uint64_t)fractional_time) >> 32) & 0x00000000FFFFFFFF);
 
+    usleep(500000);
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
+
+    usleep(500000);
     write_hps_reg_mask("sys13", 0, 1);
 
     return RETURN_SUCCESS;
