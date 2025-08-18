@@ -1687,8 +1687,8 @@ int check_time_pll(int ch) {
         \
         /* Enables x2 interpolator */\
         /* The x2 interpolator improves FPGA performance */\
-        /* It should be active when SR factor is equal to or greater than 3 (250Msps and below on 1Gsps unit */\
-        /* It is ignored when SR factor is 2 or lower (500Msps and above on 1Gsps unit) */\
+        /* It should be active when SR factor is equal to or greater than 4 (250Msps and below on 1Gsps unit */\
+        /* It is ignored when SR factor is 3 or lower (500Msps and above on 1Gsps unit) */\
         write_hps_reg_mask(tx_reg4_map[INT(ch)], 1 << 18, 1 << 18);\
         \
         /* Keeps the sample rate within the allowable range*/\
@@ -1711,10 +1711,23 @@ int check_time_pll(int ch) {
         write_hps_reg("tx" STR(ch) "2", reg_val);\
         \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
+        \
+        uint8_t target_dsp_gain;\
+        /* Enables x2 interpolator */\
+        /* The x2 interpolator improves FPGA performance */\
+        /* It should be active when SR factor is equal to or greater than 4 (250Msps and below on 1Gsps unit */\
+        /* It is ignored when SR factor is 3 or lower (500Msps and above on 1Gsps unit) */\
+        /* The FPGA automatically disables with with an SR of 3 or lower, it is set low here for clarity, it is set low here if SR of 3 or lower for clarity*/\
+        if(sample_factor >= 4) {\
+            write_hps_reg_mask(tx_reg4_map[INT(ch)], 1 << 18, 1 << 18);\
+            /* Right shift the index when using the x2 interpolator */\
+            target_dsp_gain = decim_gain_lut[sample_factor >> 1];\
+        } else {\
+            write_hps_reg_mask(tx_reg4_map[INT(ch)], 0, 1 << 18);\
+            target_dsp_gain = decim_gain_lut[sample_factor];\
+        }\
+        \
         /* Sets the dsp gain to compensate for interpolator effects*/\
-        /* Right shift index when tx_4 is high (always the case) */\
-        /* TODO: add logic for deciding if index should be shifted */\
-        uint8_t target_dsp_gain = decim_gain_lut[sample_factor >> 1];\
         char dsp_gain_s[10];\
         snprintf(dsp_gain_s, 10, "%hhu\n", target_dsp_gain);\
         set_property("tx/" STR(ch) "/dsp/gain", dsp_gain_s);\
