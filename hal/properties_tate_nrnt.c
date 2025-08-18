@@ -1711,6 +1711,19 @@ int check_time_pll(int ch) {
         write_hps_reg("tx" STR(ch) "2", reg_val);\
         \
         write_hps_reg("tx" STR(ch) "1", sample_factor);                    \
+        /* Sets the dsp gain to compensate for interpolator effects*/\
+        /* Right shift index when tx_4 is high (always the case) */\
+        /* TODO: add logic for deciding if index should be shifted */\
+        uint8_t target_dsp_gain = decim_gain_lut[sample_factor >> 1];\
+        char dsp_gain_s[10];\
+        snprintf(dsp_gain_s, 10, "%hhu\n", target_dsp_gain);\
+        set_property("tx/" STR(ch) "/dsp/gain", dsp_gain_s);\
+        get_property("tx/" STR(ch) "/dsp/gain", dsp_gain_s, 10);\
+        uint8_t actual_dsp_gain;\
+        sscanf(dsp_gain_s, "%hhu", &actual_dsp_gain);\
+        if(target_dsp_gain != actual_dsp_gain) {\
+            PRINT(ERROR, "Unable to set interpolation compensation gain. Expected: %hhu, Acutal: %hhu\n", target_dsp_gain, actual_dsp_gain);\
+        }\
         \
         snprintf(ret, MAX_PROP_LEN, "%lf", rate);\
                                                                                \
@@ -2912,6 +2925,18 @@ TX_CHANNELS
         \
         /*Sets the resamp factor*/\
         write_hps_reg("rx" STR(ch) "1", factor);                      \
+        /* Sets the dsp gain to compensate for decimation effects*/\
+        /* Right shift index when tx_4 is high (always the case) */\
+        uint8_t target_dsp_gain = decim_gain_lut[factor];\
+        char dsp_gain_s[10];\
+        snprintf(dsp_gain_s, 10, "%hhu\n", target_dsp_gain);\
+        set_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s);\
+        get_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s, 10);\
+        uint8_t actual_dsp_gain;\
+        sscanf(dsp_gain_s, "%hhu", &actual_dsp_gain);\
+        if(target_dsp_gain != actual_dsp_gain) {\
+            PRINT(ERROR, "Unable to set decimation compensation gain. Expected: %hhu, Acutal: %hhu\n", target_dsp_gain, actual_dsp_gain);\
+        }\
         /*Set whether to bypass dsp and fir*/\
         write_hps_reg("rx" STR(ch) "2", bypass);                      \
         \
@@ -6673,6 +6698,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/manual_uart"        , hdlr_rx_##_c##_rf_board_manual_uart,    RW, "", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1", SP, #_c)         \
+    /* _dsp_gain is used by dsp_rate, ensure it is first*/\
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "255", SP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000", SP, #_c) \
@@ -6729,6 +6755,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", SP, #_c)         \
+    /* _dsp_gain is used by dsp_rate, ensure it is first*/\
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "127", SP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/fpga_nco"             , hdlr_tx_##_c##_dsp_fpga_nco,            RW, "0", SP, #_c)         \
