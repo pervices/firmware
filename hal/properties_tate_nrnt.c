@@ -6465,6 +6465,19 @@ static int hdlr_system_get_buffer_level_multiple(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Tx packets must contain a multiple of this many samples
+static int hdlr_system_nsamps_multiple_tx(const char *data, char *ret) {
+    // There is currently a bug in the FPGA that requires a multiple of 32 samples for phase coherency
+    // TODO: Set to only require a multiple of 32 if using older FPGAs once the fix is implemented
+    // if(get_commit_counter() < ???) {
+        snprintf(ret, MAX_PROP_LEN, "32\n");
+    // } else {
+        // snprintf(ret, MAX_PROP_LEN, "1\n");
+    // }
+
+    return RETURN_SUCCESS;
+}
+
 // Performs self calibration, not required by most versions
 // Note: may also require UHD to perform tasks
 // Intended flow:
@@ -6934,7 +6947,7 @@ GPIO_PINS
     DEFINE_SYMLINK_PROP("system/otw_rx", "fpga/link/rx_sample_bandwidth")\
     DEFINE_SYMLINK_PROP("system/otw_tx", "fpga/link/tx_sample_bandwidth")\
     DEFINE_FILE_PROP_P("system/nsamps_multiple_rx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_RX, SP, NAC)\
-    DEFINE_FILE_PROP_P("system/nsamps_multiple_tx"       , hdlr_invalid,                           RO, S_NSAMPS_MULTIPLE_TX, SP, NAC)\
+    DEFINE_FILE_PROP_P("system/nsamps_multiple_tx"       , hdlr_system_nsamps_multiple_tx,         RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/self_calibration"         , hdlr_system_self_calibration,           RW, "1", SP, NAC)\
     /* TODO: add seperate flag to know whether the board is a 1G or 3G board to about */\
     DEFINE_FILE_PROP_P("system/flags/USE_3G_AS_1G"       , hdlr_invalid,                           RO, S_USE_3G_AS_1G, SP, NAC)\
