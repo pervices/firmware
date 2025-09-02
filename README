@@ -1,11 +1,17 @@
 1. Quick Start
 
-To quickly compile a product variant for Crimson, you can try the following
+To quickly compile a product variant, you can try the following
 commands. Note carefully that they are used for our own, internal, machines, and
 may not work for you. The remainder of this README provides additional
 information on how to get a compile working for you.
 
-On archlinux, you will need to install the "arm-linux-gnueabihf-gcc" toolchain,
+The following commands run the compilation steps in Docker to 
+ensure consistent compatibility with each product.
+Compiling with Docker installed on your machine is preferred. 
+However, if you wish to compile without Docker you must install 
+the appropriate toolchain and use the legacy script.
+
+On archlinux without Docker, you will need to install the "arm-linux-gnueabihf-gcc" toolchain,
 which is available on yaourt.
 
 1.a Automatic Compile Routines
@@ -17,6 +23,13 @@ which is available on yaourt.
     Example 1: sh autobuild.sh -p VAUNT -v RTM10 -r 4 -t 4 -s NA
     Example 2: sh autobuild.sh -p TATE_NRNT -v RTM5 -r 4 -t 4 -s 1000 --use_3g_as_1g --user_lo
     Example 3: sh autobuild.sh -p LILY -v RTM1 -r 4 -t 4 -s 500
+
+If you are compiling without Docker, the "legacy-autobuild.sh" script should be used instead.
+The legacy script accepts all the same arguments as above.
+
+    List options: sh legacy-autobuild.sh --help
+
+    Example: sh legacy-autobuild.sh -p VAUNT -v RTM10 -r 4 -t 4 -s NA
 
 2. Manually specifying Build Variant Target
 

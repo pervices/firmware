@@ -29,19 +29,7 @@ function print_diagnostics() {
     echo "----------------------------------------"
 }
 
-function check_rc() {
-    local rc=$1
-    local cmd_name=${2:-"Previous command"}
-    if [[ $rc != 0 ]]; then
-        echo "----------------------------------------" 
-        echo "ERROR: ${cmd_name} returned non-zero exit code, exiting..." 
-        echo "----------------------------------------" 
-        print_diagnostics
-        exit $rc
-    fi
-}
 
-rc=0
 
 # Used for validating values from user
 VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT')
@@ -56,8 +44,8 @@ LILY_RATES=('500')
 function print_help() {
     echo "Compiles server for device with provided configuration options."
     echo "Usage:"
-    echo "  ./autobuild.sh -p <PRODUCT> -v <RTM_VERSION> -r <NUM_RX> -t <NUM_TX> -s <MAX_RATE_MHZ> [optional flags]..."
-    echo "  ./autobuild.sh [-h|--help]  # Prints this help menu"
+    echo "  ./legacy-autobuild.sh -p <PRODUCT> -v <RTM_VERSION> -r <NUM_RX> -t <NUM_TX> -s <MAX_RATE_MHZ> [optional flags]..."
+    echo "  ./legacy-autobuild.sh [-h|--help]  # Prints this help menu"
     echo ""
     echo "Required:"
     echo "  -p, --product       The product to compile the server for (TATE_NRNT | LILY | VAUNT)"
@@ -73,9 +61,9 @@ function print_help() {
     echo "  --user_lo           Enable user LO mode"
     echo ""
     echo "Examples:"
-    echo "  ./autobuild.sh -p VAUNT -v RTM10 -r 4 -t 4 -s NA                        # Vaunt RTM10. Vaunt detects sample rate at runtime, so set to NA for compilation"
-    echo "  ./autobuild.sh -p TATE_NRNT -v RTM5 -r 4 -t 4 -s 1000 --use_3g_as_1g    # Tate RTM5 using 3G backplane as 1G"
-    echo "  ./autobuild.sh -p LILY -v RTM1 -r 4 -t 4 -s 500                         # Lily RTM1"
+    echo "  ./legacy-autobuild.sh -p VAUNT -v RTM10 -r 4 -t 4 -s NA                        # Vaunt RTM10. Vaunt detects sample rate at runtime, so set to NA for compilation"
+    echo "  ./legacy-autobuild.sh -p TATE_NRNT -v RTM5 -r 4 -t 4 -s 1000 --use_3g_as_1g    # Tate RTM5 using 3G backplane as 1G"
+    echo "  ./legacy-autobuild.sh -p LILY -v RTM1 -r 4 -t 4 -s 500                         # Lily RTM1"
 }
 
 # Compares a value to an array of valid values
@@ -248,18 +236,37 @@ if validate_value $MAX_RATE ${VALID_RATES[@]}; then
     exit 1
 fi
 
-# Source dkr command to run commands in Docker container with toolchains installed
-source ./dkr_env.sh
-# Check if the necessary docker image exists locally, if not pull
-if [ -z "$(docker images -q $PV_DOCKER 2> /dev/null)" ]; then
-      docker pull $PV_DOCKER || rc=$?
-      check_rc $rc "docker pull"
-fi
-
+# Determine compiler info
 if [ "${PRODUCT}" == "VAUNT" ]; then
-    # Docker image has these two installed, no need to autodetect
-    SERVER_CC="arm-linux-gnueabihf-gcc"
-    SERVER_CXX="arm-linux-gnueabihf-g++"
+    if [ -z "${CC:-}" ]; then
+        if command -v arm-linux-gnueabihf-gcc 2>&1 >/dev/null; then
+            SERVER_CC="arm-linux-gnueabihf-gcc"
+        elif command -v arm-unknown-linux-gnueabihf-gcc 2>&1 >/dev/null; then
+            SERVER_CC="arm-unknown-linux-gnueabihf-gcc"
+            echo "WARNING: using different compiler than CI system" # see pvpkg/firmware-scripts/server.sh
+        else
+            print_diagnostics_short
+            echo "ERROR: GCC compiler for ARM not found"
+            exit 1
+        fi
+    else
+        SERVER_CC=$CC
+    fi
+
+    if [ -z "${CXX:-}" ]; then
+        if command -v arm-linux-gnueabihf-g++ 2>&1 >/dev/null; then
+            SERVER_CXX="arm-linux-gnueabihf-g++"
+        elif command -v arm-unknown-linux-gnueabihf-g++ 2>&1 >/dev/null; then
+            SERVER_CXX="arm-unknown-linux-gnueabihf-g++"
+            echo "WARNING: using different compiler than CI system" # see pvpkg/firmware-scripts/server.sh
+        else
+            print_diagnostics_short
+            echo "ERROR: G++ compiler for ARM not found"
+            exit 1
+        fi
+    else
+        SERVER_CXX=$CXX
+    fi
 
     PRODUCT_CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors  \
                     -march=armv7-a -mtune=cortex-a9 -mfpu=neon"
@@ -270,22 +277,31 @@ elif [ "${PRODUCT}" == "TATE_NRNT" ] || [ "${PRODUCT}" == "LILY" ]; then
                     -march=armv8-a -mtune=cortex-a53"
 fi
 
-# Use autoconf in Docker container to configure compilation of server
-dkr ./autogen.sh clean || rc=$?
-check_rc $rc "dkr ./autogen.sh clean"
+if ! ./autogen.sh clean; then
+    echo "----------------------------------------" 
+    echo "ERROR: ./autogen clean returned non-zero exit code, exiting..." 
+    echo "----------------------------------------" 
+    print_diagnostics_short
+    exit $?
+fi 
 
-dkr ./autogen.sh || rc=$?
-check_rc $rc "dkr ./autogen.sh"
+if ! ./autogen.sh; then
+    echo "----------------------------------------" 
+    echo "ERROR: Autogen returned non-zero exit code, exiting..." 
+    echo "----------------------------------------" 
+    print_diagnostics_short
+    exit $?
+fi 
 
-dkr ./configure                         \
+if ! ./configure                        \
         --prefix=/usr                   \
         --host=x86_64                   \
         CC=$SERVER_CC                   \
-        CFLAGS=\"${PRODUCT_CFLAGS}      \
-                -Werror -lm -pthread\"  \
-        CPPFLAGS=\"$PRODUCT_CFLAGS\"    \
+        CFLAGS="${PRODUCT_CFLAGS}       \
+                -Werror -lm -pthread"   \
+        CPPFLAGS="$PRODUCT_CFLAGS"      \
         CXX=$SERVER_CXX                 \
-        CXXFLAGS=\"$PRODUCT_CFLAGS\"    \
+        CXXFLAGS="$PRODUCT_CFLAGS"      \
         PRODUCT=$PRODUCT                \
         HW_REV=$HW_REV                  \
         NRX=$NUM_RX                     \
@@ -293,10 +309,22 @@ dkr ./configure                         \
         MAX_RATE="S${MAX_RATE}"         \
         RX_40GHZ_FE=$RX_40GHZ_FE        \
         USE_3G_AS_1G=$USE_3G_AS_1G      \
-        USER_LO=$USER_LO || rc=$?
-check_rc $rc "Configure"
+        USER_LO=$USER_LO; then
+    echo "----------------------------------------" 
+    echo "ERROR: Configure returned non-zero exit code, exiting..." 
+    echo "----------------------------------------" 
+    print_diagnostics_short
+    exit $?
+fi 
 
-# Compile the server through the Docker container.
-# The container has a volume for this directory, so all generated files will be present on the host.
-dkr make -j$(nproc) || rc=$?
-check_rc $rc "Make"
+
+if ! make -j$(nproc); then
+    echo "----------------------------------------" 
+    echo "ERROR: Make returned non-zero exit code, exiting..." 
+    echo "----------------------------------------" 
+    print_diagnostics_short
+    exit $?
+fi
+
+exit 0
+
