@@ -3573,17 +3573,11 @@ static int hdlr_fpga_about_id(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Compile time is being removed from the FPGA
+// To minimize the chance of things that rely on this breaking, return the Unix epoch
 static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
-    uint32_t old_val;
-    int year, month, day, hour, min;
-    read_hps_reg("sys15", &old_val);
-
-    // Get year
-    year = (old_val & 0xfff00000) >> 20;
-    month = (old_val & 0x000f0000) >> 16;
-    day = (old_val & 0x0000f800) >> 11;
-    hour = (old_val & 0x000007c0) >> 6;
-    min = old_val & 0x0000003f;
+    int year = 1970;
+    int month, day, hour, min = 0;
 
     snprintf(ret, MAX_PROP_LEN, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month,
             day, hour, min);
