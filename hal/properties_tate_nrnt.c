@@ -6470,7 +6470,7 @@ static int hdlr_system_nsamps_multiple_tx(const char *data, char *ret) {
     // There is currently a bug in the FPGA that requires a multiple of 32 samples for phase coherency
     // TODO: Set to only require a multiple of 32 if using older FPGAs once the fix is implemented
     // if(get_commit_counter() < ???) {
-        snprintf(ret, MAX_PROP_LEN, "32\n");
+        snprintf(ret, MAX_PROP_LEN, "1\n");
     // } else {
         // snprintf(ret, MAX_PROP_LEN, "1\n");
     // }
