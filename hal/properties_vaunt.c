@@ -3577,7 +3577,10 @@ static int hdlr_fpga_about_id(const char *data, char *ret) {
 // To minimize the chance of things that rely on this breaking, return the Unix epoch
 static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
     int year = 1970;
-    int month, day, hour, min = 0;
+    int month = 0;
+    int day = 0;
+    int hour = 0;
+    int min = 0;
 
     snprintf(ret, MAX_PROP_LEN, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month,
             day, hour, min);
