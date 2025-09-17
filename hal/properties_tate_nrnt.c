@@ -311,6 +311,7 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     }
     uint32_t upper_sample_factor = floor(dsp_rate/(*rate));
     double upper_rate = dsp_rate/upper_sample_factor;
+
     uint32_t lower_sample_factor = ceil(dsp_rate/(*rate));
     double lower_rate = dsp_rate/lower_sample_factor;
     double rate_range = upper_rate - lower_rate;
@@ -336,6 +337,56 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
 
     return (uint16_t) sample_factor;
 }
+
+// Finds the optimal value for the sample rate blocks
+static uint16_t get_optimal_sr_factor_tx(double *rate, double dsp_rate) {
+    double max_factor = 65536; // 2^16
+    // 16 bits are used to store the sample factor
+    uint16_t sample_factor;
+
+    /*the upper sample factor is lower because the rate is divided by it*/
+    if(rate == 0) {
+        return max_factor;\
+    }
+    uint32_t upper_sample_factor = floor(dsp_rate/(*rate));
+    // If upper_sample_factor > 5 (below which interpolator disabled, a 5 here means txa1 is 4) && is odd
+    if(upper_sample_factor > 5 && (upper_sample_factor & 1)) {
+        // Reduce upper_sample_factor so that it is even
+        upper_sample_factor--;
+    }
+    double upper_rate = dsp_rate/upper_sample_factor;
+
+    uint32_t lower_sample_factor = ceil(dsp_rate/(*rate));
+    // If upper_sample_factor > 5 (below which interpolator disabled, a 5 here means txa1 is 4) && is odd
+    if(lower_sample_factor > 5 && (lower_sample_factor & 1)) {
+        // Reduce lower_sample_factor so that it is even
+        lower_sample_factor++;
+    }
+    double lower_rate = dsp_rate/lower_sample_factor;
+    double rate_range = upper_rate - lower_rate;
+    double lower_diff = *rate - lower_rate;
+
+    if(lower_diff/rate_range > RATE_ROUND_BIAS) {
+        sample_factor = upper_sample_factor;
+        *rate = upper_rate;
+    } else {
+        sample_factor = lower_sample_factor;
+        *rate = lower_rate;
+    }
+    /* The above calculations output the number of samples to the DAC per sample send by the host*/
+    /* the register for sample factor takes the number of samples that need to be added per sample from the host*/
+    if(sample_factor != 0) {
+        sample_factor--;
+    }
+
+    // Limit sample_factor to the allowable range (16 bits)
+    if(sample_factor > max_factor) {
+        sample_factor = max_factor;
+    }
+
+    return (uint16_t) sample_factor;
+}
+
 
 // Gets the number of commits on the FPGA branch this was compiled from (0 if using an older FPGA)
 // Use this when determining if an FPGA is new enough to support the requested feature
@@ -1708,7 +1759,7 @@ int check_time_pll(int ch) {
             bypass = 1;\
         } else {\
             bypass = 0;\
-            sample_factor = get_optimal_sr_factor(&rate, TX_DSP_SAMPLE_RATE);\
+            sample_factor = get_optimal_sr_factor_tx(&rate, TX_DSP_SAMPLE_RATE);\
         }\
         /*bit 0 of tx_0 is used to determine whether or not to bypass the dsp*/\
         read_hps_reg("tx" STR(ch) "2", &reg_val);\
