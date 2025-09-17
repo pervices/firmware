@@ -299,6 +299,7 @@ static int read_uart(int uartfd) {
     return RETURN_SUCCESS;
 }
 
+#if NUM_RX_CHANNELS > 0
 // Finds the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     double max_factor = 65536; // 2^16
@@ -337,7 +338,9 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
 
     return (uint16_t) sample_factor;
 }
+#endif
 
+#if NUM_TX_CHANNELS > 0
 // Finds the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor_tx(double *rate, double dsp_rate) {
     double max_factor = 65536; // 2^16
@@ -386,6 +389,7 @@ static uint16_t get_optimal_sr_factor_tx(double *rate, double dsp_rate) {
 
     return (uint16_t) sample_factor;
 }
+#endif
 
 
 // Gets the number of commits on the FPGA branch this was compiled from (0 if using an older FPGA)
