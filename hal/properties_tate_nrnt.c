@@ -309,9 +309,9 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     if(rate == 0) {
         return max_factor;\
     }
-    uint16_t upper_sample_factor = floor(dsp_rate/(*rate));
+    uint32_t upper_sample_factor = floor(dsp_rate/(*rate));
     double upper_rate = dsp_rate/upper_sample_factor;
-    uint16_t lower_sample_factor = ceil(dsp_rate/(*rate));
+    uint32_t lower_sample_factor = ceil(dsp_rate/(*rate));
     double lower_rate = dsp_rate/lower_sample_factor;
     double rate_range = upper_rate - lower_rate;
     double lower_diff = *rate - lower_rate;
@@ -328,7 +328,13 @@ static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     if(sample_factor != 0) {
         sample_factor--;
     }
-    return sample_factor;
+
+    // Limit sample_factor to the allowable range (16 bits)
+    if(sample_factor > max_factor) {
+        sample_factor = max_factor;
+    }
+
+    return (uint16_t) sample_factor;
 }
 
 // Gets the number of commits on the FPGA branch this was compiled from (0 if using an older FPGA)
