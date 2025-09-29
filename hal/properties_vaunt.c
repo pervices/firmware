@@ -1125,7 +1125,7 @@ int check_rf_pll(int ch, int uart_fd) {
             rate = fmin(rate, get_base_sample_rate() / link_rate_divisor);\
         /* Limit for quarter rate DAC */\
         } else if (INT(ch) == 2 || INT(ch) == 3){\
-            rate = fmin(rate, get_base_sample_rate() / (fmin(link_rate_divisor, 4)));\
+            rate = fmin(rate, get_base_sample_rate() / (fmax(link_rate_divisor, 4)));\
         } else {\
             /* This error should be unreachable */\
             PRINT(ERROR, "Tx channel not implemented\n");\
