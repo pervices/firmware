@@ -6747,7 +6747,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/manual_uart"        , hdlr_rx_##_c##_rf_board_manual_uart,    RW, "", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "255", SP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/dsp/gain"                 , hdlr_rx_##_c##_dsp_gain,                RW, "180", SP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rate"                 , hdlr_rx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/nco_adj"              , hdlr_rx_##_c##_dsp_fpga_nco,            RW, "-15000000", SP, #_c) \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/rstreq"               , hdlr_rx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
