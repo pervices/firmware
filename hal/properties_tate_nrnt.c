@@ -6513,6 +6513,7 @@ static int hdlr_debug_feedback_latched_FpgaRefPllUnlocked(const char *data, char
 static int hdlr_system_get_max_buffer_level(const char *data, char *ret) {
     uint32_t max_buffer_level = 0;
     read_hps_reg("res_ro14", &max_buffer_level);
+    max_buffer_level = max_buffer_level >> 1;
     snprintf(ret, MAX_PROP_LEN, "%u", max_buffer_level);
 
     return RETURN_SUCCESS;
