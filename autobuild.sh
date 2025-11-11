@@ -47,6 +47,8 @@ rc=0
 VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT')
 VAUNT_RTMS=('RTM6' 'RTM7' 'RTM8' 'RTM9' 'RTM10' 'RTM11' 'RTM12' 'RTM15')
 VAUNT_RATES=('NA')  # Vaunt detects sample rate at runtime
+AVERY_RTMS=('RTM1' 'RTM2')
+AVERY_RATES=$VAUNT_RATES  # Avery (based on Vaunt) detects sample rate at runtime
 TATE_RTMS=('RTM3' 'RTM4' 'RTM5' 'RTM6' 'RTM7')
 TATE_RATES=('1000' '3000')
 LILY_RTMS=('RTM0' 'RTM1')
@@ -60,7 +62,7 @@ function print_help() {
     echo "  ./autobuild.sh [-h|--help]  # Prints this help menu"
     echo ""
     echo "Required:"
-    echo "  -p, --product       The product to compile the server for (TATE_NRNT | LILY | VAUNT)"
+    echo "  -p, --product       The product to compile the server for (TATE_NRNT | LILY | VAUNT | AVERY)"
     echo "  -v, --hw-revision   The hardware revision to compile for (RTM5, RTM6, etc...)"
     echo "  -r, --rx-channels   The number of Rx channels on the device"
     echo "  -t, --tx-channels   The number of Tx channels on the device"
@@ -181,6 +183,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --rx_40ghz_fe)
+            # Depricated: rx_40ghz_fe is now compiled using -p AVERY
             # Indicates the unit is an avery rx where the tx board has been replaced by a 40GHz RX front end
             RX_40GHZ_FE=1
             shift
@@ -214,6 +217,19 @@ if validate_value $PRODUCT ${VALID_PRODUCTS[@]}; then
     echo "[ERROR] Invalid product: $PRODUCT"
     echo "  Valid products are: ${VALID_PRODUCTS[@]}"
     exit 1
+fi
+
+# Alias VAUNT RTM10 rx_40ghz_fe to AVERY RTM1
+# If rx_40ghz_fe was requested for anything other than VAUNT RTM10 throw an error
+if[ $RX_40GHZ_FE == 1 ]; then
+    echo "[WARNING]: --rx_40ghz_fe is depricated"
+    if [ $PRODUCT == "VAUNT" && $HW_REV == "RTM10" ]; then
+        echo "VAUNT RTM10 matches AVERY RTM1, aliasing"
+    else
+        print_diagnostics_short
+        echo "[ERROR]: no know equivalent for rx_40ghz_fe, aborting"
+        exit 1
+    fi
 fi
 
 if [ $PRODUCT == "VAUNT" ]; then
