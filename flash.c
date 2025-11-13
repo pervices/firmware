@@ -17,12 +17,14 @@
 char PATH_TNG_RX[50] = "/dev/ttycrimson-rx";
 char PATH_TNG_TX[50] = "/dev/ttycrimson-tx";
 char PATH_TNG_TIME[50] = "/dev/ttycrimson-time";
+char PATH_TNG_GPIO[50] = "/dev/ttycrimson-gpio";
 
 // TNG Hexfile Names
 char HEX_TNG_RX[50] = "vaunt-rx.hex";
 char HEX_TNG_TX[50] = "vaunt-tx.hex";
 char HEX_TNG_TIME[50] = "vaunt-synth.hex";
 char HEX_TNG_AVERY_RX[50] = "avery-rx.hex";
+char HEX_TNG_AVERY_CTRL[50] = "avery-ctrl.hex";
 char HEX_TNG_FULLTX[50] = "vaunt-fulltx.hex";
 
 // Tate Paths
@@ -70,7 +72,7 @@ char BOOT_ENTRY_SEQUENCE[30] = "abcdefghijklmnopqrstuvwxyz";
 
 int help_summary(char *this)
 {
-    printf("Usage: %s [ w(rite) | v(erify) ] [ rx | rx3 | bbrx | tx | tx3 | bbtx| time | time3 | time1on3 | avery-rx | fulltx | "
+    printf("Usage: %s [ w(rite) | v(erify) ] [ rx | rx3 | bbrx | tx | tx3 | bbtx| time | time3 | time1on3 | avery-rx | avery-ctrl | fulltx | "
            "all ] "
            "[crimson | tate | lily | avery] [0..15]\n",
            this);
@@ -79,7 +81,8 @@ int help_summary(char *this)
     printf("\tVerify time board tate mcu code: \n \t%s v time tate\n", this);
     printf("\tWrite tate tx MCU to rfe-7: \n \t%s w tx tate 7\n", this);
     printf("\tWrite lily rx MCU to rfe-2: \n \t%s w rx lily 2\n", this);
-    printf("\tWrite avery rx: \n \t%s w avery-rx avery\n", this);
+    printf("\tWrite avery rx (rtm1): \n \t%s w avery-rx avery\n", this);
+    printf("\tWrite avery ctrl (rtm2+): \n \t%s w avery-ctrl avery\n", this);
     return 0;
 }
 
@@ -129,7 +132,8 @@ int main(int argc, char *argv[])
     if ((strcmp(argv[2], "time") == 0) || (strcmp(argv[2], "time3") == 0) || (strcmp(argv[2], "time1on3") == 0) ||
         (strcmp(argv[2], "rx") == 0) || (strcmp(argv[2], "rx3") == 0) || (strcmp(argv[2], "bbrx") == 0) ||
         (strcmp(argv[2], "tx") == 0) || (strcmp(argv[2], "tx3") == 0) || (strcmp(argv[2], "bbtx") == 0) ||
-        (strcmp(argv[2], "avery-rx") == 0) || (strcmp(argv[2], "fulltx") == 0) || (strcmp(argv[2], "all") == 0))
+        (strcmp(argv[2], "avery-rx") == 0) || (strcmp(argv[2], "avery-ctrl") == 0) ||
+        (strcmp(argv[2], "fulltx") == 0) || (strcmp(argv[2], "all") == 0))
     {
         fflush(stdout);
     }
@@ -186,6 +190,11 @@ int main(int argc, char *argv[])
         if ((strcmp(argv[2], "avery-rx") == 0) && ((strcmp(argv[3], "tate") == 0 || strcmp(argv[3], "lily") == 0)))
         {
             printf("ERROR: avery-rx currently unsupported for tate, chestnut.\n");
+            return 1;
+        }
+        if ((strcmp(argv[2], "avery-ctrl") == 0) && ((strcmp(argv[3], "tate") == 0 || strcmp(argv[3], "lily") == 0)))
+        {
+            printf("ERROR: avery-ctrl currently unsupported for tate, chestnut.\n");
             return 1;
         }
         if ((strcmp(argv[2], "fulltx") == 0) && ((strcmp(argv[3], "tate") == 0 || strcmp(argv[3], "lily") == 0)))
@@ -401,6 +410,11 @@ int main(int argc, char *argv[])
         {
             printf("Flashing AVERY-RX\n");
             program(PATH_TNG_TX, HEX_TNG_AVERY_RX, argv[1]);
+        }
+        if ((strcmp(argv[2], "avery-ctrl") == 0) || (strcmp(argv[2], "all") == 0))
+        {
+            printf("Flashing AVERY-CTRL\n");
+            program(PATH_TNG_GPIO, HEX_TNG_AVERY_CTRL, argv[1]);
         }
     }
     else if ((strcmp(argv[3], "tate") == 0))
