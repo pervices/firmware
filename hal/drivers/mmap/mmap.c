@@ -274,7 +274,7 @@ int mmap_init() {
     int r;
     void *rr;
 
-    r = open(MEM_DEV, O_RDWR | O_SYNC);
+    r = open(MEM_DEV, O_RDWR | O_SYNC, 640);
     if (-1 == r) {
         PRINT(ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror(errno),
               errno);
@@ -301,7 +301,7 @@ int mmap_init() {
     }
     mmap_base = rr;
 
-    lock_fd = open(INIT_LOCK, O_CREAT | O_RDONLY);
+    lock_fd = open(INIT_LOCK, O_CREAT | O_RDONLY,1);
     if(lock_fd == -1) {
         PRINT(ERROR, "open ( " INIT_LOCK " ) failed: %s (%d)\n", strerror(errno), errno);
         r = lock_fd;
