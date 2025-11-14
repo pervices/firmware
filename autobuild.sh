@@ -45,7 +45,7 @@ rc=0
 
 # Used for validating values from user
 VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT')
-VAUNT_RTMS=('RTM6' 'RTM7' 'RTM8' 'RTM9' 'RTM10' 'RTM11' 'RTM12')
+VAUNT_RTMS=('RTM6' 'RTM7' 'RTM8' 'RTM9' 'RTM10' 'RTM11' 'RTM12' 'RTM15')
 VAUNT_RATES=('NA')  # Vaunt detects sample rate at runtime
 TATE_RTMS=('RTM3' 'RTM4' 'RTM5' 'RTM6' 'RTM7')
 TATE_RATES=('1000' '3000')
