@@ -221,7 +221,7 @@ fi
 
 # Alias VAUNT RTM10 rx_40ghz_fe to AVERY RTM1
 # If rx_40ghz_fe was requested for anything other than VAUNT RTM10 throw an error
-if [ $RX_40GHZ_FE == 1 ]; then
+if [[ $RX_40GHZ_FE == 1 && $PRODUCT != "AVERY" ]]; then
     echo "[WARNING]: --rx_40ghz_fe is depricated"
     if [[ $PRODUCT == "VAUNT" && $HW_REV == "RTM10" ]]; then
         echo "VAUNT RTM10 matches AVERY RTM1, aliasing"
