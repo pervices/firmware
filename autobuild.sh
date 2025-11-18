@@ -44,7 +44,7 @@ function check_rc() {
 rc=0
 
 # Used for validating values from user
-VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT')
+VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT' 'AVERY')
 VAUNT_RTMS=('RTM6' 'RTM7' 'RTM8' 'RTM9' 'RTM10' 'RTM11' 'RTM12' 'RTM15')
 VAUNT_RATES=('NA')  # Vaunt detects sample rate at runtime
 AVERY_RTMS=('RTM1' 'RTM2')
