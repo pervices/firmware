@@ -440,6 +440,8 @@ int write_jesd_reg_mask(uint8_t jesd_shift, uint32_t address, uint32_t data, uin
 }
 #elif defined(VAUNT)
 // NO-OP
+#elif defined(AVERY)
+// NO-OP
 #else
     #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
