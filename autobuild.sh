@@ -242,7 +242,7 @@ elif [ $PRODUCT == "TATE_NRNT" ]; then
 elif [ $PRODUCT == "LILY" ]; then
     VALID_RTMS=${LILY_RTMS[@]}
     VALID_RATES=${LILY_RATES[@]}
-elif [ $PRODUC == "AVERY" ]; then
+elif [ $PRODUCT == "AVERY" ]; then
     VALID_RTMS=${AVERY_RTMS[@]}
     VALID_RATES=${AVERY_RATES[@]}
 fi
