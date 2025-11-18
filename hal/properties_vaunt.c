@@ -17,7 +17,7 @@
 
 /* clang-format off */
 
-#if defined(VAUNT)
+#if defined(VAUNT) || defined(AVERY)
 
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
@@ -2496,7 +2496,7 @@ static int hdlr_cm_rx_atten_val(const char *data, char *ret) {
 
     int atten = 0;
 
-    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
+    mask_rx = cm_chanmask_get(STATE_DIR "/cm/chanmask-rx");
 
     sscanf(data, "%d", &atten);
 
@@ -2545,7 +2545,7 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 
     double gain = 0;
 
-    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
+    mask_rx = cm_chanmask_get(STATE_DIR "/cm/chanmask-rx");
 
     sscanf(data, "%lf", &gain);
 
@@ -2609,7 +2609,7 @@ static int hdlr_cm_tx_gain_val(const char *data, char *ret) {
 
     double gain = 0;
 
-    mask_tx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-tx");
+    mask_tx = cm_chanmask_get(STATE_DIR "/cm/chanmask-tx");
 
     sscanf(data, "%lf", &gain);
 
@@ -2685,8 +2685,8 @@ static int hdlr_cm_trx_freq_val(const char *data, char *ret) {
     read_hps_reg("sync_mode", &sync_mode);
     read_hps_reg("sync_mask", &sync_mask);
 
-    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
-    mask_tx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-tx");
+    mask_rx = cm_chanmask_get(STATE_DIR "/cm/chanmask-rx");
+    mask_tx = cm_chanmask_get(STATE_DIR "/cm/chanmask-tx");
 
     sync_mask = (mask_tx << 16) | mask_rx;
     if (0 == sync_mask) {
@@ -2779,8 +2779,8 @@ static int hdlr_cm_trx_nco_adj(const char *data, char *ret) {
     read_hps_reg("sync_mode", &sync_mode);
     read_hps_reg("sync_mask", &sync_mask);
 
-    mask_rx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-rx");
-    mask_tx = cm_chanmask_get("/var/volatile/crimson/state/cm/chanmask-tx");
+    mask_rx = cm_chanmask_get(STATE_DIR "/cm/chanmask-rx");
+    mask_tx = cm_chanmask_get(STATE_DIR "/cm/chanmask-tx");
 
     sync_mask = (mask_tx << 16) | mask_rx;
     if (0 == sync_mask) {
@@ -4643,7 +4643,7 @@ prop_t *get_prop_from_hdlr(int (*hdlr)(const char *, char *)) {
 
 int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
 
-    const char *vcs = "/var/volatile/crimson/state/";
+    const char *vcs = STATE_DIR "/";
     const size_t vcsl = strnlen(vcs, MAX_PATH_LEN);
     char origcwd[MAX_PATH_LEN];
     char *temp;

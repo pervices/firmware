@@ -1,4 +1,4 @@
-#ifdef VAUNT
+#if defined(VAUNT) || defined(AVERY)
 
 #include <errno.h>
 #include <fcntl.h>
@@ -608,10 +608,17 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     }
     ctx->fd = -1;
 
+#if defined(AVERY)
+    snprintf(cmdbuf, sizeof(cmdbuf),
+             "echo 0 > /var/volatile/calamine/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
+    system(cmdbuf);
+#else
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 0 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
     system(cmdbuf);
+#endif
 
 out:
     pthread_mutex_unlock(&ctx->lock);
@@ -746,10 +753,17 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
     r = EXIT_SUCCESS;
     ctx->enabled = true;
 
+#if defined(AVERY)
+    snprintf(cmdbuf, sizeof(cmdbuf),
+             "echo 1 > /var/volatile/calamine/state/%cx/%c/rf/freq/lut_en",
+             ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
+    system(cmdbuf);
+#else
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 1 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
     system(cmdbuf);
+#endif
 
 out:
     if (NULL != rec) {

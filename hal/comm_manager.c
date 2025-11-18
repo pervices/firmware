@@ -21,12 +21,12 @@
 #include <sys/file.h>
 #include <math.h>
 
-#ifdef VAUNT
+#if defined(VAUNT) || defined(AVERY)
     #define MAX_DEVICES 32
 #elif defined (TATE_NRNT) || defined(LILY)
     #define MAX_DEVICES 32
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
 #endif
 #define USED_DEVICE 1
 #define FREE_DEVICE 0
@@ -69,7 +69,7 @@ int close_udp_comm(int fd) {
 static int uart_devices[MAX_DEVICES];
 
 // TODO: figure out if the TATE_NRNT/VAUNT differences are really necessary
-#ifdef VAUNT
+#if defined(VAUNT) || defined(AVERY)
 static uint8_t used_uart_devices[MAX_DEVICES] = {FREE_DEVICE};
 
 int get_uart_synth_fd() { return uart_devices[0]; }
@@ -82,7 +82,7 @@ int get_uart_rx_fd() { return uart_devices[2]; }
     USED_DEVICE, // stderr
 };
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
 #endif
 
 // Gets the next available file descriptor

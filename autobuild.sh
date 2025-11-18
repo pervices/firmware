@@ -44,7 +44,7 @@ function check_rc() {
 rc=0
 
 # Used for validating values from user
-VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT')
+VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT' 'AVERY')
 VAUNT_RTMS=('RTM6' 'RTM7' 'RTM8' 'RTM9' 'RTM10' 'RTM11' 'RTM12' 'RTM15')
 VAUNT_RATES=('NA')  # Vaunt detects sample rate at runtime
 AVERY_RTMS=('RTM1' 'RTM2')
@@ -221,10 +221,11 @@ fi
 
 # Alias VAUNT RTM10 rx_40ghz_fe to AVERY RTM1
 # If rx_40ghz_fe was requested for anything other than VAUNT RTM10 throw an error
-if[ $RX_40GHZ_FE == 1 ]; then
+if [[ $RX_40GHZ_FE == 1 && $PRODUCT != "AVERY" ]]; then
     echo "[WARNING]: --rx_40ghz_fe is depricated"
-    if [ $PRODUCT == "VAUNT" && $HW_REV == "RTM10" ]; then
+    if [[ $PRODUCT == "VAUNT" && $HW_REV == "RTM10" ]]; then
         echo "VAUNT RTM10 matches AVERY RTM1, aliasing"
+        $PRODUCT = "AVERY"
     else
         print_diagnostics_short
         echo "[ERROR]: no know equivalent for rx_40ghz_fe, aborting"
@@ -241,6 +242,9 @@ elif [ $PRODUCT == "TATE_NRNT" ]; then
 elif [ $PRODUCT == "LILY" ]; then
     VALID_RTMS=${LILY_RTMS[@]}
     VALID_RATES=${LILY_RATES[@]}
+elif [ $PRODUCT == "AVERY" ]; then
+    VALID_RTMS=${AVERY_RTMS[@]}
+    VALID_RATES=${AVERY_RATES[@]}
 fi
 
 check_argument_exists "Hardware revision" $HW_REV
@@ -272,14 +276,14 @@ if [ -z "$(docker images -q $PV_DOCKER 2> /dev/null)" ]; then
       check_rc $rc "docker pull"
 fi
 
-if [ "${PRODUCT}" == "VAUNT" ]; then
+if [[ "${PRODUCT}" == "VAUNT" || "${PRODUCT}" == "AVERY"  ]]; then
     # Docker image has these two installed, no need to autodetect
     SERVER_CC="arm-linux-gnueabihf-gcc"
     SERVER_CXX="arm-linux-gnueabihf-g++"
 
     PRODUCT_CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors  \
                     -march=armv7-a -mtune=cortex-a9 -mfpu=neon"
-elif [ "${PRODUCT}" == "TATE_NRNT" ] || [ "${PRODUCT}" == "LILY" ]; then
+elif [[ "${PRODUCT}" == "TATE_NRNT" || "${PRODUCT}" == "LILY" ]]; then
     SERVER_CC="aarch64-linux-gnu-gcc"
     SERVER_CXX="aarch64-linux-gnu-g++"
     PRODUCT_CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors \

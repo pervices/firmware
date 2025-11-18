@@ -45,7 +45,7 @@ static boolean console = FALSE;
 static uint32_t timeout = DEFAULT_TIMEOUT;
 
 // Crimson files
-#ifdef VAUNT
+#if defined(VAUNT) || defined(AVERY)
 static const char *UART_CRIMSON_SN = "/dev/ttycrimson-time";
 static const char *UART_CRIMSON_TX = "/dev/ttycrimson-tx";
 static const char *UART_CRIMSON_RX = "/dev/ttycrimson-rx";
@@ -111,7 +111,7 @@ enum TARGET_DEV {
 static int target_rfe = -1;
 
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
 #endif
 
 static enum TARGET_DEV target_dev;
@@ -135,7 +135,7 @@ static int contains(const char *str, char letter, int size) {
         for (i = 0; i < 16; i++) {
             printf("%s\n", UART_RFE[i]);
         }
-    #elif defined(VAUNT)
+    #elif defined(VAUNT) || defined(AVERY)
         printf("%s\n", UART_CRIMSON_SN);
         printf("%s\n", UART_CRIMSON_TX);
         printf("%s\n", UART_CRIMSON_RX);
@@ -143,7 +143,7 @@ static int contains(const char *str, char letter, int size) {
         printf("%d\n", uart_crimson_tx_fd);
         printf("%d\n", uart_crimson_rx_fd);
     #else
-        #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT). Confirm spelling and spaces."
+        #error "This file must be compiled with a valid PRODUCT (TATE_NRNT, VAUNT, AVERY). Confirm spelling and spaces."
     #endif
         printf("%d\n", uart_comm_fd);
     }
@@ -189,7 +189,7 @@ static void parse_args(int argc, char *argv[]) {
             // if argument to open a console transaction
         } else if (streql(argv[i], ARG_MCU_CONSOLE)) {
             console = TRUE;
-#if defined(VAUNT)
+#if defined(VAUNT) || defined(AVERY)
             // if argument to specify this is a forward command
         } else if (streql(argv[i], ARG_MCU_UART_SN) && !last(i, argc)) {
 
@@ -208,7 +208,7 @@ static void parse_args(int argc, char *argv[]) {
             i++;
             if (argv[i][0] == 's') {
                 target_dev = DEV_TIME;
-#if defined(VAUNT)
+#if defined(VAUNT) || defined(AVERY)
             } else if (argv[i][0] == 't') {
                 target_dev = DEV_TX;
             } else if (argv[i][0] == 'r') {
@@ -218,7 +218,7 @@ static void parse_args(int argc, char *argv[]) {
                 target_dev = DEV_RFE;
                 target_rfe = atoi(argv[i]);
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
 #endif
             } else {
                 help();
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
         return RETURN_ERROR_PARAM;
     }
 
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
     // initialize the comm port
     if(target_dev == DEV_TIME) {
         if (init_uart_comm(&uart_target_fd, UART_CRIMSON_SN, 0) < 0) {
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
         return RETURN_ERROR_PARAM;
     }
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
 #endif
 
 

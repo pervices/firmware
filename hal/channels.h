@@ -23,9 +23,9 @@
 #include "array-utils.h"
 #if defined(TATE_NRNT) || defined(LILY)
     #include "variant_config/tate_special_config.h"
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
 #endif
 
 // https://en.wikipedia.org/wiki/X_Macro.
@@ -189,7 +189,7 @@
     #else
         #error Invalid maximum sample rate specified (MHz), must be: S1000, S3000
     #endif
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined (AVERY)
     #define NUM_RX_CHANNELS 4
     #define S_NUM_RX "4"
 
@@ -203,7 +203,7 @@
     #endif
 #endif
 
-#if defined(VAUNT)
+#if defined(VAUNT) | defined(AVERY)
     #define RX_CHANNELS \
         X(a) \
         X(b) \
@@ -315,7 +315,7 @@
     #endif
 
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
 #endif
 
 /* clang-format on */

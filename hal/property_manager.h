@@ -34,12 +34,13 @@
 #elif defined(LILY)
     #define UART_SYNTH "/dev/ttychestnut-time"
     #define UART_RFE "/dev/ttychestnut-rfe-"
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
+
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
 #endif
 
 int get_inotify_fd();

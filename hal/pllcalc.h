@@ -86,11 +86,21 @@
         #error "Invalid RTM specified"
     #endif
 
+#elif defined(AVERY)
+    #if defined(RTM1)
+        #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
+        #define PLL_CORE_REF_FREQ_HZ_S "10000000"
+        // RTM10 currently uses 5MHz reference, with doubler on ADF5355/LMX2572 active, LMX2595 on avery does not use the doubler so it needs a different define
+        #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ/2
+    #else
+        #error "Invalid RTM specified"
+    #endif
+
 #elif defined(TATE_NRNT) || defined(LILY)
 // TODO LILY: confirm this is correct
     #define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
 #endif
 
 // PLL IDs
@@ -145,7 +155,7 @@
 // TODO LILY: confirm this is correct
 #if defined(TATE_NRNT) || defined(LILY)
     #define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
-#elif defined (VAUNT)
+#elif defined (VAUNT) || defined(AVERY)
     #define LMX2595_DIV_MAX 768
 #else
     #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
@@ -243,7 +253,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
                                         LMX2595_R_MAX,          LMX2595_R_MIN
 };
 
-#if defined(VAUNT)
+#if defined(VAUNT) || defined(AVERY)
 // default LMX2572 constructor
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
     PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ,
