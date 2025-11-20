@@ -160,19 +160,25 @@ int main(int argc, char *argv[]) {
 
     inotify_fd = get_inotify_fd();
 
-#ifdef VAUNT
+#if defined(VAUNT) || defined(AVERY)
     // Perform autocalibration of the frequency synthesizers
     // N.B. this must be done after init_property() because uart init is mixed
     // in with it for some reason
     atexit(synth_lut_disable_all);
     synth_lut_enable_all_if_calibrated();
+#elif defined(TATE_NRNT) || defined(LILY)
+    // No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     // Pass the profile pointers down to properties.c
     pass_profile_pntr_manager(&load_profile, &save_profile, load_profile_path,
                               save_profile_path);
 
-#ifdef TATE_NRNT
+#if defined(VAUNT) || defined(AVERY)
+    // No-op
+#elif defined(TATE_NRNT) || defined(LILY)
     /* Final checks
      * 1. Set time board to pulsed mode.
      * 2. Ensure that time board is locked. I think that we are not permitted to reset the tim eboard anymore because that would mess up the TX JESD part of the FPGA, so it would be bad id the time board is not locked. Double check this.
@@ -189,6 +195,8 @@ int main(int argc, char *argv[]) {
         usleep(10000000); // wait 10 seconds to make it clear that the server has failed, in case auto-retry is enabled
         abort();
     }
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // Let systemd know that the server has come up
