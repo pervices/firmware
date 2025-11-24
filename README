@@ -21,8 +21,9 @@ which is available on yaourt.
     List options: sh autobuild.sh --help
 
     Example 1: sh autobuild.sh -p VAUNT -v RTM10 -r 4 -t 4 -s NA
-    Example 2: sh autobuild.sh -p TATE_NRNT -v RTM5 -r 4 -t 4 -s 1000 --use_3g_as_1g --user_lo
-    Example 3: sh autobuild.sh -p LILY -v RTM1 -r 4 -t 4 -s 500
+    Example 2: sh autobuild.sh -p AVERY -v RTM1 -r 4 -t 0 -s NA
+    Example 3: sh autobuild.sh -p TATE_NRNT -v RTM5 -r 4 -t 4 -s 1000 --use_3g_as_1g --user_lo
+    Example 4: sh autobuild.sh -p LILY -v RTM1 -r 4 -t 4 -s 500
 
 If you are compiling without Docker, the "legacy-autobuild.sh" script should be used instead.
 The legacy script accepts all the same arguments as above.
