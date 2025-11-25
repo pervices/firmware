@@ -56,7 +56,11 @@ CFLAGS+=" -DVERSIONGITBRANCH=\\\"`git rev-parse --abbrev-ref HEAD`\\\""
 CFLAGS+=" -DVERSIONGITREVISION=\\\"`git describe --abbrev=8 --dirty --always --long`\\\""
 CFLAGS+=" -DVERSIONDATE=\\\"`TZ=UTC date '+%F-%T'`\\\""
 
-CFLAGS+=" -D${PRODUCT}"
+# Previously (and to a large extent with still do) rely on ifdef PRODUCT so it had no value
+# However, this is an easy source of mistakes (by using #if PRODUCT instead of #ifdef PRODUCT) and makes using it inside larger blocks difficult
+# To prevent the above issue, the value of -D${PRODUCT} is set to 1
+# Relying on either ifdef ${PRODUCT} or if ${PRODUCT} are valid
+CFLAGS+=" -D${PRODUCT}=1"
 CFLAGS+=" -D${HW_REV}"
 CFLAGS+=" -D${NRX}"
 CFLAGS+=" -D${NTX}"
