@@ -41,11 +41,8 @@
     #elif defined(RTM12)
         #define PRODUCT_RTM_VER 12
         #define HARDWARE_RTM_VER 12
-    #elif defined(RTM15)
-        #define PRODUCT_RTM_VER 15
-        #define HARDWARE_RTM_VER 15
     #else
-        #error "VAUNT must be compiled with a valid hardware revision (RTM6, RTM7, RTM8, RTM9, RTM10, RTM11, RTM12, RTM15)"
+        #error "VAUNT must be compiled with a valid hardware revision (RTM6, RTM7, RTM8, RTM9, RTM10, RTM11, RTM12)"
     #endif
 #elif defined(AVERY)
     #if defined(RTM1)

@@ -41,13 +41,13 @@
 
 //#define PROPERTY_MANAGER_DEBUG
 
-#if !(defined(VAUNT) || defined(TATE_NRNT) || defined(LILY) || defined(AVERY))
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
+#if !(defined(VAUNT) || defined(TATE_NRNT) || defined(LILY))
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 static int uart_synth_comm_fd = 0;
-#if defined(VAUNT) || defined(AVERY)
-#if defined(RX_40GHZ_FE)
+#ifdef VAUNT
+#ifdef RX_40GHZ_FE
     // In RX_40GHZ_FE mode tx uart buffer are used to communicate with the 40GHz equipment
     static int uart_tx_comm_fd[NUM_RX_CHANNELS];
 #else
@@ -59,7 +59,7 @@ static int uart_rx_comm_fd[NUM_RX_CHANNELS];
 int uart_tx_comm_fd[32];
 int uart_rx_comm_fd[32];
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // Inotify's file descriptor
@@ -308,7 +308,7 @@ int init_property(uint8_t options) {
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);
     TX_CHANNELS
     #undef X
-#elif defined(VAUNT) || defined(AVERY)
+#elif defined(VAUNT)
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
     for (int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
@@ -316,7 +316,7 @@ int init_property(uint8_t options) {
     for (int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
+    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     PRINT(INFO, "Configuring Time Board. Using UART: %s\n", UART_SYNTH);
