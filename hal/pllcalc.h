@@ -53,7 +53,7 @@
 #include "common.h"
 #endif
 
-// PLL Calculator Parameters
+// // PLL Calculator Parameters
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to
 // used during approximation, and has the largest impact on overall tuning
 // accuracy.
@@ -64,7 +64,7 @@
 // but at the cost of accuracy.
 
 // Core reference feeds to PLL0
-#if defined(VAUNT)
+#if defined(VAUNT) || defined(AVERY)
     // Used to convert specified RTMX specified in the compile flags to HARDWARE_RTM_VER
     #include "hal/variant_config/vaunt_rtm_config.h"
 
@@ -93,7 +93,7 @@
 // TODO LILY: confirm this is correct
     #define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | LILY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // PLL IDs
@@ -148,10 +148,10 @@
 // TODO LILY: confirm this is correct
 #if defined(TATE_NRNT) || defined(LILY)
     #define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
-#elif defined (VAUNT)
+#elif defined (VAUNT) || defined (AVERY)
     #define LMX2595_DIV_MAX 768
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 #define LMX2595_DIV_MIN 1       // from datasheet
 #define LMX2595_N_MAX 524287    // from datasheet
@@ -246,7 +246,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595 = {   PLL_ID_LMX2595,
                                         LMX2595_R_MAX,          LMX2595_R_MIN
 };
 
-#if defined(VAUNT)
+#if defined(VAUNT) || defined(AVERY)
 // default LMX2572 constructor
 static pllparam_t __attribute__ ((unused)) pll_def_lmx2572 = {
     PLL_ID_LMX2572,         PLL_CORE_REF_FREQ_HZ,
@@ -271,6 +271,10 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
     LMX2595_N_MAX,          LMX2595_N_MIN,
     LMX2595_R_MAX,          LMX2595_R_MIN
 };
+#elif defined(TATE_NRNT) || defined(LILY)
+    // No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // Set Output Frequency
