@@ -41,25 +41,26 @@
 
 //#define PROPERTY_MANAGER_DEBUG
 
-#if !(defined(VAUNT) || defined(TATE_NRNT) || defined(LILY))
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+#if !(defined(VAUNT) || defined(AVERY) || defined(TATE_NRNT) || defined(LILY))
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 static int uart_synth_comm_fd = 0;
-#ifdef VAUNT
-#ifdef RX_40GHZ_FE
-    // In RX_40GHZ_FE mode tx uart buffer are used to communicate with the 40GHz equipment
-    static int uart_tx_comm_fd[NUM_RX_CHANNELS];
-#else
+#if defined(VAUNT)
     static int uart_tx_comm_fd[NUM_TX_CHANNELS];
-#endif
-static int uart_rx_comm_fd[NUM_RX_CHANNELS];
+    static int uart_rx_comm_fd[NUM_RX_CHANNELS];
+
+#elif defined(AVERY)
+    // In Avery tx uart buffer are used to communicate with the 40GHz equipment
+    static int uart_tx_comm_fd[NUM_RX_CHANNELS];
+    static int uart_rx_comm_fd[NUM_RX_CHANNELS];
+
 #elif defined(TATE_NRNT) || defined(LILY)
-// TODO: figure out why there should be 32 elements, and soft code this. It should probably be either number of channels present in the configuration, or theoretical maximum number of channles
-int uart_tx_comm_fd[32];
-int uart_rx_comm_fd[32];
+    // TODO: figure out why there should be 32 elements, and soft code this. It should probably be either number of channels present in the configuration, or theoretical maximum number of channles
+    static int uart_tx_comm_fd[32];
+    static int uart_rx_comm_fd[32];
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // Inotify's file descriptor
@@ -308,7 +309,7 @@ int init_property(uint8_t options) {
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);
     TX_CHANNELS
     #undef X
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
     for (int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
@@ -316,7 +317,7 @@ int init_property(uint8_t options) {
     for (int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     PRINT(INFO, "Configuring Time Board. Using UART: %s\n", UART_SYNTH);
