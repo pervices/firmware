@@ -1046,7 +1046,7 @@ static const reg_t reg_table[] = {
     {0x3fe0 + HPS2FPGA_GPR_OFST, "res_ro30", 0x00000000, "RO"},
     {0x3ff0 + HPS2FPGA_GPR_OFST, "res_ro31", 0x00000000, "RO"}
 };
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
 static const reg_t reg_table[] = {
     {0x000 + HPS2FPGA_GPR_OFST, "sys0", 0x00010000, "RW"},
     {0x010 + HPS2FPGA_GPR_OFST, "sys1", 0xffff003f, "RO"},
@@ -1283,7 +1283,7 @@ static const reg_t reg_table[] = {
     {0xff8 + HPS2FPGA_GPR_OFST, "rst_stat1", 0x00000000, "RO"}
 };
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 static size_t num_regs = sizeof(reg_table) / sizeof(reg_table[0]);

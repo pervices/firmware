@@ -285,10 +285,10 @@ int mmap_init() {
 
 #if defined(TATE_NRNT) || defined(LILY)
     mmap_len = 0x4000;
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
     mmap_len = 0x1000;
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
@@ -438,8 +438,8 @@ int write_jesd_reg_mask(uint8_t jesd_shift, uint32_t address, uint32_t data, uin
     }
     return write_jesd_reg(jesd_shift, address, (tmp & ~mask) | (data & mask));
 }
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
 // NO-OP
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
