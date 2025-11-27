@@ -44,9 +44,11 @@ function check_rc() {
 rc=0
 
 # Used for validating values from user
-VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT')
+VALID_PRODUCTS=('TATE_NRNT' 'LILY' 'VAUNT' 'AVERY')
 VAUNT_RTMS=('RTM6' 'RTM7' 'RTM8' 'RTM9' 'RTM10' 'RTM11' 'RTM12' 'RTM15')
 VAUNT_RATES=('NA')  # Vaunt detects sample rate at runtime
+AVERY_RTMS=('RTM1' 'RTM2')
+AVERY_RATES=$VAUNT_RATES  # Avery (based on Vaunt) detects sample rate at runtime
 TATE_RTMS=('RTM3' 'RTM4' 'RTM5' 'RTM6' 'RTM7')
 TATE_RATES=('1000' '3000')
 LILY_RTMS=('RTM0' 'RTM1')
@@ -60,7 +62,7 @@ function print_help() {
     echo "  ./autobuild.sh [-h|--help]  # Prints this help menu"
     echo ""
     echo "Required:"
-    echo "  -p, --product       The product to compile the server for (TATE_NRNT | LILY | VAUNT)"
+    echo "  -p, --product       The product to compile the server for (TATE_NRNT | LILY | VAUNT | AVERY)"
     echo "  -v, --hw-revision   The hardware revision to compile for (RTM5, RTM6, etc...)"
     echo "  -r, --rx-channels   The number of Rx channels on the device"
     echo "  -t, --tx-channels   The number of Tx channels on the device"
@@ -68,7 +70,7 @@ function print_help() {
     echo ""
     echo "Optional:"
     echo "  -h, --help          Print help message showing usage and options for this script"
-    echo "  --rx_40ghz_fe       Indicates the device Tx board has been replaced by a 40GHz Rx frontend"
+    echo "  --rx_40ghz_fe       (DEPRICATE, use AVERY product instead) Indicates the device Tx board has been replaced by a 40GHz Rx frontend"
     echo "  --use_3g_as_1g      Use 1GSPS sample rate with 3GSPS backplane"
     echo "  --user_lo           Enable user LO mode"
     echo ""
@@ -181,6 +183,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --rx_40ghz_fe)
+            # Depricated: rx_40ghz_fe is now compiled using -p AVERY
             # Indicates the unit is an avery rx where the tx board has been replaced by a 40GHz RX front end
             RX_40GHZ_FE=1
             shift
@@ -216,9 +219,25 @@ if validate_value $PRODUCT ${VALID_PRODUCTS[@]}; then
     exit 1
 fi
 
+# Alias VAUNT RTM10 rx_40ghz_fe to AVERY RTM1
+# If rx_40ghz_fe was requested for anything other than VAUNT RTM10 throw an error
+if [ $RX_40GHZ_FE == 1 ]; then
+    echo "[WARNING]: --rx_40ghz_fe is depricated"
+    if [ "$PRODUCT" == "VAUNT" && "$HW_REV" == "RTM10" ]; then
+        echo "VAUNT RTM10 matches AVERY RTM1, aliasing"
+    else
+        print_diagnostics_short
+        echo "[ERROR]: no know equivalent for rx_40ghz_fe, aborting"
+        exit 1
+    fi
+fi
+
 if [ $PRODUCT == "VAUNT" ]; then
     VALID_RTMS=${VAUNT_RTMS[@]}
     VALID_RATES=${VAUNT_RATES[@]}
+elif [ $PRODUCT == "AVERY" ]; then
+    VALID_RTMS=${AVERY_RTMS[@]}
+    VALID_RATES=${AVERY_RATES[@]}
 elif [ $PRODUCT == "TATE_NRNT" ]; then
     VALID_RTMS=${TATE_RTMS[@]}
     VALID_RATES=${TATE_RATES[@]}
@@ -256,7 +275,7 @@ if [ -z "$(docker images -q $PV_DOCKER 2> /dev/null)" ]; then
       check_rc $rc "docker pull"
 fi
 
-if [ "${PRODUCT}" == "VAUNT" ]; then
+if [ "${PRODUCT}" == "VAUNT" ] || [ "${PRODUCT}" == "AVERY" ]; then
     # Docker image has these two installed, no need to autodetect
     SERVER_CC="arm-linux-gnueabihf-gcc"
     SERVER_CXX="arm-linux-gnueabihf-g++"
@@ -268,6 +287,10 @@ elif [ "${PRODUCT}" == "TATE_NRNT" ] || [ "${PRODUCT}" == "LILY" ]; then
     SERVER_CXX="aarch64-linux-gnu-g++"
     PRODUCT_CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors \
                     -march=armv8-a -mtune=cortex-a53"
+else
+    print_diagnostics_short
+    echo "ERROR: missing compiler flags for product $PRODUCT"
+    exit 1
 fi
 
 # Use autoconf in Docker container to configure compilation of server
@@ -291,7 +314,6 @@ dkr ./configure                         \
         NRX=$NUM_RX                     \
         NTX=$NUM_TX                     \
         MAX_RATE="S${MAX_RATE}"         \
-        RX_40GHZ_FE=$RX_40GHZ_FE        \
         USE_3G_AS_1G=$USE_3G_AS_1G      \
         USER_LO=$USER_LO || rc=$?
 check_rc $rc "Configure"

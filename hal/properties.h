@@ -43,6 +43,12 @@
     //state tree
     #define STATE_DIR "/var/volatile/crimson/state"
     #define INTERBOOT_DATA "/var/lib/crimson-server/"
+#elif defined(AVERY)
+    //directory of the state tree
+    #define BASE_DIR "/var/volatile/calamine"
+    //state tree
+    #define STATE_DIR "/var/volatile/calamine/state"
+    #define INTERBOOT_DATA "/var/lib/calamine-server/"
 #elif defined(LILY)
     //directory of the state tree
     #define BASE_DIR "/var/volatile/chestnut"
@@ -56,7 +62,7 @@
     #define STATE_DIR "/var/volatile/cyan/state"
     #define INTERBOOT_DATA "/var/lib/cyan-server/"
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 typedef enum { RW, RO, WO } perm_t;
@@ -109,24 +115,24 @@ void pass_uart_rx_fd(int *fd);
 
 void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
                             char *save_path);
-#ifdef VAUNT
+#if defined(VAUNT) || defined(AVERY)
     void sync_channels(uint8_t chan_mask);
     void sync_channels_prep(uint8_t chan_mask);
     void sync_channels_cleanup(uint8_t chan_mask);
 #elif defined(TATE_NRNT) || defined(LILY)
     // NO-OP
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 #if defined(TATE_NRNT ) || defined(LILY)
     // Only implemented on Cyan
     void jesd_reset_all();
     uint32_t is_hps_only();
-#elif defined(VAUNT)
+#elif defined(VAUNT) || defined(AVERY)
     // NO-OP
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 #ifdef VAUNT
