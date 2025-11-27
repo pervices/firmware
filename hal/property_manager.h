@@ -38,8 +38,12 @@
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
+#elif defined(AVERY)
+    #define UART_TX "/dev/ttycalamine-tx"
+    #define UART_RX "/dev/ttycalamine-rx"
+    #define UART_SYNTH "/dev/ttycalamine-time"
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 int get_inotify_fd();

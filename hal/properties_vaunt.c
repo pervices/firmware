@@ -17,7 +17,7 @@
 
 /* clang-format off */
 
-#if defined(VAUNT)
+#if defined(VAUNT) || defined(AVERY)
 
 #if 1 /* Removes headers for quick gcc -E diagnostics for XMACRO stuffs */
     #include "properties.h"
@@ -40,7 +40,21 @@
 
 #include "variant_config/vaunt_rtm_config.h"
 
-#define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+
+// Used to determine whether the product is VAUNT or AVERY inside macros
+// 3 and 4 are used instead of 1 and 2 just in case to avoid a mixup with TATE_NRNT_ID or LILY_ID even though they shold never be defined at the same time
+#define VAUNT_ID 3
+#define AVERY_ID 4
+#if defined(VAUNT)
+    #define PRODUCT_ID VAUNT_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+#elif defined(AVERY)
+    #define PRODUCT_ID AVERY_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/calamine/alternate_tree_defaults.cfg"
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
+
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
 // Default payload length
@@ -151,7 +165,7 @@ static int get_commit_counter() {
 // set to 1 for DEBUG PRINTS related to EEPROM
 #define DEBUG_PRINT_EEPROM 0
 
-#if RX_40GHZ_FE
+#if defined(AVERY)
     #define MAX_RF_FREQ    40650000000ULL
     #define S_MAX_RF_FREQ "40650000000"
     #define PLL_ABSOLUTE_MAX (40000000000ULL + PLL1_RFOUT_MAX_HZ)
@@ -1588,8 +1602,8 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
-        /* NOTE: in RX_40GHZ_FE the 40GHz board is physically connected where tx would normally be */\
-        if (RX_40GHZ_FE) {                                                     \
+        /* NOTE: in Avery the 40GHz board is physically connected where tx would normally be */\
+        if (PRODUCT_ID == AVERY_ID) {                                                     \
             if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
@@ -1662,7 +1676,14 @@ TX_CHANNELS
                 strcpy(buf, "rf -c " STR(ch) " -b 1\r");                       \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
-        } /*fi RX_40GHZ_FE*/                                                   \
+        } /*fi PRODUCT_ID == AVERY_ID*/                                        \
+        else if(PRODUCT_ID == VAUNT_ID) {\
+            /* No-op */\
+        }\
+        else {\
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }\
+        \
         /* if freq out of bounds, kill channel */                              \
         if (freq > MAX_LO) {                                                   \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
@@ -1756,7 +1777,7 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b %s\r", data);        \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        if (RX_40GHZ_FE) {                                                     \
+        if (PRODUCT_ID == AVERY_ID) {                                                     \
             /* for crimson baseband, FE board must be baseband, otherwise FE
              * band set in hdlr_rx_##ch##_rf_freq_val() */                     \
             uint8_t highband;                                                  \
@@ -1766,6 +1787,12 @@ TX_CHANNELS
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
         }                                                                      \
+        else if(PRODUCT_ID == VAUNT_ID) {\
+            /* No-op */\
+        }\
+        else {\
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2249,11 +2276,17 @@ TX_CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            if (RX_40GHZ_FE) {                                                 \
+            if (PRODUCT_ID == AVERY_ID) {                                                 \
                 /* mute the front end board */                                 \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
+            else if(PRODUCT_ID == VAUNT_ID) {\
+                /* No-op */\
+            }\
+            else {\
+                PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+            }\
                                                                                \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
@@ -2334,7 +2367,7 @@ TX_CHANNELS
 RX_CHANNELS
 #undef X
 
-#if (RX_40GHZ_FE)
+#if defined(AVERY)
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_fe_lna(const char *data, char *ret) {            \
         uint8_t enable;                                                        \
@@ -2361,7 +2394,7 @@ RX_CHANNELS
     }
 RX_CHANNELS
 #undef X
-#endif // (RX_40GHZ_FE)
+#endif // defined(AVERY)
 
 /* -------------------------------------------------------------------------- */
 /* ------------------------------ CHANNEL MASK ------------------------------ */
@@ -4307,7 +4340,8 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 #define DEFINE_RX_CHANNEL_POST(_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
 
-#define DEFINE_RX_40GHZFE_CHANNEL(_c)                                                           \
+// Avery specific RX properties
+#define DEFINE_AVERY_RX_CHANNEL(_c)                                                           \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/lna"      , hdlr_rx_##_c##_fe_lna,    RW, "0", RP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/gain"     , hdlr_rx_##_c##_fe_gain,   RW, "0", RP, #_c)
 
@@ -4460,25 +4494,27 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
 
-#if (RX_40GHZ_FE) // reduced common settings without tx
+#if (NUM_TX_CHANNELS == 0 && NUM_RX_CHANNELS > 0) // common settings without tx
     #define DEFINE_CM()                                                    \
-    DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
-#else // normal common settings with tx and rx
+        DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+#elif (NUM_TX_CHANNELS > 0 && NUM_RX_CHANNELS > 0) // normal common settings with tx and rx
     #define DEFINE_CM()                                                    \
-    DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+        DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+#else
+    #error "Unimplemented channel count combination"
 #endif
 
 #define DEFINE_FPGA_POST()                                                                      \
@@ -4504,14 +4540,14 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     RX_CHANNELS
 #undef X
-#if (RX_40GHZ_FE)
-    #define X(ch) DEFINE_RX_40GHZFE_CHANNEL(ch)
+#if (AVERY)
+    #define X(ch) DEFINE_AVERY_RX_CHANNEL(ch)
         RX_CHANNELS
     #undef X
 #else
-#define X(ch) DEFINE_TX_CHANNEL(ch)
-    TX_CHANNELS
-#undef X
+    #define X(ch) DEFINE_TX_CHANNEL(ch)
+        TX_CHANNELS
+    #undef X
 #endif
     // NOTE: unlike on Cyan, on Crimson FPGA initialization happens last
     DEFINE_FPGA()
@@ -5050,9 +5086,13 @@ int set_freq_internal(const bool tx, const unsigned channel,
                       const double freq) {
 
     typedef int (*fp_t)(const char *, char *);
-    if (RX_40GHZ_FE && tx) {
+
+// tx does not exist on Avery
+#if defined(AVERY)
+    if (tx) {
         return RETURN_ERROR_PARAM;
     }
+#endif
 
     static const fp_t rx_fp[] = {
 #define X(ch) hdlr_rx_##ch##_rf_freq_val,
@@ -5113,4 +5153,4 @@ int set_freq_internal(const bool tx, const unsigned channel,
     return r;
 }
 
-#endif//defined(VAUNT)
+#endif//defined(VAUNT) || defined(AVERY)
