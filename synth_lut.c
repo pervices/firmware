@@ -1,4 +1,4 @@
-#ifdef VAUNT
+#if defined(VAUNT) || defined (AVERY)
 
 #include <errno.h>
 #include <fcntl.h>
@@ -1143,4 +1143,4 @@ out:
     return r;
 }
 
-#endif //defined(VAUNT)
+#endif //defined(VAUNT) || defined (AVERY)
