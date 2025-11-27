@@ -26,7 +26,7 @@
 #elif defined (TATE_NRNT) || defined(LILY)
     #define MAX_DEVICES 32
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 #define USED_DEVICE 1
 #define FREE_DEVICE 0
@@ -82,7 +82,7 @@ int get_uart_rx_fd() { return uart_devices[2]; }
     USED_DEVICE, // stderr
 };
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // Gets the next available file descriptor

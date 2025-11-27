@@ -41,7 +41,7 @@
 #include "time_it.h"
 #include "channels.h"
 
-#if defined(VAUNT) || defined(AVERY)
+#if defined(VAUNT) || defined (AVERY)
     //sync_lut is used to deal with Crimson specific hardware limitations
     #include "synth_lut.h"
     #include "variant_config/vaunt_rtm_config.h"
@@ -117,10 +117,10 @@ int main(int argc, char *argv[]) {
     PRINT(INFO, "Starting Lily server\n");
 #elif defined(VAUNT)
     PRINT(INFO, "Starting Crimson server\n");
-#elif defined(AVERY)
+#elif defined (AVERY)
     PRINT(INFO, "Starting Calamine server\n");
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 
@@ -214,7 +214,7 @@ system("systemd-notify --ready");
 #elif defined(AVERY)
     PRINT(INFO, "Calamine server is up\n");
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     set_led_state(LED_STATE_READY);

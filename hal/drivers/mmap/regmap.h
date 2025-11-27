@@ -32,7 +32,7 @@
 #elif defined(VAUNT) || defined(AVERY)
     #define HPS2FPGA_GPR_OFST (0xFF200000)
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 typedef struct bits {

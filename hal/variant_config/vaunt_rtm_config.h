@@ -104,7 +104,7 @@
     #define MIN_LO 150000000
     #define MIN_LO_S "150000000"
 
-#elif RTM15
+#elif HARDWARE_RTM_VER == 15
     // Minimum LO in MHz
     // TODO: ensure same as RTM12
     #define MIN_LO 150000000
@@ -112,5 +112,5 @@
     #define PRODUCT_RTM_VER 15
 
 #else
-    #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 6, 7, 8, 9, 10, 11, 12"
+    #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 6, 7, 8, 9, 10, 11, 12, 15"
 #endif

@@ -70,7 +70,7 @@ function print_help() {
     echo ""
     echo "Optional:"
     echo "  -h, --help          Print help message showing usage and options for this script"
-    echo "  --rx_40ghz_fe       Indicates the device Tx board has been replaced by a 40GHz Rx frontend"
+    echo "  --rx_40ghz_fe       (DEPRICATE, use AVERY product instead) Indicates the device Tx board has been replaced by a 40GHz Rx frontend"
     echo "  --use_3g_as_1g      Use 1GSPS sample rate with 3GSPS backplane"
     echo "  --user_lo           Enable user LO mode"
     echo ""
@@ -221,11 +221,16 @@ fi
 
 # Alias VAUNT RTM10 rx_40ghz_fe to AVERY RTM1
 # If rx_40ghz_fe was requested for anything other than VAUNT RTM10 throw an error
-if [[ $RX_40GHZ_FE == 1 && $PRODUCT != "AVERY" ]]; then
+if [ $RX_40GHZ_FE == 1 ]; then
     echo "[WARNING]: --rx_40ghz_fe is depricated"
-    if [[ $PRODUCT == "VAUNT" && $HW_REV == "RTM10" ]]; then
+    if [ "$PRODUCT" == "AVERY" ]; then
+        echo "--rx_40ghz_fe is redundant for Avery, ignoring"
+        RX_40GHZ_FE=0
+    elif [ "$PRODUCT" == "VAUNT" && "$HW_REV" == "RTM10" ]; then
         echo "VAUNT RTM10 matches AVERY RTM1, aliasing"
-        $PRODUCT = "AVERY"
+        RX_40GHZ_FE=0
+        PRODUCT="AVERY"
+        HW_REV="RTM1"
     else
         print_diagnostics_short
         echo "[ERROR]: no know equivalent for rx_40ghz_fe, aborting"
@@ -236,15 +241,15 @@ fi
 if [ $PRODUCT == "VAUNT" ]; then
     VALID_RTMS=${VAUNT_RTMS[@]}
     VALID_RATES=${VAUNT_RATES[@]}
+elif [ $PRODUCT == "AVERY" ]; then
+    VALID_RTMS=${AVERY_RTMS[@]}
+    VALID_RATES=${AVERY_RATES[@]}
 elif [ $PRODUCT == "TATE_NRNT" ]; then
     VALID_RTMS=${TATE_RTMS[@]}
     VALID_RATES=${TATE_RATES[@]}
 elif [ $PRODUCT == "LILY" ]; then
     VALID_RTMS=${LILY_RTMS[@]}
     VALID_RATES=${LILY_RATES[@]}
-elif [ $PRODUCT == "AVERY" ]; then
-    VALID_RTMS=${AVERY_RTMS[@]}
-    VALID_RATES=${AVERY_RATES[@]}
 fi
 
 check_argument_exists "Hardware revision" $HW_REV
@@ -276,18 +281,22 @@ if [ -z "$(docker images -q $PV_DOCKER 2> /dev/null)" ]; then
       check_rc $rc "docker pull"
 fi
 
-if [[ "${PRODUCT}" == "VAUNT" || "${PRODUCT}" == "AVERY"  ]]; then
+if [ "${PRODUCT}" == "VAUNT" ] || [ "${PRODUCT}" == "AVERY" ]; then
     # Docker image has these two installed, no need to autodetect
     SERVER_CC="arm-linux-gnueabihf-gcc"
     SERVER_CXX="arm-linux-gnueabihf-g++"
 
     PRODUCT_CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors  \
                     -march=armv7-a -mtune=cortex-a9 -mfpu=neon"
-elif [[ "${PRODUCT}" == "TATE_NRNT" || "${PRODUCT}" == "LILY" ]]; then
+elif [ "${PRODUCT}" == "TATE_NRNT" ] || [ "${PRODUCT}" == "LILY" ]; then
     SERVER_CC="aarch64-linux-gnu-gcc"
     SERVER_CXX="aarch64-linux-gnu-g++"
     PRODUCT_CFLAGS="-Wall -O3 -pipe -fomit-frame-pointer -Wfatal-errors \
                     -march=armv8-a -mtune=cortex-a53"
+else
+    print_diagnostics_short
+    echo "ERROR: missing compiler flags for product $PRODUCT"
+    exit 1
 fi
 
 # Use autoconf in Docker container to configure compilation of server
@@ -311,7 +320,6 @@ dkr ./configure                         \
         NRX=$NUM_RX                     \
         NTX=$NUM_TX                     \
         MAX_RATE="S${MAX_RATE}"         \
-        RX_40GHZ_FE=$RX_40GHZ_FE        \
         USE_3G_AS_1G=$USE_3G_AS_1G      \
         USER_LO=$USER_LO || rc=$?
 check_rc $rc "Configure"

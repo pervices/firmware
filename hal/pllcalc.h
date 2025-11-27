@@ -53,7 +53,7 @@
 #include "common.h"
 #endif
 
-// PLL Calculator Parameters
+// // PLL Calculator Parameters
 // The _PLL_RATS_MAX_DENOM value effectively determines the largest R value to
 // used during approximation, and has the largest impact on overall tuning
 // accuracy.
@@ -64,30 +64,23 @@
 // but at the cost of accuracy.
 
 // Core reference feeds to PLL0
-#if defined(VAUNT)
-    #if defined(RTM6) || defined(RTM7)
+#if defined(VAUNT) || defined(AVERY)
+    // Used to convert specified RTMX specified in the compile flags to HARDWARE_RTM_VER
+    #include "hal/variant_config/vaunt_rtm_config.h"
+
+    #if HARDWARE_RTM_VER == 6 || HARDWARE_RTM_VER == 7
         #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "25000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
-    #elif defined(RTM8)
+    #elif HARDWARE_RTM_VER == 8
         #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "5000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
-    #elif defined(RTM9) || defined(RTM12) || defined(RTM15)
+    #elif HARDWARE_RTM_VER == 9 || HARDWARE_RTM_VER == 12 || HARDWARE_RTM_VER == 15
         #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "10000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
-    #elif defined(RTM10) || defined (RTM11)
-        #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
-        #define PLL_CORE_REF_FREQ_HZ_S "10000000"
-        // RTM10 currently uses 5MHz reference, with doubler on ADF5355/LMX2572 active, LMX2595 on avery does not use the doubler so it needs a different define
-        #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ/2
-    #else
-        #error "Invalid RTM specified"
-    #endif
-
-#elif defined(AVERY)
-    #if defined(RTM1)
+    #elif HARDWARE_RTM_VER == 10 || HARDWARE_RTM_VER == 11
         #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "10000000"
         // RTM10 currently uses 5MHz reference, with doubler on ADF5355/LMX2572 active, LMX2595 on avery does not use the doubler so it needs a different define
@@ -100,7 +93,7 @@
 // TODO LILY: confirm this is correct
     #define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | LILY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // PLL IDs
@@ -155,10 +148,10 @@
 // TODO LILY: confirm this is correct
 #if defined(TATE_NRNT) || defined(LILY)
     #define LMX2595_DIV_MAX 384     // datasheet says 768, but at that div we cannot use synch to ensure phase coherency across channels
-#elif defined (VAUNT) || defined(AVERY)
+#elif defined (VAUNT) || defined (AVERY)
     #define LMX2595_DIV_MAX 768
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 #define LMX2595_DIV_MIN 1       // from datasheet
 #define LMX2595_N_MAX 524287    // from datasheet
@@ -278,6 +271,10 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
     LMX2595_N_MAX,          LMX2595_N_MIN,
     LMX2595_R_MAX,          LMX2595_R_MIN
 };
+#elif defined(TATE_NRNT) || defined(LILY)
+    // No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // Set Output Frequency

@@ -40,7 +40,26 @@
 
 #include "variant_config/vaunt_rtm_config.h"
 
-#define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+// Safety check to prevent sending tx UART commands to 40GHz frontend
+// Avery RTM1 (Based on Crimson RTM10) has 40GHz rfe connected to where tx normally is
+#if defined(AVERY) && (HARDWARE_RTM_VER == 10 || PRODUCT_RTM_VER == 1) && NUM_TX_CHANNELS > 0
+    #error AVERY RTM1 requested with a non 0 number of tx channels. This is invalid because tx UART connections are used for communication with the 40GHz frontend
+#endif
+
+// Used to determine whether the product is VAUNT or AVERY inside macros
+// 3 and 4 are used instead of 1 and 2 just in case to avoid a mixup with TATE_NRNT_ID or LILY_ID even though they shold never be defined at the same time
+#define VAUNT_ID 3
+#define AVERY_ID 4
+#if defined(VAUNT)
+    #define PRODUCT_ID VAUNT_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+#elif defined(AVERY)
+    #define PRODUCT_ID AVERY_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/calamine/alternate_tree_defaults.cfg"
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
+
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
 // Default payload length
@@ -152,14 +171,16 @@ static int get_commit_counter() {
 // set to 1 for DEBUG PRINTS related to EEPROM
 #define DEBUG_PRINT_EEPROM 0
 
-#if RX_40GHZ_FE
+#if defined(AVERY)
     #define MAX_RF_FREQ    40650000000ULL
     #define S_MAX_RF_FREQ "40650000000"
     #define PLL_ABSOLUTE_MAX (40000000000ULL + PLL1_RFOUT_MAX_HZ)
-#else
+#elif defined(VAUNT)
     #define MAX_RF_FREQ    6180000000ULL
     #define S_MAX_RF_FREQ "6180000000"
     #define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
 #endif
 
 //Defines maximum LO and performs a sanity check to make sure said LO is theoretically achievable by hardware
@@ -194,6 +215,16 @@ static int *uart_rx_fd = NULL;
 
 // For VAUNT and TATE there is always one MCU for time control.
 static int uart_synth_fd = 0;
+
+#if defined(AVERY)
+    // File descriper to GPIO UART
+    // Avery uses GPIO UART to communicate with the 40GHz front end
+    static int uart_gpio_fd = 0;
+#elif defined(VAUNT)
+    // No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
@@ -906,7 +937,7 @@ int check_rf_pll(int ch, int uart_fd) {
                                                                                \
         pllparam_t pll;                                                        \
         /* load the reference frequency and such for RF PLL*/                  \
-        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
+        if (HARDWARE_RTM_VER <= 10 || (HARDWARE_RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
             pll = pll_def_lmx2572;                                             \
@@ -934,7 +965,7 @@ int check_rf_pll(int ch, int uart_fd) {
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
         /* RTM10 and older, and RTM11 channel A, B use adf5355 */              \
-        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
+        if (HARDWARE_RTM_VER <= 10 || (HARDWARE_RTM_VER == 11 && INT(ch) < 2)) {                 \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             /* PLL lock is not reliable, try 3 times. */                       \
@@ -969,7 +1000,7 @@ int check_rf_pll(int ch, int uart_fd) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_common_lo(const char *data, char *ret) {      \
-        if (PRODUCT_RTM_VER <= 7) {                                                    \
+        if (HARDWARE_RTM_VER <= 7) {                                                    \
             /* common LO not supported by RTM6/7 hardware */                   \
             snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
             return EXIT_SUCCESS;                                               \
@@ -1589,16 +1620,16 @@ TX_CHANNELS
             return RETURN_SUCCESS;                                             \
         }                                                                      \
                                                                                \
-        /* NOTE: in RX_40GHZ_FE the 40GHz board is physically connected where tx would normally be */\
-        if (RX_40GHZ_FE) {                                                     \
+        /* NOTE: in Avery the 40GHz board is physically connected where tx would normally be */\
+        if (PRODUCT_ID == AVERY_ID) {                                                     \
             if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             } else if (freq > 20000000000) { /*Front end high band 20GHz - 40GHz*/\
                 /* select the band*/                                           \
                 strcpy(buf, "rf -c " STR(ch) " -b 3\r");                       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
                 /* round the requested freq to the nearest multiple of phase*/ \
@@ -1618,10 +1649,10 @@ TX_CHANNELS
                 strcpy(buf, "rf -c " STR(ch) " -f ");                          \
                 sprintf(buf + strlen(buf), "%" PRIu64 "", lmx_freq/1000000);   \
                 strcat(buf, "\r");                                             \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
+                set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
                 /* set the lmx to use output B */                              \
                 if (lmx_freq >= 7500000000) {                                  \
                     /* set outB to use VCO directly */                         \
@@ -1630,7 +1661,7 @@ TX_CHANNELS
                     /* set outB to use CH_DIV directly */                      \
                     strcpy(buf, "lmx -c " STR(ch) " -J 3\r");                  \
                 }                                                              \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* set lmx_freq to account for ADAR2004 quadrupler when print to state tree*/ \
                 lmx_freq *= 4;                                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
@@ -1638,7 +1669,7 @@ TX_CHANNELS
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
                 /* select the band*/                                           \
                 strcpy(buf, "rf -c " STR(ch) " -b 2\r");                       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
                 /* round the requested freq to the nearest multiple of phase*/ \
@@ -1655,15 +1686,22 @@ TX_CHANNELS
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
+                set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
                 /* uses output A by default */                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else { /* Front end low band */                                  \
                 strcpy(buf, "rf -c " STR(ch) " -b 1\r");                       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
-        } /*fi RX_40GHZ_FE*/                                                   \
+        } /*fi PRODUCT_ID == AVERY_ID*/                                        \
+        else if(PRODUCT_ID == VAUNT_ID) {\
+            /* No-op */\
+        }\
+        else {\
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }\
+        \
         /* if freq out of bounds, kill channel */                              \
         if (freq > MAX_LO) {                                                   \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
@@ -1690,7 +1728,7 @@ TX_CHANNELS
         }                                                                      \
                                                                                \
         /* load the reference frequency and such for RF PLL*/                  \
-        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2)) {                 \
+        if (HARDWARE_RTM_VER <= 10 || (HARDWARE_RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
                 pll = pll_def_lmx2572;                                         \
@@ -1716,7 +1754,7 @@ TX_CHANNELS
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
-        if (PRODUCT_RTM_VER <= 10 || (PRODUCT_RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
+        if (HARDWARE_RTM_VER <= 10 || (HARDWARE_RTM_VER == 11 && INT(ch) < 2) ) { /* adf5355 */  \
             strcpy(buf, "rf -c " STR(ch) " \r");                               \
             ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));            \
             /* PLL lock is not reliable, try 3 times. */                       \
@@ -1757,21 +1795,27 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b %s\r", data);        \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        if (RX_40GHZ_FE) {                                                     \
+        if (PRODUCT_ID == AVERY_ID) {                                                     \
             /* for crimson baseband, FE board must be baseband, otherwise FE
              * band set in hdlr_rx_##ch##_rf_freq_val() */                     \
             uint8_t highband;                                                  \
             sscanf(data, "%" SCNu8 "", &highband);                             \
             if (highband == 0) {                                               \
                 snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b 1\r");       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
         }                                                                      \
+        else if(PRODUCT_ID == VAUNT_ID) {\
+            /* No-op */\
+        }\
+        else {\
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_rf_common_lo(const char *data, char *ret) {      \
-        if (PRODUCT_RTM_VER <= 7) {                                                    \
+        if (HARDWARE_RTM_VER <= 7) {                                                    \
             /* common LO not supported by RTM6/7 hardware */                   \
             snprintf(ret, sizeof(NO_LMX_SUPPORT), NO_LMX_SUPPORT);             \
             return EXIT_SUCCESS;                                               \
@@ -2253,11 +2297,17 @@ TX_CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            if (RX_40GHZ_FE) {                                                 \
+            if (PRODUCT_ID == AVERY_ID) {                                                 \
                 /* mute the front end board */                                 \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
+            else if(PRODUCT_ID == VAUNT_ID) {\
+                /* No-op */\
+            }\
+            else {\
+                PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+            }\
                                                                                \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
@@ -2338,7 +2388,7 @@ TX_CHANNELS
 RX_CHANNELS
 #undef X
 
-#if (RX_40GHZ_FE)
+#if defined(AVERY)
 #define X(ch)                                                                  \
     static int hdlr_rx_##ch##_fe_lna(const char *data, char *ret) {            \
         uint8_t enable;                                                        \
@@ -2350,7 +2400,7 @@ RX_CHANNELS
             strcpy(buf, "rf -c " STR(ch) " -l 1\r");                           \
             strcpy(ret, "0");                                                  \
         }                                                                      \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2359,13 +2409,13 @@ RX_CHANNELS
         sscanf(data, "%" SCNd8 "", &gain);                                     \
         if(gain > 7) { gain = 7; }                                             \
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -g %" PRIu8 "\r", gain);\
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));                \
         snprintf(ret, MAX_PROP_LEN, "%" PRIu8, gain);                          \
         return RETURN_SUCCESS;                                                 \
     }
 RX_CHANNELS
 #undef X
-#endif // (RX_40GHZ_FE)
+#endif // defined(AVERY)
 
 /* -------------------------------------------------------------------------- */
 /* ------------------------------ CHANNEL MASK ------------------------------ */
@@ -3688,7 +3738,7 @@ static int hdlr_server_about_fw_ver(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
-#if defined(RTM6) || defined(RTM7)
+#if HARDWARE_RTM_VER == 6 || HARDWARE_RTM_VER == 7
     uint32_t old_val;
     read_hps_reg("sys1", &old_val);
 
@@ -4225,7 +4275,17 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "crimson_tng"
+#if defined(VAUNT)
+    #define PROJECT_NAME "crimson_tng"
+#elif defined(AVERY)
+    #if PRODUCT_RTM_VER == 1
+        #define PROJECT_NAME "calamine"
+    #else
+        #define PROJECT_NAME "calamine_tng"
+    #endif
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
 
 #define DEFINE_FILE_PROP_P(n, h, p, v, e, c) \
     {                                \
@@ -4311,7 +4371,8 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 #define DEFINE_RX_CHANNEL_POST(_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
 
-#define DEFINE_RX_40GHZFE_CHANNEL(_c)                                                           \
+// Avery specific RX properties
+#define DEFINE_AVERY_RX_CHANNEL(_c)                                                           \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/lna"      , hdlr_rx_##_c##_fe_lna,    RW, "0", RP, #_c)   \
     DEFINE_FILE_PROP_P("rx/" #_c "/fe/gain"     , hdlr_rx_##_c##_fe_gain,   RW, "0", RP, #_c)
 
@@ -4464,25 +4525,27 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
 
-#if (RX_40GHZ_FE) // reduced common settings without tx
+#if (NUM_TX_CHANNELS == 0 && NUM_RX_CHANNELS > 0) // common settings without tx
     #define DEFINE_CM()                                                    \
-    DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
-#else // normal common settings with tx and rx
+        DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+#elif (NUM_TX_CHANNELS > 0 && NUM_RX_CHANNELS > 0) // normal common settings with tx and rx
     #define DEFINE_CM()                                                    \
-    DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
-    DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+        DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/atten/val", hdlr_cm_rx_atten_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/gain/val" , hdlr_cm_rx_gain_val , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/tx/gain/val" , hdlr_cm_tx_gain_val , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/tx/force_stream" , hdlr_cm_tx_force_stream , RW, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/trx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/trx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
+        DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
+#else
+    #error "Unimplemented channel count combination"
 #endif
 
 #define DEFINE_FPGA_POST()                                                                      \
@@ -4508,14 +4571,15 @@ static prop_t property_table[] = {
 #define X(ch) DEFINE_RX_CHANNEL(ch)
     RX_CHANNELS
 #undef X
-#if (RX_40GHZ_FE)
-    #define X(ch) DEFINE_RX_40GHZFE_CHANNEL(ch)
+#if (AVERY)
+    #define X(ch) DEFINE_AVERY_RX_CHANNEL(ch)
         RX_CHANNELS
     #undef X
-#else
-#define X(ch) DEFINE_TX_CHANNEL(ch)
-    TX_CHANNELS
-#undef X
+#endif
+#if NUM_TX_CHANNELS > 0
+    #define X(ch) DEFINE_TX_CHANNEL(ch)
+        TX_CHANNELS
+    #undef X
 #endif
     // NOTE: unlike on Cyan, on Crimson FPGA initialization happens last
     DEFINE_FPGA()
@@ -4713,6 +4777,14 @@ void pass_uart_synth_fd(int fd) { uart_synth_fd = fd; }
 void pass_uart_tx_fd(int *fd) { uart_tx_fd = fd; }
 
 void pass_uart_rx_fd(int *fd) { uart_rx_fd = fd; }
+
+#ifdef AVERY
+    void pass_uart_gpio_fd(int fd) { uart_gpio_fd = fd; }
+#elif defined(VAUNT)
+    //No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
 
 char *get_abs_path(prop_t *prop, char *path, int max_len) {
     snprintf(path, max_len, STATE_DIR "/%s", prop->path);
@@ -4957,7 +5029,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
 
 int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     // extract lo variables and pass to MCU (LMX2595)
-#if defined(RTM6) || defined(RTM7)
+#if HARDWARE_RTM_VER == 6 || HARDWARE_RTM_VER == 7
     // set_lo_frequency not supported by RTM6/7 hardware
     return 0;
 #endif
@@ -5054,9 +5126,13 @@ int set_freq_internal(const bool tx, const unsigned channel,
                       const double freq) {
 
     typedef int (*fp_t)(const char *, char *);
-    if (RX_40GHZ_FE && tx) {
+
+// tx does not exist on Avery
+#if defined(AVERY)
+    if (tx) {
         return RETURN_ERROR_PARAM;
     }
+#endif
 
     static const fp_t rx_fp[] = {
 #define X(ch) hdlr_rx_##ch##_rf_freq_val,
@@ -5117,4 +5193,4 @@ int set_freq_internal(const bool tx, const unsigned channel,
     return r;
 }
 
-#endif//defined(VAUNT)
+#endif//defined(VAUNT) || defined(AVERY)

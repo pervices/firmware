@@ -34,13 +34,14 @@
 #elif defined(LILY)
     #define UART_SYNTH "/dev/ttychestnut-time"
     #define UART_RFE "/dev/ttychestnut-rfe-"
+// To make the transition easier, Avery is keeping the same UART file names as Crimson
 #elif defined(VAUNT) || defined(AVERY)
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
-
+    #define UART_GPIO "/dev/ttycrimson-gpio"
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 int get_inotify_fd();

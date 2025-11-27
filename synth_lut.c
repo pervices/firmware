@@ -1,4 +1,4 @@
-#if defined(VAUNT) || defined(AVERY)
+#if defined(VAUNT) || defined (AVERY)
 
 #include <errno.h>
 #include <fcntl.h>
@@ -30,6 +30,20 @@
 // I couldn't actually find this hard-coded anywhere.
 #ifndef LUT_PATH
 #define LUT_PATH "/var/calibration-data"
+#endif
+
+// Define STATE_DIR if not already defined
+// Make sure this matches STATE_DIR from properties.h
+#ifndef STATE_DIR
+    #ifdef VAUNT
+        //state tree
+        #define STATE_DIR "/var/volatile/crimson/state"
+    #elif defined(AVERY)
+        //state tree
+        #define STATE_DIR "/var/volatile/calamine/state"
+    #else
+        #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+    #endif
 #endif
 
 extern int get_uart_synth_fd();
@@ -608,17 +622,10 @@ static void _synth_lut_disable(struct synth_lut_ctx *ctx) {
     }
     ctx->fd = -1;
 
-#if defined(AVERY)
     snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/volatile/calamine/state/%cx/%c/rf/freq/lut_en",
+             "echo 0 > " STATE_DIR "/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
     system(cmdbuf);
-#else
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 0 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
-    system(cmdbuf);
-#endif
 
 out:
     pthread_mutex_unlock(&ctx->lock);
@@ -753,17 +760,10 @@ static int _synth_lut_enable(struct synth_lut_ctx *ctx) {
     r = EXIT_SUCCESS;
     ctx->enabled = true;
 
-#if defined(AVERY)
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "echo 1 > /var/volatile/calamine/state/%cx/%c/rf/freq/lut_en",
-             ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
-    system(cmdbuf);
-#else
     snprintf(cmdbuf, sizeof(cmdbuf),
              "echo 1 > /var/volatile/crimson/state/%cx/%c/rf/freq/lut_en",
              ctx->tx ? 't' : 'r', 'a' + (int32_t) ctx->channel(ctx));
     system(cmdbuf);
-#endif
 
 out:
     if (NULL != rec) {
@@ -1157,4 +1157,4 @@ out:
     return r;
 }
 
-#endif //defined(VAUNT)
+#endif //defined(VAUNT) || defined (AVERY)

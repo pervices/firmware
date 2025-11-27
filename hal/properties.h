@@ -37,6 +37,7 @@
 #define STRINGIFY(s) STRINGIFY_HELPER(s)
 #define STRINGIFY_HELPER(s) #s
 
+// If the state tree location changes for Vaunt of Avery make sure synth_lut.c is updated
 #ifdef VAUNT
     //directory of the state tree
     #define BASE_DIR "/var/volatile/crimson"
@@ -62,7 +63,7 @@
     #define STATE_DIR "/var/volatile/cyan/state"
     #define INTERBOOT_DATA "/var/lib/cyan-server/"
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 typedef enum { RW, RO, WO } perm_t;
@@ -109,9 +110,17 @@ char *get_abs_path(prop_t *prop, char *path, int max_length);
 char *get_abs_dir(prop_t *prop, char *path, int max_length);
 char *get_root(prop_t *prop, char *root);
 
+// Copy UART file descriptors from property manager to properties
 void pass_uart_synth_fd(int fd);
 void pass_uart_tx_fd(int *fd);
 void pass_uart_rx_fd(int *fd);
+#ifdef AVERY
+    void pass_uart_gpio_fd(int fd);
+#elif defined(VAUNT) || defined(TATE_NRNT) || defined(LILY)
+    //No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
+#endif
 
 void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
                             char *save_path);
@@ -122,7 +131,7 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 #elif defined(TATE_NRNT) || defined(LILY)
     // NO-OP
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 #if defined(TATE_NRNT ) || defined(LILY)
@@ -132,15 +141,17 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
 #elif defined(VAUNT) || defined(AVERY)
     // NO-OP
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 #if defined(VAUNT) || defined(AVERY)
     int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel, bool use_lut_if_possible);
-#else
+#elif defined(TATE_NRNT) || defined(LILY)
     int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan);
 

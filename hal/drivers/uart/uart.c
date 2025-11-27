@@ -124,7 +124,7 @@ int recv_uart_timeout(int fd, uint8_t *data, uint32_t *size, int32_t max_size, i
 #elif defined(VAUNT) || defined(AVERY)
     // NO-OP
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     if(max_size < 0) {
@@ -182,7 +182,7 @@ int send_uart(int fd, uint8_t *data, uint16_t size) {
 #elif defined(VAUNT) || defined(AVERY)
     // NO-OP
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
     //

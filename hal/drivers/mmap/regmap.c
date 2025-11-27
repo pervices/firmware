@@ -1283,7 +1283,7 @@ static const reg_t reg_table[] = {
     {0xff8 + HPS2FPGA_GPR_OFST, "rst_stat1", 0x00000000, "RO"}
 };
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 static size_t num_regs = sizeof(reg_table) / sizeof(reg_table[0]);

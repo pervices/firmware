@@ -36,7 +36,7 @@ void print_version() {
     #elif defined(AVERY)
         printf("Product: AVERY\n");
     #else
-        #error "You must specify either ( VAUNT | TATE_NRNT | LILY | AVERY ) when compiling this project."
+        #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
     #endif
 
     uint32_t ver39_32, ver31_0;
@@ -57,8 +57,5 @@ void print_version() {
     #endif
     #if USER_LO
     printf("USER_LO\n");
-    #endif
-    #if RX_40GHZ_FE
-    printf("RX_40GHZ_FE\n");
     #endif
 }
