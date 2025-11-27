@@ -41,7 +41,7 @@
 
 //#define PROPERTY_MANAGER_DEBUG
 
-#if !(defined(VAUNT) || defined(AVERY) defined(TATE_NRNT) || defined(LILY))
+#if !(defined(VAUNT) || defined(AVERY) || defined(TATE_NRNT) || defined(LILY))
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 

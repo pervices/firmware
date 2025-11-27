@@ -40,7 +40,22 @@
 
 #include "variant_config/vaunt_rtm_config.h"
 
+
 #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+// Used to determine whether the product is VAUNT or AVERY inside macros
+// 3 and 4 are used instead of 1 and 2 just in case to avoid a mixup with TATE_NRNT_ID or LILY_ID even though they shold never be defined at the same time
+#define VAUNT_ID 3
+#define AVERY_ID 4
+#if defined(VAUNT)
+    #define PRODUCT_ID VAUNT_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
+#elif defined(AVERY)
+    #define PRODUCT_ID AVERY_ID
+    #define ALTERNATE_TREE_DEFAULTS_PATH "/etc/calamine/alternate_tree_defaults.cfg"
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
+
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
 
 // Default payload length
@@ -1589,7 +1604,7 @@ TX_CHANNELS
         }                                                                      \
                                                                                \
         /* NOTE: in Avery the 40GHz board is physically connected where tx would normally be */\
-        if (AVERY) {                                                     \
+        if (PRODUCT_ID == AVERY_ID) {                                                     \
             if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
@@ -1662,7 +1677,14 @@ TX_CHANNELS
                 strcpy(buf, "rf -c " STR(ch) " -b 1\r");                       \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
-        } /*fi AVERY*/                                                   \
+        } /*fi PRODUCT_ID == AVERY_ID*/                                        \
+        else if(PRODUCT_ID == VAUNT_ID) {\
+            /* No-op */\
+        }\
+        else {\
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }\
+        \
         /* if freq out of bounds, kill channel */                              \
         if (freq > MAX_LO) {                                                   \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
@@ -1756,7 +1778,7 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_rf_freq_band(const char *data, char *ret) {      \
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b %s\r", data);        \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        if (AVERY) {                                                     \
+        if (PRODUCT_ID == AVERY_ID) {                                                     \
             /* for crimson baseband, FE board must be baseband, otherwise FE
              * band set in hdlr_rx_##ch##_rf_freq_val() */                     \
             uint8_t highband;                                                  \
@@ -1766,6 +1788,12 @@ TX_CHANNELS
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
         }                                                                      \
+        else if(PRODUCT_ID == VAUNT_ID) {\
+            /* No-op */\
+        }\
+        else {\
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2249,11 +2277,17 @@ TX_CHANNELS
             rx_power[INT(ch)] = PWR_OFF;                                       \
             rx_stream[INT(ch)] = STREAM_OFF;                                   \
                                                                                \
-            if (AVERY) {                                                 \
+            if (PRODUCT_ID == AVERY_ID) {                                                 \
                 /* mute the front end board */                                 \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
                 ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
+            else if(PRODUCT_ID == VAUNT_ID) {\
+                /* No-op */\
+            }\
+            else {\
+                PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+            }\
                                                                                \
             /* kill the channel */                                             \
             strcpy(buf, "board -c " STR(ch) " -k\r");                          \
@@ -4469,7 +4503,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
         DEFINE_FILE_PROP_P("cm/rx/freq/val", hdlr_cm_trx_freq_val, WO, "0", SP, NAC) \
         DEFINE_FILE_PROP_P("cm/rx/nco_adj" , hdlr_cm_trx_nco_adj , WO, "0", SP, NAC) \
         DEFINE_FILE_PROP_P("cm/rx/force_stream", hdlr_cm_rx_force_stream , RW, "0", SP, NAC)
-#else if (NUM_TX_CHANNELS > 0 && NUM_RX_CHANNELS > 0) // normal common settings with tx and rx
+#elif (NUM_TX_CHANNELS > 0 && NUM_RX_CHANNELS > 0) // normal common settings with tx and rx
     #define DEFINE_CM()                                                    \
         DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
         DEFINE_FILE_PROP_P("cm/chanmask-tx" , hdlr_cm_chanmask_tx , RW, "0", SP, NAC) \
@@ -4508,13 +4542,15 @@ static prop_t property_table[] = {
     RX_CHANNELS
 #undef X
 #if (AVERY)
+    #error "T1"
     #define X(ch) DEFINE_AVERY_RX_CHANNEL(ch)
         RX_CHANNELS
     #undef X
 #else
-#define X(ch) DEFINE_TX_CHANNEL(ch)
-    TX_CHANNELS
-#undef X
+    #error "T2"
+    #define X(ch) DEFINE_TX_CHANNEL(ch)
+        TX_CHANNELS
+    #undef X
 #endif
     // NOTE: unlike on Cyan, on Crimson FPGA initialization happens last
     DEFINE_FPGA()
