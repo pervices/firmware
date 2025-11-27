@@ -65,19 +65,22 @@
 
 // Core reference feeds to PLL0
 #if defined(VAUNT)
-    #if defined(RTM6) || defined(RTM7)
+    // Used to convert specified RTMX specified in the compile flags to HARDWARE_RTM_VER
+    #include "hal/variant_config/vaunt_rtm_config.h"
+
+    #if HARDWARE_RTM_VER == 6 || HARDWARE_RTM_VER == 7
         #define PLL_CORE_REF_FREQ_HZ 25000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "25000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
-    #elif defined(RTM8)
+    #elif HARDWARE_RTM_VER == 8
         #define PLL_CORE_REF_FREQ_HZ 5000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "5000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
-    #elif defined(RTM9) || defined(RTM12) || defined(RTM15)
+    #elif HARDWARE_RTM_VER == 9 || HARDWARE_RTM_VER == 12 || HARDWARE_RTM_VER == 15
         #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "10000000"
         #define AVERY_REF_FREQ_HZ PLL_CORE_REF_FREQ_HZ
-    #elif defined(RTM10) || defined (RTM11)
+    #elif HARDWARE_RTM_VER == 10 || HARDWARE_RTM_VER == 11
         #define PLL_CORE_REF_FREQ_HZ 10000000ULL // Default Reference Frequency used.
         #define PLL_CORE_REF_FREQ_HZ_S "10000000"
         // RTM10 currently uses 5MHz reference, with doubler on ADF5355/LMX2572 active, LMX2595 on avery does not use the doubler so it needs a different define
