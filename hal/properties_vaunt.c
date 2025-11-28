@@ -41,7 +41,6 @@
 #include "variant_config/vaunt_rtm_config.h"
 
 
-#define ALTERNATE_TREE_DEFAULTS_PATH "/etc/crimson/alternate_tree_defaults.cfg"
 // Used to determine whether the product is VAUNT or AVERY inside macros
 // 3 and 4 are used instead of 1 and 2 just in case to avoid a mixup with TATE_NRNT_ID or LILY_ID even though they shold never be defined at the same time
 #define VAUNT_ID 3
