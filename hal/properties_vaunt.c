@@ -4541,12 +4541,10 @@ static prop_t property_table[] = {
     RX_CHANNELS
 #undef X
 #if (AVERY)
-    #error "T1"
     #define X(ch) DEFINE_AVERY_RX_CHANNEL(ch)
         RX_CHANNELS
     #undef X
 #else
-    #error "T2"
     #define X(ch) DEFINE_TX_CHANNEL(ch)
         TX_CHANNELS
     #undef X
