@@ -53,12 +53,12 @@ static int uart_synth_comm_fd = 0;
 #elif defined(AVERY)
     // In Avery tx uart buffer are used to communicate with the 40GHz equipment
     static int uart_tx_comm_fd[NUM_RX_CHANNELS];
-    static int uart_tx_comm_fd[NUM_TX_CHANNELS];
+    static int uart_rx_comm_fd[NUM_RX_CHANNELS];
 
 #elif defined(TATE_NRNT) || defined(LILY)
     // TODO: figure out why there should be 32 elements, and soft code this. It should probably be either number of channels present in the configuration, or theoretical maximum number of channles
-    int uart_tx_comm_fd[32];
-    int uart_rx_comm_fd[32];
+    static int uart_tx_comm_fd[32];
+    static int uart_rx_comm_fd[32];
 #else
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
