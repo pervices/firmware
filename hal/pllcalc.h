@@ -93,7 +93,7 @@
 // TODO LILY: confirm this is correct
     #define PLL_CORE_REF_FREQ_HZ 100000000ULL // Default Reference Frequency used.
 #else
-    #error "You must specify either ( VAUNT | TATE_NRNT | LILY ) when compiling this project."
+    #error "You must specify either ( VAUNT | LILY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
 // PLL IDs
