@@ -135,12 +135,14 @@ void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
-#ifdef VAUNT
+#if defined(VAUNT) || defined(AVERY)
     int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel, bool use_lut_if_possible);
-#else
+#elif defined(TATE_NRNT) || defined(LILY)
     int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
                        bool tx, uint32_t channel);
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t chan);
 
