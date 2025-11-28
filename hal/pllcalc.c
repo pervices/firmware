@@ -324,6 +324,10 @@ void pll_SetVCO(uint64_t *reqFreq, pllparam_t *pll) {
         // but crimson time board has only one LMX2595 and needs these divider settings
         else if (*reqFreq > 14648000 ) { D = 512; }
         else if (*reqFreq >= 9766000 ) { D = 768; }
+#elif defined(TATE_NRNT || defined(LILY)
+        // No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
         else { D = 0 ;}                                 // if reqFreq is too low d=0 will cause error during check
         pll->d = D;
