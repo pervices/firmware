@@ -271,7 +271,7 @@ static pllparam_t __attribute__ ((unused)) pll_def_lmx2595_avery = {
     LMX2595_N_MAX,          LMX2595_N_MIN,
     LMX2595_R_MAX,          LMX2595_R_MIN
 };
-#elif defined(TATE_NRNT || defined(LILY)
+#elif defined(TATE_NRNT) || defined(LILY)
     // No-op
 #else
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
