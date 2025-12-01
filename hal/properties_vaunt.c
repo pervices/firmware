@@ -4254,7 +4254,17 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 /* ---------------------------- PROPERTY TABLE ------------------------------ */
 /* -------------------------------------------------------------------------- */
 
-#define PROJECT_NAME "crimson_tng"
+#if defined(VAUNT)
+    #define PROJECT_NAME "crimson_tng"
+#elif defined(AVERY)
+    #if PRODUCT_RTM_VER == 1
+        #define PROJECT_NAME "calamine"
+    #else
+        #define PROJECT_NAME "calamine_tng"
+    #endif
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
 
 #define DEFINE_FILE_PROP_P(n, h, p, v, e, c) \
     {                                \
