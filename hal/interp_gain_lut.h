@@ -4410,4 +4410,6 @@ static const uint8_t interp_gain_lut[65536] = {
     165,
 };
 
+static const uint8_t interp_gain_lut_tate[65536] = { [0 ... 65535] = 0x7F };
+
 #endif

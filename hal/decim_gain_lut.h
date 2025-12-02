@@ -4410,4 +4410,6 @@ static const uint8_t decim_gain_lut[65536] = {
     66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,  66,
     66};
 
+static const uint8_t decim_gain_lut_tate[65536] = { [0 ... 65535] = 0xFF };
+
 #endif

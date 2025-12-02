@@ -1782,10 +1782,10 @@ int check_time_pll(int ch) {
         if(sample_factor >= 4) {\
             write_hps_reg_mask(tx_reg4_map[INT(ch)], 1 << 18, 1 << 18);\
             /* Right shift the index when using the x2 interpolator */\
-            target_dsp_gain = decim_gain_lut[sample_factor >> 1];\
+            target_dsp_gain = interp_gain_lut_tate[sample_factor >> 1];\
         } else {\
             write_hps_reg_mask(tx_reg4_map[INT(ch)], 0, 1 << 18);\
-            target_dsp_gain = decim_gain_lut[sample_factor];\
+            target_dsp_gain = interp_gain_lut_tate[sample_factor];\
         }\
         \
         /* Sets the dsp gain to compensate for interpolator effects*/\
@@ -3001,7 +3001,7 @@ TX_CHANNELS
         write_hps_reg("rx" STR(ch) "1", factor);                      \
         /* Sets the dsp gain to compensate for decimation effects*/\
         /* Right shift index when tx_4 is high (always the case) */\
-        uint8_t target_dsp_gain = decim_gain_lut[factor];\
+        uint8_t target_dsp_gain = decim_gain_lut_tate[factor];\
         char dsp_gain_s[10];\
         snprintf(dsp_gain_s, 10, "%hhu\n", target_dsp_gain);\
         set_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s);\
