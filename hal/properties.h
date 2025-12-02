@@ -37,6 +37,7 @@
 #define STRINGIFY(s) STRINGIFY_HELPER(s)
 #define STRINGIFY_HELPER(s) #s
 
+// If the state tree location changes for Vaunt of Avery make sure synth_lut.c is updated
 #ifdef VAUNT
     //directory of the state tree
     #define BASE_DIR "/var/volatile/crimson"
