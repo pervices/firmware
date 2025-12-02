@@ -110,6 +110,8 @@
 #define STREAM_ON  1
 #define STREAM_OFF 0
 
+#define MIN_FPGA_FOR_RX_GAIN 5593
+
 static uint8_t rx_power[NUM_RX_CHANNELS];
 static uint8_t tx_power[NUM_TX_CHANNELS];
 
@@ -3002,6 +3004,10 @@ TX_CHANNELS
         /* Sets the dsp gain to compensate for decimation effects*/\
         /* Right shift index when tx_4 is high (always the case) */\
         uint8_t target_dsp_gain = decim_gain_lut_tate[factor];\
+        target_dsp_gain = decim_gain_lut[(base_factor)];\
+        if (get_commit_counter() >= MIN_FPGA_FOR_RX_GAIN) {\
+            target_dsp_gain = target_dsp_gain >> 4;        \
+        }\
         char dsp_gain_s[10];\
         snprintf(dsp_gain_s, 10, "%hhu\n", target_dsp_gain);\
         set_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s);\
