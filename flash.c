@@ -13,13 +13,13 @@
 // For flock
 #include <sys/file.h>
 
-// TNG Paths
+// Crimson + Calamine Paths
 char PATH_TNG_RX[50] = "/dev/ttycrimson-rx";
 char PATH_TNG_TX[50] = "/dev/ttycrimson-tx";
 char PATH_TNG_TIME[50] = "/dev/ttycrimson-time";
 char PATH_TNG_GPIO[50] = "/dev/ttycrimson-gpio";
 
-// TNG Hexfile Names
+// Crimson + Calamine Hexfile Names
 char HEX_TNG_RX[50] = "vaunt-rx.hex";
 char HEX_TNG_TX[50] = "vaunt-tx.hex";
 char HEX_TNG_TIME[50] = "vaunt-synth.hex";
@@ -351,23 +351,25 @@ int main(int argc, char *argv[])
                 return 1;
             }
         }
-        }else if (strcmp(argv[3], "avery") == 0)
+    }
+    // As of December 2, 2025 Avery is keeping the same systemd service names as Crimson
+    else if (strcmp(argv[3], "avery") == 0)
+    {
+        if (!system("systemctl is-active --quiet crimson-server.service"))
         {
-            if (!system("systemctl is-active --quiet crimson-server.service"))
+            printf("Avery server is active, stopping avery server\n");
+            if (system("systemctl stop crimson-website.service") == -1)
             {
-                printf("Avery server is active, stopping avery server\n");
-                if (system("systemctl stop crimson-website.service") == -1)
-                {
-                    return 1;
-                }
-                if (system("systemctl stop crimson-server.service") == -1)
-                {
-                    return 1;
-                }
-            }else{
-            printf("Crimson server is not active\n");
-            server_status = 0;
+                return 1;
             }
+            if (system("systemctl stop crimson-server.service") == -1)
+            {
+                return 1;
+            }
+        }else{
+            printf("Calamine server is not active\n");
+            server_status = 0;
+        }
     }
     // Closes all minicom instances, since they will interfere with flashing
     system("killall minicom");
