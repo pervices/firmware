@@ -51,6 +51,7 @@
 // Represents the earliest version this packet size is known to be supported
 // It was supported earlier but the commit counter wasn't implemented
 #define MIN_FPGA_FOR_MAX_PAY_LEN 5524
+#define MIN_FPGA_FOR_RX_GAIN 5593
 // Fallback pay_len for older FPGAs
 #define LEGACY_MAX_PAY_LEN 1400
 
@@ -1974,6 +1975,9 @@ TX_CHANNELS
         snprintf(ret, MAX_PROP_LEN, "%lf", get_base_sample_rate() / (double)(base_factor + 1)); \
         /*Set gain adjustment*/                                            \
         gain_factor = decim_gain_lut[(base_factor)];                       \
+        if (get_commit_counter() >= MIN_FPGA_FOR_RX_GAIN) {                \
+            gain_factor = gain_factor >> 4;                                \
+        }                                                                  \
         read_hps_reg("rxga", &old_val);                                    \
         write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
                                 (((uint16_t)gain_factor) << shift));         \
