@@ -228,6 +228,9 @@ if [ $RX_40GHZ_FE == 1 ]; then
         RX_40GHZ_FE=0
     elif [ "$PRODUCT" == "VAUNT" && "$HW_REV" == "RTM10" ]; then
         echo "VAUNT RTM10 matches AVERY RTM1, aliasing"
+        RX_40GHZ_FE=0
+        PRODUCT="AVERY"
+        HW_REV="RTM1"
     else
         print_diagnostics_short
         echo "[ERROR]: no know equivalent for rx_40ghz_fe, aborting"
