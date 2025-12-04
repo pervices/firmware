@@ -215,6 +215,16 @@ static int *uart_rx_fd = NULL;
 // For VAUNT and TATE there is always one MCU for time control.
 static int uart_synth_fd = 0;
 
+#if defined(AVERY)
+    // File descriper to GPIO UART
+    // Avery uses GPIO UART to communicate with the 40GHz front end
+    static int uart_gpio_fd = 0;
+#elif defined(VAUNT)
+    // No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
+
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
 
@@ -1614,11 +1624,11 @@ TX_CHANNELS
             if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             } else if (freq > 20000000000) { /*Front end high band 20GHz - 40GHz*/\
                 /* select the band*/                                           \
                 strcpy(buf, "rf -c " STR(ch) " -b 3\r");                       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
                 /* round the requested freq to the nearest multiple of phase*/ \
@@ -1638,10 +1648,10 @@ TX_CHANNELS
                 strcpy(buf, "rf -c " STR(ch) " -f ");                          \
                 sprintf(buf + strlen(buf), "%" PRIu64 "", lmx_freq/1000000);   \
                 strcat(buf, "\r");                                             \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
+                set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
                 /* set the lmx to use output B */                              \
                 if (lmx_freq >= 7500000000) {                                  \
                     /* set outB to use VCO directly */                         \
@@ -1650,7 +1660,7 @@ TX_CHANNELS
                     /* set outB to use CH_DIV directly */                      \
                     strcpy(buf, "lmx -c " STR(ch) " -J 3\r");                  \
                 }                                                              \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* set lmx_freq to account for ADAR2004 quadrupler when print to state tree*/ \
                 lmx_freq *= 4;                                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
@@ -1658,7 +1668,7 @@ TX_CHANNELS
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
                 /* select the band*/                                           \
                 strcpy(buf, "rf -c " STR(ch) " -b 2\r");                       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
                 /* round the requested freq to the nearest multiple of phase*/ \
@@ -1675,13 +1685,13 @@ TX_CHANNELS
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_tx_fd[INT(ch)], &pll, INT(ch));          \
+                set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
                 /* uses output A by default */                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else { /* Front end low band */                                  \
                 strcpy(buf, "rf -c " STR(ch) " -b 1\r");                       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
         } /*fi PRODUCT_ID == AVERY_ID*/                                        \
         else if(PRODUCT_ID == VAUNT_ID) {\
@@ -1791,7 +1801,7 @@ TX_CHANNELS
             sscanf(data, "%" SCNu8 "", &highband);                             \
             if (highband == 0) {                                               \
                 snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b 1\r");       \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
         }                                                                      \
         else if(PRODUCT_ID == VAUNT_ID) {\
@@ -2286,7 +2296,7 @@ TX_CHANNELS
             if (PRODUCT_ID == AVERY_ID) {                                                 \
                 /* mute the front end board */                                 \
                 strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
-                ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));        \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
             else if(PRODUCT_ID == VAUNT_ID) {\
                 /* No-op */\
@@ -2386,7 +2396,7 @@ RX_CHANNELS
             strcpy(buf, "rf -c " STR(ch) " -l 1\r");                           \
             strcpy(ret, "0");                                                  \
         }                                                                      \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2395,7 +2405,7 @@ RX_CHANNELS
         sscanf(data, "%" SCNd8 "", &gain);                                     \
         if(gain > 7) { gain = 7; }                                             \
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -g %" PRIu8 "\r", gain);\
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));                \
         snprintf(ret, MAX_PROP_LEN, "%" PRIu8, gain);                          \
         return RETURN_SUCCESS;                                                 \
     }
@@ -4762,6 +4772,14 @@ void pass_uart_synth_fd(int fd) { uart_synth_fd = fd; }
 void pass_uart_tx_fd(int *fd) { uart_tx_fd = fd; }
 
 void pass_uart_rx_fd(int *fd) { uart_rx_fd = fd; }
+
+#ifdef AVERY
+    void pass_uart_gpio_fd(int fd) { uart_gpio_fd = fd; }
+#elif defined(VAUNT)
+    //No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
+#endif
 
 char *get_abs_path(prop_t *prop, char *path, int max_len) {
     snprintf(path, max_len, STATE_DIR "/%s", prop->path);

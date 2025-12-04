@@ -51,9 +51,13 @@ static int uart_synth_comm_fd = 0;
     static int uart_rx_comm_fd[NUM_RX_CHANNELS];
 
 #elif defined(AVERY)
-    // In Avery tx uart buffer are used to communicate with the 40GHz equipment
-    static int uart_tx_comm_fd[NUM_RX_CHANNELS];
+    // NOTE: on Avery RTM1 tx used to be used to communicate with the 40GHz frontend
+    // RTM1: uart_tx_comm_fd is unused, uart_gpio_comm_fd is used to communicate with the 40GHz frontend, /dev/ttycrimson-gpio is an alias of /dev/ttycrimson-tx which goes to the 40GHz frontend
+    // RTM2 and later: uart_tx_comm_fd and /dev/ttycrimson-tx function same as Vaunt. uart_gpio_comm_fd and /dev/ttycrimson-gpio go to the radio frontend
+    static int uart_tx_comm_fd[NUM_TX_CHANNELS];
     static int uart_rx_comm_fd[NUM_RX_CHANNELS];
+
+    static int uart_gpio_comm_fd;
 
 #elif defined(TATE_NRNT) || defined(LILY)
     // TODO: figure out why there should be 32 elements, and soft code this. It should probably be either number of channels present in the configuration, or theoretical maximum number of channles
@@ -293,10 +297,15 @@ int init_property(uint8_t options) {
         uart_rx_comm_fd[i] = -1;
 
     /* Setup all UART devices XXX: SHOULD RETURN -1 */
+
+    // Initialize time board UART fd
     init_uart_comm(&uart_synth_comm_fd, UART_SYNTH, 0);
 
+    // Initialize tx, rx, and (Avery only) gpio/40GHz UART fd
 #if defined(TATE_NRNT) || defined(LILY)
+    // Path for the file used for UART
     static char name[512];
+
     #define X(ch)\
         const int chan_rx_##ch = INT_RX(ch);                                          \
         snprintf(name, 521, UART_RFE "%d", chan_rx_##ch);                              \
@@ -309,13 +318,30 @@ int init_property(uint8_t options) {
         init_uart_comm(&uart_tx_comm_fd[chan_tx_##ch], name, 0);
     TX_CHANNELS
     #undef X
-#elif defined(VAUNT) || defined(AVERY)
+#elif defined(VAUNT)
     init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
     init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
+
+    // On Vaunt all channels use the same UART connection
+    // Copy the file descriptor from channel 0 for every channel
     for (int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
         uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
     for (int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
         uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
+
+#elif defined(AVERY)
+    init_uart_comm(&uart_tx_comm_fd[0], UART_TX, 0);
+    init_uart_comm(&uart_rx_comm_fd[0], UART_RX, 0);
+
+    // On Avery all channels use the same UART connection
+    // Copy the file descriptor from channel 0 for every channel
+    for (int i = 1; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
+        uart_tx_comm_fd[i] = uart_tx_comm_fd[0];
+    for (int i = 1; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
+        uart_rx_comm_fd[i] = uart_rx_comm_fd[0];
+
+    // Init UART for 40GHz frontend
+    init_uart_comm(&uart_gpio_comm_fd, UART_GPIO, 0);
 #else
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
@@ -338,10 +364,17 @@ int init_property(uint8_t options) {
         return RETURN_ERROR_INOTIFY;
     }
 
-    // pass the uart handler to the property handlers
+    // pass the uart handler to the property handlers (properties_vaunt.c/properties_tate_nrnt.c)
     pass_uart_synth_fd(uart_synth_comm_fd);
     pass_uart_tx_fd(uart_tx_comm_fd);
     pass_uart_rx_fd(uart_rx_comm_fd);
+#ifdef AVERY
+    pass_uart_gpio_fd(uart_gpio_comm_fd);
+#elif defined(VAUNT) || defined(TATE_NRNT) || defined(LILY)
+    //No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
+#endif
 
     PRINT(INFO, "Building the property tree\n");
 

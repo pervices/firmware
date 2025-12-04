@@ -39,6 +39,7 @@
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
+    #define UART_GPIO "/dev/ttycrimson-gpio"
 #else
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif

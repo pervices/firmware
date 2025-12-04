@@ -110,9 +110,17 @@ char *get_abs_path(prop_t *prop, char *path, int max_length);
 char *get_abs_dir(prop_t *prop, char *path, int max_length);
 char *get_root(prop_t *prop, char *root);
 
+// Copy UART file descriptors from property manager to properties
 void pass_uart_synth_fd(int fd);
 void pass_uart_tx_fd(int *fd);
 void pass_uart_rx_fd(int *fd);
+#ifdef AVERY
+    void pass_uart_gpio_fd(int fd);
+#elif defined(VAUNT) || defined(TATE_NRNT) || defined(LILY)
+    //No-op
+#else
+    #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
+#endif
 
 void pass_profile_pntr_prop(uint8_t *load, uint8_t *save, char *load_path,
                             char *save_path);
