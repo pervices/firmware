@@ -169,10 +169,12 @@ static int get_commit_counter() {
     #define MAX_RF_FREQ    40650000000ULL
     #define S_MAX_RF_FREQ "40650000000"
     #define PLL_ABSOLUTE_MAX (40000000000ULL + PLL1_RFOUT_MAX_HZ)
-#else
+#elif defined(VAUNT)
     #define MAX_RF_FREQ    6180000000ULL
     #define S_MAX_RF_FREQ "6180000000"
     #define PLL_ABSOLUTE_MAX PLL1_RFOUT_MAX_HZ
+#else
+    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
 #endif
 
 //Defines maximum LO and performs a sanity check to make sure said LO is theoretically achievable by hardware
