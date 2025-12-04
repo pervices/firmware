@@ -40,6 +40,10 @@
 
 #include "variant_config/vaunt_rtm_config.h"
 
+// Safety check to prevent sending tx UART commands to 40GHz frontend
+#ifdef AVERY && HARDWARE_RTM_VER == 1 && NUM_TX_CHANNELS > 0
+    #error AVERY RTM1 requested with a non 0 number of tx channels. This is invalid because tx UART connections are used for communication with the 40GHz frontend
+#endif
 
 // Used to determine whether the product is VAUNT or AVERY inside macros
 // 3 and 4 are used instead of 1 and 2 just in case to avoid a mixup with TATE_NRNT_ID or LILY_ID even though they shold never be defined at the same time
