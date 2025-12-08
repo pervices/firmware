@@ -4571,7 +4571,8 @@ static prop_t property_table[] = {
     #define X(ch) DEFINE_AVERY_RX_CHANNEL(ch)
         RX_CHANNELS
     #undef X
-#else
+#endif
+#if NUM_TX_CHANNELS > 0
     #define X(ch) DEFINE_TX_CHANNEL(ch)
         TX_CHANNELS
     #undef X
