@@ -1747,14 +1747,18 @@ TX_CHANNELS
                 /* Send Parameters over to the MCU */                          \
                 set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
                 /* set the lmx to use output B */                              \
-                if (lmx_freq >= 7500000000) {                                  \
-                    /* set outB to use VCO directly */                         \
-                    strcpy(buf, "lmx -c " STR(ch) " -J 4\r");                  \
-                } else {                                                       \
-                    /* set outB to use CH_DIV directly */                      \
-                    strcpy(buf, "lmx -c " STR(ch) " -J 3\r");                  \
+                if (PRODUCT_RTM_VER == 1) {                                    \
+                    /* RTM1 used LMX output B for highband, after that we just \
+                     *use output A for both bands, and LMX2595 defaults to A*/ \
+                    if (lmx_freq >= 7500000000) {                              \
+                        /* set outB to use VCO directly */                     \
+                        strcpy(buf, "lmx -c " STR(ch) " -J 4\r");              \
+                    } else {                                                   \
+                        /* set outB to use CH_DIV directly */                  \
+                        strcpy(buf, "lmx -c " STR(ch) " -J 3\r");              \
+                    }                                                          \
+                    ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));           \
                 }                                                              \
-                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* set lmx_freq to account for ADAR2004 quadrupler when print to state tree*/ \
                 lmx_freq *= 4;                                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
