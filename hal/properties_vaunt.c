@@ -216,15 +216,11 @@ static int *uart_rx_fd = NULL;
 // For VAUNT and TATE there is always one MCU for time control.
 static int uart_synth_fd = 0;
 
-#if defined(AVERY)
-    // File descriper to GPIO UART
-    // Avery uses GPIO UART to communicate with the 40GHz front end
-    static int uart_gpio_fd = 0;
-#elif defined(VAUNT)
-    // No-op
-#else
-    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
-#endif
+// File descriper to GPIO UART
+// Avery uses GPIO UART to communicate with the 40GHz front end
+// NOTE this needs to be defined for this to compile for Crimson even though stock crimson should not be using it due to how we select AVERY in the macros
+// Stock Crimson will have the gpio UART defined, it just won't be physically connected to a board so any commands sent there will have no effect
+static int uart_gpio_fd = 0;
 
 static uint8_t uart_ret_buf[MAX_UART_RET_LEN] = { 0x00 };
 static char buf[MAX_PROP_LEN] = { '\0' };
@@ -4778,13 +4774,8 @@ void pass_uart_tx_fd(int *fd) { uart_tx_fd = fd; }
 
 void pass_uart_rx_fd(int *fd) { uart_rx_fd = fd; }
 
-#ifdef AVERY
-    void pass_uart_gpio_fd(int fd) { uart_gpio_fd = fd; }
-#elif defined(VAUNT)
-    //No-op
-#else
-    #error "You must specify either ( VAUNT | AVERY ) when compiling this file."
-#endif
+// see comment where static int uart_gpio_fd = 0; is defined for more context
+void pass_uart_gpio_fd(int fd) { uart_gpio_fd = fd; }
 
 char *get_abs_path(prop_t *prop, char *path, int max_len) {
     snprintf(path, max_len, STATE_DIR "/%s", prop->path);
