@@ -891,8 +891,85 @@ int check_rf_pll(int ch, int uart_fd) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_rf_freq_val(const char *data, char *ret) {       \
+        uint64_t lmx_freq = 0; /* for use with avery 40GHz FE */               \
         uint64_t freq = 0;                                                     \
+        pllparam_t pll;                                                        \
+        long double outfreq = 0;                                               \
         sscanf(data, "%" SCNd64 "", &freq);                                    \
+                                                                               \
+        if (PRODUCT_ID == AVERY_ID) {                                          \
+            /* NOTE: TX AVERY channels are numbered 4-7 because controller uses\
+             * 0-3 for RX channels*/                                           \
+            if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
+                /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
+                sprintf(buf, "rf -c %i -z\r", INT(ch) + 4);                    \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
+            } else if (freq > 20000000000) { /*Front end high band 20GHz - 40GHz*/\
+                /* select the band*/                                           \
+                sprintf(buf, "rf -c %i -b 3\r", INT(ch) + 4);                  \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
+                /* load the reference frequency and such for LMX2595*/         \
+                pll = pll_def_lmx2595_avery;                                   \
+                /* round the requested freq to the nearest multiple of phase*/ \
+                /* detector frequency around the 650MHz target IF*/            \
+                /* multiplied by four times because of ADAR2001 quadrupler*/   \
+                float n = ((float)freq - AVERY_IF ) / (4 * pll.ref_freq / pll.R);\
+                lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
+                /* run the pll calc algorithm */                               \
+                outfreq = setFreq(&lmx_freq, &pll);                            \
+                while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {           \
+                    PRINT(INFO, "Retrying pll calc\n");                        \
+                    pll.R = pll.R + 1;                                         \
+                    outfreq = setFreq(&lmx_freq, &pll);                        \
+                }                                                              \
+                lmx_freq = (uint64_t)outfreq;                                  \
+                /* set internal band of ADAR2001 in MHz*/                      \
+                sprintf(buf, "rf -c %i -f %" PRIu64 "\r", INT(ch) + 4,         \
+                    lmx_freq/1000000);                                         \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
+                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
+                /* Send Parameters over to the MCU */                          \
+                set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4);             \
+                /* uses output A by default */                                 \
+                /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
+                lmx_freq *= 4;                                                 \
+                /* set the freq to 650MHz so normal RF chain centered on IF */ \
+                freq = AVERY_IF;                                               \
+            } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
+                /* select the band*/                                           \
+                sprintf(buf, "rf -c %i -b 2\r", INT(ch) + 4);                  \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
+                /* load the reference frequency and such for LMX2595*/         \
+                pll = pll_def_lmx2595_avery;                                   \
+                /* round the requested freq to the nearest multiple of phase*/ \
+                /* detector frequency around the 650MHz target IF*/            \
+                float n = ((float)freq - AVERY_IF ) / ( pll.ref_freq / pll.R );\
+                lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
+                /* run the pll calc algorithm */                               \
+                outfreq = setFreq(&lmx_freq, &pll);                            \
+                while ((pll.N < pll.n_min) && (pll.R < pll.r_max)) {           \
+                    PRINT(INFO, "Retrying pll calc\n");                        \
+                    pll.R = pll.R + 1;                                         \
+                    outfreq = setFreq(&lmx_freq, &pll);                        \
+                }                                                              \
+                lmx_freq = (uint64_t)outfreq;                                  \
+                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
+                /* Send Parameters over to the MCU */                          \
+                set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4);             \
+                /* uses output A by default */                                 \
+                /* set the freq to 650MHz so normal RF chain centered on IF */ \
+                freq = AVERY_IF;                                               \
+            } else { /* Front end low band */                                  \
+                sprintf(buf, "rf -c %i -b 1\r", INT(ch) + 4);                  \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
+            }                                                                  \
+        } /*fi PRODUCT_ID == AVERY_ID*/                                        \
+        else if(PRODUCT_ID == VAUNT_ID) {                                      \
+            /* No-op */                                                        \
+        }                                                                      \
+        else {                                                                 \
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }                                                                      \
                                                                                \
         /* if freq = 0 or below allowed range, mute PLL */                     \
         if (freq < MIN_LO) {                                                   \
@@ -931,14 +1008,12 @@ int check_rf_pll(int ch, int uart_fd) {
             return RETURN_ERROR;                                               \
         }                                                                      \
                                                                                \
-        pllparam_t pll;                                                        \
         /* load the reference frequency and such for RF PLL*/                  \
         if (HARDWARE_RTM_VER <= 10 || (HARDWARE_RTM_VER == 11 && INT(ch) < 2)) {                 \
             pll = pll_def_adf5355;                                             \
         } else {                                                               \
             pll = pll_def_lmx2572;                                             \
         }                                                                      \
-        long double outfreq = 0;                                               \
                                                                                \
         /* round the requested freq to the nearest multiple of PLL ref */      \
         float n = (float)freq / pll.ref_freq;                                  \
@@ -957,6 +1032,10 @@ int check_rf_pll(int ch, int uart_fd) {
             pll.R = pll.R + 1;                                                 \
             outfreq = setFreq(&freq, &pll);                                    \
         }                                                                      \
+                                                                               \
+        /* Add lmx_freq to out_freq so that if 40GHz FE is in use we print the \
+         * actual freq to the state tree*/                                     \
+        outfreq += (long double)lmx_freq;                                      \
                                                                                \
         /* TODO: pll1.power setting TBD (need to modify pllparam_t) */         \
                                                                                \
@@ -992,6 +1071,24 @@ int check_rf_pll(int ch, int uart_fd) {
     static int hdlr_tx_##ch##_rf_freq_band(const char *data, char *ret) {      \
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b %s\r", data);        \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
+        if (PRODUCT_ID == AVERY_ID) {                                          \
+            /* for crimson baseband, FE board must be baseband, otherwise FE
+             * band set in hdlr_tx_##ch##_rf_freq_val() */                     \
+            uint8_t highband;                                                  \
+            sscanf(data, "%" SCNu8 "", &highband);                             \
+            if (highband == 0) {                                               \
+                /* AVERY TX channels use 4-7 because controller uses 0-3 for RX\
+                 * channels*/                                                  \
+                snprintf(buf, MAX_PROP_LEN, "rf -c %i -b 1\r", INT(ch) + 4 );  \
+                ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
+            }                                                                  \
+        }                                                                      \
+        else if(PRODUCT_ID == VAUNT_ID) {\
+            /* No-op */\
+        }\
+        else {\
+            PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
+        }\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
