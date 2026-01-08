@@ -39,7 +39,13 @@
     #define UART_TX "/dev/ttycrimson-tx"
     #define UART_RX "/dev/ttycrimson-rx"
     #define UART_SYNTH "/dev/ttycrimson-time"
-    #define UART_GPIO "/dev/ttycrimson-gpio"
+    #if defined(RTM1)
+        // avery controller board connected where tx usually is
+        #define UART_GPIO "/dev/ttycrimson-tx"
+    #else
+        // avery controller board connected to its own UART port
+        #define UART_GPIO "/dev/ttyUSB3"
+    #endif
 #else
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif

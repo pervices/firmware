@@ -17,7 +17,7 @@
 char PATH_TNG_RX[50] = "/dev/ttycrimson-rx";
 char PATH_TNG_TX[50] = "/dev/ttycrimson-tx";
 char PATH_TNG_TIME[50] = "/dev/ttycrimson-time";
-char PATH_TNG_GPIO[50] = "/dev/ttycrimson-gpio";
+char PATH_TNG_GPIO[50] = "/dev/ttyUSB3";
 
 // Crimson + Calamine Hexfile Names
 char HEX_TNG_RX[50] = "vaunt-rx.hex";
