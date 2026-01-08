@@ -34,6 +34,7 @@
 #define ARG_MCU_UART_TX "-TX"
 #define ARG_MCU_UART_SN "-SN"
 #define ARG_MCU_UART_RX "-RX"
+#define ARG_MCU_UART_GPIO "-GP"
 
 #define DEFAULT_TIMEOUT 100 // Milliseconds
 
@@ -49,11 +50,13 @@ static uint32_t timeout = DEFAULT_TIMEOUT;
 static const char *UART_CRIMSON_SN = "/dev/ttycrimson-time";
 static const char *UART_CRIMSON_TX = "/dev/ttycrimson-tx";
 static const char *UART_CRIMSON_RX = "/dev/ttycrimson-rx";
+static const char *UART_CRIMSON_GPIO = "/dev/ttyUSB3";
 
 enum TARGET_DEV {
     DEV_TIME,
     DEV_TX,
-    DEV_RX
+    DEV_RX,
+    DEV_GPIO
 };
 
 #elif defined(LILY)
@@ -156,7 +159,7 @@ static void help(void) {
            "[%s /dev/tty] "
            "[%s] "
            "[%s] "
-           "[%s [t|r|s]] "
+           "[%s [t|r|s|g]] "
            "[%s milliseconds]\n",
            ARG_MCU_UART_TX, ARG_MCU_UART_RX, ARG_MCU_UART_SN, ARG_MCU_SILENT,
            ARG_MCU_CONSOLE, ARG_MCU_FWD, ARG_MCU_TIMEOUT);
@@ -203,6 +206,10 @@ static void parse_args(int argc, char *argv[]) {
 
             UART_CRIMSON_RX = argv[i + 1];
             i++;
+        } else if (streql(argv[i], ARG_MCU_UART_GPIO) && !last(i, argc)) {
+            
+            UART_CRIMSON_GPIO = argv[i + 1];
+            i++;
 #endif
         } else if (streql(argv[i], ARG_MCU_FWD) && !last(i, argc)) {
             i++;
@@ -213,6 +220,8 @@ static void parse_args(int argc, char *argv[]) {
                 target_dev = DEV_TX;
             } else if (argv[i][0] == 'r') {
                 target_dev = DEV_RX;
+            } else if (argv[i][0] == 'g') {
+                target_dev = DEV_GPIO;
 #elif defined(TATE_NRNT) || defined(LILY)
             } else if (atoi(argv[i]) < 16 && atoi(argv[i]) >= 0) {
                 target_dev = DEV_RFE;
