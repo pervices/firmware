@@ -6145,8 +6145,10 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
 static int hdlr_fpga_link_qa_fifo_lvl(const char *data, char *ret) {
     uint32_t lvl;
     read_hps_reg("flc30", &lvl);
+    PRINT(INFO, "DEBUG: flc30 reg: %u", lvl);
     // Bits 19:0 of the register stores the current FIFO level in real time
     lvl &= 0xfffff;
+    PRINT(INFO, "DEBUG: Fifo level: %u", lvl);
     snprintf(ret, MAX_PROP_LEN, "%u", lvl);
     return RETURN_SUCCESS;
 }
