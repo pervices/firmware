@@ -37,11 +37,17 @@
 // Converts an expanded channel to a compile time string.
 #define STR(ch) #ch
 
-//channel character, this system only works with 26 or fewer channels
+//channel character, this system only works with 5 or fewer channels because of
+//how it interacts with the channel mask as implemented in the MCU code
+//NOTE that this means the avery-ctrl board which has 8 channels cannot use this
+//and must instead use the MSK(ch)
 #define CHR(ch) #ch[0]
 
 //channel number
 #define INT(ch) ((int)(CHR(ch) - 'a'))
+
+//channel mask
+#define MSK(ch) (1 << INT(ch))
 
 #if defined(LILY)
     #if defined (S500)

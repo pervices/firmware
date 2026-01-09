@@ -902,11 +902,11 @@ int check_rf_pll(int ch, int uart_fd) {
              * 0-3 for RX channels*/                                           \
             if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
-                sprintf(buf, "rf -c %i -z\r", INT(ch) + 4);                    \
+                sprintf(buf, "rf -c %i -z\r", MSK(ch) << 4);                   \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
             } else if (freq > 20000000000) { /*Front end high band 20GHz - 40GHz*/\
                 /* select the band*/                                           \
-                sprintf(buf, "rf -c %i -b 3\r", INT(ch) + 4);                  \
+                sprintf(buf, "rf -c %i -b 3\r", MSK(ch) << 4);                 \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
@@ -924,7 +924,7 @@ int check_rf_pll(int ch, int uart_fd) {
                 }                                                              \
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* set internal band of ADAR2001 in MHz*/                      \
-                sprintf(buf, "rf -c %i -f %" PRIu64 "\r", INT(ch) + 4,         \
+                sprintf(buf, "rf -c %i -f %" PRIu64 "\r", MSK(ch) << 4,        \
                     lmx_freq/1000000);                                         \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
@@ -937,7 +937,7 @@ int check_rf_pll(int ch, int uart_fd) {
                 freq = AVERY_IF;                                               \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
                 /* select the band*/                                           \
-                sprintf(buf, "rf -c %i -b 2\r", INT(ch) + 4);                  \
+                sprintf(buf, "rf -c %i -b 2\r", MSK(ch) << 4);                 \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
@@ -960,7 +960,7 @@ int check_rf_pll(int ch, int uart_fd) {
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else { /* Front end low band */                                  \
-                sprintf(buf, "rf -c %i -b 1\r", INT(ch) + 4);                  \
+                sprintf(buf, "rf -c %i -b 1\r", MSK(ch) << 4);                 \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
             }                                                                  \
         } /*fi PRODUCT_ID == AVERY_ID*/                                        \
@@ -1079,7 +1079,7 @@ int check_rf_pll(int ch, int uart_fd) {
             if (highband == 0) {                                               \
                 /* AVERY TX channels use 4-7 because controller uses 0-3 for RX\
                  * channels*/                                                  \
-                snprintf(buf, MAX_PROP_LEN, "rf -c %i -b 1\r", INT(ch) + 4 );  \
+                snprintf(buf, MAX_PROP_LEN, "rf -c %i -b 1\r", MSK(ch) << 4 ); \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
             }                                                                  \
         }                                                                      \
@@ -1717,11 +1717,11 @@ TX_CHANNELS
         if (PRODUCT_ID == AVERY_ID) {                                                     \
             if (freq > MAX_RF_FREQ) { /*out of bounds, too high*/              \
                 /* mute FE LO, RF LO will be muted when freq > MAX_LO below*/  \
-                strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
+                sprintf(buf, "rf -c %i -z\r", MSK(ch));                        \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             } else if (freq > 20000000000) { /*Front end high band 20GHz - 40GHz*/\
                 /* select the band*/                                           \
-                strcpy(buf, "rf -c " STR(ch) " -b 3\r");                       \
+                sprintf(buf, "rf -c %i -b 3\r", MSK(ch));                      \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
@@ -1739,9 +1739,8 @@ TX_CHANNELS
                 }                                                              \
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* set internal band of ADAR2004 in MHz*/                      \
-                strcpy(buf, "rf -c " STR(ch) " -f ");                          \
-                sprintf(buf + strlen(buf), "%" PRIu64 "", lmx_freq/1000000);   \
-                strcat(buf, "\r");                                             \
+                sprintf(buf, "rf -c %i -f %" PRIu64 "\r", MSK(ch),             \
+                    lmx_freq/1000000);                                         \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
@@ -1752,10 +1751,10 @@ TX_CHANNELS
                      *use output A for both bands, and LMX2595 defaults to A*/ \
                     if (lmx_freq >= 7500000000) {                              \
                         /* set outB to use VCO directly */                     \
-                        strcpy(buf, "lmx -c " STR(ch) " -J 4\r");              \
+                        sprintf(buf, "lmx -c %i -J 4\r", MSK(ch));             \
                     } else {                                                   \
                         /* set outB to use CH_DIV directly */                  \
-                        strcpy(buf, "lmx -c " STR(ch) " -J 3\r");              \
+                        sprintf(buf, "lmx -c %i -J 3\r", MSK(ch));             \
                     }                                                          \
                     ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));           \
                 }                                                              \
@@ -1765,7 +1764,7 @@ TX_CHANNELS
                 freq = AVERY_IF;                                               \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
                 /* select the band*/                                           \
-                strcpy(buf, "rf -c " STR(ch) " -b 2\r");                       \
+                sprintf(buf, "rf -c %i -b 2\r", MSK(ch));                      \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* load the reference frequency and such for LMX2595*/         \
                 pll = pll_def_lmx2595_avery;                                   \
@@ -1788,7 +1787,7 @@ TX_CHANNELS
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else { /* Front end low band */                                  \
-                strcpy(buf, "rf -c " STR(ch) " -b 1\r");                       \
+                sprintf(buf, "rf -c %i -b 1\r", MSK(ch));                      \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
         } /*fi PRODUCT_ID == AVERY_ID*/                                        \
@@ -1898,7 +1897,7 @@ TX_CHANNELS
             uint8_t highband;                                                  \
             sscanf(data, "%" SCNu8 "", &highband);                             \
             if (highband == 0) {                                               \
-                snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b 1\r");       \
+                snprintf(buf, MAX_PROP_LEN, "rf -c %i -b 1\r", MSK(ch));       \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
         }                                                                      \
@@ -2396,7 +2395,7 @@ TX_CHANNELS
                                                                                \
             if (PRODUCT_ID == AVERY_ID) {                                                 \
                 /* mute the front end board */                                 \
-                strcpy(buf, "rf -c " STR(ch) " -z\r");                         \
+                sprintf(buf, "rf -c %i -z\r", MSK(ch));                        \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
             }                                                                  \
             else if(PRODUCT_ID == VAUNT_ID) {\
@@ -2491,10 +2490,10 @@ RX_CHANNELS
         uint8_t enable;                                                        \
         sscanf(data, "%" SCNd8 "", &enable);                                   \
         if(enable) {                                                           \
-            strcpy(buf, "rf -c " STR(ch) " -l 0\r");                           \
+            sprintf(buf, "rf -c %i -l 0\r", MSK(ch));                          \
             strcpy(ret, "1");                                                  \
         } else {                                                               \
-            strcpy(buf, "rf -c " STR(ch) " -l 1\r");                           \
+            sprintf(buf, "rf -c %i -l 1\r", MSK(ch));                          \
             strcpy(ret, "0");                                                  \
         }                                                                      \
         ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));                \
@@ -2505,7 +2504,7 @@ RX_CHANNELS
         uint8_t gain;                                                          \
         sscanf(data, "%" SCNd8 "", &gain);                                     \
         if(gain > 7) { gain = 7; }                                             \
-        snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -g %" PRIu8 "\r", gain);\
+        snprintf(buf, MAX_PROP_LEN, "rf -c %i -g %" PRIu8 "\r", MSK(ch), gain);\
         ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));                \
         snprintf(ret, MAX_PROP_LEN, "%" PRIu8, gain);                          \
         return RETURN_SUCCESS;                                                 \
