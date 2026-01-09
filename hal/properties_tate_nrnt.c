@@ -6156,7 +6156,7 @@ static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
     uint32_t count;
     read_hps_reg("flc30", &count);
     // Bits 30:20 show the current overflow count
-    uint16_t num_oflows = (count >> 20) & 0x7ff
+    uint16_t num_oflows = (count >> 20) & 0x7ff;
     // Bit 31 is the overflow bit of the overflow counter and is set when the overflow count exceeds 0x7ff
     // Since the counter cannot be reset without rebooting the unit, return an error so user knows the count is inaccurate
     uint8_t counter_overflowed =  (count >> 30);
