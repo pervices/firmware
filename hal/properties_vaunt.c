@@ -4062,6 +4062,35 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Check the current level of the FPGA Ethernet FIFO buffer
+static int hdlr_fpga_link_qa_fifo_lvl(const char *data, char *ret) {
+    uint32_t lvl;
+    read_hps_reg("flc30", &lvl);
+    // Bits 19:0 of the register stores the current FIFO level in real time
+    lvl &= 0xfffff;
+    snprintf(ret, MAX_PROP_LEN, "%u", lvl);
+    return RETURN_SUCCESS;
+}
+
+// Check the overflow count of the FPGA Ethernet FIFO buffer
+static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
+    uint32_t count;
+    read_hps_reg("flc30", &count);
+    // Bits 30:20 show the current overflow count
+    uint16_t num_oflows = (count >> 20) & 0x7ff
+    // Bit 31 is the overflow bit of the overflow counter and is set when the overflow count exceeds 0x7ff
+    // Since the counter cannot be reset without rebooting the unit, return an error so user knows the count is inaccurate
+    counter_overflowed =  (count >> 30);
+    if (counter_overflowed) {
+        PRINT(ERROR, "Overflow counter has exceeded it's max count (0x7ff) and will not be reset until the unit reboots.");
+        snprintf(ret, MAX_PROP_LEN, "ERROR: Overflow counter has exceeded it's max count (0x7ff) and will not be reset until the unit reboots.");
+    } else {
+        // If the counter has not reached it's limit, return the number of detected overflows
+        snprintf(ret, MAX_PROP_LEN, "%u", num_oflows);
+    }
+    return RETURN_SUCCESS
+}
+
 static int hdlr_fpga_board_gps_time(const char *data, char *ret) {
     uint32_t gps_time_lh = 0, gps_time_uh = 0;
     char gps_split[MAX_PROP_LEN];
@@ -4519,8 +4548,10 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, MAX_PAY_LEN_S, SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
-    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)
-
+    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)      \
+    DEFINE_FILE_PROP_P("fpga/link/qa/fifo_lvl"               , hdlr_fpga_link_qa_fifo_lvl,             RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/oflow"                  , hdlr_fpga_link_qa_oflow,                RW, "0", SP, NAC)                 \
+    
 #if (NUM_TX_CHANNELS == 0 && NUM_RX_CHANNELS > 0) // common settings without tx
     #define DEFINE_CM()                                                    \
         DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
