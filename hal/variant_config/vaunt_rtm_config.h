@@ -53,8 +53,6 @@
         #define HARDWARE_RTM_VER 10
     #elif defined(RTM2)
         #define PRODUCT_RTM_VER 2
-        // TODO: confirm which RTM Avery will be based on
-        // It is intended to be RTM15, but for development purposes I'm setting it to 12 since RTM15 hasn't been implemented yet
         #define HARDWARE_RTM_VER 12
     #else
         #error "AVERY must be compiled with a valid hardware revision (RTM1, RTM2)"
