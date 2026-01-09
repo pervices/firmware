@@ -6167,7 +6167,7 @@ static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
         // If the counter has not reached it's limit, return the number of detected overflows
         snprintf(ret, MAX_PROP_LEN, "%u", num_oflows);
     }
-    return RETURN_SUCCESS
+    return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_link_rx_sample_bandwidth(const char *data, char *ret) {
