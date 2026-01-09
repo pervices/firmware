@@ -328,3 +328,6 @@ check_rc $rc "Configure"
 # The container has a volume for this directory, so all generated files will be present on the host.
 dkr make -j$(nproc) || rc=$?
 check_rc $rc "Make"
+echo "----------------------------------------"
+echo "SUCCESS"
+echo "----------------------------------------"
