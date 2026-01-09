@@ -799,8 +799,8 @@ static void ping(const int fd, uint8_t* buf, const size_t len)
 }
 
 // Verifies the rf pll is good. Returns 1 if the pll is locked
-int check_rf_pll(int ch, int uart_fd) {
-    snprintf(buf, sizeof(buf), "status -c %c -l\r", (char)ch + 'a');
+int check_rf_pll(int chan_mask, int uart_fd) {
+    snprintf(buf, sizeof(buf), "status -c %i -l\r", chan_mask);
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
     int pll_chan; // dummy variable used to deal with the pll channel number being different
@@ -1184,7 +1184,7 @@ int check_rf_pll(int ch, int uart_fd) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_rf_pll(INT(ch), uart_tx_fd[INT(ch)])) {\
+        if(check_rf_pll(MSK(ch), uart_tx_fd[INT(ch)])) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");                           \
         } else {                                                               \
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");                         \
@@ -2039,7 +2039,7 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_rf_pll(INT(ch), uart_rx_fd[INT(ch)])) {\
+        if(check_rf_pll(MSK(ch), uart_rx_fd[INT(ch)])) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
             snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
@@ -5064,7 +5064,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
     if(time_ret) {
         PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
         usleep(timeout_ns/1000);
-        if (check_rf_pll(channel, uart_fd)) {
+        if (check_rf_pll(1 << channel, uart_fd)) {
             return 1; //success
         } else {
             // Mute PLL to avoid transmitting with an enexpected frequency
@@ -5081,7 +5081,7 @@ int set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t *pll,
 
     int lock_failed = 0;
     // Polling loop waiting for PLL to finish locking
-    while(!check_rf_pll(channel, uart_fd)) {
+    while(!check_rf_pll(1 << channel, uart_fd)) {
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
         int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
@@ -5182,9 +5182,9 @@ int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     if(time_ret) {
         PRINT(ERROR, "Get time failed with %s. Waiting %ims instead of polling\n", strerror(errno), timeout_ns/1000000);
         usleep(timeout_ns/1000);
-        if(!check_rf_pll(channel, uart_fd)){
+        if(!check_rf_pll(chan_mask, uart_fd)){
             // Mute PLL to avoid transmitting with an enexpected frequency
-            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            sprintf(buf, "rf -c %i -z\r", chan_mask);
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
             PRINT(ERROR, "LMX unlocked. Muting PLL\n");
             return 0;
@@ -5193,7 +5193,7 @@ int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     }
 
     // Polling loop waiting for PLL to finish locking
-    while(!check_rf_pll(channel, uart_fd)) {
+    while(!check_rf_pll(chan_mask, uart_fd)) {
         struct timespec current_time;
         clock_gettime(CLOCK_MONOTONIC_COARSE, &current_time);
         int time_difference_ns = (current_time.tv_sec - timeout_start.tv_sec) * 1000000000 + (current_time.tv_nsec - timeout_start.tv_nsec);
@@ -5201,7 +5201,7 @@ int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
         // Timout occured, print error message and
         if(time_difference_ns > timeout_ns) {
             // Mute PLL to avoid transmitting with an enexpected frequency
-            strcpy(buf, "rf -c " STR(ch) " -z\r");
+            sprintf(buf, "rf -c %i -z\r", chan_mask);
             ping(uart_fd, (uint8_t *)buf, strlen(buf));
             PRINT(ERROR, "LMX unlocked. Muting PLL\n");
             return 0;
