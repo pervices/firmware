@@ -147,7 +147,9 @@ static int get_commit_counter() {
     return commit_counter;
 }
 
-#define AVERY_IF 650000000UL
+// offset IF LOs slighlty to avoid injection locking during loopback operation
+#define AVERY_RX_IF 650000000UL
+#define AVERY_TX_IF 640000000UL
 
 #define REF_FREQ 5000000 // core reference frequency is 5MHz, needed by LMX2595
 
@@ -915,7 +917,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 /* round the requested freq to the nearest multiple of phase*/ \
                 /* detector frequency around the 650MHz target IF*/            \
                 /* multiplied by four times because of ADAR2001 quadrupler*/   \
-                float n = ((float)lmx_freq - AVERY_IF ) / (4 * pll.ref_freq / pll.R);\
+                float n = ((float)lmx_freq - AVERY_TX_IF ) / (4 * pll.ref_freq / pll.R);\
                 lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
                 /* run the pll calc algorithm */                               \
                 outfreq = setFreq(&lmx_freq, &pll);                            \
@@ -936,7 +938,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
                 lmx_freq *= 4;                                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
-                freq = AVERY_IF;                                               \
+                freq = AVERY_TX_IF;                                            \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 20GHz*/\
                 /* select the band*/                                           \
                 sprintf(buf, "rf -c %i -b 2\r", MSK(ch) << 4);                 \
@@ -945,7 +947,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 pll = pll_def_lmx2595_avery;                                   \
                 /* round the requested freq to the nearest multiple of phase*/ \
                 /* detector frequency around the 650MHz target IF*/            \
-                float n = ((float)freq - AVERY_IF ) / ( pll.ref_freq / pll.R );\
+                float n = ((float)freq - AVERY_TX_IF ) / ( pll.ref_freq / pll.R );\
                 lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
                 /* run the pll calc algorithm */                               \
                 outfreq = setFreq(&lmx_freq, &pll);                            \
@@ -960,7 +962,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4);             \
                 /* uses output A by default */                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
-                freq = AVERY_IF;                                               \
+                freq = AVERY_TX_IF;                                            \
             } else { /* Front end low band */                                  \
                 sprintf(buf, "rf -c %i -b 1\r", MSK(ch) << 4);                 \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
@@ -1732,7 +1734,7 @@ TX_CHANNELS
                 /* round the requested freq to the nearest multiple of phase*/ \
                 /* detector frequency around the 650MHz target IF*/            \
                 /* multiplied by four times because of ADAR2004 quadrupler*/   \
-                float n = ((float)lmx_freq - AVERY_IF ) / (4 * pll.ref_freq / pll.R);\
+                float n = ((float)lmx_freq - AVERY_RX_IF ) / (4 * pll.ref_freq / pll.R);\
                 lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
                 /* run the pll calc algorithm */                               \
                 outfreq = setFreq(&lmx_freq, &pll);                            \
@@ -1765,7 +1767,7 @@ TX_CHANNELS
                 /* set lmx_freq to account for ADAR2004 quadrupler when print to state tree*/ \
                 lmx_freq *= 4;                                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
-                freq = AVERY_IF;                                               \
+                freq = AVERY_RX_IF;                                            \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 20GHz*/\
                 /* select the band*/                                           \
                 sprintf(buf, "rf -c %i -b 2\r", MSK(ch));                      \
@@ -1774,7 +1776,7 @@ TX_CHANNELS
                 pll = pll_def_lmx2595_avery;                                   \
                 /* round the requested freq to the nearest multiple of phase*/ \
                 /* detector frequency around the 650MHz target IF*/            \
-                float n = ((float)freq - AVERY_IF ) / ( pll.ref_freq / pll.R );\
+                float n = ((float)freq - AVERY_RX_IF ) / ( pll.ref_freq / pll.R );\
                 lmx_freq = round(n) * pll.ref_freq / pll.R;                    \
                 /* run the pll calc algorithm */                               \
                 outfreq = setFreq(&lmx_freq, &pll);                            \
@@ -1789,7 +1791,7 @@ TX_CHANNELS
                 set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
                 /* uses output A by default */                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
-                freq = AVERY_IF;                                               \
+                freq = AVERY_RX_IF;                                            \
             } else { /* Front end low band */                                  \
                 sprintf(buf, "rf -c %i -b 1\r", MSK(ch));                      \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
