@@ -929,10 +929,14 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4);             \
                 /* uses output A by default */                                 \
-                /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
-                lmx_freq *= 4;                                                 \
+                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4)) {        \
+                    /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
+                    lmx_freq *= 4;                                             \
+                } else {                                                       \
+                    /* PLL unlocked unexpected frequency should raise error */ \
+                    lmx_freq = 0;                                              \
+                }                                                              \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
@@ -955,8 +959,13 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4);             \
                 /* uses output A by default */                                 \
+                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4)) {        \
+                    /* intentionally empty, no action on success */            \
+                } else {                                                       \
+                    /* PLL unlocked unexpected frequency should raise error */ \
+                    lmx_freq = 0;                                              \
+                }                                                              \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else { /* Front end low band */                                  \
@@ -1744,7 +1753,13 @@ TX_CHANNELS
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
+                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch))) {            \
+                    /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
+                    lmx_freq *= 4;                                             \
+                } else {                                                       \
+                    /* PLL unlocked unexpected frequency should raise error */ \
+                    lmx_freq = 0;                                              \
+                }                                                              \
                 /* set the lmx to use output B */                              \
                 if (PRODUCT_RTM_VER == 1) {                                    \
                     /* RTM1 used LMX output B for highband, after that we just \
@@ -1758,8 +1773,6 @@ TX_CHANNELS
                     }                                                          \
                     ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));           \
                 }                                                              \
-                /* set lmx_freq to account for ADAR2004 quadrupler when print to state tree*/ \
-                lmx_freq *= 4;                                                 \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
@@ -1782,8 +1795,13 @@ TX_CHANNELS
                 lmx_freq = (uint64_t)outfreq;                                  \
                 /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
                 /* Send Parameters over to the MCU */                          \
-                set_lo_frequency(uart_gpio_fd, &pll, INT(ch));          \
                 /* uses output A by default */                                 \
+                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch))) {            \
+                    /* intentionally empty, no action on success */            \
+                } else {                                                       \
+                    /* PLL unlocked unexpected frequency should raise error */ \
+                    lmx_freq = 0;                                              \
+                }                                                              \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
             } else { /* Front end low band */                                  \
