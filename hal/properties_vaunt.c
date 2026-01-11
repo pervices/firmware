@@ -937,8 +937,14 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                     /* PLL unlocked unexpected frequency should raise error */ \
                     lmx_freq = 0;                                              \
                 }                                                              \
-                /* set the freq to 650MHz so normal RF chain centered on IF */ \
-                freq = AVERY_IF;                                               \
+                /* LO stepsize of 4x base clock is inconveniently large, so */ \
+                /* we allow the IF LO to drift from the center of the */       \
+                /* passband by up to 3x base clock.*/                          \
+                freq -= lmx_freq;                                              \
+                if (freq > AVERY_IF + 3 * pll.ref_freq / pll.R)                \
+                    freq = AVERY_IF + 3 * pll.ref_freq / pll.R;                \
+                else if (freq < AVERY_IF - 3 * pll.ref_freq / pll.R)           \
+                    freq = AVERY_IF - 3 * pll.ref_freq / pll.R;                \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 20GHz*/\
                 /* select the band*/                                           \
                 sprintf(buf, "rf -c %i -b 2\r", MSK(ch) << 4);                 \
@@ -1773,8 +1779,14 @@ TX_CHANNELS
                     }                                                          \
                     ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));           \
                 }                                                              \
-                /* set the freq to 650MHz so normal RF chain centered on IF */ \
-                freq = AVERY_IF;                                               \
+                /* LO stepsize of 4x base clock is inconveniently large, so */ \
+                /* we allow the IF LO to drift from the center of the */       \
+                /* passband by up to 3x base clock.*/                          \
+                freq -= lmx_freq;                                              \
+                if (freq > AVERY_IF + 3 * pll.ref_freq / pll.R)                \
+                    freq = AVERY_IF + 3 * pll.ref_freq / pll.R;                \
+                else if (freq < AVERY_IF - 3 * pll.ref_freq / pll.R)           \
+                    freq = AVERY_IF - 3 * pll.ref_freq / pll.R;                \
             } else if (freq > 6000000000) { /*Front end mid band 6GHz - 20GHz*/\
                 /* select the band*/                                           \
                 sprintf(buf, "rf -c %i -b 2\r", MSK(ch));                      \
