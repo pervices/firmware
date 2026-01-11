@@ -939,7 +939,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 }                                                              \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
-            } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
+            } else if (freq > 6000000000) { /*Front end mid band 6GHz - 20GHz*/\
                 /* select the band*/                                           \
                 sprintf(buf, "rf -c %i -b 2\r", MSK(ch) << 4);                 \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
@@ -1775,7 +1775,7 @@ TX_CHANNELS
                 }                                                              \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF;                                               \
-            } else if (freq > 6000000000) { /*Front end mid band 6GHz - 40GHz*/\
+            } else if (freq > 6000000000) { /*Front end mid band 6GHz - 20GHz*/\
                 /* select the band*/                                           \
                 sprintf(buf, "rf -c %i -b 2\r", MSK(ch));                      \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
