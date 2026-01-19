@@ -1248,7 +1248,6 @@ int check_rf_pll(int chan_mask, int uart_fd) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val;                                                      \
         uint16_t base_factor;                                                  \
         double base_err = 0.0;                                                 \
         double rate;                                                           \
@@ -1275,15 +1274,9 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         base_factor =                                                          \
             get_optimal_sr_factor(rate, get_base_sample_rate(), &base_err);    \
         /* set the appropriate sample rate */                                  \
-        int channel = INT(ch);                                                 \
-        int shift = (channel%4)*8;                                             \
         write_hps_reg("tx" STR(ch) "1", base_factor);                          \
         snprintf(ret, MAX_PROP_LEN, "%lf",                                     \
             get_base_sample_rate() / (double)(base_factor + 1));               \
-        /* Set gain adjustment */                                              \
-        read_hps_reg("txga", &old_val);                                        \
-        write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
-            ((interp_gain_lut[(base_factor)]/4) << shift));                    \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2123,7 +2116,6 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        uint32_t old_val;                                                      \
         uint16_t base_factor;                                                  \
         double base_err = 0.0;                                                 \
         double rate;                                                           \
@@ -2137,8 +2129,6 @@ TX_CHANNELS
             get_optimal_sr_factor(rate, get_base_sample_rate(), &base_err);    \
         /* set the appropriate sample rate */                                  \
         memset(ret, 0, MAX_PROP_LEN);                                          \
-        int channel = INT(ch);                                                 \
-        int shift = (channel%4)*8;                                             \
                                                                                \
         int gain_factor;                                                       \
         write_hps_reg("rx" STR(ch) "1", base_factor);                      \
@@ -2148,9 +2138,6 @@ TX_CHANNELS
         if (get_commit_counter() >= MIN_FPGA_FOR_RX_GAIN) {                \
             gain_factor = gain_factor >> 4;                                \
         }                                                                  \
-        read_hps_reg("rxga", &old_val);                                    \
-        write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
-                                (((uint16_t)gain_factor/1) << shift));         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
