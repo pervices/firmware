@@ -1283,7 +1283,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         /* Set gain adjustment */                                              \
         read_hps_reg("txga", &old_val);                                        \
         write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
-            (interp_gain_lut[(base_factor)] << shift));                        \
+            ((interp_gain_lut[(base_factor)]/2) << shift));                    \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2150,7 +2150,7 @@ TX_CHANNELS
         }                                                                  \
         read_hps_reg("rxga", &old_val);                                    \
         write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
-                                (((uint16_t)gain_factor) << shift));         \
+                                (((uint16_t)gain_factor/2) << shift));         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
