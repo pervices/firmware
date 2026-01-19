@@ -1285,6 +1285,21 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
             (interp_gain_lut[(base_factor)] << shift));                        \
                                                                                \
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
+        usleep(10000);\
+        usleep(buffer_reset_delay);                                        \
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);                   \
+        usleep(10000);\
+        usleep(buffer_reset_delay);                                        \
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
+        usleep(10000);\
+        /* WIP: double reset in case it fixes something with phase */\
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);                   \
+        usleep(10000);\
+        usleep(buffer_reset_delay);                                        \
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
+        usleep(10000);\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2160,6 +2175,19 @@ TX_CHANNELS
         read_hps_reg("rxga", &old_val);                                    \
         write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
                                 (((uint16_t)gain_factor) << shift));         \
+                                \
+        read_hps_reg(reg4[INT(ch)], &old_val);                         \
+        write_hps_reg(reg4[INT(ch)], old_val | 0x2);                   \
+        /* TODO: optimize delay, this is much longer than needed */\
+        usleep(10000);\
+        write_hps_reg(reg4[INT(ch)], old_val &(~0x2));\
+        usleep(10000);\
+        /* WIP: reset DSP a second time. It's needed on Tate, maybe it'll solve the phase issue*/\
+        write_hps_reg(reg4[INT(ch)], old_val | 0x2);\
+        /* TODO: optimize delay, this is much longer than needed */\
+        usleep(10000);\
+        write_hps_reg(reg4[INT(ch)], old_val &(~0x2));\
+        usleep(10000);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
