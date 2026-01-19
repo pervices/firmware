@@ -252,6 +252,59 @@ static const char *reg4[] = {
 #undef X
 };
 
+// Performs a double reset to the dsp
+// This must be run after setting the sample rate to prevent rare phase issues (#16297)
+// These should be removed one the root cause has been found and fixed
+// Test many times to verify the fix works
+//     The issue the fix only appears after a soft reboot
+//     The issue these fix has about a 1/35 chance of appearing per tx burst (2/5 per ci test distro, 1/14 within a test)
+// The double reset might be overkill, the delays are definitely overkill but I am leaving them as is due to the amount of time proper tuning would take
+
+#if (NUM_TX_CHANNELS > 0)
+    static void double_tx_reset(int ch) {
+        // Get whether the dsp was originally in reset or not
+        uint32_t original;
+        read_hps_reg(reg4[INT(ch) + 4], &original);
+
+
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);
+        usleep(10000);
+        usleep(buffer_reset_delay);
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);
+        usleep(10000);
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);
+        usleep(10000);
+        write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);
+        usleep(10000);
+
+        // Restore the dsp to it's original reset state
+        write_hps_reg(reg4[INT(ch) + 4], original);
+        usleep(10000);
+    }
+#endif
+
+#if (NUM_RX_CHANNELS > 0)
+    static void double_rx_reset(int ch) {
+        // Get whether the dsp was originally in reset or not
+        uint32_t original;
+        read_hps_reg(reg4[INT(ch) + 4], &original);
+
+        write_hps_reg_mask(reg4[INT(ch)], 0x0, 0x2);
+        usleep(10000);
+        write_hps_reg_mask(reg4[INT(ch)], 0x2, 0x2);
+        usleep(10000);
+        write_hps_reg_mask(reg4[INT(ch)], 0x0, 0x2);
+        usleep(10000);
+        write_hps_reg_mask(reg4[INT(ch)], 0x2, 0x2);
+        usleep(10000);
+
+        // Restore the dsp to it's original reset state
+        write_hps_reg(reg4[INT(ch) + 4], original);
+        usleep(10000);
+    }
+#endif
+
+
 #if (NUM_TX_CHANNELS > 0)
 static uint8_t tx_power[] = {
     #define X(ch) PWR_OFF,
@@ -1280,6 +1333,10 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         write_hps_reg("tx" STR(ch) "1", base_factor);                          \
         snprintf(ret, MAX_PROP_LEN, "%lf",                                     \
             get_base_sample_rate() / (double)(base_factor + 1));               \
+        \
+        /* Double reset the dsp to prevent phase issues*/\
+        double_tx_reset(INT(ch));\
+        \
         /* Set gain adjustment */                                              \
         read_hps_reg("txga", &old_val);                                        \
         write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
@@ -2148,9 +2205,14 @@ TX_CHANNELS
         if (get_commit_counter() >= MIN_FPGA_FOR_RX_GAIN) {                \
             gain_factor = gain_factor >> 4;                                \
         }                                                                  \
+        \
+        /* Double reset the dsp to prevent phase issues*/\
+        double_rx_reset(INT(ch));\
+        \
         read_hps_reg("rxga", &old_val);                                    \
         write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
                                 (((uint16_t)gain_factor) << shift));         \
+                                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
