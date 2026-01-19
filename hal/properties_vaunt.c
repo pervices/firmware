@@ -1280,11 +1280,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         write_hps_reg("tx" STR(ch) "1", base_factor);                          \
         snprintf(ret, MAX_PROP_LEN, "%lf",                                     \
             get_base_sample_rate() / (double)(base_factor + 1));               \
-        /* Set gain adjustment */                                              \
-        read_hps_reg("txga", &old_val);                                        \
-        write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
-            (interp_gain_lut[(base_factor)] << shift));                        \
-                                                                               \
+        \
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
         usleep(10000);\
         usleep(buffer_reset_delay);                                        \
@@ -1300,6 +1296,11 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
         usleep(10000);\
         \
+        /* Set gain adjustment */                                              \
+        read_hps_reg("txga", &old_val);                                        \
+        write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
+            (interp_gain_lut[(base_factor)] << shift));                        \
+                                                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2172,10 +2173,7 @@ TX_CHANNELS
         if (get_commit_counter() >= MIN_FPGA_FOR_RX_GAIN) {                \
             gain_factor = gain_factor >> 4;                                \
         }                                                                  \
-        read_hps_reg("rxga", &old_val);                                    \
-        write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
-                                (((uint16_t)gain_factor) << shift));         \
-                                \
+        \
         read_hps_reg(reg4[INT(ch)], &old_val);                         \
         write_hps_reg(reg4[INT(ch)], old_val | 0x2);                   \
         /* TODO: optimize delay, this is much longer than needed */\
@@ -2188,6 +2186,11 @@ TX_CHANNELS
         usleep(10000);\
         write_hps_reg(reg4[INT(ch)], old_val &(~0x2));\
         usleep(10000);\
+        \
+        read_hps_reg("rxga", &old_val);                                    \
+        write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
+                                (((uint16_t)gain_factor) << shift));         \
+                                \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
