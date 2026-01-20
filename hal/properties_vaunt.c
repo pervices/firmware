@@ -1334,6 +1334,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         snprintf(ret, MAX_PROP_LEN, "%lf",                                     \
             get_base_sample_rate() / (double)(base_factor + 1));               \
         \
+        /* Double reset the dsp to prevent phase issues*/\
         double_tx_reset(INT(ch));\
         \
         /* Set gain adjustment */                                              \
@@ -1555,19 +1556,10 @@ int check_rf_pll(int chan_mask, int uart_fd) {
             /* Toggles dsp reset to clear the buffer*/                         \
             /* Must be put in reset, taken out of reset, put back in reset to properly reset*/\
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
-            usleep(10000);\
             usleep(buffer_reset_delay);                                        \
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);                   \
-            usleep(10000);\
             usleep(buffer_reset_delay);                                        \
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
-            usleep(10000);\
-            /* WIP: double reset in case it fixes something with phase */\
-            write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);                   \
-            usleep(10000);\
-            usleep(buffer_reset_delay);                                        \
-            write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
-            usleep(10000);\
                                                                                \
         } else { /* power off */                                               \
             /* kill the channel */                                             \
@@ -2431,16 +2423,7 @@ TX_CHANNELS
                                                                                \
                 read_hps_reg(reg4[INT(ch)], &old_val);                         \
                 write_hps_reg(reg4[INT(ch)], old_val | 0x2);                   \
-                /* TODO: optimize delay, this is much longer than needed */\
-                usleep(10000);\
-                write_hps_reg(reg4[INT(ch)], old_val &(~0x2));\
-                usleep(10000);\
-                /* WIP: reset DSP a second time. It's needed on Tate, maybe it'll solve the phase issue*/\
-                write_hps_reg(reg4[INT(ch)], old_val | 0x2);\
-                /* TODO: optimize delay, this is much longer than needed */\
-                usleep(10000);\
-                write_hps_reg(reg4[INT(ch)], old_val &(~0x2));\
-                usleep(10000);\
+                write_hps_reg(reg4[INT(ch)], old_val &(~0x2));                 \
                                                                                \
                 rx_stream[INT(ch)] = STREAM_ON;                                \
             } else {                                                           \
