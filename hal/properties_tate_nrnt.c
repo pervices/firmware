@@ -3020,7 +3020,7 @@ TX_CHANNELS
         write_hps_reg("rx" STR(ch) "2", bypass);                      \
         /* double reset */\
         uint32_t original;\
-        read_hps_reg(reg4[INT(ch) + 4], &original);\
+        read_hps_reg(rx_reg4_map[INT(ch) + 4], &original);\
         write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x0, 0x2);\
         usleep(10000);\
         write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x2, 0x2);\
