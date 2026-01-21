@@ -1802,6 +1802,19 @@ int check_time_pll(int ch) {
         }\
         \
         snprintf(ret, MAX_PROP_LEN, "%lf", rate);\
+        \
+        uint32_t original;\
+        read_hps_reg(tx_reg4_map[INT(ch) + 4], &original);\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x0, 0x2);\
+        usleep(10000);\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x2, 0x2);\
+        usleep(10000);\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x0, 0x2);\
+        usleep(10000);\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x2, 0x2);\
+        usleep(10000);\
+        write_hps_reg(tx_reg4_map[INT(ch)+4], original);\
+        usleep(10000);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -3030,6 +3043,7 @@ TX_CHANNELS
         write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x2, 0x2);\
         usleep(10000);\
         write_hps_reg(rx_reg4_map[INT(ch)+4], original);\
+        usleep(10000);\
                                                                               \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
