@@ -3001,7 +3001,6 @@ TX_CHANNELS
         \
         /*Sets the resamp factor*/\
         write_hps_reg("rx" STR(ch) "1", factor);                      \
-        usleep(100000);\
         /* Sets the dsp gain to compensate for decimation effects*/\
         /* Right shift index when tx_4 is high (always the case) */\
         uint8_t target_dsp_gain = decim_gain_lut_tate[factor];\
@@ -3019,8 +3018,19 @@ TX_CHANNELS
         }\
         /*Set whether to bypass dsp and fir*/\
         write_hps_reg("rx" STR(ch) "2", bypass);                      \
-        \
-                                                                               \
+        /* double reset */\
+        uint32_t original;\
+        read_hps_reg(reg4[INT(ch) + 4], &original);\
+        write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x0, 0x2);\
+        usleep(10000);\
+        write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x2, 0x2);\
+        usleep(10000);\
+        write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x0, 0x2);\
+        usleep(10000);\
+        write_hps_reg_mask(rx_reg4_map[INT(ch)], 0x2, 0x2);\
+        usleep(10000);\
+        write_hps_reg(rx_reg4_map[INT(ch)+4], original);\
+                                                                              \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
