@@ -660,20 +660,18 @@ static int get_network_speed() {
 #endif
 
 uint32_t is_hps_only() {
-    // The flag is always high in old versions of the FPGA
-    // Assume the build is not HPS only if it was compiled before that flag was introduced
-    // sys15 stores the compile time, see hdlr_fpga_about_cmp_time for a detailed breakdown of the register
-    uint32_t compile_time = 0;
-    read_hps_reg("sys15", &compile_time);
-    if(compile_time < 0x7e71d000) {
+    int commit = get_commit_counter();
+    // If the commit counter is implemented, the FPGA is new enough for the flag to be implemented
+    if(commit > 0) {
+        uint32_t flag = 0;
+        read_hps_reg("res_ro12", &flag);
+        flag = (flag >> 30) & 0x1;
+        return flag;
+    // FPGAs older than 2023-01-26 may have the flag be always high, regardless of whether it is actually HPS only
+    // If the FPGA is to old for the commit counter, assume the FPGA is not hps only
+    } else {
         return 0;
     }
-
-
-    uint32_t flag = 0;
-    read_hps_reg("res_ro12", &flag);
-    flag = (flag >> 30) & 0x1;
-    return flag;
 
 }
 
@@ -5653,24 +5651,6 @@ static int hdlr_fpga_about_id(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
-    uint32_t old_val = 0;
-    int year, month, day, hour, min;
-    read_hps_reg("sys15", &old_val);
-
-    // Get year
-    year = (old_val & 0xfff00000) >> 20;
-    month = (old_val & 0x000f0000) >> 16;
-    day = (old_val & 0x0000f800) >> 11;
-    hour = (old_val & 0x000007c0) >> 6;
-    min = old_val & 0x0000003f;
-
-    snprintf(ret, MAX_PROP_LEN, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month,
-            day, hour, min);
-
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     uint32_t old_val = 0;
     read_hps_reg("sys18", &old_val);
@@ -6949,7 +6929,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/name"                     , hdlr_invalid,                           RO, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
     DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/commit_counter"           , hdlr_fpga_about_commit_counter,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/imgparam/rate"            , hdlr_fpga_about_rate,              RW, "0", SP, NAC)                 \
