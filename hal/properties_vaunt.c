@@ -3820,21 +3820,6 @@ static int hdlr_fpga_about_id(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-// Compile time is being removed from the FPGA
-// To minimize the chance of things that rely on this breaking, return the Unix epoch
-static int hdlr_fpga_about_cmp_time(const char *data, char *ret) {
-    int year = 1970;
-    int month = 0;
-    int day = 0;
-    int hour = 0;
-    int min = 0;
-
-    snprintf(ret, MAX_PROP_LEN, "cmp. time %i-%i-%i %i:%i (yyyy-MM-dd HH:mm) \n", year, month,
-            day, hour, min);
-
-    return RETURN_SUCCESS;
-}
-
 static int hdlr_fpga_about_conf_info(const char *data, char *ret) {
     uint32_t old_val;
     read_hps_reg("sys18", &old_val);
@@ -4688,7 +4673,6 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/about/id"                       , hdlr_fpga_about_id,                     RW, "001", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/name"                     , hdlr_invalid,                           RO, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/about/serial"                   , hdlr_fpga_about_serial,                 RW, "001", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/about/cmp_time"                 , hdlr_fpga_about_cmp_time,               RW, "yyyy-mm-dd-hh-mm", SP, NAC)  \
     DEFINE_FILE_PROP_P("fpga/about/conf_info"                , hdlr_fpga_about_conf_info,              RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/commit_counter"           , hdlr_fpga_about_commit_counter,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/dump"                     , hdlr_fpga_board_dump,                   WO, "0", SP, NAC)                 \
