@@ -292,7 +292,7 @@ static const char *reg4[] = {
     static void double_rx_reset(int ch) {
         // Get whether the dsp was originally in reset or not
         uint32_t original;
-        read_hps_reg(reg4[INT(ch) + 4], &original);
+        read_hps_reg(reg4[INT(ch)], &original);
 
         write_hps_reg_mask(reg4[INT(ch)], 0x0, 0x2);
         usleep(10000);
@@ -304,7 +304,7 @@ static const char *reg4[] = {
         usleep(10000);
 
         // Restore the dsp to it's original reset state
-        write_hps_reg(reg4[INT(ch) + 4], original);
+        write_hps_reg(reg4[INT(ch)], original);
         usleep(10000);
     }
 #endif
