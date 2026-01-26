@@ -258,13 +258,13 @@ static const char *reg4[] = {
 };
 
 // Performs a double reset to the dsp
-// This must be run after setting the sample rate to prevent rare phase issues (#16297)
+// This must be run after setting the sample rate to prevent rare phase issues (#16297, #16799)
 // These should be removed one the root cause has been found and fixed
 // Test many times to verify the fix works
 //     The issue the fix only appears after a soft reboot
 //     The issue these fix has about a 1/35 chance of appearing per tx burst (2/5 per ci test distro, 1/14 within a test)
 // The double reset might be overkill, the delays are definitely overkill but I am leaving them as is due to the amount of time proper tuning would take
-
+// TODO: remove double_tx_reset and double_rx_reset after issue #16799 is resolved
 #if (NUM_TX_CHANNELS > 0)
     static void double_tx_reset(int ch) {
         // Get whether the dsp was originally in reset or not
@@ -1346,6 +1346,11 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         read_hps_reg("txga", &old_val);                                        \
         write_hps_reg("txga", (old_val & ~(0xff << shift)) |                   \
             (interp_gain_lut[(base_factor)] << shift));                        \
+        \
+        /* Additional double reset */\
+        /* This probably does nothing, but it might help with #16799 */\
+        /* The issue is to rare with the double reset a few lines earlier to determine if this helps */\
+        double_tx_reset(INT(ch));\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -1406,6 +1411,12 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                       \
         usleep(buffer_reset_delay);                                            \
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);                       \
+        \
+        /* Additional double reset */\
+        /* This probably does nothing, but it might help with #16799 */\
+        /* The issue is to rare with the double reset a few lines earlier to determine if this helps */\
+        double_tx_reset(INT(ch));\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -2218,6 +2229,10 @@ TX_CHANNELS
         write_hps_reg("rxga", (old_val & ~(0xff << shift)) |               \
                                 (((uint16_t)gain_factor) << shift));         \
                                 \
+        /* Additional double reset */\
+        /* This probably does nothing, but it might help with #16799 */\
+        /* The issue is to rare with the double reset a few lines earlier to determine if this helps */\
+        double_rx_reset(INT(ch));\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
@@ -2429,6 +2444,11 @@ TX_CHANNELS
                 read_hps_reg(reg4[INT(ch)], &old_val);                         \
                 write_hps_reg(reg4[INT(ch)], old_val | 0x2);                   \
                 write_hps_reg(reg4[INT(ch)], old_val &(~0x2));                 \
+                \
+                /* Additional double reset */\
+                /* This probably does nothing, but it might help with #16799 */\
+                /* The issue is to rare with the double reset a few lines earlier to determine if this helps */\
+                double_rx_reset(INT(ch));\
                                                                                \
                 rx_stream[INT(ch)] = STREAM_ON;                                \
             } else {                                                           \
