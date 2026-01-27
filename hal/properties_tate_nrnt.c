@@ -6160,15 +6160,16 @@ static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
     // Bits 30:20 show the current overflow count
     uint16_t num_oflows = (count >> 20) & 0x7ff;
     // Bit 31 is the overflow bit of the overflow counter and is set when the overflow count exceeds 0x7ff
-    // Since the counter cannot be reset without rebooting the unit, return an error so user knows the count is inaccurate
+    // Since the counter cannot be reset without rebooting the unit, print an error so user knows the count is inaccurate
     uint8_t counter_overflowed =  (count >> 30);
     if (counter_overflowed) {
         PRINT(ERROR, "Overflow counter has exceeded it's max count (0x7ff) and will not be reset until the unit reboots.");
-        snprintf(ret, MAX_PROP_LEN, "ERROR: Overflow counter has exceeded it's max count (0x7ff) and will not be reset until the unit reboots.");
-    } else {
-        // If the counter has not reached it's limit, return the number of detected overflows
-        snprintf(ret, MAX_PROP_LEN, "%u", num_oflows);
+        // The property will have a value of -1 to indicate the counter has overflowed
+        num_overflows = -1;
     }
+    // If the counter has not reached it's limit, return the number of detected overflows
+    snprintf(ret, MAX_PROP_LEN, "%u", num_oflows);
+    
     return RETURN_SUCCESS;
 }
 
