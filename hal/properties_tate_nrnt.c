@@ -6155,6 +6155,8 @@ static int hdlr_fpga_link_qa_fifo_lvl(const char *data, char *ret) {
 static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
     uint32_t count;
     read_hps_reg("flc30", &count);
+    // TEST COUNT: oflow=15
+    count = 0x00f00000;
     // Bits 30:20 show the current overflow count
     uint16_t num_oflows = (count >> 20) & 0x7ff;
     // Bit 31 is the overflow bit of the overflow counter and is set when the overflow count exceeds 0x7ff
@@ -6166,11 +6168,6 @@ static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
         num_oflows = -1;
     }
 
-    // FOR TESTING, return this test val since I cannot get it to actually overflow
-    uint16_t oflows_limit = 2047;
-    // uint16_t oflows_exceeded = -1;
-
-    num_oflows = oflows_limit;
     // If the counter has not reached it's limit, return the number of detected overflows
     snprintf(ret, MAX_PROP_LEN, "%u", num_oflows);
     
