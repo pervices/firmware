@@ -6165,7 +6165,7 @@ static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
     if (counter_overflowed) {
         PRINT(ERROR, "Overflow counter has exceeded it's max count (0x7ff) and will not be reset until the unit reboots.");
         // The property will have a value of -1 to indicate the counter has overflowed
-        num_overflows = -1;
+        num_oflows = -1;
     }
     // If the counter has not reached it's limit, return the number of detected overflows
     snprintf(ret, MAX_PROP_LEN, "%u", num_oflows);
