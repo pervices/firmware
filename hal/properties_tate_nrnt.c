@@ -6167,9 +6167,9 @@ static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
     }
 
     // FOR TESTING, return this test val since I cannot get it to actually overflow
-    test_num_oflows = 52;
-    oflows_limit = 2047;
-    oflows_exceeded = -1;
+    uint32_t test_num_oflows = 52;
+    uint32_t oflows_limit = 2047;
+    uint32_t oflows_exceeded = -1;
 
     num_oflows = test_num_oflows;
     // If the counter has not reached it's limit, return the number of detected overflows
