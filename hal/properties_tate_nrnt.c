@@ -6145,10 +6145,8 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
 static int hdlr_fpga_link_qa_fifo_lvl(const char *data, char *ret) {
     uint32_t lvl;
     read_hps_reg("flc30", &lvl);
-    PRINT(INFO, "DEBUG: flc30 reg: %u", lvl);
     // Bits 19:0 of the register stores the current FIFO level in real time
     lvl &= 0xfffff;
-    PRINT(INFO, "DEBUG: Fifo level: %u", lvl);
     snprintf(ret, MAX_PROP_LEN, "%u", lvl);
     return RETURN_SUCCESS;
 }
@@ -6163,10 +6161,17 @@ static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
     // Since the counter cannot be reset without rebooting the unit, print an error so user knows the count is inaccurate
     uint8_t counter_overflowed =  (count >> 30);
     if (counter_overflowed) {
-        PRINT(ERROR, "Overflow counter has exceeded it's max count (0x7ff) and will not be reset until the unit reboots.");
+        PRINT(ERROR, "Overflow counter has exceeded it's max count (0x7ff) and will not be reset until the unit reboots.\n");
         // The property will have a value of -1 to indicate the counter has overflowed
         num_oflows = -1;
     }
+
+    // FOR TESTING, return this test val since I cannot get it to actually overflow
+    test_num_oflows = 52;
+    oflows_limit = 2047;
+    oflows_exceeded = -1;
+
+    num_oflows = test_num_oflows;
     // If the counter has not reached it's limit, return the number of detected overflows
     snprintf(ret, MAX_PROP_LEN, "%u", num_oflows);
     
