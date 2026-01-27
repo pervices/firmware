@@ -272,18 +272,18 @@ static const char *reg4[] = {
         read_hps_reg(reg4[INT(ch) + 4], &original);
 
 
-        write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);
         usleep(10000);
         usleep(buffer_reset_delay);
-        write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);
         usleep(10000);
-        write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);
         usleep(10000);
-        write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);
         usleep(10000);
 
         // Restore the dsp to it's original reset state
-        write_hps_reg(reg4[INT(ch) + 4], original);
+        // write_hps_reg(reg4[INT(ch) + 4], original);
         usleep(10000);
     }
 #endif
@@ -294,17 +294,17 @@ static const char *reg4[] = {
         uint32_t original;
         read_hps_reg(reg4[INT(ch) + 4], &original);
 
-        write_hps_reg_mask(reg4[INT(ch)], 0x0, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch)], 0x0, 0x2);
         usleep(10000);
-        write_hps_reg_mask(reg4[INT(ch)], 0x2, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch)], 0x2, 0x2);
         usleep(10000);
-        write_hps_reg_mask(reg4[INT(ch)], 0x0, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch)], 0x0, 0x2);
         usleep(10000);
-        write_hps_reg_mask(reg4[INT(ch)], 0x2, 0x2);
+        // write_hps_reg_mask(reg4[INT(ch)], 0x2, 0x2);
         usleep(10000);
 
         // Restore the dsp to it's original reset state
-        write_hps_reg(reg4[INT(ch) + 4], original);
+        // write_hps_reg(reg4[INT(ch) + 4], original);
         usleep(10000);
     }
 #endif
