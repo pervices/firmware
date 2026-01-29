@@ -298,7 +298,7 @@ int mmap_init() {
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
-    rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
+    rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_32BIT, mmap_fd,
               HPS2FPGA_GPR_OFST);
     if (MAP_FAILED == rr) {
         PRINT(ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror(errno),
