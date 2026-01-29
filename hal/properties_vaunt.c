@@ -4260,7 +4260,7 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
 }
 
 // Check the current level of the FPGA Ethernet FIFO buffer
-static int hdlr_fpga_link_qa_fifo_lvl(const char *data, char *ret) {
+static int hdlr_fpga_link_qa_sfp_fifo_lvl(const char *data, char *ret) {
     uint32_t lvl;
     read_hps_reg("flc30", &lvl);
     // Bits 19:0 of the register stores the current FIFO level in real time
@@ -4270,7 +4270,7 @@ static int hdlr_fpga_link_qa_fifo_lvl(const char *data, char *ret) {
 }
 
 // Check the overflow count of the FPGA Ethernet FIFO buffer
-static int hdlr_fpga_link_qa_oflow(const char *data, char *ret) {
+static int hdlr_fpga_link_qa_sfp_oflow(const char *data, char *ret) {
     uint32_t count;
     read_hps_reg("flc30", &count);
     // Bits 30:20 show the current overflow count
@@ -4745,8 +4745,8 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)      \
-    DEFINE_FILE_PROP_P("fpga/link/qa/fifo_lvl"               , hdlr_fpga_link_qa_fifo_lvl,             RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/qa/oflow"                  , hdlr_fpga_link_qa_oflow,                RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,             RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,                RW, "0", SP, NAC)                 \
     
 #if (NUM_TX_CHANNELS == 0 && NUM_RX_CHANNELS > 0) // common settings without tx
     #define DEFINE_CM()                                                    \
