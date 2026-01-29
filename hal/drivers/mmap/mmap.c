@@ -96,14 +96,14 @@ static int reg_write(uint32_t addr, uint32_t *data) {
 
     *mmap_addr = *data;
 
+    // FIXME: This command always returns with an error, it may be the reason why so many regwrites that shouldn't need delays require them
+    int r = msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
+
     // Release lock
     pthread_mutex_unlock(mutex);
     if(pthread_mutex_unlock(mutex)) {
         PRINT(ERROR, "pthread_mutex_unlock failed: %s (%d)\n", strerror(errno), errno);
     }
-
-    // FIXME: This command always returns with an error, it may be the reason why so many regwrites that shouldn't need delays require them
-    int r = msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
 
     if(r != 0) {
         PRINT(ERROR, "%s while running msync after register write\n", strerror(errno));
