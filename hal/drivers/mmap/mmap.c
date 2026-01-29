@@ -102,10 +102,13 @@ static int reg_write(uint32_t addr, uint32_t *data) {
     // Release lock
     pthread_mutex_unlock(mutex);
     if(pthread_mutex_unlock(mutex)) {
+
         PRINT(ERROR, "pthread_mutex_unlock failed: %s (%d)\n", strerror(errno), errno);
     }
 
     if(r != 0) {
+        PRINT(INFO, "mmap_base: %p\n", mmap_base);
+        PRINT(INFO, "mmap_len: %lu\n", mmap_len);
         PRINT(ERROR, "%s while running msync after register write\n", strerror(errno));
     }
 
