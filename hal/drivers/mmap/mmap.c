@@ -103,7 +103,11 @@ static int reg_write(uint32_t addr, uint32_t *data) {
     }
 
     // FIXME: This command always returns with an error, it may be the reason why so many regwrites that shouldn't need delays require them
-    msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
+    int r = msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
+
+    if(r != 0) {
+        PRINT(ERROR, "%s while running msync after register write\n", strerror(errno));
+    }
 
     return RETURN_SUCCESS;
 }
