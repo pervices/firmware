@@ -111,6 +111,11 @@
 #define STREAM_OFF 0
 
 #define MIN_FPGA_FOR_RX_GAIN 5593
+#define MIN_FPGA_FOR_SFP_OFLOW_COUNT 5592
+
+// The maximum value of the sfp overflow counter
+// Overflow count is 10 bits, so max value of 0x7ff (2047)
+#define MAX_SFP_OFLOW_COUNT 2047
 
 static uint8_t rx_power[NUM_RX_CHANNELS];
 static uint8_t tx_power[NUM_TX_CHANNELS];
@@ -6141,6 +6146,19 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Get the maximum value the sfp overflow counter can handle
+static int hdlr_fpga_link_max_sfp_oflow_count(const char *data, char *ret) {
+    uint16_t max_count;
+    // If the current FPGA version supports the overflow counter, return the max value it can handle
+    if (get_commit_counter() >= MIN_FPGA_FOR_SFP_OFLOW_COUNT) {
+        max_count = MAX_SFP_OFLOW_COUNT;
+    } else {
+        // If the current FPGA version does not support the counter, max count will be zero
+        max_count = 0;
+    }
+    snprintf(ret, MAX_PROP_LEN, "%u", max_count);
+}
+
 // Check the current level of the FPGA Ethernet FIFO buffer
 static int hdlr_fpga_link_qa_sfp_fifo_lvl(const char *data, char *ret) {
     uint32_t lvl;
@@ -7027,8 +7045,9 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)      \
-    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,             RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,                RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,         RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,            RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/max_sfp_oflow_count"       , hdlr_fpga_link_max_sfp_oflow_count,     RW, "2047", SP, NAC)              \
     /* Size of half of a complex pair in bytes*/\
     DEFINE_FILE_PROP_P("fpga/link/rx_sample_bandwidth"       , hdlr_fpga_link_rx_sample_bandwidth,     RW, S_DEAULT_OTW_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/link/tx_sample_bandwidth"       , hdlr_fpga_link_tx_sample_bandwidth,     RW, S_DEAULT_OTW_TX, SP, NAC)

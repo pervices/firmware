@@ -74,6 +74,12 @@
 // Fallback pay_len for older FPGAs
 #define LEGACY_MAX_PAY_LEN 1400
 
+// Represents the earliest version sfp overflow detection is supported
+#define MIN_FPGA_FOR_SFP_OFLOW_COUNT 5592
+// The maximum value of the sfp overflow counter
+// Overflow count is 10 bits, so max value of 0x7ff (2047)
+#define MAX_SFP_OFLOW_COUNT 2047
+
 // Alias PLL_CORE_REF_FREQ_HZ for clarity
 #define LO_STEPSIZE PLL_CORE_REF_FREQ_HZ
 #define LO_STEPSIZE_S PLL_CORE_REF_FREQ_HZ_S
@@ -4259,6 +4265,19 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Get the maximum value the sfp overflow counter can handle
+static int hdlr_fpga_link_max_sfp_oflow_count(const char *data, char *ret) {
+    uint16_t max_count;
+    // If the current FPGA version supports the overflow counter, return the max value it can handle
+    if (get_commit_counter() >= MIN_FPGA_FOR_SFP_OFLOW_COUNT) {
+        max_count = MAX_SFP_OFLOW_COUNT;
+    } else {
+        // If the current FPGA version does not support the counter, max count will be zero
+        max_count = 0;
+    }
+    snprintf(ret, MAX_PROP_LEN, "%u", max_count);
+}
+
 // Check the current level of the FPGA Ethernet FIFO buffer
 static int hdlr_fpga_link_qa_sfp_fifo_lvl(const char *data, char *ret) {
     uint32_t lvl;
@@ -4745,9 +4764,10 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)      \
-    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,             RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,                RW, "0", SP, NAC)                 \
-    
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,         RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,            RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/max_sfp_oflow_count"       , hdlr_fpga_link_max_sfp_oflow_count,     RW, "2047", SP, NAC)              \
+
 #if (NUM_TX_CHANNELS == 0 && NUM_RX_CHANNELS > 0) // common settings without tx
     #define DEFINE_CM()                                                    \
         DEFINE_FILE_PROP_P("cm/chanmask-rx" , hdlr_cm_chanmask_rx , RW, "0", SP, NAC) \
