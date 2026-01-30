@@ -317,20 +317,20 @@ int rewrite_all_reg(void) {
         ret = reg_write(get_reg_from_index(index)->addr, &old_val[index]);
         if (ret < 0)
             return ret;
-    }
-
-    // Verifies no other registers have unexpected changes
-    for (index = 0; index < get_num_regs(); index++) {
-        if(exempt_regs[index] == CHECK_EXCEMPT) {
-            continue;
-        }
-        const reg_t *temp = get_reg_from_index(index);
-        ret = reg_read(temp->addr, &new_val);
-        //returns on error
-        if (ret < 0)
-            return ret;
-        if(new_val!=old_val[index]) {
-            printf("reg = %s caused a change in reg = %s\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
+    
+        // Verifies no other registers have unexpected changes
+        for (check_index = 0; check_index < get_num_regs(); check_index++) {
+            if(exempt_regs[check_index] == CHECK_EXCEMPT) {
+                continue;
+            }
+            const reg_t *temp = get_reg_from_index(check_index);
+            ret = reg_read(temp->addr, &new_val);
+            //returns on error
+            if (ret < 0)
+                return ret;
+            if(new_val!=old_val[check_index]) {
+                printf("reg = %s caused a change in reg = %s\n", get_reg_from_index(index)->name, get_reg_from_index(check_index)->name);
+            }
         }
     }
 
