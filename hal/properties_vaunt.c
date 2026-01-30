@@ -4276,6 +4276,7 @@ static int hdlr_fpga_link_max_sfp_oflow_count(const char *data, char *ret) {
         max_count = 0;
     }
     snprintf(ret, MAX_PROP_LEN, "%u", max_count);
+    return RETURN_SUCCESS;
 }
 
 // Check the current level of the FPGA Ethernet FIFO buffer
