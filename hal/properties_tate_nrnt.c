@@ -2997,10 +2997,6 @@ TX_CHANNELS
         /*write_hps_reg("rx" STR(ch) "1", factor);*/                      \
         /* Sets the dsp gain to compensate for decimation effects*/\
         /* Right shift index when tx_4 is high (always the case) */\
-        uint8_t target_dsp_gain = decim_gain_lut_tate[factor];\
-        if (get_commit_counter() >= MIN_FPGA_FOR_RX_GAIN) {\
-            target_dsp_gain = target_dsp_gain >> 4;        \
-        }\
         /*Set whether to bypass dsp and fir*/\
         /*write_hps_reg("rx" STR(ch) "2", bypass);*/                      \
         \
