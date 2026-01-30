@@ -85,11 +85,13 @@ static int reg_read(uint32_t addr, uint32_t *data) {
 }
 
 static int reg_write(uint32_t addr, uint32_t *data) {
-    // Rewrite to all reg first
-    rewrite_all_reg();
     if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
+    // Rewrite to all reg first
+    printf("Rewriting all registers...\n");
+    rewrite_all_reg();
+    printf("Register rewrite complete.\n");
 
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
@@ -278,7 +280,6 @@ int rewrite_all_reg(void) {
     uint32_t check_index, index, new_val;
     uint8_t exempt_regs[get_num_regs()];
     uint32_t old_val[get_num_regs()];
-     printf("Begining register rewrite...\n");
     //generates the list of registers to exempt from the test
     for(index = 0; index < get_num_regs(); index++) {
         // Just exempting the special cases instead of handling them like check_hps_reg does
@@ -333,8 +334,6 @@ int rewrite_all_reg(void) {
             }
         }
     }
-
-    printf("Register rewrite complete\n");
     return RETURN_SUCCESS;
 }
 
