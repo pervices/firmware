@@ -4573,6 +4573,8 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+static int hdlr_fpga_trigger_sma_override(const char *data, char *ret)
+
 //makes all rx begin streaming data in phase with each other, using an sma trigger
 //0 stops all force streaming. To start streaming set this using a value where each bit corresponds to ech channel
 //ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
@@ -4584,10 +4586,12 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     if(stream != 0) {
         //stop any force streaming by bringing the trigger low
         //force the trigger input to always read as high
-        set_property("fpga/trigger/sma_override", "1");
+        //set_property("fpga/trigger/sma_override", "1");
+        hdlr_fpga_trigger_sma_override("1", ret);
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
-        set_property("fpga/trigger/sma_pol", "negative");
+        //set_property("fpga/trigger/sma_pol", "negative");
+        hdlr_fpga_trigger_sma_pol("negative", ret);
         // configure the channels specified for force streaming, and ensure others are not
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
@@ -4602,11 +4606,13 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         }
         //sets the sma to activate when high (sma_override is forcing it high)
         //this starts the streaming for all channels at once
-        set_property("fpga/trigger/sma_pol", "positive");
+        //set_property("fpga/trigger/sma_pol", "positive");
+        hdlr_fpga_trigger_sma_pol("positive", ret);
     } else {
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
-        set_property("fpga/trigger/sma_pol", "negative");
+        //set_property("fpga/trigger/sma_pol", "negative");
+        hdlr_fpga_trigger_sma_pol("negative", ret);
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
@@ -4615,6 +4621,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         }
         //stop ignoring the trigger input state in case it will be used later
         set_property("fpga/trigger/sma_override", "0");
+        hdlr_fpga_trigger_sma_override("0", ret);
     }
     return RETURN_SUCCESS;
 }
