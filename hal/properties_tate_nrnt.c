@@ -2969,7 +2969,6 @@ TX_CHANNELS
         sscanf(data, "%lf", &rate);                                            \
         uint16_t factor = 0;\
         /*Bypasses dsp and half band filer 2. Bypasses dsp when 1*/\
-        uint32_t bypass = 0;\
         \
         /* Keeps the sample rate within the allowable range*/\
         if(rate < MIN_RX_SAMPLE_RATE) rate = MIN_RX_SAMPLE_RATE;\
@@ -2980,7 +2979,6 @@ TX_CHANNELS
             rate = RX_BASE_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
-            bypass = 2;\
             snprintf(ret, MAX_PROP_LEN, "%lf", RX_BASE_SAMPLE_RATE); \
         \
         /*If sample rate is roundable to RX_DSP_SAMPLE_RATE (which bypasses some dsp stuff)*/\
@@ -2988,17 +2986,15 @@ TX_CHANNELS
             rate = RX_DSP_SAMPLE_RATE;\
             /*the factor does not matter when bypassing the dsp*/\
             factor = 0;\
-            bypass = 1;\
             snprintf(ret, MAX_PROP_LEN, "%lf", RX_DSP_SAMPLE_RATE); \
         } else {\
-            bypass = 0;\
             factor = get_optimal_sr_factor(&rate, RX_DSP_SAMPLE_RATE);\
             /*Returns the actual sample rate set*/\
             snprintf(ret, MAX_PROP_LEN, "%lf", RX_DSP_SAMPLE_RATE / (double)(factor + 1)); \
         }\
         \
         /*Sets the resamp factor*/\
-        /*write_hps_reg("rx" STR(ch) "1", factor);*/                      \
+        write_hps_reg("rx" STR(ch) "1", factor);                      \
         /* Sets the dsp gain to compensate for decimation effects*/\
         /* Right shift index when tx_4 is high (always the case) */\
         uint8_t target_dsp_gain = decim_gain_lut_tate[factor];\
@@ -3006,7 +3002,7 @@ TX_CHANNELS
             target_dsp_gain = target_dsp_gain >> 4;        \
         }\
         /*Set whether to bypass dsp and fir*/\
-        write_hps_reg("rx" STR(ch) "2", bypass);                      \
+        /*write_hps_reg("rx" STR(ch) "2", bypass);*/                      \
         \
                                                                                \
         return RETURN_SUCCESS;                                                 \
