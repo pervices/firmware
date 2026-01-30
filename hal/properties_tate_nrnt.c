@@ -2998,7 +2998,7 @@ TX_CHANNELS
         }\
         \
         /*Sets the resamp factor*/\
-        write_hps_reg("rx" STR(ch) "1", factor);                      \
+        /*write_hps_reg("rx" STR(ch) "1", factor);*/                      \
         /* Sets the dsp gain to compensate for decimation effects*/\
         /* Right shift index when tx_4 is high (always the case) */\
         uint8_t target_dsp_gain = decim_gain_lut_tate[factor];\
