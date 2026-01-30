@@ -3007,10 +3007,12 @@ TX_CHANNELS
         }\
         char dsp_gain_s[10];\
         snprintf(dsp_gain_s, 10, "%hhu\n", target_dsp_gain);\
-        set_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s);\
-        get_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s, 10);\
+        char dsp_gain_result[MAX_PROP_LEN];\
+        /*set_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s);*/\
+        /*get_property("rx/" STR(ch) "/dsp/gain", dsp_gain_s, 10);*/\
+        hdlr_rx_##ch##_dsp_gain(dsp_gain_s, dsp_gain_result);\
         uint8_t actual_dsp_gain;\
-        sscanf(dsp_gain_s, "%hhu", &actual_dsp_gain);\
+        sscanf(dsp_gain_result, "%hhu", &actual_dsp_gain);\
         if(target_dsp_gain != actual_dsp_gain) {\
             PRINT(ERROR, "Unable to set decimation compensation gain. Expected: %hhu, Acutal: %hhu\n", target_dsp_gain, actual_dsp_gain);\
         }\
