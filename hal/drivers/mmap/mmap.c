@@ -112,6 +112,30 @@ static int reg_write(uint32_t addr, uint32_t *data) {
     return RETURN_SUCCESS;
 }
 
+static int reg_write_no_rewrite(uint32_t addr, uint32_t *data) {
+    if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
+        return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+    }
+
+    volatile uint32_t *mmap_addr =
+        (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
+
+    get_lock();
+
+    *mmap_addr = *data;
+
+    // Release lock
+    pthread_mutex_unlock(mutex);
+    if(pthread_mutex_unlock(mutex)) {
+        PRINT(ERROR, "pthread_mutex_unlock failed: %s (%d)\n", strerror(errno), errno);
+    }
+
+    // FIXME: This command always returns with an error, it may be the reason why so many regwrites that shouldn't need delays require them
+    msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
+
+    return RETURN_SUCCESS;
+}
+
 int read_hps_addr(uint32_t addr, uint32_t *data) {
     if (!data)
         return RETURN_ERROR_PARAM;
@@ -315,7 +339,7 @@ int rewrite_all_reg(void) {
             continue;
         }
         // Rewrite existing val to reg
-        ret = reg_write(get_reg_from_index(index)->addr, &old_val[index]);
+        ret = reg_write_no_rewrite(get_reg_from_index(index)->addr, &old_val[index]);
         if (ret < 0)
             return ret;
     
