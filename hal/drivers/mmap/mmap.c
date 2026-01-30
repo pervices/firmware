@@ -89,9 +89,7 @@ static int reg_write(uint32_t addr, uint32_t *data) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
     // Rewrite to all reg first
-    printf("Rewriting all registers...\n");
     rewrite_all_reg();
-    printf("Register rewrite complete.\n");
 
     volatile uint32_t *mmap_addr =
         (uint32_t *)((uint8_t *)mmap_base + addr - HPS2FPGA_GPR_OFST);
