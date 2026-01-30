@@ -85,6 +85,8 @@ static int reg_read(uint32_t addr, uint32_t *data) {
 }
 
 static int reg_write(uint32_t addr, uint32_t *data) {
+    // Rewrite to all reg first
+    rewrite_all_reg();
     if (MAP_FAILED == mmap_base || -1 == mmap_fd || 0 == mmap_len) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
@@ -266,6 +268,74 @@ int check_hps_reg(void) {
         }
     }
     printf("Register check complete\n");
+    return RETURN_SUCCESS;
+}
+
+// Rewrite current values of each register that is not exempted
+int rewrite_all_reg(void) {
+    int ret;
+    //check index is the register being checked for side effects, index is ther register being checked for change
+    uint32_t check_index, index, new_val;
+    uint32_t new_data = 0;
+    uint8_t exempt_regs[get_num_regs()];
+    uint32_t old_val[get_num_regs()];
+     printf("Begining register rewrite...\n");
+    //generates the list of registers to exempt from the test
+    for(index = 0; index < get_num_regs(); index++) {
+        // Just exempting the special cases instead of handling them like check_hps_reg does
+        // System reset
+        if(strstr(get_reg_from_index(index)->name, "sys0") != 0) {
+            exempt_regs[index] = CHECK_EXCEMPT;
+        // FPGA reset
+        } else if(strstr(get_reg_from_index(index)->name, "rst_req0") != 0) {
+            exempt_regs[index] = CHECK_EXCEMPT;
+        } else if(strstr(get_reg_from_index(index)->perm, "RO") != 0) {
+            exempt_regs[index] = CHECK_EXCEMPT;
+        } else {
+            exempt_regs[index] = 0;
+        }
+    }
+
+    // Get values of each register
+    for (index=0; index < get_num_regs(); index++) {
+        // Skip exempted registers
+        if(exempt_regs[index] == CHECK_EXCEMPT) {
+            continue;
+        }
+        const reg_t *temp = get_reg_from_index(index);
+        ret = reg_read(temp->addr, &old_val[index]);
+        if (ret < 0)
+            return ret;
+    }
+
+    // Rewrites values to all registers
+    for (index = 0; index < get_num_regs(); index++) {
+        // Skip exempted regs
+        if(exempt_regs[index] == CHECK_EXCEMPT) {
+            continue;
+        }
+        // Rewrite existing val to reg
+        ret = reg_write(get_reg_from_index(index)->addr, &old_val[index]);
+        if (ret < 0)
+            return ret;
+    }
+
+    // Verifies no other registers have unexpected changes
+    for (index = 0; index < get_num_regs(); index++) {
+        if(exempt_regs[index] == CHECK_EXCEMPT) {
+            continue;
+        }
+        const reg_t *temp = get_reg_from_index(index);
+        ret = reg_read(temp->addr, &new_val);
+        //returns on error
+        if (ret < 0)
+            return ret;
+        if(new_val!=old_val[index]) {
+            printf("reg = %s caused a change in reg = %s\n", get_reg_from_index(check_index)->name, get_reg_from_index(index)->name);
+        }
+    }
+
+    printf("Register rewrite complete\n");
     return RETURN_SUCCESS;
 }
 

@@ -44,6 +44,7 @@ int write_hps_reg_mask(const char *reg, uint32_t data, uint32_t mask);
 void list_hps_reg(uint8_t verbosity);
 int dump_hps_reg(void);
 int check_hps_reg(void);
+int rewrite_all_reg(void);
 void set_mem_debug_opt(uint8_t options);
 
 int mmap_init();
