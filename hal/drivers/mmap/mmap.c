@@ -276,7 +276,6 @@ int rewrite_all_reg(void) {
     int ret;
     //check index is the register being checked for side effects, index is ther register being checked for change
     uint32_t check_index, index, new_val;
-    uint32_t new_data = 0;
     uint8_t exempt_regs[get_num_regs()];
     uint32_t old_val[get_num_regs()];
      printf("Begining register rewrite...\n");
