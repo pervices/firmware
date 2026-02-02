@@ -4535,7 +4535,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         usleep(10000);
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
-        set_property("fpga/trigger/sma_pol", "negative");
+        // set_property("fpga/trigger/sma_pol", "negative");
         usleep(10000);
         // configure the channels specified for force streaming, and ensure others are not
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
