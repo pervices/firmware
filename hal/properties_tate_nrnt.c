@@ -2965,7 +2965,6 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        snprintf(ret, MAX_PROP_LEN, "1258850"); \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
