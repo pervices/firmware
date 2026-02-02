@@ -301,7 +301,7 @@ static int read_uart(int uartfd) {
     return RETURN_SUCCESS;
 }
 
-#if NUM_RX_CHANNELS > 0
+#if NUM_RX_CHANNELS > 0 && 0
 // Finds the optimal value for the sample rate blocks
 static uint16_t get_optimal_sr_factor(double *rate, double dsp_rate) {
     double max_factor = 65536; // 2^16
@@ -2965,42 +2965,6 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
-        double rate;                                                           \
-        sscanf(data, "%lf", &rate);                                            \
-        uint16_t factor = 0;\
-        /*Bypasses dsp and half band filer 2. Bypasses dsp when 1*/\
-        \
-        /* Keeps the sample rate within the allowable range*/\
-        if(rate < MIN_RX_SAMPLE_RATE) rate = MIN_RX_SAMPLE_RATE;\
-        if(rate > MAX_USER_SAMPLE_RATE * 1e6) rate = MAX_USER_SAMPLE_RATE * 1e6;\
-        /* If sample rate is roundable to RX_BASE_SAMPLE_RATE (which bypass all dsp stuff */\
-        /* Due to issues with the 3G to 1G conversion the rate on rx with 3G boards in 1G mode is actually limited to 500Msps */\
-        if(rate > ((RX_DSP_SAMPLE_RATE*RATE_ROUND_BIAS)+(RX_BASE_SAMPLE_RATE*(1-RATE_ROUND_BIAS))) && !(USE_3G_AS_1G && rx_board_variant[INT(ch)] == rfe3g)) {\
-            rate = RX_BASE_SAMPLE_RATE;\
-            /*the factor does not matter when bypassing the dsp*/\
-            factor = 0;\
-            snprintf(ret, MAX_PROP_LEN, "%lf", RX_BASE_SAMPLE_RATE); \
-        \
-        /*If sample rate is roundable to RX_DSP_SAMPLE_RATE (which bypasses some dsp stuff)*/\
-        } else if(rate > RX_DSP_SAMPLE_RATE * (0.5* RATE_ROUND_BIAS + 0.5)) {\
-            rate = RX_DSP_SAMPLE_RATE;\
-            /*the factor does not matter when bypassing the dsp*/\
-            factor = 0;\
-            snprintf(ret, MAX_PROP_LEN, "%lf", RX_DSP_SAMPLE_RATE); \
-        } else {\
-            factor = get_optimal_sr_factor(&rate, RX_DSP_SAMPLE_RATE);\
-            /*Returns the actual sample rate set*/\
-            snprintf(ret, MAX_PROP_LEN, "%lf", RX_DSP_SAMPLE_RATE / (double)(factor + 1)); \
-        }\
-        \
-        /*Sets the resamp factor*/\
-        /*write_hps_reg("rx" STR(ch) "1", factor);*/                      \
-        /* Sets the dsp gain to compensate for decimation effects*/\
-        /* Right shift index when tx_4 is high (always the case) */\
-        /*Set whether to bypass dsp and fir*/\
-        /*write_hps_reg("rx" STR(ch) "2", bypass);*/                      \
-        \
-        /* DEBUG: alsos say the rate is the default*/\
         snprintf(ret, MAX_PROP_LEN, "1258850"); \
                                                                                \
         return RETURN_SUCCESS;                                                 \
