@@ -2965,6 +2965,7 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_dsp_rate(const char *data, char *ret) {          \
+        usleep(200000);\
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
