@@ -3000,6 +3000,8 @@ TX_CHANNELS
         /*Set whether to bypass dsp and fir*/\
         /*write_hps_reg("rx" STR(ch) "2", bypass);*/                      \
         \
+        /* DEBUG: alsos say the rate is the default*/\
+        snprintf(ret, MAX_PROP_LEN, "1258850"); \
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
