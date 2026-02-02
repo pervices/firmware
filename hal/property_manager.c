@@ -81,6 +81,16 @@ static void write_to_file(const char *path, const char *data) {
         return;
     }
     fprintf(fd, "%s", data);
+
+    int fd_int = fileno(fd);
+    if(fd_int == -1) {
+        PRINT(ERROR, "failed to convert FILE to integer file descriptor: %s\n", strerror(errno));
+    } else {
+        int r = fsync(fd_int);
+        if(r != 0) {
+            PRINT(ERROR, "fsync failed before reading property: %s\n", strerror(errno));
+        }
+    }
     fclose(fd);
 
     // PRINT(VERBOSE, "wrote to file: %s (%s)\n", path, data);
@@ -95,6 +105,16 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     if (!(fd = fopen(path, "r"))) {
         PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
         return;
+    }
+
+    int fd_int = fileno(fd);
+    if(fd_int == -1) {
+        PRINT(ERROR, "failed to convert FILE to integer file descriptor: %s\n", strerror(errno));
+    } else {
+        int r = fsync(fd_int);
+        if(r != 0) {
+            PRINT(ERROR, "fsync failed before reading property: %s\n", strerror(errno));
+        }
     }
 
     // Read content
