@@ -4561,7 +4561,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             set_property(path_buffer, "0");
         }
         //stop ignoring the trigger input state in case it will be used later
-        set_property("fpga/trigger/sma_override", "0");
+        //set_property("fpga/trigger/sma_override", "0");
     }
     return RETURN_SUCCESS;
 }
