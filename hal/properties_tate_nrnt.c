@@ -4532,11 +4532,11 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //stop any force streaming by bringing the trigger low
         //force the trigger input to always read as high
         set_property("fpga/trigger/sma_override", "1");
-        usleep(10000);
+        usleep(1000000);
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
-        // set_property("fpga/trigger/sma_pol", "negative");
-        usleep(10000);
+        set_property("fpga/trigger/sma_pol", "negative");
+        usleep(1000000);
         // configure the channels specified for force streaming, and ensure others are not
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
@@ -4552,7 +4552,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma to activate when high (sma_override is forcing it high)
         //this starts the streaming for all channels at once
         set_property("fpga/trigger/sma_pol", "positive");
-        usleep(10000);
+        usleep(1000000);
     } else {
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
