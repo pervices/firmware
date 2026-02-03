@@ -4592,7 +4592,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
             write_hps_reg_mask(rx_reg4_map[ch], 0x2, 0x2);
         }
         // Delay to allow FIFOs to empty after putting them in reset. Probably useless, but this is a temporary measure and not worth the time to optimize
-        usleep(1000);
+        usleep(100000);
 
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
