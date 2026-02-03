@@ -4589,7 +4589,9 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         // Unfortunantly this workaround means every ch will send a slightly different amount of data
         // TODO: remove this (plus the delay) once the FPGA issue is fixed #16809-16
         for(size_t ch = 0; ch < NUM_RX_CHANNELS; ch++) {
-            write_hps_reg_mask(rx_reg4_map[ch], 0x2, 0x2);
+            write_hps_reg_mask(rx_reg4_map[ch], 0x000, 0x1002);
+
+            write_hps_reg_mask(rx_reg4_map[ch], 0x002, 0x1002);
         }
         // Delay to allow FIFOs to empty after putting them in reset. Probably useless, but this is a temporary measure and not worth the time to optimize
         usleep(100000);
