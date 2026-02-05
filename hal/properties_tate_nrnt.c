@@ -4571,6 +4571,9 @@ static int hdlr_cm_trx_fpga_nco(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Map of channels currently force streaming
+int64_t rx_force_stream_state = 0;
+
 //makes all rx begin streaming data in phase with each other, using an sma trigger
 //0 stops all force streaming. To start streaming set this using a value where each bit corresponds to ech channel
 //ie 1 to only stream from ch A, 2 for chB, 4 for chC, 5 for chA and chC
@@ -4579,7 +4582,12 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     int64_t stream = 0;
     sscanf(data, "%li", &stream);
     char path_buffer[MAX_PATH_LEN];
-    if(stream != 0) {
+
+    // Enable force stream if it is requested on any channel, and those exact channels are not already being streamed on
+    // TODO: decide whether or not to keep this behaviour permenant or revert if after issue #16931 is resolved
+    // Stopping streaming has a low chance of causing the SFP port to become stuck
+    // By not restarting force stream when the same stream is requested we reduce how often a stream is stopped, and as a result how often the issue occurs
+    if(stream != 0 && stream != rx_force_stream_state) {
         //stop any force streaming by bringing the trigger low
         //force the trigger input to always read as high
         set_property("fpga/trigger/sma_override", "1");
@@ -4601,6 +4609,7 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma to activate when high (sma_override is forcing it high)
         //this starts the streaming for all channels at once
         set_property("fpga/trigger/sma_pol", "positive");
+
     } else {
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
@@ -4614,6 +4623,10 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //stop ignoring the trigger input state in case it will be used later
         set_property("fpga/trigger/sma_override", "0");
     }
+
+    // Update the variable tracking the current state
+    rx_force_stream_state = stream;
+
     return RETURN_SUCCESS;
 }
 
