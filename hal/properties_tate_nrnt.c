@@ -6284,13 +6284,6 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
 
     sscanf(data, "%i", &reset_type);
 
-    if(reset_type >= 1 && reset_type <=3) {
-        write_hps_reg_mask("res_rw7", 0xc0000000, 0xc0000000);
-        //usleep(1000000);
-        write_hps_reg_mask("res_rw7", 0x00000000, 0xc0000000);
-        //usleep(1000000);
-    }
-
     // Call the reset
     reset_type = fpga_reset(reset_type);
 
@@ -7430,7 +7423,7 @@ int jesd_master_reset() {
 #undef X
 
         // Reset JESD IP
-        fpga_reset(3);
+        fpga_reset(2);
         // Reinint rx JESD without resetting IP (alternative to resetting the IP
         // Reining via reg writes break RTM3 USE_3G_AS_1G
         // Resetting the IP is prefered but sometimes this works when resetting the IP doesn't
