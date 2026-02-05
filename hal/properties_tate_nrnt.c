@@ -6287,7 +6287,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     if(reset_type >= 1 && reset_type <=2) {
         write_hps_reg_mask("res_rw7", 0xc0000000, 0xc0000000);
         usleep(1000000);
-        write_hps_reg_mask("res_rw7", 0x00000000, 0x00000000);
+        write_hps_reg_mask("res_rw7", 0x00000000, 0xc0000000);
         usleep(1000000);
     }
 
