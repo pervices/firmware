@@ -6220,21 +6220,10 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_reset(const char *data, char *ret) {
-    /* The reset controllet is like a waterfall:
-     * Global Reset -> 40G Reset -> JESD Reset -> DSP Reset
-     * Whichever Reset step we begin on will be followed by the others.
-     * Reset is initiated by setting one bit high in the res_rw7 register
-     * Global Reset    res_rw7[30]      Triggered by writing 1 to state tree
-     * 40G Reset       res_rw7[29]      write 2 to state tree
-     * JESD Reset      res_rw7[28]      write 3 to state tree
-     * DSP Reset       res_rw7[27]      write 4 to state tree
-     * Writing 0 to the state tree will not trigger any reset
-     */
-    int reset_type = 0;
+// Resets the FPGA via the reset controller
+static int fpga_reset(int reset_type) {
+    // Get the initial LED state so we can restore it later
     uint8_t led_state = get_led_state();
-
-    sscanf(data, "%i", &reset_type);
 
     if (reset_type == 0) {
         // No reset requested
@@ -6258,6 +6247,7 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
         PRINT(ERROR, "Invalid reset request: %i\n", reset_type);
         reset_type = -1;
     }
+
     /* register sys[18] shows the reset status
      * the bits are [31:0] chanMode = {
      * w_40gModulePresent,                                                         // 4-bits
@@ -6275,6 +6265,33 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // Resetting the FPGA results in user visible LEDs being reset to their
     // default value. This sets it back to the state it was in before the FPGA reset.
     set_led_state(led_state);
+
+    return reset_type;
+}
+
+static int hdlr_fpga_reset(const char *data, char *ret) {
+    /* The reset controllet is like a waterfall:
+     * Global Reset -> 40G Reset -> JESD Reset -> DSP Reset
+     * Whichever Reset step we begin on will be followed by the others.
+     * Reset is initiated by setting one bit high in the res_rw7 register
+     * Global Reset    res_rw7[30]      Triggered by writing 1 to state tree
+     * 40G Reset       res_rw7[29]      write 2 to state tree
+     * JESD Reset      res_rw7[28]      write 3 to state tree
+     * DSP Reset       res_rw7[27]      write 4 to state tree
+     * Writing 0 to the state tree will not trigger any reset
+     */
+    int reset_type = 0;
+
+    sscanf(data, "%i", &reset_type);
+
+    // Call the reset
+    reset_type = fpga_reset(reset_type);
+
+    // FPGA resets starting at or before the JESD reset will bring down JESD
+    // jesd_enabled is used to check if we have reached the phase in the boot process where the JESD is meant to be up
+    if(reset_type >= 1 && reset_type <= 3 && jesd_enabled) {
+        set_property("fpga/jesd/jesd_reset_master", "1");
+    }
 
     snprintf(ret, MAX_PROP_LEN, "%u\n", reset_type);
     return RETURN_SUCCESS;
@@ -7405,7 +7422,7 @@ int jesd_master_reset() {
 #undef X
 
         // Reset JESD IP
-        set_property("fpga/reset", "3");
+        fpga_reset(3);
         // Reinint rx JESD without resetting IP (alternative to resetting the IP
         // Reining via reg writes break RTM3 USE_3G_AS_1G
         // Resetting the IP is prefered but sometimes this works when resetting the IP doesn't
