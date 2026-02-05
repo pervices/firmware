@@ -448,6 +448,17 @@ static void wait_for_fpga_reset() {
     } while (sys18_val & 0x00ff0000);
 }
 
+// Clears jamming that sometimes occurs on the SFP port when finishing an rx stream
+// The jamming results in the sfp port becoming unresponsive
+// Instances where this is called can be removed once issue #16931 is resolved
+// NOTE: rx in this context refers to the host's perspective not the device
+static void user_rx_sfp_reset() {
+    // Puts rx sfp port in reset (level triggered)
+    write_hps_reg_mask("res_rw7", 0x40000000, 0x40000000);
+    // Takes the rx sfp port out of reset
+    write_hps_reg_mask("res_rw7", 0x00000000, 0x40000000);
+}
+
 static int read_interboot_variable(char* data_filename, int64_t* value) {
     struct stat sb;
 
@@ -4594,6 +4605,10 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
+
+        // Reset jamming that may occur after from stopping streaming
+        user_rx_sfp_reset();
+
         // configure the channels specified for force streaming, and ensure others are not
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
@@ -4614,6 +4629,10 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
+
+        // Reset jamming that may occur after from stopping streaming
+        user_rx_sfp_reset();
+
         //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             //stops any existing force streaming
@@ -6134,6 +6153,25 @@ static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Calls an SFP reset that only resets the rx SFP port
+// This was intended to avoid the side effects of calling an SFP reset through the reset controller
+// TODO:review if this should be kept
+static int hdlr_fpga_link_user_rx_sfp_reset(const char *data, char *ret) {
+    //does not reset if the user write a 0
+    int reset = 0;
+    sscanf(data, "%i", &reset);
+    if(reset) {
+        // Call the reset
+        user_rx_sfp_reset();
+        snprintf(ret, MAX_PROP_LEN, "1");
+    } else {
+        // Do nothing
+        snprintf(ret, MAX_PROP_LEN, "0");
+    }
+
+    return RETURN_SUCCESS;
+}
+
 static int hdlr_fpga_link_rx_sample_bandwidth(const char *data, char *ret) {
     int result = 0;
     for(int chan = 0; chan < NUM_RX_CHANNELS; chan++) {
@@ -7008,6 +7046,8 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)\
+    /* NOTE: rx here is from the host's perspective, not the device */\
+    DEFINE_FILE_PROP_P("fpga/link/rx_user_sfp_reset"         , hdlr_fpga_link_user_rx_sfp_reset,             RW, "0", SP, NAC)\
     /* Size of half of a complex pair in bytes*/\
     DEFINE_FILE_PROP_P("fpga/link/rx_sample_bandwidth"       , hdlr_fpga_link_rx_sample_bandwidth,     RW, S_DEAULT_OTW_RX, SP, NAC)\
     DEFINE_FILE_PROP_P("fpga/link/tx_sample_bandwidth"       , hdlr_fpga_link_tx_sample_bandwidth,     RW, S_DEAULT_OTW_TX, SP, NAC)
