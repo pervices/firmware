@@ -6287,6 +6287,14 @@ static int hdlr_fpga_reset(const char *data, char *ret) {
     // Call the reset
     reset_type = fpga_reset(reset_type);
 
+    if(reset_type >= 1 && reset_type <=2) {
+        write_hps_reg_mask("res_rw7", 0xc0000000, 0xc0000000);
+        usleep(1000000);
+        write_hps_reg_mask("res_rw7", 0x00000000, 0x00000000);
+        usleep(1000000);
+    }
+
+
     // FPGA resets starting at or before the JESD reset will bring down JESD
     // jesd_enabled is used to check if we have reached the phase in the boot process where the JESD is meant to be up
     if(reset_type >= 1 && reset_type <= 3 && jesd_enabled) {
