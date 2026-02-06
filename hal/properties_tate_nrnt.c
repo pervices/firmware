@@ -7445,9 +7445,9 @@ int jesd_master_reset() {
         // Ideally we start the reset controller from JESD, but due to a bug we must reset the SFP as well
         // Resetting resets the JESD as well
         // TODO: renable fpga_reset(3) and remove fpga_reset(2) and sfp_reset after #16931 is resolved
-        // For unknown reasons resetting twice (or rebooting the server once) is required to prevent the issue
-        // SFP resetting without validating that links came back up
-        fpga_reset(2);
+        // For unknown reasons the level reset is required to prevent the issue
+        write_hps_reg_mask("res_rw20", 0xc0000000, 0xc0000000);
+        write_hps_reg_mask("res_rw20", 0x00000000, 0xc0000000);
         // SFP reset with validation
         sfp_reset(1);
 
