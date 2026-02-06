@@ -7445,11 +7445,8 @@ int jesd_master_reset() {
         // Ideally we start the reset controller from JESD, but due to a bug we must reset the SFP as well
         // Resetting resets the JESD as well
         // TODO: renable fpga_reset(3) and remove fpga_reset(2) and sfp_reset after #16931 is resolved
-        // For unknown reasons the level reset is required to prevent the issue
-        write_hps_reg_mask("res_rw20", 0xc0000000, 0xc0000000);
-        write_hps_reg_mask("res_rw20", 0x00000000, 0xc0000000);
-        // SFP reset with validation
-        sfp_reset(1);
+        // Ideally we would reset the SFP with  validation as part of the workaround but that causes the issue to appear, but just doing the reset doesn't
+        fpga_reset(2);
 
         // Reinint rx JESD without resetting IP (alternative to resetting the IP
         // Reining via reg writes break RTM3 USE_3G_AS_1G
