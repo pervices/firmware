@@ -5111,8 +5111,9 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "clk -y\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     return RETURN_SUCCESS;
 }
 
@@ -5120,8 +5121,9 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -j\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     return RETURN_SUCCESS;
 }
 
@@ -5129,8 +5131,9 @@ static int hdlr_time_sync_lmk_resync_jesd(const char *data, char *ret) {
 static int hdlr_time_sync_lmk_resync_all(const char *data, char *ret) {
     if (strcmp(data, "0") != 0) {
         strcpy(buf, "sync -r\r");
+        ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     }
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
+
     return RETURN_SUCCESS;
 }
 
