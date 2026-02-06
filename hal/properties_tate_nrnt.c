@@ -235,6 +235,8 @@ static int __attribute__ ((unused)) set_lo_frequency_rx(int uart_fd, pllparam_t 
 static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, pllparam_t *pll, int channel);
 static int __attribute__ ((unused)) set_lo_frequency_time(pllparam_t *pll, int channel);
 
+static int fpga_reset(int reset_type);
+
 typedef enum {
     pulsed = 0,
     continuous = 1,
@@ -5506,14 +5508,14 @@ int check_sfp() {
     }
 }
 
+// Resets the SFPs until they come up
 // 0: do nothing
 // 1: reset SFP
 // 2: reset SFPs only if they are down
-static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
-    //does not reset if the user write a 0
-    int reset = 0;
-    sscanf(data, "%i", &reset);
-    if(!reset) return RETURN_SUCCESS;
+static int sfp_reset(int reset) {
+    if(!reset) {
+        return RETURN_SUCCESS;
+    }
 
     if(reset == 2) {
         // SFP is up, skip reset
@@ -5525,7 +5527,7 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
     for(int n = 0; n < sfp_max_reset_attempts; n++) {
 
         // Reset FPGA starting at SFPs
-        set_property("fpga/reset", "2");
+        fpga_reset(2);
 
         if(check_sfp() == RETURN_SUCCESS) {
             // Reset counter for number of failed boots
@@ -5533,20 +5535,36 @@ static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
             return RETURN_SUCCESS;
         }
     }
-    PRINT(ERROR, "Failed to establish sfp link after %i attempts rebooting\n", sfp_max_reset_attempts);
+    PRINT(ERROR, "Failed to establish sfp link after %i attempts\n", sfp_max_reset_attempts);
 
-    // TEMPORARY: reboot the server if unable to establish JESD links
-    int64_t failed_count = 0;
-    read_interboot_variable("cons_sfp_fail_count", &failed_count);
-    if(failed_count < sfp_max_reboot_attempts) {
-        update_interboot_variable("cons_sfp_fail_count", failed_count + 1);
-        system("systemctl reboot");
-    } else {
-        PRINT(ERROR, "Unable to establish SFP links despite multiple reboots. The system will not attempt another reboot to bring up SFP links until a successful attempt to establish links\n");
+    return ENETDOWN;
+}
+
+// Property tree wrapper for sfp_reset + reboot the system if unable to establish SFP
+static int hdlr_fpga_link_sfp_reset(const char *data, char *ret) {
+    int reset = 0;
+    sscanf(data, "%i", &reset);
+
+    int r = sfp_reset(reset);
+
+    if(r != RETURN_SUCCESS) {
+
+        // TEMPORARY: reboot the server if unable to establish SFP links
+        int64_t failed_count = 0;
+        read_interboot_variable("cons_sfp_fail_count", &failed_count);
+        if(failed_count < sfp_max_reboot_attempts) {
+            update_interboot_variable("cons_sfp_fail_count", failed_count + 1);
+
+            PRINT(ERROR, "Unable to establish SFP link. The unit will wait 60s then reboot\n");
+            sleep(60);
+            system("systemctl reboot");
+        } else {
+            PRINT(ERROR, "Unable to establish SFP links despite multiple reboots. The system will not attempt another reboot to bring up SFP links until a successful attempt to establish links\n");
+        }
+
     }
 
-
-    return RETURN_ERROR;
+    return RETURN_SUCCESS;
 }
 
 static int hdlr_fpga_clear_regs(const char *data, char *ret) {
