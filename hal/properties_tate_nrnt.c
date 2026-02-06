@@ -7440,7 +7440,17 @@ int jesd_master_reset() {
 #undef X
 
         // Reset JESD IP
-        fpga_reset(3);
+        // fpga_reset(3);
+        // Start the reset controller from SFP reset + adding checks to make sure link comes back up
+        // Ideally we start the reset controller from JESD, but due to a bug we must reset the SFP as well
+        // Resetting resets the JESD as well
+        // TODO: renable fpga_reset(3) and remove fpga_reset(2) and sfp_reset after #16931 is resolved
+        // For unknown reasons resetting twice (or rebooting the server once) is required to prevent the issue
+        // SFP resetting without validating that links came back up
+        fpga_reset(2);
+        // SFP reset with validation
+        sfp_reset(1);
+
         // Reinint rx JESD without resetting IP (alternative to resetting the IP
         // Reining via reg writes break RTM3 USE_3G_AS_1G
         // Resetting the IP is prefered but sometimes this works when resetting the IP doesn't
