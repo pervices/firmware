@@ -4599,7 +4599,12 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     //sets the sma trigger to activate when it is low (override bit will make it high)
     //the sma trigger will now be inactive
     set_property("fpga/trigger/sma_pol", "negative");
-    //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
+
+    // TODO: remove this delay after 16931 is fixed
+    // For some reason having a delay here reduces the chance of the sfp port becoming unresponsive
+    usleep(100000);
+
+    // Set every channel to normal streaming mode, and puts it in reset/disabled
     for(int n = 0; n < NUM_RX_CHANNELS; n++) {
         //stops any existing force streaming
         snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
@@ -4610,7 +4615,6 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     if(stream == 0) {
         //stop ignoring the trigger input state in case it will be used later
         set_property("fpga/trigger/sma_override", "0");
-
         rx_force_stream_state = 0;
 
         return RETURN_SUCCESS;
