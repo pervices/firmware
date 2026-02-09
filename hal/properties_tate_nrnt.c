@@ -4585,46 +4585,52 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
     sscanf(data, "%li", &stream);
     char path_buffer[MAX_PATH_LEN];
 
-    // Enable force stream if it is requested on any channel, and those exact channels are not already being streamed on
+    // Do nothing if the current state matches the desired state
     // TODO: decide whether or not to keep this behaviour permenant or revert if after issue #16931 is resolved
-    // Stopping streaming has a low chance of causing the SFP port to become stuck
-    // By not restarting force stream when the same stream is requested we reduce how often a stream is stopped, and as a result how often the issue occurs
-    if(stream != 0 && stream != rx_force_stream_state) {
-        //stop any force streaming by bringing the trigger low
-        //force the trigger input to always read as high
-        set_property("fpga/trigger/sma_override", "1");
-        //sets the sma trigger to activate when it is low (override bit will make it high)
-        //the sma trigger should be inactive from here until the end of the function
-        set_property("fpga/trigger/sma_pol", "negative");
-        // configure the channels specified for force streaming, and ensure others are not
-        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
-            if(stream & 1 << n) {
-                snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
-                set_property(path_buffer, "1");
-                snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/trigger/sma_mode", n+'a');
-                set_property(path_buffer, "level");
-            } else {
-                snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
-                set_property(path_buffer, "0");
-            }
-        }
-        //sets the sma to activate when high (sma_override is forcing it high)
-        //this starts the streaming for all channels at once
-        set_property("fpga/trigger/sma_pol", "positive");
+    if(stream == rx_force_stream_state) {
+        return RETURN_SUCCESS;
+    }
 
-    } else {
-        //sets the sma trigger to activate when it is low (override bit will make it high)
-        //the sma trigger should be inactive from here until the end of the function
-        set_property("fpga/trigger/sma_pol", "negative");
-        //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
-        for(int n = 0; n < NUM_RX_CHANNELS; n++) {
-            //stops any existing force streaming
+    // Begining of stopping all channels to start the new run
+
+    //force the trigger input to always read as high
+    set_property("fpga/trigger/sma_override", "1");
+
+    //sets the sma trigger to activate when it is low (override bit will make it high)
+    //the sma trigger will now be inactive
+    set_property("fpga/trigger/sma_pol", "negative");
+    //stops streaming on everything, note that it does not clean up a lot of the changes done when activating synchronized force streaming
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        //stops any existing force streaming
+        snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
+        set_property(path_buffer, "0");
+    }
+
+    // Stop force stream was requested, disable all channels
+    if(stream == 0) {
+        //stop ignoring the trigger input state in case it will be used later
+        set_property("fpga/trigger/sma_override", "0");
+
+        rx_force_stream_state = 0;
+
+        return RETURN_SUCCESS;
+    }
+
+    // configure the channels specified for force streaming, and ensure others are not
+    for(int n = 0; n < NUM_RX_CHANNELS; n++) {
+        if(stream & 1 << n) {
+            snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
+            set_property(path_buffer, "1");
+            snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/trigger/sma_mode", n+'a');
+            set_property(path_buffer, "level");
+        } else {
             snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
             set_property(path_buffer, "0");
         }
-        //stop ignoring the trigger input state in case it will be used later
-        set_property("fpga/trigger/sma_override", "0");
     }
+    //sets the sma to activate when high (sma_override is forcing it high)
+    //this starts the streaming for all channels at once
+    set_property("fpga/trigger/sma_pol", "positive");
 
     // Update the variable tracking the current state
     rx_force_stream_state = stream;
