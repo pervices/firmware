@@ -236,6 +236,7 @@ static int __attribute__ ((unused)) set_lo_frequency_tx(int uart_fd, pllparam_t 
 static int __attribute__ ((unused)) set_lo_frequency_time(pllparam_t *pll, int channel);
 
 static int fpga_reset(int reset_type);
+static int sfp_reset(int reset);
 
 typedef enum {
     pulsed = 0,
@@ -4597,6 +4598,16 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
         // configure the channels specified for force streaming, and ensure others are not
+
+        // TODO: remove sfp reset, jesd reset, and sleep after 16931 is resolved
+        // Reset the SFP after force streaming is stopped as a temporary workaround for a bug
+        sfp_reset(1);
+        // Reset JESD since resetting the SFP brings it down
+        set_property("fpga/jesd/jesd_reset_master", "1");
+        // Sleep until SFP re-established
+        // sfp_reset reset waits for it on the device side, but it takes more time for the host
+        sleep(8);
+
         for(int n = 0; n < NUM_RX_CHANNELS; n++) {
             if(stream & 1 << n) {
                 snprintf(path_buffer, MAX_PATH_LEN, "rx/%c/prime_trigger_stream", n+'a');
@@ -4613,6 +4624,17 @@ static int hdlr_cm_rx_force_stream(const char *data, char *ret) {
         set_property("fpga/trigger/sma_pol", "positive");
 
     } else {
+        // If force streaming is not already inactive
+        if(rx_force_stream_state) {
+            // TODO: remove sfp reset, jesd reset, and sleep after 16931 is resolved
+            // Reset the SFP after force streaming is stopped as a temporary workaround for a bug
+            sfp_reset(1);
+            // Reset JESD since resetting the SFP brings it down
+            set_property("fpga/jesd/jesd_reset_master", "1");
+            // Sleep until SFP re-established
+            // sfp_reset reset waits for it on the device side, but it takes more time for the host
+            sleep(8);
+        }
         //sets the sma trigger to activate when it is low (override bit will make it high)
         //the sma trigger should be inactive from here until the end of the function
         set_property("fpga/trigger/sma_pol", "negative");
