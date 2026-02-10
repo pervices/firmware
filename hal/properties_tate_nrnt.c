@@ -6153,13 +6153,24 @@ static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
     }
 
     // Copy hostname to property
-    fread(ret, 1, MAX_PROP_LEN, static_hostname);
+    size_t bytes_read = fread(ret, 1, MAX_PROP_LEN, static_hostname);
 
     // Return -1 if fread failed
     if(ferror(static_hostname)) {
         PRINT(ERROR, "Unable to read /etc/hostname\n");
         snprintf(ret, MAX_PROP_LEN, "-1");
+    } else {
+        // Check if the hostname was to long
+        if(bytes_read >= MAX_PROP_LEN) {
+            PRINT(ERROR, "hostname to long for poperty buffer\n");
+            snprintf(ret, MAX_PROP_LEN, "-1");
+        } else {
+            // Add null terminator
+            ret[bytes_read] = 0;
+        }
     }
+
+
 
     fclose(static_hostname);
 
