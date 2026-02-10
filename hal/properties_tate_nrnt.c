@@ -6138,13 +6138,30 @@ static int hdlr_fpga_link_net_dhcp_en(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Read the static hostname
+// Previously it set the static hostname but we are changing it to read only to prevent conflict with hostnamectl
 static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
-    char name[MAX_PROP_LEN] = {0};
-    char command[MAX_PROP_LEN] = {0};
-    sscanf(data, "%s", name);
+    // Open current hostname file
+    FILE *static_hostname = fopen("/etc/hostname", "r");
 
-    snprintf(command, MAX_PROP_LEN, "echo %s > /etc/hostname", name);
-    system(command);
+    // Failed to open hostname file
+    if(static_hostname == NULL) {
+        PRINT(ERROR, "Unable to open /etc/hostname: %s\n", strerror(errno));
+        snprintf(ret, MAX_PROP_LEN, "-%i", errno);
+
+        return RETURN_SUCCESS;
+    }
+
+    // Copy hostname to property
+    fread(ret, 1, MAX_PROP_LEN, static_hostname);
+
+    // Return -1 if fread failed
+    if(ferror(static_hostname)) {
+        PRINT(ERROR, "Unable to read /etc/hostname\n");
+        snprintf(ret, MAX_PROP_LEN, "-1");
+    }
+
+    fclose(static_hostname);
 
     return RETURN_SUCCESS;
 }
@@ -7080,7 +7097,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfpd/ver"                  , hdlr_fpga_link_sfpd_ver,                RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, PROJECT_NAME, SP, NAC)        \
+    DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, "poke", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)      \
     DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,            RW, "0", SP, NAC)                 \
