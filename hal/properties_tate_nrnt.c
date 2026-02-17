@@ -174,6 +174,9 @@ typedef enum {
 // Maximum user set delay for i or q
 static const int max_iq_delay = 32;
 
+// Flag used to indicate that JESD is expected to be up
+// It is set the first time the server attempts to bring up
+// It is used so that properties that bring down jesd know whether or not to attempt to bring it back up
 static uint_fast8_t jesd_enabled = 0;
 
 // A typical VAUNT file descriptor layout may look something like this:
@@ -5544,8 +5547,14 @@ static int sfp_reset(int reset) {
         fpga_reset(2);
 
         if(check_sfp() == RETURN_SUCCESS) {
-            // Reset counter for number of failed boots
+            // Reset counter for number of consecutive failed boots
             update_interboot_variable("cons_sfp_fail_count", 0);
+
+            // Bring up JESD if they are expected to be up
+            if(jesd_enabled) {
+                set_property("fpga/jesd/jesd_reset_master", "1");
+            }
+
             return RETURN_SUCCESS;
         }
     }
@@ -6295,6 +6304,7 @@ static int hdlr_fpga_user_regs(const char *data, char *ret) {
 }
 
 // Resets the FPGA via the reset controller
+// NOTE: resets starting at or before jesd will bring it down
 static int fpga_reset(int reset_type) {
     // Get the initial LED state so we can restore it later
     uint8_t led_state = get_led_state();
