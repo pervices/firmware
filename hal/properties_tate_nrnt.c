@@ -6184,23 +6184,6 @@ static int hdlr_fpga_link_net_hostname(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int hdlr_fpga_link_net_ip_addr(const char *data, char *ret) {
-    // Ensure that it is a valid IP address
-    char ip_address[MAX_PROP_LEN] = {0};
-    char command[MAX_PROP_LEN] = {0};
-    sscanf(data, "%s", ip_address);
-
-    struct sockaddr_in sa;
-    if (!inet_pton(AF_INET, ip_address, &(sa.sin_addr))) {
-        return RETURN_ERROR_PARAM;
-    }
-
-    // Write to the file
-    snprintf(command, MAX_PROP_LEN, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/%s/ /etc/init.d/mcu_init.sh", ip_address);
-    system(command);
-    return RETURN_SUCCESS;
-}
-
 // Get the maximum value the sfp overflow counter can handle
 static int hdlr_fpga_link_max_sfp_oflow_count(const char *data, char *ret) {
     uint16_t max_count;
@@ -7117,7 +7100,6 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfpd/pay_len"              , hdlr_fpga_link_sfpd_pay_len,            RW, "8896", SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, "poke", SP, NAC)        \
-    DEFINE_FILE_PROP_P("fpga/link/net/ip_addr"               , hdlr_fpga_link_net_ip_addr,             RW, "192.168.10.2", SP, NAC)      \
     DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,            RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/max_sfp_oflow_count"       , hdlr_fpga_link_max_sfp_oflow_count,     RW, "2047", SP, NAC)              \
