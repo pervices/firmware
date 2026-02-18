@@ -224,10 +224,11 @@ static void init_prop_val(prop_t *prop) {
     char path[MAX_PATH_LEN];
 
     // exceptions for values that must persist through hard resets
-    if (strcmp(prop->path, "fpga/link/net/hostname") == 0 ||
-        strcmp(prop->path, "fpga/link/net/ip_addr") == 0 ||
+    if (strcmp(prop->path, "fpga/link/net/ip_addr") == 0 ||
         strcmp(prop->path, "save_config") == 0 ||
         strcmp(prop->path, "load_config") == 0) {
+
+        PRINT(VERBOSE, "Excempting property %s from initialization\n", prop->path);
         return;
     }
 
