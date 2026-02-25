@@ -2688,6 +2688,26 @@ static int hdlr_cm_quick_reboot_tx(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// Issues reboot command to gpio board, does not wait for reboot to complete
+static int hdlr_cm_quick_reboot_gpio(const char *data, char *ret) {
+    #if (AVERY)
+        int32_t request;
+
+        sscanf(data, "%i", &request);
+
+        if(request > 0) {
+            snprintf(buf, MAX_PROP_LEN, "board -r\r");
+            // Issues reboot command (in Vaunt all radio front ends are on the same board so rebooting one reboots all)
+            send_uart_comm(uart_gpio_fd, (uint8_t *)buf, strlen(buf));
+            snprintf(ret, MAX_PROP_LEN, "1");
+        } else {
+            snprintf(ret, MAX_PROP_LEN, "0");
+        }
+
+    #endif
+    return RETURN_SUCCESS;
+}
+
 // Issues reboot command to rx board, does not wait for reboot to complete
 // NOTE: sysref must be continuous during reboot
 static int hdlr_cm_wait_for_reboot_rx(const char *data, char *ret) {
@@ -2731,6 +2751,29 @@ static int hdlr_cm_wait_for_reboot_tx(const char *data, char *ret) {
         snprintf(ret, MAX_PROP_LEN, "no action");
     }
 
+    return RETURN_SUCCESS;
+}
+
+// Waits for reboot command from to GPIO board, as pair with hdlr_cm_quick_reboot_gpio
+static int hdlr_cm_wait_for_reboot_gpio(const char *data, char *ret) {
+    #if (AVERY)
+        int32_t request;
+
+        sscanf(data, "%i", &request);
+
+        if(request > 0 ) {
+            // Waits for the boot message to fnish printing
+            read_uart(uart_gpio_fd);
+            int bytes_read = strnlen((char *)uart_ret_buf, MAX_PROP_LEN);
+            if(bytes_read != 0) {
+                snprintf(ret, MAX_PROP_LEN, "reboot complete");
+            } else {
+                snprintf(ret, MAX_PROP_LEN, "reboot failed");
+            }
+        } else {
+            snprintf(ret, MAX_PROP_LEN, "no action");
+        }
+    #endif
     return RETURN_SUCCESS;
 }
 
@@ -4539,10 +4582,12 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 #define DEFINE_START_RFE_REBOOT()\
     DEFINE_FILE_PROP_P("cm/rx/quick_reboot"                   , hdlr_cm_quick_reboot_rx,                           RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("cm/tx/quick_reboot"                   , hdlr_cm_quick_reboot_tx,                           RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("cm/gpio/quick_reboot"                 , hdlr_cm_quick_reboot_gpio,                         RW, "1", SP, NAC)\
 
 #define DEFINE_WAIT_RFE_REBOOT()\
     DEFINE_FILE_PROP_P("cm/rx/wait_for_reboot"                   , hdlr_cm_wait_for_reboot_rx,                           RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("cm/tx/wait_for_reboot"                   , hdlr_cm_wait_for_reboot_tx,                           RW, "1", SP, NAC)\
+    DEFINE_FILE_PROP_P("cm/gpio/wait_for_reboot"                 , hdlr_cm_wait_for_reboot_gpio,                         RW, "1", SP, NAC)\
 
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
