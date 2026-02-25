@@ -287,6 +287,12 @@ int main(int argc, char *argv[]) {
             PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_RX);
             return RETURN_ERROR_INSUFFICIENT_RESOURCES;
         }
+    }
+    else if(target_dev == DEV_GPIO) {
+        if (init_uart_comm(&uart_target_fd, UART_CRIMSON_GPIO, 0) < 0) {
+            PRINT(ERROR, "cannot initialize uart %s\n", UART_CRIMSON_GPIO);
+            return RETURN_ERROR_INSUFFICIENT_RESOURCES;
+        }
     } else {
         PRINT(ERROR, "Invalid target device\n");
         return RETURN_ERROR_PARAM;
