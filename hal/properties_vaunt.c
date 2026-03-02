@@ -4377,8 +4377,8 @@ static int hdlr_fpga_board_gps_sync_time(const char *data, char *ret) {
     write_hps_reg("sys10", systime_uh);
     write_hps_reg("sys11", 0); // Set frac_time to 0
     write_hps_reg("sys12", 0); // Set frac_time to 0
-    write_hps_reg("sys13", 1); // Writing 1, then 0 to sys9 sets the time
-    write_hps_reg("sys13", 0); // to what is written in sys7 and sys8
+    write_hps_reg_mask("sys13", 1, 0x1); // Writing 1, then 0 to sys13 sets the time
+    write_hps_reg_mask("sys13", 0, 0x1); // to what is held in the other registers
 
     return RETURN_SUCCESS;
 }
