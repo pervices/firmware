@@ -4837,6 +4837,8 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("system/lo_step"              , hdlr_invalid,                           RO, LO_STEPSIZE_S, SP, NAC)\
     DEFINE_FILE_PROP_P("system/max_rate"                 , hdlr_max_sample_rate,                   RW, "1", SP, NAC)\
     DEFINE_FILE_PROP_P("system/is_full_tx"                 , hdlr_is_full_tx,                   RW, "POKE", SP, NAC)\
+    /* The port the client connects to when using TCP management */\
+    DEFINE_FILE_PROP_P("system/tcp_management_port"           , hdlr_invalid,                           RO, TCP_LISTENER_PORT_S, SP, NAC)
 
 static prop_t property_table[] = {
     DEFINE_TIME()
@@ -5032,6 +5034,7 @@ prop_t *get_prop_from_cmd(const char *cmd) {
 
     if (RETURN_SUCCESS ==
         resolve_symbolic_property_name(cmd, path, sizeof(path))) {
+
         cmd = path;
     }
 

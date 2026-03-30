@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// Exposes accept4
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -49,11 +52,37 @@
 
 #include "hal/utils/print_version.h"
 
+// Maximum number of TCP connections the server support
+// Usually at most 2 are needed at once, but the limit is large in case a customer is doing something stupid
+static const int MAX_TCP_CONNECTIONS = 256;
+
+/**
+ * Processes tcp connection requests and messages
+ * @param tcp_listener_fd The socket clients connect to
+ * @param tcp_connected_fds An array of connected sockets of size MAX_TCP_CONNECTIONS. -1 Is used to indicate sockets not yet created
+ */
+void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds);
+
+/**
+ * Services UDP messages
+ * This is a helper function to make the code more readable
+ * @param udp_comm_fds An array of the file descriptors of the UDP sockets to process
+ * @param udp_comm_fds_length The number of elements in udp_comm_fds
+ */
+void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length);
+
+/**
+ * Services requests sent via the state tree
+ * @param save_profile TODO: figure out what profile is
+ * @param save_profile_path TODO: figure out what profile is
+ * @param load_profile TODO: figure out what profile is
+ * @param load_profile_path TODO: figure out what profile is
+ */
+void service_file_requests(int save_profile, char* save_profile_path, int load_profile, char* load_profile_path);
+
 int main(int argc, char *argv[]) {
 
     int ret = 0;
-    int i = 0;
-    cmd_t cmd = {0};
 
     uint8_t load_profile = 0;
     uint8_t save_profile = 0;
@@ -63,7 +92,7 @@ int main(int argc, char *argv[]) {
     char load_profile_path[MAX_PROP_LEN];
     char save_profile_path[MAX_PROP_LEN];
 
-    const int port_nums[] = {
+    const int udp_port_nums[] = {
         /* UDP management port */
         42799,
         /* Crimson ports */
@@ -77,12 +106,23 @@ int main(int argc, char *argv[]) {
         42807,
     };
 
-    int comm_fds[ARRAY_SIZE(port_nums)];
+    // File descriptor of the listener used to start TCP connections
+    int tcp_listener_fd = -1;
+
+    // File descriptors of connected tcp sockets
+    int tcp_connected_fds[MAX_TCP_CONNECTIONS];
+
+    for(size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        // -1 indicates the socket has not been created yet
+        tcp_connected_fds[i] = -1;
+    }
+
+    // UDP fds are stored after TCP fds
+    int udp_comm_fds[ARRAY_SIZE(udp_port_nums)];
 
     extern int verbose;
     verbose = 0;
 
-    fd_set rfds;
     ret = mmap_init();
     if (EXIT_SUCCESS != ret) {
         PRINT(ERROR, "mmap_init failed\n");
@@ -91,7 +131,7 @@ int main(int argc, char *argv[]) {
     atexit(mmap_fini);
 
     // Check for firmware version
-    for (i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-v") == 0) {
             print_version();
             return 0;
@@ -132,23 +172,30 @@ int main(int argc, char *argv[]) {
             options |= SERVER_DEBUG_OPT;
     }
 
-    // Initialize network communications for each port
-    for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
-        if (init_udp_comm(&(comm_fds[i]), port_nums[i]) < 0) {
-            PRINT(ERROR, "%s, cannot initialize network %s\n", __func__);
+    // Initialize network communications for TCP ports
+    // SOCK_NONBLOCK mean's we don't need to rely on select
+    int init_tcp_comm_r = init_tcp_comm(&tcp_listener_fd, TCP_LISTENER_PORT, SOCK_NONBLOCK);
+    if (init_tcp_comm_r < 0) {
+        PRINT(ERROR, "Initializing TCP management socket failed with error code %s\n", strerror(errno));
+        return RETURN_ERROR_COMM_INIT;
+    }
+    // Set the socket to be a listener
+    int listen_r = listen(tcp_listener_fd, /*backlog */ 64);
+    if(listen_r < 0) {
+        PRINT(ERROR, "Failed to set TCP socket as a listener: %s\n", strerror(errno));
+        return RETURN_ERROR_COMM_INIT;
+    }
+
+    // Initialize network communications for UDP ports
+    for (int i = 0; i < ARRAY_SIZE(udp_port_nums); i++) {
+        int init_udp_comm_r = init_udp_comm(&udp_comm_fds[i], udp_port_nums[i]);
+        if (init_udp_comm_r < 0) {
+            PRINT(ERROR, "Initializing UDP management socket failed with error code %s\n", strerror(errno));
             return RETURN_ERROR_COMM_INIT;
         }
     }
 
     PRINT(INFO, "Network init done\n");
-
-    // Buffer used for read/write
-    uint8_t buffer[UDP_PAYLOAD_LEN];
-    int highest_fd = -1;
-    int inotify_fd;
-    int ret2;
-    struct sockaddr_in sa;
-    socklen_t sa_len;
 
     // Initialize the properties, which is implemented as a Linux file structure
     const int t0 = time_it();
@@ -156,8 +203,6 @@ int main(int argc, char *argv[]) {
     const int t1 = time_it();
 
     PRINT(INFO, "boot time %d\n", t1 - t0);
-
-    inotify_fd = get_inotify_fd();
 
 #if defined(VAUNT) || defined(AVERY)
     // Perform autocalibration of the frequency synthesizers
@@ -218,62 +263,250 @@ system("systemd-notify --ready");
 
     // Main loop, look for commands, if exists, service it and respond
     for (;;) {
+        service_tcp_requests(tcp_listener_fd, tcp_connected_fds);
 
-        // Set up read file descriptor set for select(2)
-        FD_ZERO(&rfds);
-        for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
-            FD_SET(comm_fds[i], &rfds);
-            if (comm_fds[i] >= highest_fd) {
-                highest_fd = comm_fds[i];
-            }
+        service_udp_requests(udp_comm_fds, ARRAY_SIZE(udp_port_nums));
+
+        service_file_requests(save_profile, save_profile_path, load_profile, load_profile_path);
+    }
+
+    // Close network sockets
+    close(tcp_listener_fd);
+
+    for (size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        // Close established TCP connections
+        if(tcp_connected_fds[i] != -1) {
+            close(tcp_connected_fds[i]);
+
+            // Mark the socket as destructed
+            tcp_connected_fds[i] = -1;
         }
-        FD_SET(inotify_fd, &rfds);
-        if (inotify_fd >= highest_fd) {
-            highest_fd = inotify_fd;
+    }
+
+    for (int i = 0; i < ARRAY_SIZE(udp_comm_fds); i++) {
+        close(udp_comm_fds[i]);
+    }
+
+    return 0;
+}
+
+// Flags so we only print error messages once
+static uint_fast8_t max_connections_exceeded_printed = 0;
+static uint_fast8_t unspecified_accept4_error_printed = 0;
+
+void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
+
+    // The first unused location in tcp_connected_fds
+    // Used for store a new TCP connection
+    int new_connected_i = -1;
+
+    for(size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        if(tcp_connected_fds[i] == -1) {
+            new_connected_i = i;
+            break;
+        }
+    }
+
+    // The array does not have space for new sockets
+    if(new_connected_i == -1) {
+        if(!max_connections_exceeded_printed) {
+            max_connections_exceeded_printed = 1;
+            PRINT(ERROR, "The TCP connection limit of %lu has been reached, no more can be created\n");
+        }
+    // Accept new socket if the array has space
+    } else {
+        // Accept the next request for a TCP connection
+        tcp_connected_fds[new_connected_i] = accept4(tcp_listener_fd, NULL, NULL, 0);
+
+        // If the attempt at accepting failed with an issue other than that there were no requests
+        if(tcp_connected_fds[new_connected_i] < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            if(!unspecified_accept4_error_printed) {
+                unspecified_accept4_error_printed = 1;
+                PRINT(ERROR, "Failed to accept new TCP socket request: %s\n", strerror(errno));
+            }
+        } else if(tcp_connected_fds[new_connected_i] < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            // Do nothing, there was no request for a new socket
+        } else {
+            // The accept request was successful, no further action required for creating the socket
+        }
+    }
+
+    // Creating new connected sockets is done, now we move onto servicing connected sockets
+
+    // Buffer to store the received packet and the response
+    uint8_t packet[UDP_PAYLOAD_LEN];
+
+    for(size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        // This socket has not been created yet, move on to the next one
+        if(tcp_connected_fds[i] == -1) {
+            continue;
         }
 
-        ret = select(highest_fd + 1, &rfds, NULL, NULL, NULL);
+        // Clear the packet buffer to reduce the change of unspecified behaviour
+        memset(packet, 0, sizeof(packet));
 
-        switch (ret) {
+        // Receive the command packet
+        ssize_t data_received = recv(tcp_connected_fds[i], packet, UDP_PAYLOAD_LEN, 0);
 
-        case 0:
-        case -1:
+        // recv failed
+        if(data_received < 0) {
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                // No packet has been received
+                // Non-blocking mode was enabled by SOCK_NONBLOCK
+                continue;
 
-            if (0 == ret) {
-                // Timeout has expired (although we have provided no timeout)
-                PRINT(VERBOSE, "select timed-out\n");
-            } else {
-                PRINT(VERBOSE, "select failed on fd %d: %s (%d)\n", -1,
-                      strerror(errno), errno);
+            } else if(errno == ECONNRESET) {
+                // The client forcefully close the connection
+                // This is not an issue on the server side but indicates somthing went wrong in the client
+                PRINT(ERROR, "The TCP management connection was forcefully closed by the client\n");
+
+                // Close the connection
+                close(tcp_connected_fds[i]);
+                // Clear the file descriptor of connection
+                tcp_connected_fds[i] = -1;
+
+                continue;
+
+            }else {
+                PRINT(ERROR, "Failed to receive TCP packet with error code: %s\n", strerror(errno));
+                // Close the connection
+                close(tcp_connected_fds[i]);
+                // Clear the file descriptor of connection
+                tcp_connected_fds[i] = -1;
+
+                continue;
+
             }
+        } else if(data_received == 0) {
+            PRINT(VERBOSE, "The management TCP connection was gracefully closed by the client\n");
+
+            // Close our side of the connection
+            close(tcp_connected_fds[i]);
+            // Clear the file descriptor of connection
+            tcp_connected_fds[i] = -1;
 
             continue;
-            break;
+
+        }
+
+        // Struct to store the command in
+        cmd_t cmd;
+        memset(&cmd, 0, sizeof(cmd));
+
+        int parse_error = parse_cmd(&cmd, packet);
+        if(parse_error != RETURN_SUCCESS) {
+            // Print the error code. The code is on defined in the server, not widely used UNIX code
+            PRINT(ERROR, "Failed to parse command with (server) error code: %i\n", parse_error);
+        }
+
+        int property_action_r;
+
+        // Carry out the command
+        if (cmd.op == OP_GET) {
+            property_action_r = get_property(cmd.prop, cmd.data, MAX_PROP_LEN);
+        } else if(cmd.op == OP_SET) {
+            property_action_r = set_property(cmd.prop, cmd.data);
+        } else {
+            property_action_r = RETURN_ERROR;
+            // This should be impossible with a packet that passed parsing
+            PRINT(ERROR, "Unrecognized command\n");
+        }
+
+        if(property_action_r != RETURN_SUCCESS) {
+            cmd.status = CMD_ERROR;
+        } else {
+            cmd.status = CMD_SUCCESS;
+        }
+
+        // Create the reply packet
+        build_cmd(&cmd, packet, UDP_PAYLOAD_LEN);
+
+        size_t reply_size = strnlen((char *)packet, UDP_PAYLOAD_LEN);
+
+        // Reply to the host with the new status code
+        ssize_t data_sent = send(tcp_connected_fds[i], packet, reply_size, 0);
+
+        if(data_sent < 0) {
+            PRINT(ERROR, "Failed to send packet with error  %s. Closing the connection\n", strerror(errno));
+
+            // Close the connection
+            close(tcp_connected_fds[i]);
+            // Mark the file descriptor as no longer in use
+            tcp_connected_fds[i] = -1;
+
+        } else if(data_sent == 0) {
+            PRINT(ERROR, "0 bytes sent when replying over TCP\n");
+
+        } else if(data_sent != reply_size) {
+            PRINT(ERROR, "TCP attempted to send reply of size %lu but sent %lu\n", data_sent, reply_size);
+        }
+    }
+}
+
+void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length) {
+
+    // Set up read file descriptor set for select(2)
+    fd_set rfds;
+    FD_ZERO(&rfds);
+
+    int highest_fd = -1;
+    for (int i = 0; i < udp_comm_fds_length; i++) {
+        FD_SET(udp_comm_fds[i], &rfds);
+        if (udp_comm_fds[i] >= highest_fd) {
+            highest_fd = udp_comm_fds[i];
+        }
+    }
+
+    // Set timeout to 0 for nonblocking
+    struct timespec pselect_timeout;
+    pselect_timeout.tv_sec = 0;
+    pselect_timeout.tv_nsec = 0;
+
+    int udp_packets_to_service = pselect(highest_fd + 1, &rfds, NULL, NULL, &pselect_timeout, NULL);
+
+    // Buffer used for read/write
+    uint8_t buffer[UDP_PAYLOAD_LEN];
+
+    switch (udp_packets_to_service) {
+
+        case -1:
+            PRINT(ERROR, "pselect failed for UDP sockets: %s\n", strerror(errno));
+
+            return;
+
+        case 0:
+            // No requests have been received (timeout expired)
+            return;
 
         default:
-
             // Service other management requests
-            for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
+            for (int i = 0; i < udp_comm_fds_length; i++) {
 
-                if (!FD_ISSET(comm_fds[i], &rfds)) {
+                if (!FD_ISSET(udp_comm_fds[i], &rfds)) {
                     continue;
                 }
+
+                // Struct used to store where a packet was received from so it can be replied to
+                struct sockaddr_in sa;
+                socklen_t sa_len;
 
                 sa_len = sizeof(sa);
                 memset(buffer, 0, sizeof(buffer));
-                ret2 = recvfrom(comm_fds[i], buffer, sizeof(buffer) - 1, 0,
+                int recv_ret = recvfrom(udp_comm_fds[i], buffer, sizeof(buffer) - 1, 0,
                                 (struct sockaddr *)&sa, &sa_len);
-                if (ret2 < 0) {
+                if (recv_ret < 0) {
                     PRINT(ERROR, "recvfrom failed: %s (%d)\n", strerror(errno),
-                          errno);
-                    ret--;
+                            errno);
+                    udp_packets_to_service--;
                     continue;
                 }
+
+                cmd_t cmd = {0};
 
                 if (RETURN_SUCCESS != parse_cmd(&cmd, buffer)) {
 
                     PRINT(ERROR, "failed to parse command\n");
-                    ret--;
+                    udp_packets_to_service--;
                     continue;
                 }
 
@@ -291,19 +524,59 @@ system("systemd-notify --ready");
                 }
 
                 build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
-                ret2 = sendto(comm_fds[i], buffer, strlen((char *)buffer), 0,
-                              (struct sockaddr *)&sa, sa_len);
-                if (ret2 < 0) {
+                int send_ret = sendto(udp_comm_fds[i], buffer, strlen((char *)buffer), 0,
+                                (struct sockaddr *)&sa, sa_len);
+                if (send_ret < 0) {
                     PRINT(ERROR, "sendto failed: %s (%d)\n", strerror(errno),
-                          errno);
-                    ret--;
+                            errno);
+                    udp_packets_to_service--;
                     continue;
                 }
 
-                ret--;
+                udp_packets_to_service--;
             }
 
-            // Service inotify
+            if (0 != udp_packets_to_service) {
+                // Sanity check, this should only happen if we forget udp_packets_to_service-- before a continue
+                PRINT(ERROR, "Failed to parse: %i UDP requests\n", udp_packets_to_service);
+            }
+
+            return;
+    }
+}
+
+void service_file_requests(int save_profile, char* save_profile_path, int load_profile, char* load_profile_path) {
+
+    // Set up read file descriptor set for select(2)
+    fd_set rfds;
+    FD_ZERO(&rfds);
+
+    // File descriptor of the state tree
+    int inotify_fd = get_inotify_fd();
+
+    FD_SET(inotify_fd, &rfds);
+
+    // Set timeout to 0 for nonblocking
+    struct timespec pselect_timeout;
+    pselect_timeout.tv_sec = 0;
+    pselect_timeout.tv_nsec = 0;
+
+    int filesystem_service_ready = pselect(inotify_fd + 1, &rfds, NULL, NULL, &pselect_timeout, NULL);
+
+    switch (filesystem_service_ready) {
+
+        case -1:
+            PRINT(ERROR, "pselect failed for state tree request: %s\n", strerror(errno));
+
+            return;
+
+        case 0:
+            // No requests have been received (timeout expired)
+            return;
+
+        default:
+            // Service requests from the state tree
+
             if (FD_ISSET(inotify_fd, &rfds)) {
 
                 // Check if any files/properties have been modified through
@@ -321,22 +594,9 @@ system("systemd-notify --ready");
                     load_properties(load_profile_path);
                     load_profile = 0;
                 }
-
-                ret--;
-            }
-
-            if (0 != ret) {
-                // Sanity check: this should be zero after servicing fd's!!
-                PRINT(VERBOSE, "did not service all channels\n");
             }
 
             break;
-        }
     }
 
-    // Close the file descriptors
-    for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
-        close_udp_comm(comm_fds[i]);
-    }
-    return 0;
 }
