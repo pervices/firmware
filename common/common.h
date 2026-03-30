@@ -77,6 +77,10 @@
 #define PWR_HALF_ON 4
 #define PWR_ON 1
 
+// The port the host listens on for TCP connections
+#define TCP_LISTENER_PORT 42798
+#define TCP_LISTENER_PORT_S "42798"
+
 // Output data structure
 typedef struct outdata {
     uint8_t status; // status of the operation
