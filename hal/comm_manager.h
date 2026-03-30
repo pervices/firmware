@@ -33,6 +33,11 @@ int close_udp_comm(int fd);
 int recv_udp_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size);
 int send_udp_comm(int fd, uint8_t *data, uint16_t size);
 
+int init_tcp_comm(int *fd, in_port_t port);
+int close_tcp_comm(int fd);
+int recv_tcp_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size);
+int send_tcp_comm(int fd, uint8_t *data, uint16_t size);
+
 int init_uart_comm(int *fd, const char *dev, uint16_t options);
 int close_uart_comm(int fd);
 int recv_uart_comm(int fd, uint8_t *data, uint32_t *size, int32_t max_size);

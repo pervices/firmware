@@ -63,7 +63,12 @@ int main(int argc, char *argv[]) {
     char load_profile_path[MAX_PROP_LEN];
     char save_profile_path[MAX_PROP_LEN];
 
-    const int port_nums[] = {
+    // TCP management port
+    const int tcp_port_nums[] = {
+        42798
+    };
+
+    const int udp_port_nums[] = {
         /* UDP management port */
         42799,
         /* Crimson ports */
@@ -77,7 +82,14 @@ int main(int argc, char *argv[]) {
         42807,
     };
 
-    int comm_fds[ARRAY_SIZE(port_nums)];
+    // File descriptors for management sockets
+    int comm_fds[ARRAY_SIZE(tcp_port_nums) + ARRAY_SIZE(udp_port_nums)];
+
+    // TCP fds are stored at the start of the list
+    int* tcp_comm_fds = &comm_fds[0];
+
+    // UDP fds are stored after TCP fds
+    int* udp_comm_fds = &comm_fds[ARRAY_SIZE(tcp_port_nums)];
 
     extern int verbose;
     verbose = 0;
@@ -132,10 +144,20 @@ int main(int argc, char *argv[]) {
             options |= SERVER_DEBUG_OPT;
     }
 
-    // Initialize network communications for each port
-    for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
-        if (init_udp_comm(&(comm_fds[i]), port_nums[i]) < 0) {
-            PRINT(ERROR, "%s, cannot initialize network %s\n", __func__);
+    // Initialize network communications for TCP ports
+    for (i = 0; i < ARRAY_SIZE(tcp_port_nums); i++) {
+        int init_tcp_comm_r = init_tcp_comm(&tcp_comm_fds[i], tcp_port_nums[i]);
+        if (init_tcp_comm_r < 0) {
+            PRINT(ERROR, "Initializing TCP management socket failed with error code %s\n", strerror(errno));
+            return RETURN_ERROR_COMM_INIT;
+        }
+    }
+
+    // Initialize network communications for UDP ports
+    for (i = 0; i < ARRAY_SIZE(udp_port_nums); i++) {
+        int init_udp_comm_r = init_udp_comm(&udp_comm_fds[i], udp_port_nums[i]);
+        if (init_udp_comm_r < 0) {
+            PRINT(ERROR, "Initializing UDP management socket failed with error code %s\n", strerror(errno));
             return RETURN_ERROR_COMM_INIT;
         }
     }
@@ -221,7 +243,7 @@ system("systemd-notify --ready");
 
         // Set up read file descriptor set for select(2)
         FD_ZERO(&rfds);
-        for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
+        for (i = 0; i < ARRAY_SIZE(comm_fds); i++) {
             FD_SET(comm_fds[i], &rfds);
             if (comm_fds[i] >= highest_fd) {
                 highest_fd = comm_fds[i];
@@ -253,7 +275,7 @@ system("systemd-notify --ready");
         default:
 
             // Service other management requests
-            for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
+            for (i = 0; i < ARRAY_SIZE(comm_fds); i++) {
 
                 if (!FD_ISSET(comm_fds[i], &rfds)) {
                     continue;
@@ -334,9 +356,14 @@ system("systemd-notify --ready");
         }
     }
 
-    // Close the file descriptors
-    for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
-        close_udp_comm(comm_fds[i]);
+    // TCP
+    for (i = 0; i < ARRAY_SIZE(tcp_port_nums); i++) {
+        close_tcp_comm(tcp_comm_fds[i]);
+    }
+
+    // Close the UDP file descriptors
+    for (i = 0; i < ARRAY_SIZE(udp_port_nums); i++) {
+        close_udp_comm(udp_comm_fds[i]);
     }
     return 0;
 }
