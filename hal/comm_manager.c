@@ -47,19 +47,12 @@ int init_udp_comm(int *fd, in_port_t port) {
 
     ret = establish_udp_connection(&mydev, port);
     if (ret < 0) {
-        close_udp_comm(*fd);
+        close(*fd);
     }
 
     *fd = mydev.sockfd;
 
     return ret;
-}
-
-int close_udp_comm(int fd) {
-
-    close(fd);
-
-    return RETURN_SUCCESS;
 }
 
 /**************************************

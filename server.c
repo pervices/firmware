@@ -356,14 +356,10 @@ system("systemd-notify --ready");
         }
     }
 
-    // TCP
-    for (i = 0; i < ARRAY_SIZE(tcp_port_nums); i++) {
-        close_tcp_comm(tcp_comm_fds[i]);
+    // Close network sockets
+    for (i = 0; i < ARRAY_SIZE(comm_fds); i++) {
+        close(comm_fds[i]);
     }
 
-    // Close the UDP file descriptors
-    for (i = 0; i < ARRAY_SIZE(udp_port_nums); i++) {
-        close_udp_comm(udp_comm_fds[i]);
-    }
     return 0;
 }
