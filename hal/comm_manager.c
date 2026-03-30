@@ -20,6 +20,7 @@
 #include "udp.h"
 #include <sys/file.h>
 #include <math.h>
+#include <sys/socket.h>
 
 #if defined(VAUNT) || defined(AVERY)
     #define MAX_DEVICES 32
@@ -47,7 +48,7 @@ int init_udp_comm(int *fd, in_port_t port) {
 
     ret = establish_udp_connection(&mydev, port);
     if (ret < 0) {
-        close_udp_comm(*fd);
+        close(*fd);
     }
 
     *fd = mydev.sockfd;
@@ -55,9 +56,31 @@ int init_udp_comm(int *fd, in_port_t port) {
     return ret;
 }
 
-int close_udp_comm(int fd) {
+int init_tcp_comm(int *fd, in_port_t port, int flags) {
 
-    close(fd);
+    // Create an ipv4 TCP socket
+    *fd = socket(AF_INET, SOCK_STREAM | flags, /* Protocol */ 0);
+
+    if(*fd < 0) {
+        PRINT(ERROR, "Failed to create ipv4 TCP socket: %s\n", strerror(errno));
+        return -errno;
+    }
+
+    // Struct to store the host address
+    struct sockaddr_in server_address;
+    // ipv4
+    server_address.sin_family = AF_INET;
+    // Any IP address
+    server_address.sin_addr.s_addr = htonl(INADDR_ANY);
+    server_address.sin_port = htons(port);
+
+    // Bind to the specified port
+    int bind_r = bind(*fd, (struct sockaddr*) &server_address, sizeof(server_address));
+
+    if(bind_r < 0) {
+        PRINT(ERROR, "Failed to bind ipv4 TCP socket: %s\n", strerror(errno));
+        return -errno;
+    }
 
     return RETURN_SUCCESS;
 }
