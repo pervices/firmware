@@ -6656,6 +6656,8 @@ static int hdlr_debug_feedback_latched_FpgaRefPllUnlocked(const char *data, char
     return RETURN_SUCCESS;
 }
 
+// The size of the buffer in samples
+// Be aware that packet headers are stored separately. Said header buffer will overflow with to many very small packets
 static int hdlr_system_get_max_buffer_level(const char *data, char *ret) {
     uint32_t max_buffer_level = 0;
     read_hps_reg("res_ro14", &max_buffer_level);
@@ -6664,6 +6666,9 @@ static int hdlr_system_get_max_buffer_level(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+// The number to multiply buffer level readings by
+// When using res_ro4/5/6/7 or buffer level requests over the SFP ports, multiply the value by this number
+// This exists because the buffer level packets do not have enough space to store the full level
 static int hdlr_system_get_buffer_level_multiple(const char *data, char *ret) {
     uint32_t buffer_level_multiple = 0;
     read_hps_reg("res_ro15", &buffer_level_multiple);
