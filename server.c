@@ -79,8 +79,6 @@ int main(int argc, char *argv[]) {
 
     int comm_fds[ARRAY_SIZE(port_nums)];
 
-    const char *const enet_dev = "eth0";
-
     extern int verbose;
     verbose = 0;
 
@@ -136,9 +134,8 @@ int main(int argc, char *argv[]) {
 
     // Initialize network communications for each port
     for (i = 0; i < ARRAY_SIZE(port_nums); i++) {
-        if (init_udp_comm(&(comm_fds[i]), enet_dev, port_nums[i], 0) < 0) {
-            PRINT(ERROR, "%s, cannot initialize network %s\n", __func__,
-                  enet_dev);
+        if (init_udp_comm(&(comm_fds[i]), port_nums[i]) < 0) {
+            PRINT(ERROR, "%s, cannot initialize network %s\n", __func__);
             return RETURN_ERROR_COMM_INIT;
         }
     }

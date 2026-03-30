@@ -28,7 +28,7 @@
 
 #define UDP_PAYLOAD_LEN 1472
 
-int init_udp_comm(int *fd, const char *dev, in_port_t port, uint16_t options);
+int init_udp_comm(int *fd, in_port_t port);
 int close_udp_comm(int fd);
 int recv_udp_comm(int fd, uint8_t *data, uint16_t *size, uint16_t max_size);
 int send_udp_comm(int fd, uint8_t *data, uint16_t size);

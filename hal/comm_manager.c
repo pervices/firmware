@@ -35,7 +35,7 @@
  * UDP Driver Manager
  **************************************/
 
-int init_udp_comm(int *fd, const char *dev, in_port_t port, uint16_t options) {
+int init_udp_comm(int *fd, in_port_t port) {
     int ret = RETURN_SUCCESS;
 
     // Allocate space for udp device
