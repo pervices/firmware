@@ -69,17 +69,17 @@ int main(int argc, char *argv[]) {
     };
 
     const int udp_port_nums[] = {
-        /* UDP management port */
-        42799,
-        /* Crimson ports */
-        42800,
-        42801,
-        42802,
-        42803,
-        42804,
-        42805,
-        42806,
-        42807,
+        // /* UDP management port */
+        // 42799,
+        // /* Crimson ports */
+        // 42800,
+        // 42801,
+        // 42802,
+        // 42803,
+        // 42804,
+        // 42805,
+        // 42806,
+        // 42807,
     };
 
     // File descriptors for management sockets
@@ -289,14 +289,16 @@ system("systemd-notify --ready");
                     PRINT(ERROR, "recvfrom failed: %s (%d)\n", strerror(errno),
                           errno);
                     ret--;
-                    continue;
+                    return -1;
+                    // continue;
                 }
 
                 if (RETURN_SUCCESS != parse_cmd(&cmd, buffer)) {
 
                     PRINT(ERROR, "failed to parse command\n");
                     ret--;
-                    continue;
+                    return -1;
+                    // continue;
                 }
 
                 cmd.status = CMD_SUCCESS;
