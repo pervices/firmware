@@ -29,15 +29,15 @@
 #define UDP_PAYLOAD_LEN 1472
 
 /**
- * Initializes a tcp server socket
+ * Initializes a UDP server socket
  * @param fd Where to store the file descriptor for the new TCP socket
  * @param port The port for the new socket to use
  * @return Return 0 on success. Return negative value on failure. TODO:return -errno of the last operation
  */
-int init_tcp_comm(int *fd, in_port_t port);
+int init_udp_comm(int *fd, in_port_t port);
 
 /**
- * Initializes a tcp server socket
+ * Initializes a TCP server socket
  * @param fd Where to store the file descriptor for the new TCP socket
  * @param port The port for the new socket to use
  * @return Return 0 on success. On failure return -errno of the last operation
