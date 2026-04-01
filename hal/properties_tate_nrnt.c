@@ -2039,6 +2039,21 @@ int check_time_pll(int ch) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_ignore_ts_in_burst(const char *data, char *ret) {\
+        /* when tx<ch>6[19] is high: FPGA uses the timestamp only from start of burst packets, rather than from every packet*/\
+        int ignore;\
+        uint32_t wr_val = 0;\
+        sscanf(data, "%i", &ignore);\
+        if(ignore) {\
+            wr_val = 1 << 19;\
+            strcpy(ret, "1");\
+        } else {\
+            strcpy(ret, "0");\
+        }\
+        write_hps_reg_mask("tx" STR(ch) "6", wr_val, 1 << 19);\
+        return RETURN_SUCCESS;\
+    }\
+    \
     /*Interface for checking the fifo of every channel. Currently only ch0 is used*/\
     static int hdlr_tx_##ch##_qa_fifo_lvl(const char *data, char *ret) {    \
         uint32_t lvl;                                                          \
@@ -6952,6 +6967,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iq_swap"             , hdlr_tx_##_c##_link_iq_swap,            RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/link/ignore_ts_in_burst"  , hdlr_tx_##_c##_ignore_ts_in_burst,      RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", SP, #_c)         \
