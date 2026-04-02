@@ -40,9 +40,10 @@ int init_udp_comm(int *fd, in_port_t port);
  * Initializes a TCP server socket
  * @param fd Where to store the file descriptor for the new TCP socket
  * @param port The port for the new socket to use
+ * @param flags Flags to be passed to socket(2)
  * @return Return 0 on success. On failure return -errno of the last operation
  */
-int init_tcp_comm(int *fd, in_port_t port);
+int init_tcp_comm(int *fd, in_port_t port, int flags);
 
 int init_uart_comm(int *fd, const char *dev, uint16_t options);
 int close_uart_comm(int fd);

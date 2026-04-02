@@ -56,10 +56,10 @@ int init_udp_comm(int *fd, in_port_t port) {
     return ret;
 }
 
-int init_tcp_comm(int *fd, in_port_t port) {
+int init_tcp_comm(int *fd, in_port_t port, int flags) {
 
     // Create an ipv4 TCP socket
-    *fd = socket(AF_INET, SOCK_STREAM, 0);
+    *fd = socket(AF_INET, SOCK_STREAM, /* Protocol */ 0 | /* Flags */ flags);
 
     if(*fd < 0) {
         PRINT(ERROR, "Failed to create ipv4 TCP socket: %s\n", strerror(errno));

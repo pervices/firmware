@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// Exposes accept4
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -48,6 +51,17 @@
 #endif
 
 #include "hal/utils/print_version.h"
+
+// Maximum number of TCP connections the server support
+// Usually at most 2 are needed at once, but the limit is large in case a customer is doing something stupid
+static const int MAX_TCP_CONNECTIONS = 256;
+
+/**
+ * Processes tcp connection requests and messages
+ * @param tcp_listener_fd The socket clients connect to
+ * @param tcp_connected_fds An array of connected sockets of size MAX_TCP_CONNECTIONS. -1 Is used to indicate sockets not yet created
+ */
+void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds);
 
 /**
  * Services UDP messages
@@ -92,6 +106,14 @@ int main(int argc, char *argv[]) {
 
     // File descriptor of the listener used to start TCP connections
     int tcp_listener_fd = -1;
+
+    // File descriptors of connected tcp sockets
+    int tcp_connected_fds[MAX_TCP_CONNECTIONS];
+
+    for(size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        // -1 indicates the socket has not been created yet
+        tcp_connected_fds[i] = -1;
+    }
 
     // UDP fds are stored after TCP fds
     int udp_comm_fds[ARRAY_SIZE(udp_port_nums)];
@@ -149,9 +171,15 @@ int main(int argc, char *argv[]) {
     }
 
     // Initialize network communications for TCP ports
-    int init_tcp_comm_r = init_tcp_comm(&tcp_listener_fd, tcp_listener_port);
+    int init_tcp_comm_r = init_tcp_comm(&tcp_listener_fd, tcp_listener_port, SOCK_NONBLOCK);
     if (init_tcp_comm_r < 0) {
         PRINT(ERROR, "Initializing TCP management socket failed with error code %s\n", strerror(errno));
+        return RETURN_ERROR_COMM_INIT;
+    }
+    // Set the socket to be a listener
+    int listen_r = listen(tcp_listener_fd, /*backlog */ 64);
+    if(listen_r < 0) {
+        PRINT(ERROR, "Failed to set TCP socket as a listener: %s\n", strerror(errno));
         return RETURN_ERROR_COMM_INIT;
     }
 
@@ -232,6 +260,8 @@ system("systemd-notify --ready");
 
     // Main loop, look for commands, if exists, service it and respond
     for (;;) {
+        service_tcp_requests(tcp_listener_fd, tcp_connected_fds);
+
         service_udp_requests(udp_comm_fds, ARRAY_SIZE(udp_port_nums), save_profile, save_profile_path, load_profile, load_profile_path);
 
         // TODO service TCP requests
@@ -245,6 +275,61 @@ system("systemd-notify --ready");
     }
 
     return 0;
+}
+
+// Flags so we only print error messages once
+static uint_fast8_t max_connections_exceeded_printed = 0;
+static uint_fast8_t unspecified_accept4_error_printed = 0;
+
+void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
+
+    // The first unused location in tcp_connected_fds
+    // Used for store a new TCP connection
+    int new_connected_i = -1;
+
+    for(size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        if(tcp_connected_fds[i] == -1) {
+            new_connected_i = i;
+            break;
+        }
+    }
+
+    // The array does not have space for new sockets
+    if(new_connected_i == -1) {
+        if(!max_connections_exceeded_printed) {
+            max_connections_exceeded_printed = 1;
+            PRINT(ERROR, "The TCP connection limit of %lu has been reached, no more can be created\n");
+        }
+    // Accept new socket if the array has space
+    } else {
+        // Accept the next request for a TCP connection
+        // SOCK_NONBLOCK applies to the new socket, to the new socket, not this opperation
+        tcp_connected_fds[new_connected_i] = accept4(tcp_listener_fd, NULL, NULL, SOCK_NONBLOCK);
+
+        // If the attempt at accepting failed with an issue other than that there were no requests
+        if(tcp_connected_fds[new_connected_i] < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            if(!unspecified_accept4_error_printed) {
+                unspecified_accept4_error_printed = 1;
+                PRINT(ERROR, "Failed to accept new TCP socket request: %s\n", strerror(errno));
+            }
+        } else if(tcp_connected_fds[new_connected_i] < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            // Do nothing, there was no request for a new socket
+        } else {
+            // The accept request was successful, no further action required for creating the socket
+        }
+    }
+
+    // Creating new connected sockets is done, now we move onto servicing connected sockets
+
+    for(size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        // This socket has not been created yet, move on to the next one
+        if(tcp_connected_fds[i] == -1) {
+            continue;
+        }
+
+        // TODO: process packets
+
+    }
 }
 
 void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_profile, char* save_profile_path, int load_profile, char* load_profile_path) {
