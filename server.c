@@ -171,6 +171,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Initialize network communications for TCP ports
+    // SOCK_NONBLOCK mean's we don't need to rely on select
     int init_tcp_comm_r = init_tcp_comm(&tcp_listener_fd, tcp_listener_port, SOCK_NONBLOCK);
     if (init_tcp_comm_r < 0) {
         PRINT(ERROR, "Initializing TCP management socket failed with error code %s\n", strerror(errno));
