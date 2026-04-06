@@ -91,17 +91,17 @@ int main(int argc, char *argv[]) {
     const int tcp_listener_port = 42798;
 
     const int udp_port_nums[] = {
-        // /* UDP management port */
-        // 42799,
-        // /* Crimson ports */
-        // 42800,
-        // 42801,
-        // 42802,
-        // 42803,
-        // 42804,
-        // 42805,
-        // 42806,
-        // 42807,
+        /* UDP management port */
+        42799,
+        /* Crimson ports */
+        42800,
+        42801,
+        42802,
+        42803,
+        42804,
+        42805,
+        42806,
+        42807,
     };
 
     // File descriptor of the listener used to start TCP connections
