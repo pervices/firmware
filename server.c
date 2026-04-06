@@ -355,6 +355,7 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
     }
 
     // TODO: rename select_r to something better
+    // TODO: replace select with something non-blocking
     int select_r = select(highest_fd + 1, &rfds, NULL, NULL, NULL);
 
     // Buffer used for read/write
