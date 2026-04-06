@@ -261,11 +261,13 @@ system("systemd-notify --ready");
 
     // Main loop, look for commands, if exists, service it and respond
     for (;;) {
+        PRINT(ERROR, "T1\n");
         service_tcp_requests(tcp_listener_fd, tcp_connected_fds);
+        PRINT(ERROR, "T2\n");
 
         service_udp_requests(udp_comm_fds, ARRAY_SIZE(udp_port_nums), save_profile, save_profile_path, load_profile, load_profile_path);
 
-        // TODO service TCP requests
+        PRINT(ERROR, "T3\n");
     }
 
     // Close network sockets
@@ -334,6 +336,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
 }
 
 void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_profile, char* save_profile_path, int load_profile, char* load_profile_path) {
+    PRINT(ERROR, "A1\n");
 
     // Set up read file descriptor set for select(2)
     fd_set rfds;
@@ -347,6 +350,8 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
         }
     }
 
+    PRINT(ERROR, "A5\n");
+
     int inotify_fd = get_inotify_fd();
 
     FD_SET(inotify_fd, &rfds);
@@ -356,6 +361,8 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
 
     // TODO: rename select_r to something better
     int select_r = select(highest_fd + 1, &rfds, NULL, NULL, NULL);
+
+    PRINT(ERROR, "A10\n");
 
     // Buffer used for read/write
     uint8_t buffer[UDP_PAYLOAD_LEN];
@@ -463,4 +470,6 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
 
             break;
     }
+
+    PRINT(ERROR, "A25\n");
 }
