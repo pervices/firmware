@@ -354,9 +354,13 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
         highest_fd = inotify_fd;
     }
 
+    // Set timeout to 0 for nonblocking
+    struct timespec pselect_timeout;
+    pselect_timeout.tv_sec = 0;
+    pselect_timeout.tv_nsec = 0;
+
     // TODO: rename select_r to something better
-    // TODO: replace select with something non-blocking
-    int select_r = select(highest_fd + 1, &rfds, NULL, NULL, NULL);
+    int select_r = pselect(highest_fd + 1, &rfds, NULL, NULL, &pselect_timeout, NULL);
 
     // Buffer used for read/write
     uint8_t buffer[UDP_PAYLOAD_LEN];
