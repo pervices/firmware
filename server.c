@@ -344,6 +344,8 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
 
     int highest_fd = -1;
     for (int i = 0; i < udp_comm_fds_length; i++) {
+        PRINT(ERROR, "udp_comm_fds[%i]: %i\n", i, udp_comm_fds[i]);
+
         FD_SET(udp_comm_fds[i], &rfds);
         if (udp_comm_fds[i] >= highest_fd) {
             highest_fd = udp_comm_fds[i];
@@ -354,10 +356,14 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
 
     int inotify_fd = get_inotify_fd();
 
+    PRINT(ERROR, "A6\n");
+
     FD_SET(inotify_fd, &rfds);
     if (inotify_fd >= highest_fd) {
         highest_fd = inotify_fd;
     }
+
+     PRINT(ERROR, "A9\n");
 
     // TODO: rename select_r to something better
     int select_r = select(highest_fd + 1, &rfds, NULL, NULL, NULL);
