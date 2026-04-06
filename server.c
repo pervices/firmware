@@ -68,12 +68,17 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds);
  * This is a helper function to make the code more readable
  * @param udp_comm_fds An array of the file descriptors of the UDP sockets to process
  * @param udp_comm_fds_length The number of elements in udp_comm_fds
+ */
+void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_profile, char* save_profile_path, int load_profile, char* load_profile_path);
+
+/**
+ * Services requests sent via the state tree
  * @param save_profile TODO: figure out what profile is
  * @param save_profile_path TODO: figure out what profile is
  * @param load_profile TODO: figure out what profile is
  * @param load_profile_path TODO: figure out what profile is
  */
-void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_profile, char* save_profile_path, int load_profile, char* load_profile_path);
+void service_file_requests(int save_profile, char* save_profile_path, int load_profile, char* load_profile_path);
 
 int main(int argc, char *argv[]) {
 
@@ -265,7 +270,7 @@ system("systemd-notify --ready");
 
         service_udp_requests(udp_comm_fds, ARRAY_SIZE(udp_port_nums), save_profile, save_profile_path, load_profile, load_profile_path);
 
-        // TODO service TCP requests
+        service_file_requests(save_profile, save_profile_path, load_profile, load_profile_path);
     }
 
     // Close network sockets
@@ -367,18 +372,14 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
 
     switch (select_r) {
 
-        case 0:
         case -1:
-
-            if (0 == select_r) {
-                // Timeout has expired (although we have provided no timeout)
-                PRINT(VERBOSE, "select timed-out\n");
-            } else {
-                PRINT(VERBOSE, "select failed on fd %d: %s (%d)\n", -1,
-                        strerror(errno), errno);
-            }
+            PRINT(ERROR, "pselect failed for UDP sockets: %s\n", strerror(errno));
 
             return;
+            break;
+
+        case 0:
+            // No requests have been received (timeout expired)
             break;
 
         default:
@@ -439,6 +440,8 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
                 select_r--;
             }
 
+            // TODO: move servicing inotify to service_file_requests
+
             // Service inotify
             if (FD_ISSET(inotify_fd, &rfds)) {
 
@@ -468,4 +471,8 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
 
             break;
     }
+}
+
+void service_file_requests(int save_profile, char* save_profile_path, int load_profile, char* load_profile_path) {
+
 }
