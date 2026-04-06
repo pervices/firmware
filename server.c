@@ -69,7 +69,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds);
  * @param udp_comm_fds An array of the file descriptors of the UDP sockets to process
  * @param udp_comm_fds_length The number of elements in udp_comm_fds
  */
-void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_profile, char* save_profile_path, int load_profile, char* load_profile_path);
+void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length);
 
 /**
  * Services requests sent via the state tree
@@ -268,7 +268,7 @@ system("systemd-notify --ready");
     for (;;) {
         service_tcp_requests(tcp_listener_fd, tcp_connected_fds);
 
-        service_udp_requests(udp_comm_fds, ARRAY_SIZE(udp_port_nums), save_profile, save_profile_path, load_profile, load_profile_path);
+        service_udp_requests(udp_comm_fds, ARRAY_SIZE(udp_port_nums));
 
         service_file_requests(save_profile, save_profile_path, load_profile, load_profile_path);
     }
@@ -338,7 +338,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
     }
 }
 
-void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_profile, char* save_profile_path, int load_profile, char* load_profile_path) {
+void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length) {
 
     // Set up read file descriptor set for select(2)
     fd_set rfds;
@@ -352,35 +352,26 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
         }
     }
 
-    int inotify_fd = get_inotify_fd();
-
-    FD_SET(inotify_fd, &rfds);
-    if (inotify_fd >= highest_fd) {
-        highest_fd = inotify_fd;
-    }
-
     // Set timeout to 0 for nonblocking
     struct timespec pselect_timeout;
     pselect_timeout.tv_sec = 0;
     pselect_timeout.tv_nsec = 0;
 
-    // TODO: rename select_r to something better
-    int select_r = pselect(highest_fd + 1, &rfds, NULL, NULL, &pselect_timeout, NULL);
+    int udp_packets_to_service = pselect(highest_fd + 1, &rfds, NULL, NULL, &pselect_timeout, NULL);
 
     // Buffer used for read/write
     uint8_t buffer[UDP_PAYLOAD_LEN];
 
-    switch (select_r) {
+    switch (udp_packets_to_service) {
 
         case -1:
             PRINT(ERROR, "pselect failed for UDP sockets: %s\n", strerror(errno));
 
             return;
-            break;
 
         case 0:
             // No requests have been received (timeout expired)
-            break;
+            return;
 
         default:
             // Service other management requests
@@ -401,8 +392,8 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
                 if (recv_ret < 0) {
                     PRINT(ERROR, "recvfrom failed: %s (%d)\n", strerror(errno),
                             errno);
-                    select_r--;
-                    // continue;
+                    udp_packets_to_service--;
+                    continue;
                 }
 
                 cmd_t cmd = {0};
@@ -410,8 +401,8 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
                 if (RETURN_SUCCESS != parse_cmd(&cmd, buffer)) {
 
                     PRINT(ERROR, "failed to parse command\n");
-                    select_r--;
-                    // continue;
+                    udp_packets_to_service--;
+                    continue;
                 }
 
                 cmd.status = CMD_SUCCESS;
@@ -433,16 +424,57 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
                 if (send_ret < 0) {
                     PRINT(ERROR, "sendto failed: %s (%d)\n", strerror(errno),
                             errno);
-                    select_r--;
+                    udp_packets_to_service--;
                     continue;
                 }
 
-                select_r--;
+                udp_packets_to_service--;
             }
 
-            // TODO: move servicing inotify to service_file_requests
+            if (0 != udp_packets_to_service) {
+                // Sanity check, this should only happen if we forget udp_packets_to_service-- before a continue
+                PRINT(ERROR, "Failed to parse: %i UDP requests\n", udp_packets_to_service);
+            }
 
-            // Service inotify
+            return;
+    }
+}
+
+void service_file_requests(int save_profile, char* save_profile_path, int load_profile, char* load_profile_path) {
+
+    // Set up read file descriptor set for select(2)
+    fd_set rfds;
+    FD_ZERO(&rfds);
+
+    // File descriptor of the state tree
+    int inotify_fd = get_inotify_fd();
+
+    FD_SET(inotify_fd, &rfds);
+
+    // Set timeout to 0 for nonblocking
+    struct timespec pselect_timeout;
+    pselect_timeout.tv_sec = 0;
+    pselect_timeout.tv_nsec = 0;
+
+    int filesystem_service_ready = pselect(inotify_fd + 1, &rfds, NULL, NULL, &pselect_timeout, NULL);
+
+    // Buffer used for read/write
+    uint8_t buffer[UDP_PAYLOAD_LEN];
+
+    switch (filesystem_service_ready) {
+
+        case -1:
+            PRINT(ERROR, "pselect failed for state tree request: %s\n", strerror(errno));
+
+            return;
+
+        case 0:
+            // No requests have been received (timeout expired)
+            return;
+
+        default:
+            // Service requests from the state tree
+
             if (FD_ISSET(inotify_fd, &rfds)) {
 
                 // Check if any files/properties have been modified through
@@ -460,19 +492,9 @@ void service_udp_requests(int* udp_comm_fds, int udp_comm_fds_length, int save_p
                     load_properties(load_profile_path);
                     load_profile = 0;
                 }
-
-                select_r--;
-            }
-
-            if (0 != select_r) {
-                // Sanity check: this should be zero after servicing fd's!!
-                PRINT(VERBOSE, "did not service all channels\n");
             }
 
             break;
     }
-}
-
-void service_file_requests(int save_profile, char* save_profile_path, int load_profile, char* load_profile_path) {
 
 }
