@@ -309,8 +309,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
     // Accept new socket if the array has space
     } else {
         // Accept the next request for a TCP connection
-        // SOCK_NONBLOCK applies to the new socket, to the new socket, not this opperation
-        tcp_connected_fds[new_connected_i] = accept4(tcp_listener_fd, NULL, NULL, SOCK_NONBLOCK);
+        tcp_connected_fds[new_connected_i] = accept4(tcp_listener_fd, NULL, NULL, 0);
 
         // If the attempt at accepting failed with an issue other than that there were no requests
         if(tcp_connected_fds[new_connected_i] < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -327,14 +326,83 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
 
     // Creating new connected sockets is done, now we move onto servicing connected sockets
 
+    // Buffer to store the received packet and the response
+    uint8_t packet[UDP_PAYLOAD_LEN];
+
     for(size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
         // This socket has not been created yet, move on to the next one
         if(tcp_connected_fds[i] == -1) {
             continue;
         }
 
-        // TODO: process packets
+        // Clear the packet buffer to reduce the change of unspecified behaviour
+        memset(packet, 0, sizeof(packet));
 
+        // TODO: confirm recvfrom and sendto are not needed for TCP to know where to send the reply to
+        // Receive the command packet
+        ssize_t data_received = recv(tcp_connected_fds[i], packet, UDP_PAYLOAD_LEN, MSG_DONTWAIT);
+
+        // recv failed
+        if(data_received < 0) {
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                // No packet has been received
+                continue;
+
+            } else {
+                // TODO: skip this error message for routine operations like the client closing the connection
+                PRINT(ERROR, "Failed to receive TCP packet with error code: %s\n", strerror(errno));
+                // Close the connection
+                close(tcp_connected_fds[i]);
+                // Clear the file descriptor of connection
+                tcp_connected_fds[i] = -1;
+
+                continue;
+            }
+        }
+
+        // Struct to store the command in
+        cmd_t cmd;
+        memset(&cmd, 0, sizeof(cmd));
+
+        int parse_error = parse_cmd(&cmd, packet);
+        if(parse_error != RETURN_SUCCESS) {
+            // Print the error code. The code is on defined in the server, not widely used UNIX code
+            PRINT(ERROR, "Failed to parse command with (server) error code: %i\n", parse_error);
+        }
+
+        int property_action_r;
+
+        // Carry out the command
+        if (cmd.op == OP_GET) {
+            property_action_r = get_property(cmd.prop, cmd.data, MAX_PROP_LEN);
+        } else if(cmd.op == OP_SET) {
+            property_action_r = set_property(cmd.prop, cmd.data);
+        } else {
+            property_action_r = RETURN_ERROR;
+            // This should be impossible with a packet that passed parsing
+            PRINT(ERROR, "Unrecognized command\n");
+        }
+
+        if(property_action_r != RETURN_SUCCESS) {
+            cmd.status = CMD_ERROR;
+        } else {
+            cmd.status = CMD_SUCCESS;
+        }
+
+        // Create the reply packet
+        build_cmd(&cmd, packet, UDP_PAYLOAD_LEN);
+        // Reply to the host with the new status code
+        ssize_t data_sent = send(tcp_connected_fds[i], packet, UDP_PAYLOAD_LEN, 0);
+
+        if(data_sent < 0) {
+            // TODO: skip error message for routine TCP operations like if the host close the program while we were processing the command
+            PRINT(ERROR, "Failed to send packet with error  %s. Closing the connection\n", strerror(errno));
+
+            // Close the connection
+            close(tcp_connected_fds[i]);
+            // Mark the file descriptor as no longer in use
+            tcp_connected_fds[i] = -1;
+        }
     }
 }
 
