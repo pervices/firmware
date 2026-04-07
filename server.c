@@ -458,9 +458,6 @@ void service_file_requests(int save_profile, char* save_profile_path, int load_p
 
     int filesystem_service_ready = pselect(inotify_fd + 1, &rfds, NULL, NULL, &pselect_timeout, NULL);
 
-    // Buffer used for read/write
-    uint8_t buffer[UDP_PAYLOAD_LEN];
-
     switch (filesystem_service_ready) {
 
         case -1:
