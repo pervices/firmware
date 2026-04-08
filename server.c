@@ -92,9 +92,6 @@ int main(int argc, char *argv[]) {
     char load_profile_path[MAX_PROP_LEN];
     char save_profile_path[MAX_PROP_LEN];
 
-    // The port the host listens on for TCP connections
-    const int tcp_listener_port = 42798;
-
     const int udp_port_nums[] = {
         /* UDP management port */
         42799,
@@ -177,7 +174,7 @@ int main(int argc, char *argv[]) {
 
     // Initialize network communications for TCP ports
     // SOCK_NONBLOCK mean's we don't need to rely on select
-    int init_tcp_comm_r = init_tcp_comm(&tcp_listener_fd, tcp_listener_port, SOCK_NONBLOCK);
+    int init_tcp_comm_r = init_tcp_comm(&tcp_listener_fd, TCP_LISTENER_PORT, SOCK_NONBLOCK);
     if (init_tcp_comm_r < 0) {
         PRINT(ERROR, "Initializing TCP management socket failed with error code %s\n", strerror(errno));
         return RETURN_ERROR_COMM_INIT;
