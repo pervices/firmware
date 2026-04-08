@@ -273,6 +273,16 @@ system("systemd-notify --ready");
     // Close network sockets
     close(tcp_listener_fd);
 
+    for (size_t i = 0; i < MAX_TCP_CONNECTIONS; i++) {
+        // Close established TCP connections
+        if(tcp_connected_fds[i] != -1) {
+            close(tcp_connected_fds[i]);
+
+            // Mark the socket as destructed
+            tcp_connected_fds[i] = -1;
+        }
+    }
+
     for (int i = 0; i < ARRAY_SIZE(udp_comm_fds); i++) {
         close(udp_comm_fds[i]);
     }
@@ -345,7 +355,16 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
                 // No packet has been received
                 continue;
 
-            } else {
+            } else if(errno == ECONNRESET) {
+                // The client forcefully close the connection
+                PRINT(ERROR, "The TCP connection was forcefully closed by the client\n");
+
+                // Close the connection
+                close(tcp_connected_fds[i]);
+                // Clear the file descriptor of connection
+                tcp_connected_fds[i] = -1;
+
+            }else {
                 // TODO: skip this error message for routine operations like the client closing the connection
                 PRINT(ERROR, "Failed to receive TCP packet with error code: %s\n", strerror(errno));
                 // Close the connection
@@ -355,6 +374,13 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
 
                 continue;
             }
+        } else if(data_received == 0) {
+            PRINT(VERBOSE, "The TCP connection was gracefully closed by the client\n");
+
+            // Close our side of the connection
+            close(tcp_connected_fds[i]);
+            // Clear the file descriptor of connection
+            tcp_connected_fds[i] = -1;
         }
 
         // Struct to store the command in
