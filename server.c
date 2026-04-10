@@ -409,8 +409,10 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
 
         // Carry out the command
         if (cmd.op == OP_GET) {
+            PRINT(ERROR, "GET\n");
             property_action_r = get_property(cmd.prop, cmd.data, MAX_PROP_LEN);
         } else if(cmd.op == OP_SET) {
+            PRINT(ERROR, "SET\n");
             property_action_r = set_property(cmd.prop, cmd.data);
         } else {
             property_action_r = RETURN_ERROR;
