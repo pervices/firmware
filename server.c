@@ -441,6 +441,8 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             close(tcp_connected_fds[i]);
             // Mark the file descriptor as no longer in use
             tcp_connected_fds[i] = -1;
+        } else if(data_sent == 0) {
+            PRINT(ERROR, "0 bytes sent over TCP, this should be impossible\n");
         }
     }
 }

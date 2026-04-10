@@ -97,8 +97,11 @@ out:
 
 // seq,status,[data]
 void build_cmd(cmd_t *cmd, uint8_t *data, size_t max_size) {
-    if (!cmd || !data)
+    if (!cmd || !data) {
+        // TODO: improve error detection and handling. Why does this function do nothing on nullptr?
+        PRINT(ERROR, "build_cmd given null pointer(s)\n");
         return;
+    }
 
     memset(data, 0, max_size);
     snprintf((char *)data, max_size, "%" PRIu32 ",%i,%s", cmd->seq, cmd->status,
