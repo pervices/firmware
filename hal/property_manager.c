@@ -543,12 +543,14 @@ int get_property(const char *prop, char *data, size_t max_len) {
 
     // check if valid property
     if (!temp) {
+        print(ERROR, "T1\n");
         PRINT(ERROR, "Property: %s does not exist\n", prop);
         return RETURN_ERROR_SET_PROP;
     }
 
     // check if WO property
     if (temp->permissions == WO) {
+        print(ERROR, "T2\n");
         return RETURN_ERROR_GET_PROP;
     }
 
