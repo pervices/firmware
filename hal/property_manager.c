@@ -538,23 +538,31 @@ int load_properties(const char *file) {
 
 // Standard get property
 int get_property(const char *prop, char *data, size_t max_len) {
+    PRINT(ERROR, "T0\n");
+
     char path[MAX_PATH_LEN];
     prop_t *temp = get_prop_from_cmd(prop);
 
+    PRINT(ERROR, "T1\n");
+
     // check if valid property
     if (!temp) {
-        PRINT(ERROR, "T1\n");
+        PRINT(ERROR, "T2A\n");
         PRINT(ERROR, "Property: %s does not exist\n", prop);
         return RETURN_ERROR_SET_PROP;
     }
 
     // check if WO property
     if (temp->permissions == WO) {
-        PRINT(ERROR, "T2\n");
+        PRINT(ERROR, "T2B\n");
         return RETURN_ERROR_GET_PROP;
     }
 
+    PRINT(ERROR, "T3\n");
+
     read_from_file(get_abs_path(temp, path, MAX_PATH_LEN), data, max_len);
+
+    PRINT(ERROR, "T4\n");
 
     return RETURN_SUCCESS;
 }
