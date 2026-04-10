@@ -365,6 +365,8 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
                 // Clear the file descriptor of connection
                 tcp_connected_fds[i] = -1;
 
+                continue;
+
             }else {
                 // TODO: skip this error message for routine operations like the client closing the connection
                 PRINT(ERROR, "Failed to receive TCP packet with error code: %s\n", strerror(errno));
@@ -374,6 +376,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
                 tcp_connected_fds[i] = -1;
 
                 continue;
+
             }
         } else if(data_received == 0) {
             PRINT(VERBOSE, "The TCP connection was gracefully closed by the client\n");
@@ -382,6 +385,9 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             close(tcp_connected_fds[i]);
             // Clear the file descriptor of connection
             tcp_connected_fds[i] = -1;
+
+            continue;
+
         }
 
         // Struct to store the command in
