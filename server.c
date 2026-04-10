@@ -430,8 +430,11 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
 
         // Create the reply packet
         build_cmd(&cmd, packet, UDP_PAYLOAD_LEN);
+
+        size_t reply_size = strnlen((char *)packet, UDP_PAYLOAD_LEN);
+
         // Reply to the host with the new status code
-        ssize_t data_sent = send(tcp_connected_fds[i], packet, UDP_PAYLOAD_LEN, 0);
+        ssize_t data_sent = send(tcp_connected_fds[i], packet, reply_size, 0);
 
         if(data_sent < 0) {
             // TODO: skip error message for routine TCP operations like if the host close the program while we were processing the command
@@ -442,7 +445,10 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             // Mark the file descriptor as no longer in use
             tcp_connected_fds[i] = -1;
         } else if(data_sent == 0) {
+            // TODO: finish error message
             PRINT(ERROR, "0 bytes sent over TCP, this should be impossible\n");
+        } else if(data_sent != reply_size) {
+            PRINT(ERROR, "TCP attempted to send reply of size %lu but sent %lu\n", data_sent, reply_size);
         }
     }
 }
