@@ -424,7 +424,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             PRINT(ERROR, "CMD_ERROR\n");
             cmd.status = CMD_ERROR;
         } else {
-            PRINT(ERROR, "CMD_ERROR\n");
+            PRINT(ERROR, "CMD_SUCCESS\n");
             cmd.status = CMD_SUCCESS;
         }
 
