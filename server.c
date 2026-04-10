@@ -394,6 +394,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             PRINT(ERROR, "Failed to parse command with (server) error code: %i\n", parse_error);
         }
 
+        PRINT(ERROR, "data_received: %li\n", data_received);
         PRINT(ERROR, "packet: %s\n", packet);
         PRINT(ERROR, "cmd.prop: %s\n", cmd.prop);
         PRINT(ERROR, "cmd.data %s\n", cmd.data);
