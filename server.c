@@ -357,6 +357,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
 
             } else if(errno == ECONNRESET) {
                 // The client forcefully close the connection
+                // This is not an issue on the server side but indicates somthing went wrong in the client
                 PRINT(ERROR, "The TCP connection was forcefully closed by the client\n");
 
                 // Close the connection
