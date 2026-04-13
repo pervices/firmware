@@ -368,7 +368,6 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
                 continue;
 
             }else {
-                // TODO: skip this error message for routine operations like the client closing the connection
                 PRINT(ERROR, "Failed to receive TCP packet with error code: %s\n", strerror(errno));
                 // Close the connection
                 close(tcp_connected_fds[i]);
@@ -379,7 +378,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
 
             }
         } else if(data_received == 0) {
-            PRINT(VERBOSE, "The TCP connection was gracefully closed by the client\n");
+            PRINT(VERBOSE, "The management TCP connection was gracefully closed by the client\n");
 
             // Close our side of the connection
             close(tcp_connected_fds[i]);
@@ -428,7 +427,6 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
         ssize_t data_sent = send(tcp_connected_fds[i], packet, reply_size, 0);
 
         if(data_sent < 0) {
-            // TODO: skip error message for routine TCP operations like if the host close the program while we were processing the command
             PRINT(ERROR, "Failed to send packet with error  %s. Closing the connection\n", strerror(errno));
 
             // Close the connection
@@ -437,8 +435,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             tcp_connected_fds[i] = -1;
 
         } else if(data_sent == 0) {
-            // TODO: finish error message
-            PRINT(ERROR, "0 bytes sent over TCP, this should be impossible\n");
+            PRINT(ERROR, "0 bytes sent when replying over TCP\n");
 
         } else if(data_sent != reply_size) {
             PRINT(ERROR, "TCP attempted to send reply of size %lu but sent %lu\n", data_sent, reply_size);
