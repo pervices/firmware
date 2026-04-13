@@ -5033,15 +5033,10 @@ prop_t *get_prop_from_cmd(const char *cmd) {
     char path[MAX_PATH_LEN];
     size_t i;
 
-    PRINT(ERROR, "A1\n");
-
     if (RETURN_SUCCESS ==
         resolve_symbolic_property_name(cmd, path, sizeof(path))) {
 
-        PRINT(ERROR, "A2A\n");
         cmd = path;
-    } else {
-        PRINT(ERROR, "A2B\n");
     }
 
     for (i = 0; i < num_properties; i++) {
@@ -5049,8 +5044,6 @@ prop_t *get_prop_from_cmd(const char *cmd) {
             (strlen(property_table[i].path) == strlen(cmd)))
             return (property_table + i);
     }
-
-    PRINT(ERROR, "A100\n");
 
     // no matching prop found
     return NULL;
