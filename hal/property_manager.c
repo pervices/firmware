@@ -543,6 +543,7 @@ int get_property(const char *prop, char *data, size_t max_len) {
 
     // check if valid property
     if (!temp) {
+        PRINT(ERROR, "Property: %s does not exist\n", prop);
         return RETURN_ERROR_SET_PROP;
     }
 

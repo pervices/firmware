@@ -346,12 +346,13 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
         memset(packet, 0, sizeof(packet));
 
         // Receive the command packet
-        ssize_t data_received = recv(tcp_connected_fds[i], packet, UDP_PAYLOAD_LEN, MSG_DONTWAIT);
+        ssize_t data_received = recv(tcp_connected_fds[i], packet, UDP_PAYLOAD_LEN, 0);
 
         // recv failed
         if(data_received < 0) {
             if(errno == EAGAIN || errno == EWOULDBLOCK) {
                 // No packet has been received
+                // Non-blocking mode was enabled by SOCK_NONBLOCK
                 continue;
 
             } else if(errno == ECONNRESET) {

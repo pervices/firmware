@@ -70,7 +70,6 @@ int init_tcp_comm(int *fd, in_port_t port, int flags) {
     struct sockaddr_in server_address;
     // ipv4
     server_address.sin_family = AF_INET;
-    // Any IP address
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     server_address.sin_port = htons(port);
 
