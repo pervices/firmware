@@ -345,7 +345,6 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
         // Clear the packet buffer to reduce the change of unspecified behaviour
         memset(packet, 0, sizeof(packet));
 
-        // TODO: confirm recvfrom and sendto are not needed for TCP to know where to send the reply to
         // Receive the command packet
         ssize_t data_received = recv(tcp_connected_fds[i], packet, UDP_PAYLOAD_LEN, MSG_DONTWAIT);
 
@@ -358,7 +357,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             } else if(errno == ECONNRESET) {
                 // The client forcefully close the connection
                 // This is not an issue on the server side but indicates somthing went wrong in the client
-                PRINT(ERROR, "The TCP connection was forcefully closed by the client\n");
+                PRINT(ERROR, "The TCP management connection was forcefully closed by the client\n");
 
                 // Close the connection
                 close(tcp_connected_fds[i]);
@@ -400,19 +399,12 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             PRINT(ERROR, "Failed to parse command with (server) error code: %i\n", parse_error);
         }
 
-        PRINT(ERROR, "data_received: %li\n", data_received);
-        PRINT(ERROR, "packet: %s\n", packet);
-        PRINT(ERROR, "cmd.prop: %s\n", cmd.prop);
-        PRINT(ERROR, "cmd.data %s\n", cmd.data);
-
         int property_action_r;
 
         // Carry out the command
         if (cmd.op == OP_GET) {
-            PRINT(ERROR, "GET\n");
             property_action_r = get_property(cmd.prop, cmd.data, MAX_PROP_LEN);
         } else if(cmd.op == OP_SET) {
-            PRINT(ERROR, "SET\n");
             property_action_r = set_property(cmd.prop, cmd.data);
         } else {
             property_action_r = RETURN_ERROR;
@@ -421,10 +413,8 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
         }
 
         if(property_action_r != RETURN_SUCCESS) {
-            PRINT(ERROR, "CMD_ERROR\n");
             cmd.status = CMD_ERROR;
         } else {
-            PRINT(ERROR, "CMD_SUCCESS\n");
             cmd.status = CMD_SUCCESS;
         }
 
@@ -444,9 +434,11 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
             close(tcp_connected_fds[i]);
             // Mark the file descriptor as no longer in use
             tcp_connected_fds[i] = -1;
+
         } else if(data_sent == 0) {
             // TODO: finish error message
             PRINT(ERROR, "0 bytes sent over TCP, this should be impossible\n");
+
         } else if(data_sent != reply_size) {
             PRINT(ERROR, "TCP attempted to send reply of size %lu but sent %lu\n", data_sent, reply_size);
         }
