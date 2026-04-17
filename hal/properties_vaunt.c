@@ -1398,6 +1398,10 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         read_hps_reg("tx" STR(ch) "4", &old_val);                              \
         write_hps_reg("tx" STR(ch) "4",                                        \
                       (old_val & ~(0x1 << 13)) | (direction << 13));           \
+        \
+        /* TMP: this will break changing the nco while streaming */\
+        double_tx_reset(INT(ch));\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1412,6 +1416,9 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                       \
         usleep(buffer_reset_delay);                                            \
         write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);                       \
+        \
+        double_tx_reset(INT(ch));\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1431,6 +1438,9 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         } else {                                                               \
             snprintf(ret, MAX_PROP_LEN, "0");                                  \
         }                                                                      \
+        \
+        double_tx_reset(INT(ch));\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1479,7 +1489,9 @@ int check_rf_pll(int chan_mask, int uart_fd) {
             write_hps_reg("tx" STR(ch) "4", old_val & ~(1 << 14));             \
                                                                                \
         /* sync_channels( 15 ); */                                             \
-                                                                               \
+        \
+        double_tx_reset(INT(ch));\
+        \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -1571,6 +1583,8 @@ int check_rf_pll(int chan_mask, int uart_fd) {
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x0, 0x2);                   \
             usleep(buffer_reset_delay);                                        \
             write_hps_reg_mask(reg4[INT(ch) + 4], 0x2, 0x2);                   \
+            \
+            double_tx_reset(INT(ch));\
                                                                                \
         } else { /* power off */                                               \
             /* kill the channel */                                             \
