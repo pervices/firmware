@@ -265,6 +265,8 @@ system("systemd-notify --ready");
     for (;;) {
         service_tcp_requests(tcp_listener_fd, tcp_connected_fds);
 
+        // UDP requests are used for backwards compatibility with UHD, devices discovery on current UDP, and non UHD programs
+        // Do not deprecate since non UHD programs rely on UDP
         service_udp_requests(udp_comm_fds, ARRAY_SIZE(udp_port_nums));
 
         service_file_requests(save_profile, save_profile_path, load_profile, load_profile_path);
