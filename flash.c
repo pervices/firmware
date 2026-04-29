@@ -497,6 +497,13 @@ int main(int argc, char *argv[])
 
 int program(char *PATH_DEV, char *BOARD_HEX, char *MODE){
 
+    // ensure we can find the hexfile
+    if (access(BOARD_HEX, R_OK) != 0)
+    {
+        printf("ERROR: failed to find %s\n", BOARD_HEX);
+        return 1;
+    }
+
     // open device path
     int fd = -1;
     fd = open(PATH_DEV, O_RDWR);
