@@ -29,7 +29,10 @@ static pthread_mutex_t* mutex = NULL;
 static void *mmap_base = MAP_FAILED;
 static size_t mmap_len = 0;
 
-// Standard for linux
+// /dev/mem is a way of referencing specific physical addresses in memory
+// It is not a conventional file, or an ordinary device driver file
+// Only a few file operations and flags work on /dev/mem
+// If you are searching for info make sure it applies to /dev/mem. A lot of general info about files and mmap do not apply to it.
 #define MEM_DEV "/dev/mem"
 
 // Path to shared memory to store mutex for accessing FPGA regs
@@ -96,14 +99,16 @@ static int reg_write(uint32_t addr, uint32_t *data) {
 
     *mmap_addr = *data;
 
+    // Flushed data from the CPU cache to system memory
+    // The system memory being written to is where the data is supposed to end up, no file synchronization is required
+    // This is probably redundant with O_SYNC, but is included due to the difficulty of debugging
+    __builtin___clear_cache((char*) mmap_addr, (char*) (mmap_addr + 1));
+
     // Release lock
     pthread_mutex_unlock(mutex);
     if(pthread_mutex_unlock(mutex)) {
         PRINT(ERROR, "pthread_mutex_unlock failed: %s (%d)\n", strerror(errno), errno);
     }
-
-    // FIXME: This command always returns with an error, it may be the reason why so many regwrites that shouldn't need delays require them
-    msync(mmap_base, mmap_len, MS_SYNC | MS_INVALIDATE);
 
     return RETURN_SUCCESS;
 }
@@ -274,6 +279,9 @@ int mmap_init() {
     int r;
     void *rr;
 
+    // Open the pseudo device driver used for writing to specific locations in physical memory
+    // It is used for memory mapped IO
+    // O_SYNC ensures writes are written instead of being cached
     r = open(MEM_DEV, O_RDWR | O_SYNC, 640);
     if (-1 == r) {
         PRINT(ERROR, "mmap( /dev/mem ) failed: %s (%d)\n", strerror(errno),
@@ -291,6 +299,7 @@ int mmap_init() {
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
+    // Obtain a mapping to the physical location in memory connected to the FPGA registers
     rr = mmap(NULL, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, mmap_fd,
               HPS2FPGA_GPR_OFST);
     if (MAP_FAILED == rr) {
