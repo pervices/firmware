@@ -2046,9 +2046,9 @@ int check_time_pll(int ch) {
         sscanf(data, "%i", &ignore);\
         if(ignore) {\
             wr_val = 1 << 19;\
-            strcpy(ret, "1");\
+            snprintf(ret, MAX_PROP_LEN, "1");\
         } else {\
-            strcpy(ret, "0");\
+            snprintf(ret, MAX_PROP_LEN, "0");\
         }\
         write_hps_reg_mask("tx" STR(ch) "6", wr_val, 1 << 19);\
         return RETURN_SUCCESS;\
