@@ -2381,14 +2381,6 @@ int check_time_pll(int ch) {
         return RETURN_SUCCESS;                                                 \
     }\
     \
-    static int hdlr_tx_##ch##_about_hw_ver(const char *data, char *ret) {      \
-        strcpy(buf, "board -h\r");                                             \
-        ping_tx(uart_tx_fd[INT_TX(ch)], (uint8_t *)buf, strlen(buf), INT(ch)); \
-        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }\
-    \
     /*TODO: make sw_ver only return the mcu version*/\
     static int hdlr_tx_##ch##_about_sw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
@@ -4124,14 +4116,6 @@ TX_CHANNELS
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-    \
-    static int hdlr_rx_##ch##_about_hw_ver(const char *data, char *ret) {      \
-        strcpy(buf, "board -h\r");                                             \
-        ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));                \
-        snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
                                                                                \
     /*TODO: make sw_ver only return the mcu version*/\
     static int hdlr_rx_##ch##_about_sw_ver(const char *data, char *ret) {      \
@@ -5377,14 +5361,6 @@ static int hdlr_time_about_mcufuses(const char *data, char *ret) {
 
 static int hdlr_time_about_fw_ver(const char *data, char *ret) {
     strcpy(buf, "board -v\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
-
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_about_hw_ver(const char *data, char *ret) {
-    strcpy(buf, "board -h\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     snprintf(ret, MAX_PROP_LEN, (char *)uart_ret_buf);
 
@@ -6863,7 +6839,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/mcufuses"           , hdlr_rx_##_c##_about_mcufuses,          RW, "001", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/fw_ver"             , hdlr_rx_##_c##_about_fw_ver,            RW, VERSION, RP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, RP, #_c)     \
+    DEFINE_SYMLINK_PROP("rx/" #_c "/about/hw_ver", "rx/" #_c "/about/eeprom") \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/sw_ver"             , hdlr_rx_##_c##_about_sw_ver,            RW, VERSION, RP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
@@ -6993,7 +6969,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001", TP, #_c)       \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/mcufuses"           , hdlr_tx_##_c##_about_mcufuses,          RW, "001", TP, #_c)       \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/fw_ver"             , hdlr_tx_##_c##_about_fw_ver,            RW, VERSION, TP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
+    DEFINE_SYMLINK_PROP("tx/" #_c "/about/hw_ver", "tx/" #_c "/about/eeprom")\
     DEFINE_FILE_PROP_P("tx/" #_c "/about/sw_ver"             , hdlr_tx_##_c##_about_sw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/variant/is_baseband_only" , hdlr_tx_##_c##_about_is_bandband_only, RW, VERSION, TP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/about/ddr_bank"           , hdlr_tx_##_c##_about_ddr_bank,          RW, "0", SP, #_c)     \
@@ -7048,7 +7024,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcufuses"                 , hdlr_time_about_mcufuses,               RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
-    DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
+    DEFINE_SYMLINK_PROP("time/about/hw_ver", "time/about/eeprom")\
     DEFINE_FILE_PROP_P("time/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)\
     DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "0", SP, NAC)
 
