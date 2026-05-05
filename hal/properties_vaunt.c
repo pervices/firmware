@@ -1636,14 +1636,6 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_about_hw_ver(const char *data, char *ret) {      \
-        strcpy(buf, "board -h\r");                                             \
-        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
     static int hdlr_tx_##ch##_about_fw_ver(const char *data, char *ret) {      \
         strcpy(buf, "board -v\r");                                             \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
@@ -2550,14 +2542,6 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_about_mcufuses(const char *data, char *ret) {    \
         strcpy(buf, "status -f\r");                                            \
         ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));      \
-        strcpy(ret, (char *)uart_ret_buf);                                     \
-                                                                               \
-        return RETURN_SUCCESS;                                                 \
-    }                                                                          \
-                                                                               \
-    static int hdlr_rx_##ch##_about_hw_ver(const char *data, char *ret) {      \
-        strcpy(buf, "board -h\r");                                             \
-        ping(uart_rx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
         strcpy(ret, (char *)uart_ret_buf);                                     \
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -3540,14 +3524,6 @@ static int hdlr_time_about_mcurev(const char *data, char *ret) {
 
 static int hdlr_time_about_mcufuses(const char *data, char *ret) {
     strcpy(buf, "status -f\r");
-    ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
-    strcpy(ret, (char *)uart_ret_buf);
-
-    return RETURN_SUCCESS;
-}
-
-static int hdlr_time_about_hw_ver(const char *data, char *ret) {
-    strcpy(buf, "board -h\r");
     ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
     strcpy(ret, (char *)uart_ret_buf);
 
@@ -4592,7 +4568,6 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/about/hw_ver"             , hdlr_rx_##_c##_about_hw_ver,            RW, VERSION, SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/common_lo"        , hdlr_rx_##_c##_rf_common_lo,            RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
@@ -4629,6 +4604,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/loopback"             , hdlr_rx_##_c##_dsp_loopback,            RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/eeprom"             , hdlr_rx_##_c##_about_eeprom,            RW, "001", RP, #_c)       \
+    DEFINE_SYMLINK_PROP("rx/" #_c "/about/hw_ver", "rx/" #_c "/about/eeprom")\
     DEFINE_FILE_PROP_P("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/mcudevid"           , hdlr_rx_##_c##_about_mcudevid,          RW, "001", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/mcurev"             , hdlr_rx_##_c##_about_mcurev,            RW, "001", RP, #_c)       \
@@ -4692,9 +4668,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rate"                 , hdlr_tx_##_c##_dsp_rate,                RW, "1258850", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/nco_adj"              , hdlr_tx_##_c##_dsp_nco_adj,             RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/about/hw_ver"             , hdlr_tx_##_c##_about_hw_ver,            RW, VERSION, TP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/id"                 , hdlr_tx_##_c##_about_id,                RW, "001", TP, #_c)       \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/eeprom"             , hdlr_tx_##_c##_about_eeprom,            RW, "001", TP, #_c)       \
+    DEFINE_SYMLINK_PROP("tx/" #_c "/about/hw_ver", "tx/" #_c "/about/eeprom")\
     DEFINE_FILE_PROP_P("tx/" #_c "/about/serial"             , hdlr_tx_##_c##_about_serial,            RW, "001", TP, #_c)       \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/mcudevid"           , hdlr_tx_##_c##_about_mcudevid,          RW, "001", TP, #_c)       \
     DEFINE_FILE_PROP_P("tx/" #_c "/about/mcurev"             , hdlr_tx_##_c##_about_mcurev,            RW, "001", TP, #_c)       \
@@ -4714,7 +4690,6 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/status"            , hdlr_tx_##_c##_jesd_status,             RW, "bad", SP, #_c)\
 
 #define DEFINE_TIME()                                                                                                 \
-    DEFINE_FILE_PROP_P("time/about/hw_ver"                   , hdlr_time_about_hw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
@@ -4740,6 +4715,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/board/manual_uart"              , hdlr_time_board_manual_uart,            RW, "", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/eeprom"                   , hdlr_time_about_eeprom,                 RW, "001", SP, NAC)       \
+    DEFINE_SYMLINK_PROP("time/about/hw_ver", "time/about/eeprom")\
     DEFINE_FILE_PROP_P("time/about/serial"                   , hdlr_time_about_serial,                 RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcudevid"                 , hdlr_time_about_mcudevid,               RW, "001", SP, NAC)       \
     DEFINE_FILE_PROP_P("time/about/mcurev"                   , hdlr_time_about_mcurev,                 RW, "001", SP, NAC)       \
