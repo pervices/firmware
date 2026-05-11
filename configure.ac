@@ -49,6 +49,7 @@ CPPFLAGS+=" -I\${top_srcdir}/hal "
 CPPFLAGS+=" -I\${top_srcdir}/hal/drivers/mmap"
 CPPFLAGS+=" -I\${top_srcdir}/hal/drivers/uart"
 CPPFLAGS+=" -I\${top_srcdir}/hal/drivers/udp"
+CPPFLAGS+=" -I\${top_srcdir}/hal/utils"
 CPPFLAGS+=" -I\${top_srcdir}/parser"
 
 CFLAGS="${CFLAGS}"
@@ -82,5 +83,6 @@ AC_CONFIG_FILES([Makefile
                  hal/drivers/mmap/Makefile
                  hal/drivers/uart/Makefile
                  hal/drivers/udp/Makefile
+                 hal/utils/Makefile
                  parser/Makefile])
 AC_OUTPUT

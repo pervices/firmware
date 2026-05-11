@@ -20,4 +20,4 @@
 /**
  * C equivalent of mkdir -p
  */
-int mkdir_p(const char* path);
+//int mkdir_p(const char* path);

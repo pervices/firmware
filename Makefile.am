@@ -20,6 +20,7 @@ server_LDADD = \
 	hal/drivers/mmap/libmmap.la \
 	hal/drivers/udp/libudp.la \
 	hal/drivers/uart/libuart.la \
+	hal/utils/libutils.la \
 	parser/libparser.la \
 	-lpthread
 

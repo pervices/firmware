@@ -32,6 +32,8 @@
 #include "channels.h"
 #include "time_it.h"
 
+#include "utils/mkdir_p.h"
+
 // For getting group id from it's names
 #include <sys/types.h>
 #include <grp.h>
@@ -186,6 +188,10 @@ static void make_prop(prop_t *prop) {
         // mkdir -p /home/root/state/*
         snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
         system(cmd);
+
+
+
+
         // Enables execute and read for the directory containing the property
         // execute allow you to enter the directory
         // read allows you to list the contents
