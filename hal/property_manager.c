@@ -32,6 +32,15 @@
 #include "channels.h"
 #include "time_it.h"
 
+// For getting group id from it's names
+#include <sys/types.h>
+#include <grp.h>
+
+// Needed for posix file tree walk
+// Documentation says to _XOPEN_SOURCE 500 is needed, however we actually need __USE_XOPEN_EXTENDED 1 before including ftw.h
+#define __USE_XOPEN_EXTENDED 1
+#include <ftw.h>
+
 /* clang-format on */
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
@@ -119,9 +128,43 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
-static void change_group_permissions_for_all(void) {
+/**
+ * Sets the file/directory to the group dev-grp0
+ * @param fpath The path of file/directory
+ * @param sb Unused, required by nftw
+ * @param typeflag The type pointed to by fpath
+ * @param ftwbuf Unused, required by nftw
+ * @return
+ */
+int change_group_for_individual(const char *fpath, const struct stat *sb,
+ int typeflag, struct FTW *ftwbuf) {
 
-    system("chgrp dev-grp0 -R " BASE_DIR);
+        struct group* group_info = getgrnam("dev-grp0");
+
+    if(group_info == NULL) {
+        PRINT(ERROR, "Failed to get gid of dev-grp0 due to error code %s. %s will not have it's gid set\n", strerror(errno), fpath);
+    }
+
+    gid_t gid = group_info->gr_gid;
+
+    int lchown_r = lchown(fpath, -1, gid);
+
+    if(lchown_r < 0) {
+        PRINT(ERROR, "Failed to get gid of dev-grp0 to %s due to error code: %s\n", fpath, strerror(errno));
+        PRINT(ERROR, "typeflag: %i\n", typeflag);
+    }
+
+    // Always return 0 to continue the walk
+    return 0;
+}
+
+static void change_group_for_all(void) {
+
+    int nftw_r = nftw(BASE_DIR, change_group_for_individual, 512, 0);
+
+    if(nftw_r < 0) {
+        PRINT(ERROR, "Unable to set group of all state tree files. nftw failed with error code: %s\n", strerror(errno));
+    }
 
 }
 
@@ -261,8 +304,8 @@ static void build_tree(void) {
         }
     }
 
-    PRINT(INFO, "\tXXX: Changing permissions for all\n");
-    change_group_permissions_for_all();
+    PRINT(INFO, "\tXXX: Changing groups for all properties and their directories\n");
+    change_group_for_all();
 
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
