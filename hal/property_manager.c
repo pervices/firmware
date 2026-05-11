@@ -19,17 +19,15 @@
 
 #include "property_manager.h"
 
-#if 1
-    #include "comm_manager.h"
-    #include "common.h"
-    #include "mmap.h" // shouldn't need to include this, this is here for errata fixing
-    #include "properties.h"
-    #include "array-utils.h"
-    #include "uart.h"
+#include "comm_manager.h"
+#include "common.h"
+#include "mmap.h" // shouldn't need to include this, this is here for errata fixing
+#include "properties.h"
+#include "array-utils.h"
+#include "uart.h"
 
-    #include <stdbool.h>
-    #include <unistd.h>
-#endif
+#include <stdbool.h>
+#include <unistd.h>
 
 #include "channels.h"
 #include "time_it.h"
