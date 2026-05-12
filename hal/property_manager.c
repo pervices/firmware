@@ -186,6 +186,9 @@ static void make_prop(prop_t *prop) {
 
         // TODO: @CF: use mkdir(2)
         // mkdir -p /home/root/state/*
+
+        creat_with_dir(get_abs_path(prop, path, MAX_PATH_LEN), 777);
+
         snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
         system(cmd);
 

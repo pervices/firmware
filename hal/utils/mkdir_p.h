@@ -19,5 +19,15 @@
 
 /**
  * C equivalent of mkdir -p
+ *
+ * @param path The path of the directory to create
+ *
+ * @return Error code of the first failed sys call.
  */
-//int mkdir_p(const char* path);
+int mkdir_p(const char* path);
+
+/**
+ * Functions the same as creat and mkdir -p for the directory containing the file
+ *
+ */
+int creat_with_dir(const char* path, mode_t mode);
