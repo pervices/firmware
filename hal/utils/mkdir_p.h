@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <sys/types.h>
+
 /**
  * C equivalent of mkdir -p
  *

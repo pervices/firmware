@@ -25,6 +25,9 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <libgen.h>
 
 // TMP for exit
 #include <stdlib.h>
@@ -52,16 +55,65 @@ int mkdir_p(const char* path) {
 //     }
 }
 
+/**
+ * Creates the parent directory of the provided path
+ *
+ * @param path The path of the file/folder whose directory we want to create. Must be less than MAX_PATH_LEN
+ * @param mode The permissions for the directory
+ *
+ * @return Returns 0 on success, -errno on failure
+ */
+int create_parent_dir(const char* path, mode_t mode) {
+    char parent_path[PATH_MAX];
+
+    parent_pa
+}
+
 int creat_with_dir(const char* path, mode_t mode) {
 
-    int file = creat(path, mode);
+    // TODO: make sure mode is bing applied to the file, and not this operation
 
-    if(file < 0) {
+    // Create file
+    int prop_a = creat(path, mode);
+
+    // The file was successfully created
+    if(prop_a >= 0) {
+        close(prop_a);
+        return RETURN_SUCCESS;
+    }
+    // The file already exists
+    else if(errno == EEXIST) {
+        return RETURN_SUCCESS;
+    }
+    // Unexpected failure
+    else if(errno != MISSING DIRECTORY) {
         int e = errno;
-        PRINT(ERROR, "path: %s\n", path);
-        PRINT(ERROR, "error: %s\n", strerrno(e));
-    } else {
-        close(file);
+        PRINT(ERROR, "1path: %s\n", path);
+        PRINT(ERROR, "1 error: %s\n", strerror(e));
+        return e;
+    }
+
+    do {
+        // Get parent directory
+        // Create parent directory
+
+    } while (errno != MISSING DIRECTORY && errno != SUCCESS);
+
+    // Directory for file was created
+    if(errno == SUCCESS) {
+        int prop_b = creat(path, mode);
+
+        if(prop_b <0) {
+            // ERROR
+            return errno;
+        } else {
+            close(prop_b);
+            return RETURN_SUCCESS;
+        }
+    }
+    // Failed to create directory for the file
+    else {
+        return FAILURE;
     }
 }
 
