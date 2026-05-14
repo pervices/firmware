@@ -20,6 +20,15 @@
 #include <sys/types.h>
 
 /**
+ * Copies the directory of the file/directory refered to by path to dir.
+ * This exists because libc's dirname is unreasonably complicated to use. This funtion will ignore trailing /. It will return an error there is no parent directory (i.e /example/ and example will return an error, /demo/example/ and demo/example/ will pass).
+ * @param dir The buffer to write the directory to. It must be at least the length of path (including the null terminator)
+ * @param path A null terminated string containing the path of the file whose directory you want
+ * @return Returns 0 on success. At present it returns INT_MIN. It may return -error_code in the future.
+ */
+int simple_dirname(char* dir, const char* path);
+
+/**
  * C equivalent of mkdir -p
  *
  * @param path The path of the directory to create
@@ -30,6 +39,7 @@ int mkdir_p(const char* path);
 
 /**
  * Functions the same as creat and mkdir -p for the directory containing the file
- *
+ * @param path The path of the file to create. Much be less than MAX_PATH_LEN
+ * @param mode The permissions for the file to be created
  */
 int creat_with_dir(const char* path, mode_t mode);
