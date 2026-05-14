@@ -38,8 +38,8 @@ int simple_dirname(char* dir, const char* path);
 int mkdir_p(const char* path);
 
 /**
- * Functions the same as creat and mkdir -p for the directory containing the file
+ * Equivalent to mkdir -p for the directory containing the file, and then touch on the file
  * @param path The path of the file to create. Much be less than MAX_PATH_LEN
  * @param mode The permissions for the file to be created
  */
-int creat_with_dir(const char* path, mode_t mode);
+int touch_p(const char* path, mode_t mode);

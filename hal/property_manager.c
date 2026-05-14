@@ -203,10 +203,10 @@ static void make_prop(prop_t *prop) {
 
         // Create the file for the property
         // TODO: use ftw to set the permissions of the directories create to read and excute only
-        int creat_with_dir_r = creat_with_dir(get_abs_path(prop, path, MAX_PATH_LEN), prop_permsions);
+        int touch_p_r = touch_p(get_abs_path(prop, path, MAX_PATH_LEN), prop_permsions);
 
-        if(creat_with_dir_r < 0) {
-            PRINT(ERROR, "Failed to create file for property due to: %s\n", strerror(-creat_with_dir_r));
+        if(touch_p_r < 0) {
+            PRINT(ERROR, "Failed to create file for property due to: %s\n", strerror(-touch_p_r));
             break;
         }
 

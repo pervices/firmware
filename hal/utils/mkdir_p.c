@@ -110,24 +110,21 @@ int mkdir_p(const char* path) {
     }
 }
 
-int creat_with_dir(const char* path, mode_t mode) {
+int touch_p(const char* path, mode_t mode) {
 
     // TODO: make sure mode is bing applied to the file, and not this operation
 
     // Create file
-    int file_a = creat(path, mode);
+    int file_a = open(path, /* Create file if it doesn't already exist */O_CREAT, mode);
 
     // The file was successfully created
     if(file_a >= 0) {
         close(file_a);
         return RETURN_SUCCESS;
     }
-    // The file already exists
-    else if(errno == EEXIST) {
-        return -EEXIST;
-    }
+
     // The directory for the file doesn't exist
-    else if(errno == ENOENT) {
+    if(errno == ENOENT) {
         char dir[MAX_PATH_LEN];
 
         int dirname_r = simple_dirname(dir, path);
@@ -146,7 +143,7 @@ int creat_with_dir(const char* path, mode_t mode) {
         }
 
         // Attempt to create the file
-        int file_b = creat(path, mode);
+        int file_b = open(path, O_CREAT, mode);
 
         if(file_b < 0) {
             int e = errno;
