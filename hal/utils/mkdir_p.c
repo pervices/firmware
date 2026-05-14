@@ -47,6 +47,7 @@ int simple_dirname(char* dir, const char* path) {
 
     // No parent directory
     if(i == 0) {
+        // TODO: find a good error code
         return ~0;
     }
 
@@ -57,7 +58,7 @@ int simple_dirname(char* dir, const char* path) {
     // Add the null terminator
     dir[i] = 0;
 
-    return 0;
+    return RETURN_SUCCESS;
 }
 
 int mkdir_p(const char* path) {
@@ -70,22 +71,43 @@ int mkdir_p(const char* path) {
 
     // Success, no further action required
     if(mkdir_r == 0) {
-        return 0;
+        return RETURN_SUCCESS;
     }
 
-    if(mkdir_r < 0) {
-        int mkdir_error = errno;
-        PRINT(ERROR, "mkdir_error: %s\n", strerror(mkdir_error));
-        PRINT(ERROR, "path: %s\n", path);
-        exit(mkdir_error);
+    int mkdir_error = errno;
+
+    // The parent directory doesn't exist yet
+    if(mkdir_error == ENOENT) {
+        char dir[MAX_PATH_LEN];
+        int dirname_r = simple_dirname(dir, path);
+
+        if(dirname_r < 0) {
+            PRINT(ERROR, "Unable to extract directory name from %s\n", path);
+        }
+
+        // Recursively attempt to create parent directory
+        int mk_parent_r = mkdir_p(dir);
+
+        // Propogate error if the attempt to make the parent failed
+        if(mk_parent_r < 0) {
+            return mk_parent_r;
+        }
+
+        // Try making the directory again now that the parent exists
+        int mkdir_r2 = mkdir(path, 0777);
+
+        if(mkdir_r2 < 0) {
+            int e = errno;
+            PRINT(ERROR, "Unable to directory %s due to: %s\n", path, e);
+            return -e;
+        }
+
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "mkdir failed with error code: %s\n", strerror(mkdir_error));
+
+        return -mkdir_error;
     }
-
-    return 0;
-
-
-//     while(path[0] ~= NULL) {
-//
-//     }
 }
 
 int creat_with_dir(const char* path, mode_t mode) {
@@ -93,63 +115,56 @@ int creat_with_dir(const char* path, mode_t mode) {
     // TODO: make sure mode is bing applied to the file, and not this operation
 
     // Create file
-    int prop_a = creat(path, mode);
+    int file_a = creat(path, mode);
 
     // The file was successfully created
-    if(prop_a >= 0) {
-        close(prop_a);
+    if(file_a >= 0) {
+        close(file_a);
         return RETURN_SUCCESS;
     }
     // The file already exists
     else if(errno == EEXIST) {
         return -EEXIST;
-    } else if(errno == ENOENT) {
+    }
+    // The directory for the file doesn't exist
+    else if(errno == ENOENT) {
         char dir[MAX_PATH_LEN];
 
-        int dirname_r = simple_dirname(path,
+        int dirname_r = simple_dirname(dir, path);
 
+        if(dirname_r < 0) {
+            PRINT(ERROR, "Unable to extract directory name from %s\n", path);
+            return dirname_r;
+        }
 
-        mkdir_p(
+        int mkdir_p_r = mkdir_p(dir);
+
+        // Unable to create the directory
+        if(mkdir_p_r < 0) {
+            PRINT(ERROR, "Unable to create directory %s for file %s\n", dir, path);
+            return mkdir_p_r;
+        }
+
+        // Attempt to create the file
+        int file_b = creat(path, mode);
+
+        if(file_b < 0) {
+            int e = errno;
+            PRINT(ERROR, "Unable to creat file with path %s after successfully creating its folder %s\n", path, dir);
+            return e;
+        }
+
+        close(file_b);
+
+        return RETURN_SUCCESS;
     }
+    // Unexpected failure
+    else {
+        int e = errno;
+        PRINT(ERROR, "Unable to creat file: %s\n", strerror(errno));
 
-    PRINT(ERROR, "creat errno: %s\n", strerror(errno));
-
-
-
-    return ~0;
-
-    // // Unexpected failure
-    // else if(errno != MISSING DIRECTORY) {
-    //     int e = errno;
-    //     PRINT(ERROR, "1path: %s\n", path);
-    //     PRINT(ERROR, "1 error: %s\n", strerror(e));
-    //     return e;
-    // }
-    //
-    // do {
-    //
-    //
-    //     // Get parent directory
-    //     // Create parent directory
-    //
-    // } while (errno != MISSING DIRECTORY && errno != SUCCESS);
-    //
-    // // Directory for file was created
-    // if(errno == SUCCESS) {
-    //     int prop_b = creat(path, mode);
-    //
-    //     if(prop_b <0) {
-    //         // ERROR
-    //         return errno;
-    //     } else {
-    //         close(prop_b);
-    //         return RETURN_SUCCESS;
-    //     }
-    // }
-    // // Failed to create directory for the file
-    // else {
-    //     return FAILURE;
-    // }
+        return -e;
+    }
 }
 
 

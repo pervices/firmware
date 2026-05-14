@@ -178,57 +178,40 @@ static void make_prop(prop_t *prop) {
 
     switch (prop->type) {
 
-    case PROP_TYPE_FILE:
+    case PROP_TYPE_FILE: {
 
-        // TODO: @CF: The preferred way to build a directory tree relative to
-        // some path would be to use mkdirat(2), openat(2), etc. Here, we don't
-        // even check return values, which can be dangerous.
+        mode_t prop_permsions;
 
-        // TODO: @CF: use mkdir(2)
-        // mkdir -p /home/root/state/*
+        switch(prop->permissions) {
+            case RO:
+                prop_permsions = 0444;
+                break;
 
-        creat_with_dir(get_abs_path(prop, path, MAX_PATH_LEN), 777);
+            case WO:
+                prop_permsions = 0222;
+                break;
 
-        snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
-        system(cmd);
+            case RW:
+                prop_permsions = 0666;
+                break;
 
+            default:
+                PRINT(ERROR, "Invalid permissions for property %s, defaulting to RW\n", path);
+                prop_permsions = 0666;
+                break;
+        }
 
+        // Create the file for the property
+        // TODO: use ftw to set the permissions of the directories create to read and excute only
+        int creat_with_dir_r = creat_with_dir(get_abs_path(prop, path, MAX_PATH_LEN), prop_permsions);
 
-
-        // Enables execute and read for the directory containing the property
-        // execute allow you to enter the directory
-        // read allows you to list the contents
-        // Not having write enabled prevents creating new files but does not affect writing to existing files
-        snprintf(cmd, CMD_LENGTH, "chmod 0555 %s", get_abs_dir(prop, path, MAX_PATH_LEN));
-        system(cmd);
-        // PRINT( VERBOSE,"executing: %s\n", cmd);
-
-        // TODO: replace with openat(2)
-        // touch /home/root/state/*
-        snprintf(cmd, CMD_LENGTH, "touch %s", get_abs_path(prop, path, MAX_PATH_LEN));
-        system(cmd);
-        // PRINT( VERBOSE,"executing: %s\n", cmd);
-
-        // TODO: @CF: use fchmodat(2)
-        // if read only property, change permissions
-        if (prop->permissions == RO) {
-            // chmod a-w
-            snprintf(cmd, CMD_LENGTH, "chmod 0444 %s", get_abs_path(prop, path, MAX_PATH_LEN));
-            system(cmd);
-        } else if (prop->permissions == WO) {
-            // TODO: @CF: use fchmodat(2)
-            // chmod a-r
-            snprintf(cmd, CMD_LENGTH, "chmod 0222 %s", get_abs_path(prop, path, MAX_PATH_LEN));
-            system(cmd);
-        } else if (prop->permissions == RW) {
-            // TODO: @CF: use fchmodat(2)
-            // chmod a-r
-            snprintf(cmd, CMD_LENGTH, "chmod 0666 %s", get_abs_path(prop, path, MAX_PATH_LEN));
-            system(cmd);
+        if(creat_with_dir_r < 0) {
+            PRINT(ERROR, "Failed to create file for property due to: %s\n", strerror(-creat_with_dir_r));
+            break;
         }
 
         break;
-
+    }
     case PROP_TYPE_SYMLINK:
 
         // TODO: @CF: The preferred way to build a directory tree relative to

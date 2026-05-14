@@ -31,7 +31,7 @@ int simple_dirname(char* dir, const char* path);
 /**
  * C equivalent of mkdir -p
  *
- * @param path The path of the directory to create
+ * @param path The path of the directory to create. It must be less than MAX_PATH_LEN
  *
  * @return Error code of the first failed sys call.
  */
