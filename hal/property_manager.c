@@ -312,11 +312,11 @@ static void build_tree(void) {
         }
     }
 
-    // Restore umask
-    umask(original_mask);
-
     PRINT(INFO, "\tXXX: Changing groups for all properties and their directories, and setting directory permissions\n");
     change_group_and_dir_perms_for_all();
+
+    // Restore umask
+    umask(original_mask);
 
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
