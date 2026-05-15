@@ -285,6 +285,9 @@ static void build_tree(void) {
     PRINT(INFO, "\tXXX: Building tree, %i properties found\n", get_num_prop());
     prop_t *prop;
 
+    // Disable umask so that permissions for new files are applied correctly
+    mode_t original_mask = umask(0);
+
     size_t i;
     for (i = 0; i < get_num_prop(); i++) {
         prop = get_prop(i);
@@ -295,6 +298,9 @@ static void build_tree(void) {
             init_prop_val(prop);
         }
     }
+
+    // Restore umask
+    umask(original_mask);
 
     PRINT(INFO, "\tXXX: Changing groups for all properties and their directories\n");
     change_group_for_all();

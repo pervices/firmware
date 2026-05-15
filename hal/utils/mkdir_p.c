@@ -112,8 +112,6 @@ int mkdir_p(const char* path) {
 
 int touch_p(const char* path, mode_t mode) {
 
-    // TODO: fix the umask preventing mode from being applied
-
     // Create file
     int file_a = open(path, /* Create file if it doesn't already exist */O_CREAT, mode);
 

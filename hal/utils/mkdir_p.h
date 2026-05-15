@@ -40,6 +40,6 @@ int mkdir_p(const char* path);
 /**
  * Equivalent to mkdir -p for the directory containing the file, and then touch on the file
  * @param path The path of the file to create. Much be less than MAX_PATH_LEN
- * @param mode The permissions for the file to be created
+ * @param mode The permissions for the new file if one is created. Does not change an existing file's permission or override umask
  */
 int touch_p(const char* path, mode_t mode);
