@@ -131,14 +131,15 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
 }
 
 /**
- * Sets the file/directory to the group dev-grp0
+ * Sets the file/directory to the group dev-grp0, and sets directory permissions.
+ * Both operations are done here to avoid needing to walk through the state tree multiple times
  * @param fpath The path of file/directory
  * @param sb Unused, required by nftw
  * @param typeflag The type pointed to by fpath
  * @param ftwbuf Unused, required by nftw
  * @return
  */
-int change_group_for_individual(const char *fpath, const struct stat *sb,
+int change_group_and_dir_perms(const char *fpath, const struct stat *sb,
  int typeflag, struct FTW *ftwbuf) {
 
         struct group* group_info = getgrnam("dev-grp0");
@@ -156,16 +157,28 @@ int change_group_for_individual(const char *fpath, const struct stat *sb,
         PRINT(ERROR, "typeflag: %i\n", typeflag);
     }
 
+    // Set directory permissions
+    // Do not set file and symlink permissions, they are set upon creation
+    if(typeflag == FTW_D) {
+        // Set all directories to allow read (ls), and execute (cd), but not write (add new file)
+        int chmod_r = chmod(fpath, 555);
+
+        if(chmod_r < 0) {
+            PRINT(ERROR, "Failed to set permissions for %s due to: %s\n", fpath, strerror(errno));
+        }
+    }
+
     // Always return 0 to continue the walk
     return 0;
 }
 
-static void change_group_for_all(void) {
+static void change_group_and_dir_perms_for_all(void) {
 
-    int nftw_r = nftw(BASE_DIR, change_group_for_individual, 512, 0);
+    // Walk through the state tree
+    int nftw_r = nftw(BASE_DIR, change_group_and_dir_perms, 512, 0);
 
     if(nftw_r < 0) {
-        PRINT(ERROR, "Unable to set group of all state tree files. nftw failed with error code: %s\n", strerror(errno));
+        PRINT(ERROR, "Unable to set group/permissions of all state tree files. nftw failed with error code: %s\n", strerror(errno));
     }
 
 }
@@ -302,8 +315,8 @@ static void build_tree(void) {
     // Restore umask
     umask(original_mask);
 
-    PRINT(INFO, "\tXXX: Changing groups for all properties and their directories\n");
-    change_group_for_all();
+    PRINT(INFO, "\tXXX: Changing groups for all properties and their directories, and setting directory permissions\n");
+    change_group_and_dir_perms_for_all();
 
     // force property initofy check (writing of defaults) after init
     PRINT(INFO, "\tXXX: Checking proprety inotifies\n");
