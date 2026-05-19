@@ -194,68 +194,75 @@ static void make_prop(prop_t *prop) {
 
     switch (prop->type) {
 
-    case PROP_TYPE_FILE: {
+        case PROP_TYPE_FILE: {
 
-        mode_t prop_permsions;
+            mode_t prop_permsions;
 
-        switch(prop->permissions) {
-            case RO:
-                prop_permsions = S_IRUSR | S_IRGRP | S_IROTH;
+            switch(prop->permissions) {
+                case RO:
+                    prop_permsions = S_IRUSR | S_IRGRP | S_IROTH;
+                    break;
+
+                case WO:
+                    prop_permsions = S_IWUSR | S_IWGRP | S_IWOTH;
+                    break;
+
+                case RW:
+                    prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+                    break;
+
+                default:
+                    PRINT(ERROR, "Invalid permissions for property %s, defaulting to RW\n", path);
+                    prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+                    break;
+            }
+
+            // Create the file for the property
+            int touch_p_r = touch_p(path);
+
+            if(touch_p_r < 0) {
+                PRINT(ERROR, "Failed to create file for %s due to: %s\n", path, strerror(-touch_p_r));
                 break;
+            }
 
-            case WO:
-                prop_permsions = S_IWUSR | S_IWGRP | S_IWOTH;
+            int chmod_r = chmod(path, prop_permsions);
+
+            if(chmod_r < 0) {
+                PRINT(ERROR, "Failed set file permissions for %s due to: %s\n", path, strerror(errno));
                 break;
+            }
 
-            case RW:
-                prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-                break;
-
-            default:
-                PRINT(ERROR, "Invalid permissions for property %s, defaulting to RW\n", path);
-                prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-                break;
-        }
-
-        // Create the file for the property
-        int touch_p_r = touch_p(path);
-
-        if(touch_p_r < 0) {
-            PRINT(ERROR, "Failed to create file for %s due to: %s\n", path, strerror(-touch_p_r));
             break;
         }
+        case PROP_TYPE_SYMLINK: {
 
-        int chmod_r = chmod(path, prop_permsions);
+            char dir[MAX_PATH_LEN];
 
-        if(chmod_r < 0) {
-            PRINT(ERROR, "Failed set file permissions for %s due to: %s\n", path, strerror(errno));
+            // Create directory where the symlink is to be created
+            int simple_dirname_r = simple_dirname(dir, path);
+
+            if(simple_dirname_r < 0) {
+                PRINT(ERROR, "Failed to get directory for %s due to: %s\n", path, strerror(-simple_dirname_r));
+                break;
+            }
+
+            int mkdir_p_r = mkdir_p(dir);
+
+            if(mkdir_p_r < 0) {
+                PRINT(ERROR, "Failed to create directory %s for %s due to: %s\n", dir, path, strerror(-mkdir_p_r));
+            }
+
+            snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
+            system(cmd);
+
+            // TODO: replace with symlinkat(2)
+            snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf " STATE_DIR "/%s %s",
+                    prop->symlink_target, prop->path);
+            system(cmd);
+            // PRINT( VERBOSE,"executing: %s\n", cmd);
+
             break;
         }
-
-        break;
-    }
-    case PROP_TYPE_SYMLINK:
-
-        // TODO: @CF: The preferred way to build a directory tree relative to
-        // some path would be to use mkdirat(2), openat(2), etc. Here, we don't
-        // even check return values, which can be dangerous.
-
-        // TODO: @CF: use mkdir(2)
-        // mkdir -p /home/root/state/*
-        snprintf(cmd, CMD_LENGTH, "mkdir -p %s", get_abs_dir(prop, path, MAX_PATH_LEN));
-        system(cmd);
-        // PRINT( VERBOSE,"executing: %s\n", cmd);
-
-        snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
-        system(cmd);
-
-        // TODO: replace with symlinkat(2)
-        snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf " STATE_DIR "/%s %s",
-                 prop->symlink_target, prop->path);
-        system(cmd);
-        // PRINT( VERBOSE,"executing: %s\n", cmd);
-
-        break;
     }
 }
 
