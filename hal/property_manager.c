@@ -185,11 +185,10 @@ static void change_group_and_dir_perms_for_all(void) {
 
 // Helper function to make properties
 static void make_prop(prop_t *prop) {
-    const int CMD_LENGTH = 2*MAX_PATH_LEN + 100;
-    char cmd[CMD_LENGTH];
+    // The absolute path of the property to be created
     char path[MAX_PATH_LEN];
 
-    // Convert prop's path to an absolute path and copy it to path
+    // Convert prop's path to an absolute path and store it in path
     get_abs_path(prop, path, MAX_PATH_LEN);
 
     switch (prop->type) {
@@ -225,6 +224,7 @@ static void make_prop(prop_t *prop) {
                 break;
             }
 
+            // Set permissions
             int chmod_r = chmod(path, prop_permsions);
 
             if(chmod_r < 0) {
@@ -246,20 +246,21 @@ static void make_prop(prop_t *prop) {
                 break;
             }
 
+            // Create parent directory
             int mkdir_p_r = mkdir_p(dir);
 
             if(mkdir_p_r < 0) {
                 PRINT(ERROR, "Failed to create directory %s for %s due to: %s\n", dir, path, strerror(-mkdir_p_r));
+                break;
             }
 
-            snprintf(cmd, sizeof(cmd), "rm -Rf " STATE_DIR "/%s", prop->path);
-            system(cmd);
+            // Create symlink
+            int symlink_r = symlink(prop->symlink_target, prop->path);
 
-            // TODO: replace with symlinkat(2)
-            snprintf(cmd, sizeof(cmd), "cd " STATE_DIR "; ln -sf " STATE_DIR "/%s %s",
-                    prop->symlink_target, prop->path);
-            system(cmd);
-            // PRINT( VERBOSE,"executing: %s\n", cmd);
+            if(symlink_r < 0) {
+                PRINT(ERROR, "Failed to create symlink due to: %s\n", strerror(errno));
+                break;
+            }
 
             break;
         }
