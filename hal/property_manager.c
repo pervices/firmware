@@ -215,7 +215,6 @@ static void make_prop(prop_t *prop) {
         }
 
         // Create the file for the property
-        // TODO: use ftw to set the permissions of the directories create to read and excute only
         int touch_p_r = touch_p(get_abs_path(prop, path, MAX_PATH_LEN), prop_permsions);
 
         if(touch_p_r < 0) {
