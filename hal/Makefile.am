@@ -1,5 +1,6 @@
 SUBDIRS = \
-	drivers
+	drivers \
+	utils
 
 noinst_LTLIBRARIES = \
 	libhal.la
