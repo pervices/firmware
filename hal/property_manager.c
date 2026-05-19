@@ -189,6 +189,9 @@ static void make_prop(prop_t *prop) {
     char cmd[CMD_LENGTH];
     char path[MAX_PATH_LEN];
 
+    // Convert prop's path to an absolute path and copy it to path
+    get_abs_path(prop, path, MAX_PATH_LEN);
+
     switch (prop->type) {
 
     case PROP_TYPE_FILE: {
@@ -197,28 +200,35 @@ static void make_prop(prop_t *prop) {
 
         switch(prop->permissions) {
             case RO:
-                prop_permsions = 0444;
+                prop_permsions = S_IRUSR | S_IRGRP | S_IROTH;
                 break;
 
             case WO:
-                prop_permsions = 0222;
+                prop_permsions = S_IWUSR | S_IWGRP | S_IWOTH;
                 break;
 
             case RW:
-                prop_permsions = 0666;
+                prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
                 break;
 
             default:
                 PRINT(ERROR, "Invalid permissions for property %s, defaulting to RW\n", path);
-                prop_permsions = 0666;
+                prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
                 break;
         }
 
         // Create the file for the property
-        int touch_p_r = touch_p(get_abs_path(prop, path, MAX_PATH_LEN), prop_permsions);
+        int touch_p_r = touch_p(path);
 
         if(touch_p_r < 0) {
-            PRINT(ERROR, "Failed to create file for property due to: %s\n", strerror(-touch_p_r));
+            PRINT(ERROR, "Failed to create file for %s due to: %s\n", path, strerror(-touch_p_r));
+            break;
+        }
+
+        int chmod_r = chmod(path, prop_permsions);
+
+        if(chmod_r < 0) {
+            PRINT(ERROR, "Failed set file permissions for %s due to: %s\n", path, strerror(errno));
             break;
         }
 

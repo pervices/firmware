@@ -110,10 +110,10 @@ int mkdir_p(const char* path) {
     }
 }
 
-int touch_p(const char* path, mode_t mode) {
+int touch_p(const char* path) {
 
     // Create file
-    int file_a = open(path, /* Create file if it doesn't already exist */O_CREAT, mode);
+    int file_a = open(path, /* Create file if it doesn't already exist */O_CREAT);
 
     // The file was successfully created
     if(file_a >= 0) {
@@ -141,7 +141,7 @@ int touch_p(const char* path, mode_t mode) {
         }
 
         // Attempt to create the file
-        int file_b = open(path, O_CREAT, mode);
+        int file_b = open(path, O_CREAT);
 
         if(file_b < 0) {
             int e = errno;
