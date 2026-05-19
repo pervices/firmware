@@ -161,7 +161,7 @@ int change_group_and_dir_perms(const char *fpath, const struct stat *sb,
     // Do not set file and symlink permissions, they are set upon creation
     if(typeflag == FTW_D) {
         // Set all directories to allow read (ls), and execute (cd), but not write (add new file)
-        int chmod_r = chmod(fpath, 555);
+        int chmod_r = chmod(fpath, S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 
         if(chmod_r < 0) {
             PRINT(ERROR, "Failed to set permissions for %s due to: %s\n", fpath, strerror(errno));
