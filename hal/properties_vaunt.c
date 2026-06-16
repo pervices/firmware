@@ -3204,6 +3204,8 @@ static int hdlr_time_clk_pps(const char *data, char *ret) {
     write_hps_reg_mask("sys13", 1, 1);
     write_hps_reg_mask("sys13", 0, 1);
 
+    usleep(1000);
+
     return RETURN_SUCCESS;
 }
 
@@ -3228,6 +3230,9 @@ static int hdlr_time_clk_set_time(const char *data, char *ret) {
     // Toggling this bit sets the time
     write_hps_reg_mask("sys13", 1, 1);
     write_hps_reg_mask("sys13", 0, 1);
+
+    usleep(1000);
+
     return RETURN_SUCCESS;
 }
 
