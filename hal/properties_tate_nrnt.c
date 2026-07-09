@@ -5448,19 +5448,24 @@ static int hdlr_fpga_qa_ecc_b_errors(const char *data, char *ret) {
 }
 
 static int hdlr_fpga_board_temp(const char *data, char *ret) {
-    uint32_t old_val = 0;
-    read_hps_reg("sys14", &old_val);
+    // Update the register
+    write_hps_reg_mask("res_rw7", ~0, 1 << 24);
+    write_hps_reg_mask("res_rw7", 0, 1 << 24);
 
-    // Mask off temp
-    old_val = old_val & 0xff;
+    // The raw value is a signed 32 bit fixed point number with 8 bits below the binary point
+    uint32_t raw_val = 0;
+    read_hps_reg("sys14", &raw_val);
 
-    if (old_val >= 128) {
-        old_val = old_val - 128;
-        snprintf(ret, MAX_PROP_LEN, "temp +%u degC\n", old_val);
-    } else if (old_val < 128) {
-        old_val = old_val - 58;
-        snprintf(ret, MAX_PROP_LEN, "temp -%u degC\n", old_val);
+    if(raw_val >= 0x80000000 && raw_val <= 0x800000FF) {
+        PRINT(ERROR, "Unable to read FPGA temperature sensor\n");
+        snprintf(ret, MAX_PROP_LEN, "temp +ERROR degC\n\n");
+
+        return RETURN_SUCCESS;
     }
+
+    float temperature_c = (int32_t)raw_val / 256.0f;
+
+    snprintf(ret, MAX_PROP_LEN, "temp %+.2f degC\n", temperature_c);
 
     return RETURN_SUCCESS;
 }
