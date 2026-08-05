@@ -36,8 +36,11 @@
     #elif defined(RTM7)
         #define PRODUCT_RTM_VER 7
         #define HARDWARE_RTM_VER 7
+    #elif defined(RTM8)
+        #define PRODUCT_RTM_VER 8
+        #define HARDWARE_RTM_VER 7
     #else
-        #error "TATE_NRNT must be compiled with a valid hardware revision (RTM3, RTM4, RTM5, RTM6, RTM7)"
+        #error "TATE_NRNT must be compiled with a valid hardware revision (RTM3, RTM4, RTM5, RTM6, RTM7, RTM8)"
     #endif
 #elif defined(LILY)
     // No actual Lily version exists based on RTM5 hardware, this option exists for testing using a converted RTM5 Tate
@@ -75,7 +78,7 @@
     #define DEFAULT_ANALOG_SYSREF_DELAY 0
 
 #else
-    #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 3, 4, 5, 6"
+    #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 3, 4, 5, 6, 7"
 #endif
 
 #if HARDWARE_RTM_VER == 3 || HARDWARE_RTM_VER == 4 || HARDWARE_RTM_VER == 5
@@ -88,5 +91,5 @@
     #define RX_LO_POWER 60
     #define TIME_LO_POWER 0
 #else
-    #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 3, 4, 5, 6"
+    #error "Invalid HARDWARE_RTM_VER (derived from product and hardware revision). Valid HARDWARE_RTM_VER: 3, 4, 5, 6, 7"
 #endif
