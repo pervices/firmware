@@ -130,12 +130,12 @@ static uint8_t tx_power[NUM_TX_CHANNELS];
 #endif
 
 #if NUM_RX_CHANNELS > 0
-    // Flag used to indicate if this is not the first call to hdlr_rx_##ch##_pwr
-    static uint8_t rx_not_first_pwr[NUM_RX_CHANNELS] = { 0 };
+    // Flag used to indicate if this is the first call to hdlr_rx_##ch##_pwr
+    static uint8_t rx_first_pwr[NUM_RX_CHANNELS] = { 1 };
 #endif
 #if NUM_TX_CHANNELS > 0
-    // Flag used to indicate if this is not the first call to hdlr_rx_##ch##_pwr
-    static uint8_t tx_not_first_pwr[NUM_TX_CHANNELS] = { 0 };
+    // Flag used to indicate if this is the first call to hdlr_rx_##ch##_pwr
+    static uint8_t tx_first_pwr[NUM_TX_CHANNELS] = { 1 };
 #endif
 
 #define MAX_POSSIBLE_CHANNELS 16
@@ -2240,7 +2240,7 @@ int check_time_pll(int ch) {
             /* Check if low noise aplifier is in a good condition */           \
             /* Skip check if this is not the first time running it or if unsupported, attempting to reset it won't work and will cause timeouts in UHD */\
             /* LNA arlarm not implemented on Lily */\
-            while(tx_not_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
+            while(tx_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
                 hdlr_tx_##ch##_status_lna("1", buf);                                \
                 if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                           \
                     PRINT(INFO, "LNA is good\n");                                   \
@@ -2305,7 +2305,7 @@ int check_time_pll(int ch) {
             write_hps_reg(tx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
                                                                                \
-        tx_not_first_pwr[INT(ch)] = 1;\
+        tx_first_pwr[INT(ch)] = 0;\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
@@ -4006,7 +4006,7 @@ TX_CHANNELS
             /* Check if low noise aplifier is in a good condition*/            \
             /* Skip check if this is not the first, attempting to reset it won't work and will cause timeouts in UHD */\
             /* LNA arlarm not implemented on Lily */\
-            while(rx_not_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
+            while(rx_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
                 hdlr_rx_##ch##_status_lna("1", buf);                           \
                 if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
                     PRINT(INFO, "LNA is good\n");                              \
@@ -4054,7 +4054,7 @@ TX_CHANNELS
             write_hps_reg(rx_reg4_map[INT(ch)], old_val &(~0x100));                \
         }                                                                      \
         \
-        rx_not_first_pwr[INT(ch)] = 1;\
+        rx_first_pwr[INT(ch)] = 0;\
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
