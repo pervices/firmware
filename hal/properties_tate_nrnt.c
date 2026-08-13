@@ -159,7 +159,8 @@ static uint8_t rx_3g_set_to_1g[NUM_RX_CHANNELS] = {0};
 // Stores if the rx board is a 3G board. Used so that the server knows whether rfe boards are 1G or 3G with USE_3G_AS_1G
 static uint8_t rx_board_variant[NUM_RX_CHANNELS] = {0};
 
-static uint8_t rx_stream[NUM_RX_CHANNELS] = {0};
+// initialize the stream as on so that the code to turn the stream off will run during server boot
+static uint8_t rx_stream[NUM_RX_CHANNELS] = {1};
 #endif
 
 typedef enum {
@@ -3763,6 +3764,12 @@ TX_CHANNELS
                                                                                \
         /* Otherwise make the change accordingly */                            \
         if (stream > 0) { /* TURN THE STREAM ON */                             \
+            /* For RTM4 LNA is kept off as much as possible to minimize risk of damaging MAAL-011141 by sudden power loss, so turn it on */\
+            if(HARDWARE_RTM_VER == 4) {\
+                snprintf(buf, 20, "rf -L 1\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+                hdlr_rx_##ch##_lna_helper(3);/* checks if the LNA successfully powered on and if not retries */\
+            }\
             if (rx_power[INT(ch)] & PWR_ON) {                                 \
                 read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                         \
                 write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x100);                 \
@@ -3777,6 +3784,11 @@ TX_CHANNELS
                 snprintf(ret, MAX_PROP_LEN, "%u", 0); /* Alert File Tree */                   \
             }                                                                  \
         } else { /* TURN THE STREAM OFF */                                     \
+            /* For RTM4 keep LNA off as much as possible to minimize risk of damaging MAAL-011141 by sudden power loss */\
+            if(HARDWARE_RTM_VER == 4) {\
+                snprintf(buf, 20, "rf -L 0\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            }\
             /* disable DSP core */                                             \
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                          \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val | 0x2);                    \
@@ -4022,11 +4034,15 @@ TX_CHANNELS
             read_hps_reg(rx_reg4_map[INT(ch)], &old_val);                               \
             write_hps_reg(rx_reg4_map[INT(ch)], old_val & ~0x100);                      \
             \
-            /* Check if low noise aplifier is in a good condition*/            \
-            /* Skip check if this is not the first, attempting to reset it won't work and will cause timeouts in UHD */\
-            /* LNA arlarm not implemented on Lily */\
-            if(rx_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
-                hdlr_rx_##ch##_lna_helper(10);\
+            /* For RTM4 we are keeping the LNA off as much as possible to minimize risk of damaging MAAL-011141 by sudden power loss */\
+            /* See hdlr_rx_##ch##_stream() for RTM4 management of the LNA disable/enable and retry */\
+            /* LNA status not implemented on Lily */\
+            if(HARDWARE_RTM_VER != 4 && PRODUCT_ID != LILY_ID) {\
+                /* Check if low noise aplifier is in a good condition */\
+                /* Skip check if this is not the first, attempting to reset it won't work (already been retried 10 times) and will cause timeouts in UHD */\
+                if(rx_first_pwr[INT(ch)]) {\
+                    hdlr_rx_##ch##_lna_helper(10);\
+                }\
             }\
                                                                                \
             /* Puts DSP in reset (should be in reset whenever not stream, use the stream property to take it out of reset */\
