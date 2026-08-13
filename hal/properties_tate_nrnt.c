@@ -3726,6 +3726,26 @@ TX_CHANNELS
         return RETURN_SUCCESS;                                                 \
     } \
     \
+    static int hdlr_rx_##ch##_lna_helper(int retries) {\
+        int num_lna_attempts = 0;\
+        while(1){\
+            hdlr_rx_##ch##_status_lna("1", buf);\
+            if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
+                PRINT(INFO, "LNA is good\n");\
+                return RETURN_SUCCESS;\
+            } else if(num_lna_attempts >= retries){\
+                PRINT(ERROR, "Failed to start lna after %i attempts\n", retries);\
+                return RETURN_ERROR;\
+            } else {\
+                PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
+                num_lna_attempts ++;\
+                snprintf(buf, 20, "rf -L r\r");\
+                ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
+            }\
+        }\
+        return RETURN_ERROR;\
+    }\
+    \
     static int hdlr_rx_##ch##_stream(const char *data, char *ret) {            \
         uint32_t old_val = 0;                                                  \
         uint8_t stream = 0;                                                    \
@@ -3964,7 +3984,6 @@ TX_CHANNELS
             return RETURN_SUCCESS;\
         }\
         uint32_t old_val = 0;                                                  \
-        int num_lna_attempts = 0;                                              \
         int8_t power = 0;                                                     \
         sscanf(data, "%" SCNd8 "", &power);                                    \
         \
@@ -4006,20 +4025,8 @@ TX_CHANNELS
             /* Check if low noise aplifier is in a good condition*/            \
             /* Skip check if this is not the first, attempting to reset it won't work and will cause timeouts in UHD */\
             /* LNA arlarm not implemented on Lily */\
-            while(rx_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
-                hdlr_rx_##ch##_status_lna("1", buf);                           \
-                if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                      \
-                    PRINT(INFO, "LNA is good\n");                              \
-                    break;                                                     \
-                } else if(num_lna_attempts >= 10){                             \
-                    PRINT(ERROR, "Failed to start lna after 10 attempts\n");   \
-                    break;                                                     \
-                } else {                                                       \
-                    PRINT(INFO, "The lna is in a bad state, attempting to restart\n");\
-                    num_lna_attempts ++;                                       \
-                    snprintf(buf, 20, "rf -L r\r");                            \
-                    ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
-                }\
+            if(rx_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
+                hdlr_rx_##ch##_lna_helper(10);\
             }\
                                                                                \
             /* Puts DSP in reset (should be in reset whenever not stream, use the stream property to take it out of reset */\
