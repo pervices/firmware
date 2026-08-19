@@ -61,6 +61,7 @@
 #endif
 
 #define NO_LMX_SUPPORT "RTM6 and RTM7 hardware does not support common LO"
+#define NO_LO_POWER_SUPPORT "RTM11+ is required to set LMX LO power"
 
 // Default payload length
 // JPOL: 2024-02-29 experimentally determined 8144 is the largest payload crimson will send
@@ -1150,7 +1151,8 @@ int check_rf_pll(int chan_mask, int uart_fd) {
     static int hdlr_tx_##ch##_rf_freq_lo_pwr(const char *data, char *ret) {                     \
         /* LMX only present for RTM11+ */                                                       \
         if (HARDWARE_RTM_VER < 11) {                                                            \
-            PRINT(ERROR, "RTM11+ is required to set LMX LO power.\n", __LINE__);                \
+            PRINT(ERROR, NO_LO_POWER_SUPPORT, __LINE__);                \
+            snprintf(ret, sizeof(NO_LO_POWER_SUPPORT), NO_LO_POWER_SUPPORT);
             return RETURN_ERROR;                                                                \
         }                                                                                       \
                                                                                                 \
