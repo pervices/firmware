@@ -1174,6 +1174,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         snprintf(buf, MAX_PROP_LEN, "lmx -c %s -p %u\r", STR(ch), lo_power);                    \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                 \
                                                                                                 \
+        snprintf(ret, MAX_PROP_LEN, "%i", lo_power);                                            \
         return RETURN_SUCCESS;                                                                  \
     }                                                                                           \
                                                                                \
