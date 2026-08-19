@@ -1147,6 +1147,37 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
                                                                                \
+    static int hdlr_tx_##ch##_rf_freq_lo_pwr(const char *data, char *ret) {                     \
+        /* LMX only present for RTM11+ */                                                       \
+        if (HARDWARE_RTM_VER < 11) {                                                            \
+            PRINT(ERROR, "RTM11+ is required to set LMX LO power.\n", __LINE__);                \
+            return RETURN_ERROR;                                                                \
+        }                                                                                       \
+                                                                                                \
+        int lo_power;                                                                           \
+        sscanf(data, "%i", &lo_power);                                                    \
+                                                                                                \
+        /* Power must be between 0 and 63. Clip to range if outside of it */                    \
+        if (lo_power > 63) {                                                                    \
+            PRINT(ERROR, "Attempted to set LO power to %i but the maximum power setting is 63. "\
+                "Using maximum value instead.\n", lo_power);                                    \
+            lo_power = 63;                                                                      \
+        } else if (lo_power < 0) {                                                              \
+            PRINT(ERROR, "Attempted to set LO power to %i but the minimum power setting is 0. "\
+                "Using minimum value instead.\n", lo_power);                                    \
+            lo_power = 0;                                                                       \
+        }                                                                                       \
+                                                                                                \
+        /* Set the LO power on the tx board */                                                  \
+        /* This value will be overwritten if the rf/freq/val property is set after it. */       \
+        PRINT(INFO, "Setting LO power level to: %i\n", lo_power);                               \
+        snprintf(buf, MAX_PROP_LEN, "lmx -c %s -p %u\r", STR(ch), lo_power);                    \
+        ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                 \
+                                                                                                \
+        snprintf(ret, MAX_PROP_LEN, "%i", lo_power);                                            \
+        return RETURN_SUCCESS;                                                                  \
+    }                                                                                           \
+                                                                               \
     static int hdlr_tx_##ch##_rf_freq_band(const char *data, char *ret) {      \
         snprintf(buf, MAX_PROP_LEN, "rf -c " STR(ch) " -b %s\r", data);        \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                \
@@ -4649,6 +4680,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_sra_sel"    , hdlr_tx_##_c##_rf_dac_dither_sra_sel,   RW, "6", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lo_pwr"           , hdlr_tx_##_c##_rf_freq_lo_pwr,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lut_en"           , hdlr_tx_##_c##_rf_freq_lut_en,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/band"             , hdlr_tx_##_c##_rf_freq_band,            RW, "1", TP, #_c)         \
