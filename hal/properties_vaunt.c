@@ -1151,7 +1151,6 @@ int check_rf_pll(int chan_mask, int uart_fd) {
     static int hdlr_tx_##ch##_rf_freq_lo_pwr(const char *data, char *ret) {                     \
         /* LMX only present for RTM11+ */                                                       \
         if (HARDWARE_RTM_VER < 11) {                                                            \
-            PRINT(ERROR, NO_LO_POWER_SUPPORT);                                                  \
             snprintf(ret, sizeof(NO_LO_POWER_SUPPORT), NO_LO_POWER_SUPPORT);                    \
             return RETURN_ERROR;                                                                \
         }                                                                                       \
