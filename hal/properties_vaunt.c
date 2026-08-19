@@ -1151,13 +1151,13 @@ int check_rf_pll(int chan_mask, int uart_fd) {
     static int hdlr_tx_##ch##_rf_freq_lo_pwr(const char *data, char *ret) {                     \
         /* LMX only present for RTM11+ */                                                       \
         if (HARDWARE_RTM_VER < 11) {                                                            \
-            PRINT(ERROR, NO_LO_POWER_SUPPORT, __LINE__);                \
-            snprintf(ret, sizeof(NO_LO_POWER_SUPPORT), NO_LO_POWER_SUPPORT);
+            PRINT(ERROR, NO_LO_POWER_SUPPORT);                                                  \
+            snprintf(ret, sizeof(NO_LO_POWER_SUPPORT), NO_LO_POWER_SUPPORT);                    \
             return RETURN_ERROR;                                                                \
         }                                                                                       \
                                                                                                 \
         int lo_power;                                                                           \
-        sscanf(data, "%i", &lo_power);                                                    \
+        sscanf(data, "%i", &lo_power);                                                          \
                                                                                                 \
         /* Power must be between 0 and 63. Clip to range if outside of it */                    \
         if (lo_power > 63) {                                                                    \
@@ -1165,7 +1165,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 "Using maximum value instead.\n", lo_power);                                    \
             lo_power = 63;                                                                      \
         } else if (lo_power < 0) {                                                              \
-            PRINT(ERROR, "Attempted to set LO power to %i but the minimum power setting is 0. "\
+            PRINT(ERROR, "Attempted to set LO power to %i but the minimum power setting is 0. " \
                 "Using minimum value instead.\n", lo_power);                                    \
             lo_power = 0;                                                                       \
         }                                                                                       \
