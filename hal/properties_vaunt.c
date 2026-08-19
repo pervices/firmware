@@ -1155,7 +1155,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         }                                                                                       \
                                                                                                 \
         int lo_power;                                                                           \
-        sscanf(data, "%", SCNu8, &lo_power);                                                    \
+        sscanf(data, "%i", &lo_power);                                                    \
                                                                                                 \
         /* Power must be between 0 and 63. Clip to range if outside of it */                    \
         if (lo_power > 63) {                                                                    \
@@ -1173,6 +1173,8 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         PRINT(INFO, "Setting LO power level to: %i\n", lo_power);                               \
         snprintf(buf, MAX_PROP_LEN, "lmx -c %s -p %u\r", STR(ch), lo_power);                    \
         ping(uart_tx_fd[INT(ch)], (uint8_t *)buf, strlen(buf));                                 \
+                                                                                                \
+        return RETURN_SUCCESS;                                                                  \
     }                                                                                           \
                                                                                \
     static int hdlr_tx_##ch##_rf_freq_band(const char *data, char *ret) {      \
