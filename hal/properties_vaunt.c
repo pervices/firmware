@@ -4182,7 +4182,7 @@ static int hdlr_fpga_link_sfpa_pay_len(const char *data, char *ret) {
     // Limit pay_len for current FPGA
     if(get_commit_counter() >= MIN_FPGA_FOR_MAX_PAY_LEN) {
         if(pay_len > MAX_PAY_LEN) {
-            pay_len = MAX_PATH_LEN;
+            pay_len = MAX_PAY_LEN;
         }
     // Limit pay_len for legacy FPGA
     } else {
@@ -4248,7 +4248,7 @@ static int hdlr_fpga_link_sfpb_pay_len(const char *data, char *ret) {
     // Limit pay_len for current FPGA
     if(get_commit_counter() >= MIN_FPGA_FOR_MAX_PAY_LEN) {
         if(pay_len > MAX_PAY_LEN) {
-            pay_len = MAX_PATH_LEN;
+            pay_len = MAX_PAY_LEN;
         }
     // Limit pay_len for legacy FPGA
     } else {
