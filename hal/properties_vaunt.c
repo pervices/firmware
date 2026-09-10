@@ -35,6 +35,7 @@
     #include <math.h>
 #endif
 
+#include <sys/time.h>
 #include <sys/stat.h>
 #include "channels.h"
 
@@ -446,6 +447,14 @@ static uint16_t get_optimal_sr_factor(double rate, double base_rate,
         }                                                                      \
         _r;                                                                    \
     })
+
+// Check if the pps signal has been detected in the past second
+static uint32_t is_pps_detected() {
+    uint32_t pps_detected;
+    read_hps_reg("sys21", &pps_detected);
+
+    return (int) pps_detected & 0x1;
+}
 
 /* -------------------------------------------------------------------------- */
 /* -------------------------------- MISC ------------------------------------ */
@@ -3270,10 +3279,7 @@ static int hdlr_time_clk_cmd(const char* data, char* ret) {
 // Checks if there has been a PPS in the past second
 // Poll this to verify the PPS is working
 static int hdlr_time_clk_pps_dtc(const char* data, char* ret) {
-    uint32_t pps_detected;
-    read_hps_reg("sys21", &pps_detected);
-    
-    snprintf(ret, MAX_PROP_LEN, "%u", pps_detected & 0x1);
+    snprintf(ret, MAX_PROP_LEN, "%u", is_pps_detected());
     return RETURN_SUCCESS;
 }
 
@@ -3305,16 +3311,107 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
 }
 
 static int hdlr_time_set_time_source(const char *data, char *ret) {
-    // Sets pps mode to input
+    // Get the current mode
+    uint32_t existing_mode;
+    read_hps_reg("sys13", &existing_mode);
+    existing_mode = existing_mode & 0x2;
+
+    int is_target_internal;
+
     if (strcmp(data, "external") == 0) {
+        // Do nothing if the polarity already matches the requested to avoid waiting a long time for the detected check
+        if(existing_mode == 2) {
+            return RETURN_SUCCESS;
+        }
+        // Sets pps mode to input (taking in an external signal)
         write_hps_reg_mask("sys13", 2, 0x2);
-    // Sets pps mode to output
+
+        is_target_internal = 0;
+
     } else if (strcmp(data, "internal") == 0) {
+        // Do nothing if the polarity already matches the requested to avoid waiting a long time for the detected check
+        if(existing_mode == 0) {
+            return RETURN_SUCCESS;
+        }
+
+        // Sets pps mode to output
         write_hps_reg_mask("sys13", 0, 0x2);
+
+        is_target_internal = 1;
+
     // Other time sources not supported
     } else {
         snprintf(ret, MAX_PROP_LEN, "Invalid time source\nValid options are: external, internal\n");
+        // Exit early since providing an invalid time source is already an error, no need to check to further errors.
+        return RETURN_SUCCESS;
     }
+
+    // Variables for measuring timeout
+    struct timespec start, now, poll_interval;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    double time_elapsed;
+    // Poll is the PPS was detected every 100us
+    poll_interval.tv_sec = 0;
+    poll_interval.tv_nsec = 100000;
+
+    int pps_good;
+    int pps_was_down = 0;
+
+    // Poll pps_good until it has either been stable for 1.1s (therefore we must be getting a PPS), or it went down and came back if (so were know that the new PPS mode is stable)
+    do {
+        pps_good = is_pps_detected();
+
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        time_elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
+
+        if(!pps_good) {
+            pps_was_down = 1;
+        }
+        
+        // Sleep until the next poll if 
+        if(!pps_good || !pps_was_down) {
+            nanosleep(&poll_interval, NULL);
+        }
+    // Loop while (pps is bad or the pps hasn't been detected as down yet) && the timeout has not been reached
+    // If the timeout is reached then the PPS is good since it's been long enough that it would've going down if it was bad
+    // 2.1 was selected because experimently it goes down after between 1.059344 and 1.845352s. I am assuming that the actual threshold is 2s.
+    } while ((!pps_good || !pps_was_down) && time_elapsed < 2.1);
+
+    if(pps_good) {
+        // The new PPS singal is good or is already internal, no action required
+        return RETURN_SUCCESS;
+    } else if(is_target_internal) {
+        PRINT(ERROR, "Failed to detect internal PPS\n");
+        return RETURN_SUCCESS;
+    }
+
+    PRINT(ERROR, "External PPS signal not detected, falling back to internal\n");
+    // Fall back to using an internal PPS 
+    write_hps_reg_mask("sys13", 0, 0x2);
+    // Set the return value to indicate the PPS fell back to internal
+    snprintf(ret, MAX_PROP_LEN, "internal");
+
+    // Start the timer for timeout
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    // Wait until the internal PPS is detected or timeout
+    do {
+        pps_good = is_pps_detected();
+
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        time_elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
+        
+        // Sleep until the next poll if 
+        if(!pps_good) {
+            nanosleep(&poll_interval, NULL);
+        }
+    // Loop while (pps is bad or the pps hasn't been detected as down yet) && the timeout has not been reached
+    } while (!pps_good && time_elapsed < 1.1);
+
+    if(!pps_good) {
+        PRINT(ERROR, "Failed to detect internal PPS after falling back due to failed to detected external\n");
+    }
+
     return RETURN_SUCCESS;
 }
 
