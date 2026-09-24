@@ -66,7 +66,11 @@
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
-typedef enum { RW, RO, WO } perm_t;
+// WOR: write to said property before reading to update it
+// Same permission as RW (since a right is needed to update it)
+// The permissions field is being repurposed to include automatic pokes becasue the alternative involes a lot of code rewriting
+typedef enum { RW, RO, WO, WOR } perm_t;
+
 typedef enum { POLL, NO_POLL } poll_t;
 
 typedef enum {
@@ -80,8 +84,7 @@ typedef enum {
 typedef enum {
     TP = 3, //indicates to set a tx board on
     RP = 2, //indicates to set an rx board on
-    SP = 1, //indicates not to seta board to on
-    UP = 0, //indicates that is is unspecified whether or not to set a channel power (uses old method)
+    SP = 1, //indicates not to set a board to on (applies to operations that do not touch the RX or TX rfes)
 } prop_pwr_t;
 
 //constant used in DEFINE_FILE_PROP_P, when a channel number is not applicable
