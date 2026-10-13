@@ -1059,6 +1059,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
         else {                                                                 \
             PRINT(ERROR, "Unexpected product at line %d. Contact support\n", __LINE__);\
         }                                                                      \
+        PRINT(INFO, "LMX_FREQ: %u, FREQ: %u\n", lmx_freq, freq);               \
                                                                                \
         /* if freq = 0 or below allowed range, mute PLL */                     \
         if (freq < MIN_LO) {                                                   \
@@ -5422,6 +5423,7 @@ int set_lo_frequency(int uart_fd, pllparam_t *pll, uint8_t channel) {
     ping(uart_fd, (uint8_t *)buf, strlen(buf));
 
     double freq = (pll->vcoFreq / pll->d) + (pll->x2en * pll->vcoFreq / pll->d);
+    PRINT(INFO, "phase detector freq:  %u, freq: %u\n", (uint32_t)(pll->ref_freq / pll->R / 1000000), freq);
 
     // Reinitialize the LMX. For some reason the initialization on server boot, doesn't seem to be enough
     strcpy(buf, "lmx -k \r");
