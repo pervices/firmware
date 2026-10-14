@@ -4601,6 +4601,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
             get_property(prop_path, buf, MAX_PROP_LEN);
             if(strcmp(buf,"Locked") != 0) {
                 fail_count += 1;
+                PRINT(ERROR, "buf: %s\n", buf);
             }
             PRINT(ERROR, "2 fail_count: %hhu\n", fail_count);
         }
