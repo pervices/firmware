@@ -1001,16 +1001,21 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                 sprintf(buf, "rf -c %i -f %" PRIu64 "\r", MSK(ch) << 4,        \
                     lmx_freq/1000000);                                         \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));               \
-                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
-                /* Send Parameters over to the MCU */                          \
-                /* uses output A by default */                                 \
-                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4)) {        \
-                    /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
-                    lmx_freq *= 4;                                             \
-                } else {                                                       \
-                    /* PLL unlocked unexpected frequency should raise error */ \
-                    lmx_freq = 0;                                              \
-                }                                                              \
+                /* PLL lock is not reliable, try 3 times. */                   \
+                for(int i=0; i < 3; i++) {                                     \
+                    /* TODO: pll1.power setting TBD (need to modify pllparam_t) */  \
+                    /* Send Parameters over to the MCU */                           \
+                    /* uses output A by default */                                  \
+                    if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4)) {         \
+                        /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
+                        lmx_freq = (uint64_t)outfreq * 4;                           \
+                        /* Do not reattempt if PLL successfully locked */           \
+                        break;                                                      \
+                    } else {                                                        \
+                        /* PLL unlocked unexpected frequency should raise error */  \
+                        lmx_freq = 0;                                               \
+                    }                                                               \
+                }                                                                   \
                 /* LO stepsize of 4x base clock is inconveniently large, so */ \
                 /* we allow the IF LO to drift from the center of the */       \
                 /* passband by up to 3x base clock.*/                          \
@@ -1036,16 +1041,21 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                     pll.R = pll.R + 1;                                         \
                     outfreq = setFreq(&lmx_freq, &pll);                        \
                 }                                                              \
-                lmx_freq = (uint64_t)outfreq;                                  \
-                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
-                /* Send Parameters over to the MCU */                          \
-                /* uses output A by default */                                 \
-                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4)) {        \
-                    /* intentionally empty, no action on success */            \
-                } else {                                                       \
-                    /* PLL unlocked unexpected frequency should raise error */ \
-                    lmx_freq = 0;                                              \
-                }                                                              \
+                /* PLL lock is not reliable, try 3 times. */                   \
+                for(int i=0; i < 3; i++) {                                     \
+                    /* TODO: pll1.power setting TBD (need to modify pllparam_t) */  \
+                    /* Send Parameters over to the MCU */                           \
+                    /* uses output A by default */                                  \
+                    if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch) + 4)) {         \
+                        /* If PLL successfully locked, lmx_freq was set */          \
+                        lmx_freq = (uint64_t)outfreq;                               \
+                        /* Do not reattempt if PLL successfully locked */           \
+                        break;                                                      \
+                    } else {                                                        \
+                        /* PLL unlocked unexpected frequency should raise error */  \
+                        lmx_freq = 0;                                               \
+                    }                                                               \
+                }                                                                   \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF_TX;                                            \
             } else { /* Front end low band */                                  \
@@ -1858,15 +1868,20 @@ TX_CHANNELS
                 sprintf(buf, "rf -c %i -f %" PRIu64 "\r", MSK(ch),             \
                     lmx_freq/1000000);                                         \
                 ping(uart_gpio_fd, (uint8_t *)buf, strlen(buf));        \
-                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
-                /* Send Parameters over to the MCU */                          \
-                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch))) {            \
-                    /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
-                    lmx_freq *= 4;                                             \
-                } else {                                                       \
-                    /* PLL unlocked unexpected frequency should raise error */ \
-                    lmx_freq = 0;                                              \
-                }                                                              \
+                /* PLL lock is not reliable, try 3 times. */                        \
+                for(int i=0; i < 3; i++) {                                          \
+                    /* TODO: pll1.power setting TBD (need to modify pllparam_t) */  \
+                    /* Send Parameters over to the MCU */                           \
+                    if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch))) {             \
+                        /* set lmx_freq to account for ADAR2001 quadrupler when print to state tree*/ \
+                        lmx_freq = (uint64_t)outfreq * 4;                           \
+                        /* Do not reattempt if PLL successfully locked */           \
+                        break;                                                      \
+                    } else {                                                        \
+                        /* PLL unlocked unexpected frequency should raise error */  \
+                        lmx_freq = 0;                                               \
+                    }                                                               \
+                }                                                                   \
                 /* set the lmx to use output B */                              \
                 if (PRODUCT_RTM_VER == 1) {                                    \
                     /* RTM1 used LMX output B for highband, after that we just \
@@ -1905,16 +1920,21 @@ TX_CHANNELS
                     pll.R = pll.R + 1;                                         \
                     outfreq = setFreq(&lmx_freq, &pll);                        \
                 }                                                              \
-                lmx_freq = (uint64_t)outfreq;                                  \
-                /* TODO: pll1.power setting TBD (need to modify pllparam_t) */ \
-                /* Send Parameters over to the MCU */                          \
-                /* uses output A by default */                                 \
-                if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch))) {            \
-                    /* intentionally empty, no action on success */            \
-                } else {                                                       \
-                    /* PLL unlocked unexpected frequency should raise error */ \
-                    lmx_freq = 0;                                              \
-                }                                                              \
+                /* PLL lock is not reliable, try 3 times. */                   \
+                for(int i=0; i < 3; i++) {                                     \
+                    /* TODO: pll1.power setting TBD (need to modify pllparam_t) */  \
+                    /* Send Parameters over to the MCU */                           \
+                    /* uses output A by default */                                  \
+                    if(set_lo_frequency(uart_gpio_fd, &pll, INT(ch))) {             \
+                        /* If PLL successfully locked, lmx_freq was set */          \
+                        lmx_freq = (uint64_t)outfreq;                               \
+                        /* Do not reattempt if PLL successfully locked */           \
+                        break;                                                      \
+                    } else {                                                        \
+                        /* PLL unlocked unexpected frequency should raise error */  \
+                        lmx_freq = 0;                                               \
+                    }                                                               \
+                }                                                             \
                 /* set the freq to 650MHz so normal RF chain centered on IF */ \
                 freq = AVERY_IF_RX;                                            \
             } else { /* Front end low band */                                  \
