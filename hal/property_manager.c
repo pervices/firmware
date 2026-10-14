@@ -207,6 +207,8 @@ static void make_prop(prop_t *prop) {
                     break;
 
                 case RW:
+                // WOR is RW with an additional flag to write before reading unrelated to the actual permissions
+                case WOR:
                     prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
                     break;
 
@@ -368,7 +370,7 @@ int init_property(uint8_t options) {
     set_uart_debug_opt(options);
     set_mem_debug_opt(options);
 
-    // XXX 
+    // XXX
     uart_synth_comm_fd = -1;
 
     for(int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
@@ -697,15 +699,9 @@ int set_property(const char *prop, const char *data) {
     PRINT(INFO, "pwr_en: %i\n", temp->pwr_en);
     PRINT(INFO, "Setting: %s\n", temp->path);
 #endif
-    if(temp->pwr_en == UP) {
-        // enable (turns on and initializes) channel if it has not been enabled yet
-        // (enabling the channel later will erase the current channels, so enable
-        // now)
-        //This is what causes the power to turn on every time anthing with tx or rx in its path is called
-        //This is the old method
-        PRINT(ERROR, "Old method of choosing if a board needs to be powered on removed\n");
-    //powers of channels if they are not already on
-    } else if(temp->pwr_en == RP) {
+
+    //powers of channels if the property requires it
+    if(temp->pwr_en == RP) {
         power_on_channel(0, *(temp->ch));
     } else if(temp->pwr_en == TP) {
         power_on_channel(1, *(temp->ch));
@@ -728,7 +724,7 @@ int property_good(char *path) {
     // returns 1 if property is good else returns 0
     char property_read[5];
     char fullpath[200] = STATE_DIR "/";
-    
+
     snprintf(&fullpath[0], 200, path);
     // need to write to the property to force an update
     set_property(&fullpath[0],"0");
