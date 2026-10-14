@@ -667,7 +667,7 @@ int get_property(const char *prop, char *data, size_t max_len) {
     // If WOR write to the property before reading to get a fresh value
     if (temp->permissions == WOR) {
         power_on_channel_if_needed(temp);
-        // write_to_file(get_abs_path(temp, path, MAX_PATH_LEN), data);
+        write_to_file(get_abs_path(temp, path, MAX_PATH_LEN), data);
     }
 
     read_from_file(get_abs_path(temp, path, MAX_PATH_LEN), data, max_len);
