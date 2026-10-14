@@ -4580,6 +4580,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
 
     // TODO: Check TX JESD links
 
+    PRINT(ERROR, "1 fail_count: %hhu\n", fail_count);
     // Check RX and TX RF PLLs
     for (j = 0; j < 2; j++) {
         switch(j)
@@ -4601,6 +4602,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
             if(strcmp(buf,"Locked") != 0) {
                 fail_count += 1;
             }
+            PRINT(ERROR, "2 fail_count: %hhu\n", fail_count);
         }
     }
 
