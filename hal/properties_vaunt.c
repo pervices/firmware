@@ -4770,14 +4770,14 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sample_counter"   , hdlr_tx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sample_counter"   , hdlr_tx_##_c##_trigger_sample_counter, WOR, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_mixer_en"   , hdlr_tx_##_c##_rf_dac_dither_mixer_en,  RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_sra_sel"    , hdlr_tx_##_c##_rf_dac_dither_sra_sel,   RW, "6", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,            WOR, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lo_pwr"           , hdlr_tx_##_c##_rf_freq_lo_pwr,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lut_en"           , hdlr_tx_##_c##_rf_freq_lut_en,          RW, "0", TP, #_c)         \
