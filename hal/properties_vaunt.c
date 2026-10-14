@@ -4810,9 +4810,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,            WOR, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,               WOR, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,               WOR, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"       , hdlr_tx_##_c##_endian_swap,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
