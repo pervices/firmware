@@ -130,6 +130,35 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
+// Powers on/initializes a channel if it must be initialized for the property
+static void power_on_channel_if_needed(prop_t* prop) {
+
+    bool is_tx;
+
+    // Check if the property needs power
+    if(prop->pwr_en == SP) {
+        // Do nothing this property does not need the applicable RFE board to be powered on
+        return;
+    } else if(prop->pwr_en == RP) {
+        is_tx = false;
+    } else if(prop->pwr_en == TP) {
+        is_tx = false;
+    } else {
+        PRINT(ERROR, "Unrecognized board power status dependency. This should be unreachable\n");
+        return;
+    }
+
+    // Turn on/initialize the channel
+    char buf[MAX_PATH_LEN];
+    snprintf(buf, sizeof(buf), "%s/%c/pwr", is_tx ? "tx" : "rx", *(prop->ch));
+    prop = get_prop_from_cmd(buf);
+    if (NULL == prop) {
+        PRINT(ERROR, "Cannot find prop for command '%s', channel: %c\n", buf, *(prop->ch));
+        return;
+    }
+    write_to_file(get_abs_path(prop, buf, MAX_PATH_LEN), "1");
+}
+
 /**
  * Sets the file/directory to the group dev-grp0, and sets directory permissions.
  * Both operations are done here to avoid needing to walk through the state tree multiple times
@@ -207,6 +236,8 @@ static void make_prop(prop_t *prop) {
                     break;
 
                 case RW:
+                // WOR is RW with an additional flag to write before reading unrelated to the actual permissions
+                case WOR:
                     prop_permsions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
                     break;
 
@@ -368,7 +399,7 @@ int init_property(uint8_t options) {
     set_uart_debug_opt(options);
     set_mem_debug_opt(options);
 
-    // XXX 
+    // XXX
     uart_synth_comm_fd = -1;
 
     for(int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
@@ -633,6 +664,13 @@ int get_property(const char *prop, char *data, size_t max_len) {
         return RETURN_ERROR_GET_PROP;
     }
 
+    // If WOR write to the property before reading to get a fresh value
+    if (temp->permissions == WOR) {
+        power_on_channel_if_needed(temp);
+        write_to_file(get_abs_path(temp, path, MAX_PATH_LEN), data);
+        check_property_inotifies();
+    }
+
     read_from_file(get_abs_path(temp, path, MAX_PATH_LEN), data, max_len);
 
     return RETURN_SUCCESS;
@@ -663,19 +701,6 @@ int get_channel_for_path(const char *path) {
     return path[3] - 'a';
 }
 
-void power_on_channel(bool is_tx, char channel) {
-    char buf[MAX_PATH_LEN];
-    prop_t *prop;
-
-    snprintf(buf, sizeof(buf), "%s/%c/pwr", is_tx ? "tx" : "rx", channel);
-    prop = get_prop_from_cmd(buf);
-    if (NULL == prop) {
-        PRINT(ERROR, "Cannot find prop for command '%s', channel: %i\n", buf, channel);
-        return;
-    }
-    write_to_file(get_abs_path(prop, buf, MAX_PATH_LEN), "1");
-}
-
 // standard set property
 int set_property(const char *prop, const char *data) {
     char path[MAX_PATH_LEN];
@@ -693,23 +718,8 @@ int set_property(const char *prop, const char *data) {
         return RETURN_ERROR_SET_PROP;
     }
 
-#ifdef PROPERTY_MANAGER_DEBUG
-    PRINT(INFO, "pwr_en: %i\n", temp->pwr_en);
-    PRINT(INFO, "Setting: %s\n", temp->path);
-#endif
-    if(temp->pwr_en == UP) {
-        // enable (turns on and initializes) channel if it has not been enabled yet
-        // (enabling the channel later will erase the current channels, so enable
-        // now)
-        //This is what causes the power to turn on every time anthing with tx or rx in its path is called
-        //This is the old method
-        PRINT(ERROR, "Old method of choosing if a board needs to be powered on removed\n");
-    //powers of channels if they are not already on
-    } else if(temp->pwr_en == RP) {
-        power_on_channel(0, *(temp->ch));
-    } else if(temp->pwr_en == TP) {
-        power_on_channel(1, *(temp->ch));
-    }
+    //powers on channels if the property requires it
+    power_on_channel_if_needed(temp);
 
     write_to_file(get_abs_path(temp, path, MAX_PATH_LEN), data);
 
@@ -728,7 +738,7 @@ int property_good(char *path) {
     // returns 1 if property is good else returns 0
     char property_read[5];
     char fullpath[200] = STATE_DIR "/";
-    
+
     snprintf(&fullpath[0], 200, path);
     // need to write to the property to force an update
     set_property(&fullpath[0],"0");
