@@ -4707,7 +4707,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"     , hdlr_rx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"   , hdlr_rx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"   , hdlr_rx_##_c##_trigger_sample_counter, WOR, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
