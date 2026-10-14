@@ -4599,7 +4599,10 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
             snprintf(prop_path, PROP_PATH_LEN, "%cx/%c/status/rfpll_lock", ch_type, i+'a');
             set_property(prop_path, "1");
             PRINT(ERROR, "pre buf: %s\n", buf);
-            get_property(prop_path, buf, MAX_PROP_LEN);
+            int get_r = get_property(prop_path, buf, MAX_PROP_LEN);
+            if(get_r != RETURN_SUCCESS) {
+                PRINT(ERROR, "get_r: %i\n", get_r);
+            }
             if(strcmp(buf,"Locked") != 0) {
                 fail_count += 1;
             }
