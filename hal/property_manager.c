@@ -130,6 +130,35 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
 }
 
+// Powers on/initializes a channel if it must be initialized for the property
+static void power_on_channel_if_needed(prop_t* prop) {
+
+    bool is_tx;
+
+    // Check if the property needs power
+    if(prop->pwr_en == SP) {
+        // Do nothing this property does not need the applicable RFE board to be powered on
+        return;
+    } else if(prop->pwr_en == RP) {
+        is_tx = false;
+    } else if(prop->pwr_en == TP) {
+        is_tx = false;
+    } else {
+        PRINT(ERROR, "Unrecognized board power status dependency. This should be unreachable\n");
+        return;
+    }
+
+    // Turn on/initialize the channel
+    char buf[MAX_PATH_LEN];
+    snprintf(buf, sizeof(buf), "%s/%c/pwr", is_tx ? "tx" : "rx", *(prop->ch));
+    prop = get_prop_from_cmd(buf);
+    if (NULL == prop) {
+        PRINT(ERROR, "Cannot find prop for command '%s', channel: %c\n", buf, *(prop->ch));
+        return;
+    }
+    write_to_file(get_abs_path(prop, buf, MAX_PATH_LEN), "1");
+}
+
 /**
  * Sets the file/directory to the group dev-grp0, and sets directory permissions.
  * Both operations are done here to avoid needing to walk through the state tree multiple times
@@ -665,19 +694,6 @@ int get_channel_for_path(const char *path) {
     return path[3] - 'a';
 }
 
-void power_on_channel(bool is_tx, char channel) {
-    char buf[MAX_PATH_LEN];
-    prop_t *prop;
-
-    snprintf(buf, sizeof(buf), "%s/%c/pwr", is_tx ? "tx" : "rx", channel);
-    prop = get_prop_from_cmd(buf);
-    if (NULL == prop) {
-        PRINT(ERROR, "Cannot find prop for command '%s', channel: %i\n", buf, channel);
-        return;
-    }
-    write_to_file(get_abs_path(prop, buf, MAX_PATH_LEN), "1");
-}
-
 // standard set property
 int set_property(const char *prop, const char *data) {
     char path[MAX_PATH_LEN];
@@ -695,17 +711,8 @@ int set_property(const char *prop, const char *data) {
         return RETURN_ERROR_SET_PROP;
     }
 
-#ifdef PROPERTY_MANAGER_DEBUG
-    PRINT(INFO, "pwr_en: %i\n", temp->pwr_en);
-    PRINT(INFO, "Setting: %s\n", temp->path);
-#endif
-
-    //powers of channels if the property requires it
-    if(temp->pwr_en == RP) {
-        power_on_channel(0, *(temp->ch));
-    } else if(temp->pwr_en == TP) {
-        power_on_channel(1, *(temp->ch));
-    }
+    //powers on channels if the property requires it
+    power_on_channel_if_needed(temp);
 
     write_to_file(get_abs_path(temp, path, MAX_PATH_LEN), data);
 
