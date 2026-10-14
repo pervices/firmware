@@ -2173,7 +2173,8 @@ TX_CHANNELS
         if(check_rf_pll(MSK(ch), uart_rx_fd[INT(ch)])) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
-            snprintf(ret, MAX_PROP_LEN, "Unlocked\n");\
+            snprintf(ret, MAX_PROP_LEN, "Locked\n");\
+            /* snprintf(ret, MAX_PROP_LEN, "Unlocked\n"); */\
         }\
                                                                                \
         return RETURN_SUCCESS;                                                 \
@@ -4718,7 +4719,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/range"            , hdlr_rx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,            WOR, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,        WOR, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
