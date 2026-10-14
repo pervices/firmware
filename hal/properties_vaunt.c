@@ -4598,11 +4598,13 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
         for (i = 0; (i < NUM_RX_CHANNELS && ch_type == 'r') || (i < NUM_TX_CHANNELS && ch_type == 'r') ; i++) {
             snprintf(prop_path, PROP_PATH_LEN, "%cx/%c/status/rfpll_lock", ch_type, i+'a');
             set_property(prop_path, "1");
+            PRINT(ERROR, "pre buf: %s\n", buf);
             get_property(prop_path, buf, MAX_PROP_LEN);
             if(strcmp(buf,"Locked") != 0) {
                 fail_count += 1;
-                PRINT(ERROR, "buf: %s\n", buf);
             }
+            PRINT(ERROR, "post buf: %s\n", buf);
+            memset(buf, 0, MAX_PROP_LEN);
             PRINT(ERROR, "2 fail_count: %hhu\n", fail_count);
         }
     }
