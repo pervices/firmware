@@ -743,14 +743,14 @@ static int valid_trig_time_disable(const char *data, uint32_t *val) {
 static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?16:13), 1, val);
 }
 
 static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?17:14), 1, val);
 }
 
@@ -2955,14 +2955,14 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 #if (NUM_TX_CHANNELS > 0)
 static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     uint32_t mask;
-    
+
     if (1 != sscanf(data, "%x", &mask)) {
         return RETURN_ERROR_PARAM;
     }
-    
+
     mask &= 0xffff;
     snprintf(ret, MAX_PROP_LEN, "%x", mask);
-    
+
     return RETURN_SUCCESS;
 }
 
@@ -3419,8 +3419,8 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
         if(!pps_good) {
             pps_was_down = 1;
         }
-        
-        // Sleep until the next poll if 
+
+        // Sleep until the next poll if
         if(!pps_good || !pps_was_down) {
             nanosleep(&poll_interval, NULL);
         }
@@ -3438,7 +3438,7 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
     }
 
     PRINT(ERROR, "External PPS signal not detected, falling back to internal\n");
-    // Fall back to using an internal PPS 
+    // Fall back to using an internal PPS
     write_hps_reg_mask("sys13", 0, 0x2);
     // Set the return value to indicate the PPS fell back to internal
     snprintf(ret, MAX_PROP_LEN, "internal");
@@ -3452,8 +3452,8 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
 
         clock_gettime(CLOCK_MONOTONIC, &now);
         time_elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
-        
-        // Sleep until the next poll if 
+
+        // Sleep until the next poll if
         if(!pps_good) {
             nanosleep(&poll_interval, NULL);
         }
@@ -3953,7 +3953,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             // read the status register
             reset = 0x3f;
             break;
-        case 1: 
+        case 1:
             PRINT(INFO,"hps pll reset\n");
         case 3:
             PRINT(INFO,"failover pll reset\n");
@@ -4013,7 +4013,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     if(time >= MAX_RESET_WAIT) {
         PRINT(ERROR, "Timeout while waiting for FPGA reset\n");
     }
-    
+
     // write the register back to its default state
     write_hps_reg("rst_req0", 0xffffffff);
 
@@ -4576,15 +4576,15 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 
 static int read_interboot_variable(char* data_filename, int64_t* value) {
     struct stat sb;
-    
+
     char data_path[MAX_PROP_LEN];
-    
+
     snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
-    
+
     int file_missing = stat(data_path, &sb);
-    
+
     PRINT(INFO, "Reading from %s\n", data_path);
-    
+
     if(file_missing) {
         *value = 0;
         return file_missing;
@@ -4598,19 +4598,19 @@ static int read_interboot_variable(char* data_filename, int64_t* value) {
 
 static void update_interboot_variable(char* data_filename, int64_t value) {
     struct stat sb;
-    
+
     char data_path[MAX_PROP_LEN];
-    
+
     snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
-    
+
     int directory_missing = stat(INTERBOOT_DATA, &sb);
-    
+
     if(directory_missing) {
         mkdir(INTERBOOT_DATA, 0644);
     }
-    
+
     FILE *data_file = fopen( data_path, "w");
-    
+
     fprintf(data_file, "%lli", value);
     fclose(data_file);
 }
@@ -4629,7 +4629,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
     uint8_t i, j, error_val, ret_val;
     char ch_type;
     char prop_path[PROP_PATH_LEN];
-    
+
     // Check for known bad FPGA state
     uint32_t read_val;
     read_hps_reg("rst_stat0",&read_val);
@@ -4790,7 +4790,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "negative", SP, #_c)  \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"     , hdlr_rx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"   , hdlr_rx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"   , hdlr_rx_##_c##_trigger_sample_counter, WOR, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
@@ -4801,11 +4801,11 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/val"              , hdlr_rx_##_c##_rf_gain_val,             RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/gain/range"            , hdlr_rx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/atten/val"             , hdlr_rx_##_c##_rf_atten_val,            RW, "127", RP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,            WOR, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,        WOR, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/test"               , hdlr_rx_##_c##_rf_board_test,           WO, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,           RW, "20", RP, #_c)        \
+    DEFINE_FILE_PROP_P("rx/" #_c "/board/temp"               , hdlr_rx_##_c##_rf_board_temp,          WOR, "20", RP, #_c)        \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/led"                , hdlr_rx_##_c##_rf_board_led,            WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/manual_uart"        , hdlr_rx_##_c##_rf_board_manual_uart,    RW, "", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/dsp/signed"               , hdlr_rx_##_c##_dsp_signed,              RW, "1", SP, #_c)         \
@@ -4853,14 +4853,14 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sample_counter"   , hdlr_tx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sample_counter"   , hdlr_tx_##_c##_trigger_sample_counter, WOR, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_mixer_en"   , hdlr_tx_##_c##_rf_dac_dither_mixer_en,  RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_sra_sel"    , hdlr_tx_##_c##_rf_dac_dither_sra_sel,   RW, "6", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/nco"               , hdlr_tx_##_c##_rf_dac_nco,              RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,             RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/temp"              , hdlr_tx_##_c##_rf_dac_temp,            WOR, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lo_pwr"           , hdlr_tx_##_c##_rf_freq_lo_pwr,          RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/val"              , hdlr_tx_##_c##_rf_freq_val,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/lut_en"           , hdlr_tx_##_c##_rf_freq_lut_en,          RW, "0", TP, #_c)         \
@@ -4869,12 +4869,12 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/q_bias"           , hdlr_tx_##_c##_rf_freq_q_bias,          RW, "17", TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/val"              , hdlr_tx_##_c##_rf_gain_val,             RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/gain/range"            , hdlr_tx_##_c##_rf_gain_range,           RW, "\"0,0,0\"", SP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,             RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,           RW, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/rfpll_lock"        , hdlr_tx_##_c##_status_rfld,            WOR, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_lock"       , hdlr_tx_##_c##_status_dacld,           WOR, "0", TP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/status/dacpll_centre"     , hdlr_tx_##_c##_status_dacctr,          WOR, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/dump"               , hdlr_tx_##_c##_rf_board_dump,           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/test"               , hdlr_tx_##_c##_rf_board_test,           WO, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,           RW, "23",TP, #_c)        \
+    DEFINE_FILE_PROP_P("tx/" #_c "/board/temp"               , hdlr_tx_##_c##_rf_board_temp,          WOR, "23",TP, #_c)        \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/led"                , hdlr_tx_##_c##_rf_board_led,            WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/board/manual_uart"        , hdlr_tx_##_c##_rf_board_manual_uart,    RW, "", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/gain"                 , hdlr_tx_##_c##_dsp_gain,                RW, "10", SP, #_c)        \
@@ -4893,9 +4893,9 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/link/vita_en"             , hdlr_tx_##_c##_link_vita_en,            RW, "1", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/iface"               , hdlr_tx_##_c##_link_iface,              RW, "sfpa", SP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/link/port"                , hdlr_tx_##_c##_link_port,               RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,             RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,                RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,                RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/fifo_lvl"              , hdlr_tx_##_c##_qa_fifo_lvl,            WOR, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/oflow"                 , hdlr_tx_##_c##_qa_oflow,               WOR, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/qa/uflow"                 , hdlr_tx_##_c##_qa_uflow,               WOR, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/link/endian_swap"       , hdlr_tx_##_c##_endian_swap,            RW, "0", SP, #_c)\
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/delay_iq"          , hdlr_tx_##_c##_jesd_delay_iq,            RW, "0 0", SP, #_c)\
 
@@ -4905,12 +4905,12 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 #define DEFINE_TIME()                                                                                                 \
     DEFINE_FILE_PROP_P("time/about/fw_ver"                   , hdlr_time_about_fw_ver,                 RW, VERSION, SP, NAC)     \
     DEFINE_FILE_PROP_P("time/clk/cmd"                        , hdlr_time_clk_cmd,                      RW, "0.0", SP, NAC)       \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                    RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                   RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,          RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll2", hdlr_time_status_ld_jesd_pll2,          RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll1", hdlr_time_status_lol_jesd_pll1,         RW, "unlocked", SP, NAC)  \
-    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,         RW, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect"          , hdlr_time_status_ld,                   WOR, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock"          , hdlr_time_status_lol,                  WOR, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll1", hdlr_time_status_ld_jesd_pll1,         WOR, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lockdetect_jesd_pll2", hdlr_time_status_ld_jesd_pll2,         WOR, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll1", hdlr_time_status_lol_jesd_pll1,        WOR, "unlocked", SP, NAC)  \
+    DEFINE_FILE_PROP_P("time/status/lmk_lossoflock_jesd_pll2", hdlr_time_status_lol_jesd_pll2,        WOR, "unlocked", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/ref"                     , hdlr_time_source_ref,                   RW, "0", SP, NAC)  \
     DEFINE_FILE_PROP_P("time/source/extsine"                 , hdlr_time_source_extsine,               RW, "sine", SP, NAC)      \
     DEFINE_FILE_PROP_P("time/source/vtune"                   , hdlr_time_source_vtune,                 RW, "1403", SP, NAC)      \
@@ -4923,7 +4923,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("time/sync/sysref_mode"               , hdlr_time_sync_sysref_mode,          WO, "continuous", SP, NAC)    \
     DEFINE_FILE_PROP_P("time/board/dump"                     , hdlr_time_board_dump,                   WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/test"                     , hdlr_time_board_test,                   WO, "0", SP, NAC)         \
-    DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                   RW, "20", SP, NAC)        \
+    DEFINE_FILE_PROP_P("time/board/temp"                     , hdlr_time_board_temp,                  WOR, "20", SP, NAC)        \
     DEFINE_FILE_PROP_P("time/board/led"                      , hdlr_time_board_led,                    WO, "0", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/board/manual_uart"              , hdlr_time_board_manual_uart,            RW, "", SP, NAC)         \
     DEFINE_FILE_PROP_P("time/about/id"                       , hdlr_time_about_id,                     RO, "001", SP, NAC)       \
@@ -4966,15 +4966,15 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/board/fw_rst"                   , hdlr_fpga_board_fw_rst,                 WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpa_port"   , hdlr_fpga_board_flow_control_sfpa_port, RW, "42809", SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/board/flow_control/sfpb_port"   , hdlr_fpga_board_flow_control_sfpb_port, RW, "42809", SP, NAC)             \
-    DEFINE_FILE_PROP_P("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,               RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,          RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/gps_time"                 , hdlr_fpga_board_gps_time,              WOR, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/board/gps_frac_time"            , hdlr_fpga_board_gps_frac_time,         WOR, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/gps_sync_time"            , hdlr_fpga_board_gps_sync_time,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/jesd_sync"                , hdlr_fpga_board_jesd_sync,              WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/led"                      , hdlr_fpga_board_led,                    WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/reboot"                   , hdlr_fpga_board_reboot,                 RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/rst_softsys"              , hdlr_fpga_board_rst_softsys,            WO, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/board/test"                     , hdlr_fpga_board_test,                   WO, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/board/temp"                     , hdlr_fpga_board_temp,                   RW, "20", SP, NAC)                \
+    DEFINE_FILE_PROP_P("fpga/board/temp"                     , hdlr_fpga_board_temp,                  WOR, "20", SP, NAC)                \
     DEFINE_FILE_PROP_P("fpga/board/gle"                      , hdlr_fpga_board_gle,                    RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/rate"                      , hdlr_fpga_link_rate,                    RW, "10000000000", SP, NAC)        \
     DEFINE_FILE_PROP_P("fpga/link/sfpa/ip_addr"              , hdlr_fpga_link_sfpa_ip_addr,            RW, "10.10.10.2", SP, NAC)        \
@@ -4987,8 +4987,8 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/link/sfpb/pay_len"              , hdlr_fpga_link_sfpb_pay_len,            RW, MAX_PAY_LEN_S, SP, NAC)              \
     DEFINE_FILE_PROP_P("fpga/link/net/dhcp_en"               , hdlr_fpga_link_net_dhcp_en,             RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/net/hostname"              , hdlr_fpga_link_net_hostname,            RW, "poke", SP, NAC)        \
-    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,         RW, "0", SP, NAC)                 \
-    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,            RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_fifo_lvl"           , hdlr_fpga_link_qa_sfp_fifo_lvl,        WOR, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/link/qa/sfp_oflow"              , hdlr_fpga_link_qa_sfp_oflow,           WOR, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/link/max_sfp_oflow_count"       , hdlr_fpga_link_max_sfp_oflow_count,     RW, "2047", SP, NAC)              \
 
 #if (NUM_TX_CHANNELS == 0 && NUM_RX_CHANNELS > 0) // common settings without tx
