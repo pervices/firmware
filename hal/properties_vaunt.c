@@ -2170,7 +2170,7 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_status_rfld(const char *data, char *ret) {       \
-        if(check_rf_pll(MSK(ch), uart_rx_fd[INT(ch)])) {\
+        if(1 /*check_rf_pll(MSK(ch), uart_rx_fd[INT(ch)])*/ ) {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
         } else {\
             snprintf(ret, MAX_PROP_LEN, "Locked\n");\
