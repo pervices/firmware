@@ -130,17 +130,34 @@ int main(int argc, char *argv[]) {
     }
     atexit(mmap_fini);
 
-    // Check for firmware version
     for (int i = 1; i < argc; i++) {
+        // Print version info then exit
         if (strcmp(argv[i], "-v") == 0) {
             print_version();
             return 0;
         }
-        if (strcmp(argv[i], "-d") == 0) {
-            verbose++;
+        // Specify the verbosity of print messages
+        else if (strcmp(argv[i], "-d") == 0) {
+            // Default to 1 if the option value was unspecified
+            verbose = 1;
+
+            if (i + 1 < argc) {
+                char *end;
+                // Extract the value
+                long val = strtol(argv[i + 1], &end, 10);
+                // If a valid value was extracted
+                if (end != argv[i + 1] && *end == '\0') {
+                    // Set the logging level
+                    verbose = (int)val;
+                    // Skip the option argument for the next pass since we consumed it here
+                    i++;
+                } else {
+                    // No option value was provided, leave as default
+                }
+            }
         }
     }
-    
+
 #ifdef TATE_NRNT
     // Linux will freeze if attempting to boot an hps only image
     if(is_hps_only()) {
@@ -163,7 +180,7 @@ int main(int argc, char *argv[]) {
 
 
     set_led_state(LED_STATE_INIT);
-    
+
     PRINT(INFO, "Started LEDs\n");
 
     // Check for an argument for debug mode
@@ -231,7 +248,7 @@ int main(int argc, char *argv[]) {
 
     // 1. set the time board back to pulsed sysref mode
     set_property("time/sync/sysref_mode","pulsed");
-     
+
 // 2. check that time board plls are locked
     if (property_good("time/status/status_good") != 1) {
         PRINT(ERROR,"TIME BOARD PLLs UNLOCKED: Stopping server.\n");
