@@ -25,9 +25,6 @@
 #include <stdio.h>
 #include <time.h>
 
-// Define used for debugging
-//#define DEBUG
-
 // Global return values
 #define RETURN_SUCCESS 0
 #define RETURN_ERROR -1
