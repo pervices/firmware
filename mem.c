@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 
     char *reg;            // register
     uint32_t addr, value; // r/w address, and value if applicable
-    int verbose = 0;      // printing verbosity, default, not verbose
+    extern int verbose;      // printing verbosity, default, not verbose
     int length = 4;
     uint32_t rval;              // value that is read
     uint32_t mask = 0xffffffff; // default mask if not specified
@@ -30,9 +30,30 @@ int main(int argc, char *argv[]) {
 
     // Check for firmware version
     for (int i = 1; i < argc; i++) {
+        // Print version info then exit
         if (strcmp(argv[i], "-v") == 0) {
             print_version();
             return 0;
+        }
+        // Specify the verbosity of print messages
+        else if (strcmp(argv[i], "-d") == 0) {
+            // Default to 1 if the option value was unspecified
+            verbose = 1;
+
+            if (i + 1 < argc) {
+                char *end;
+                // Extract the value
+                long val = strtol(argv[i + 1], &end, 10);
+                // If a valid value was extracted
+                if (end != argv[i + 1] && *end == '\0') {
+                    // Set the logging level
+                    verbose = (int)val;
+                    // Skip the option argument for the next pass since we consumed it here
+                    i++;
+                } else {
+                    // No option value was provided, leave as default
+                }
+            }
         }
     }
 
