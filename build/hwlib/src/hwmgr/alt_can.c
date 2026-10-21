@@ -1,20 +1,20 @@
 /******************************************************************************
  *
  * Copyright 2014 Altera Corporation. All Rights Reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
- * 
+ *
  * 3. The name of the author may not be used to endorse or promote products
  * derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER "AS IS" AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED. IN NO
@@ -25,7 +25,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  ******************************************************************************/
 
 #include "alt_can.h"
@@ -168,7 +168,7 @@ ALT_STATUS_CODE alt_can_init(const ALT_CAN_CTLR_t can,
 
     //Save CAN start address to the instance
     can_dev->location = (void *)can;
-    
+
     if (alt_can_checking(can_dev) == ALT_E_FALSE)
     {
         return ALT_E_BAD_ARG;
@@ -229,7 +229,7 @@ ALT_STATUS_CODE alt_can_reset(ALT_CAN_DEV_t * can_dev)
     alt_can_rstmgr_strobe(can_dev);
 
     alt_can_mailboxes_reset(can_dev);
-    
+
     // RAM Initialization
     alt_setbits_word(ALT_CAN_PROTO_CFR_ADDR(ALT_CAN_PROTO_BASE(can_dev->location)), ALT_CAN_PROTO_CFR_RAMINIT_SET_MSK);
 
@@ -240,30 +240,30 @@ ALT_STATUS_CODE alt_can_reset(ALT_CAN_DEV_t * can_dev)
     {
         return ALT_E_TMO;
     }
-    
+
     // Enable automatic retransmission
     alt_clrbits_word(ALT_CAN_PROTO_CCTL_ADDR(ALT_CAN_PROTO_BASE(can_dev->location)), ALT_CAN_PROTO_CCTL_DAR_SET_MSK);
-    
+
     alt_can_baudrate_set(can_dev, 100000);
-    
+
     if (already_enabled)
     {
         // Re-enable controller
         status = alt_can_enable(can_dev);
     }
-   
+
     for (uint32_t n = 0; n < ALT_CAN_MAILBOXES_COUNT; n++)
     {
         can_dev->mailboxes[n].init_done = false;
     }
-    
+
     // Invalidating of all message objects */
     for (uint32_t i = 1; i <= ALT_CAN_MAILBOXES_COUNT; i++)
         alt_can_mailbox_reset(can_dev, ALT_CAN_INTERFACE_WRITE, i);
 
     // Clear status, assign to timeout to avoid compiler warning
     timeout = alt_read_word(ALT_CAN_PROTO_CSTS_ADDR(ALT_CAN_PROTO_BASE(can_dev->location)));
-    
+
 
     return status;
 }
@@ -443,14 +443,14 @@ ALT_STATUS_CODE alt_can_rate_to_bittime(ALT_CAN_DEV_t *can_dev, uint32_t bitrate
     uint32_t spt_error = 1000;
     uint32_t spt = 0;
     uint32_t sampl_pt;
-    
+
     if (bitrate > 800000)
         sampl_pt = 750;
     else if (bitrate > 500000)
         sampl_pt = 800;
     else
         sampl_pt = 875;
-    
+
     //Tseg even = round down
     //odd = round up
 
@@ -467,15 +467,15 @@ ALT_STATUS_CODE alt_can_rate_to_bittime(ALT_CAN_DEV_t *can_dev, uint32_t bitrate
         //Bitrate for current brp
         rate = clock_freq / (bittime->brp * tsegall);
         error = bitrate - rate;
-        
+
         //Tseg brp biterror
         if (error < 0)
             error = -error;
         if (error > best_error)
             continue;
-        
+
         best_error = error;
-        
+
         if (error == 0)
         {
             bittime->tseg2 = (tseg / 2) + 1 - (sampl_pt * ((tseg / 2) + 1)) / 1000;
@@ -483,36 +483,36 @@ ALT_STATUS_CODE alt_can_rate_to_bittime(ALT_CAN_DEV_t *can_dev, uint32_t bitrate
                 bittime->tseg2 = ALT_CAN_BITTIMMING_TSEG2_MIN + 1;
             if (bittime->tseg2 > ALT_CAN_BITTIMMING_TSEG2_MAX + 1)
                 bittime->tseg2 = ALT_CAN_BITTIMMING_TSEG2_MAX + 1;
-            
+
             bittime->tseg1 = (tseg / 2) - bittime->tseg2;
             if (bittime->tseg1 > ALT_CAN_BITTIMMING_TSEG1_MAX + 1)
             {
                 bittime->tseg1 = ALT_CAN_BITTIMMING_TSEG1_MAX + 1;
                 bittime->tseg2 = tseg - bittime->tseg1;
             }
-            
+
             spt = 1000 * ((tseg / 2) + 1 - bittime->tseg2) / ((tseg / 2) + 1);
-            
+
             error = sampl_pt - spt;
             if (error < 0)
                 error = -error;
             if (error > spt_error)
                 continue;
             spt_error = error;
-            
+
         }
-        
+
         if (error == 0)
             break;
     }
-    
+
     bittime->tseg2 = (bittime->tseg2 - 1) & ALT_CAN_BITTIMMING_TSEG2_MSK;
     bittime->tseg1 = (bittime->tseg1 - 1) & ALT_CAN_BITTIMMING_TSEG1_MSK;
     bittime->sjw = 0;
-    
+
     bittime->brpe = ((bittime->brp - 1) >> 6) & ALT_CAN_BITTIMMING_BRPE_MSK;
     bittime->brp = (bittime->brp - 1) & ALT_CAN_BITTIMMING_BRP_MSK;
-    
+
     return ALT_E_SUCCESS;
 
 }
@@ -534,10 +534,10 @@ ALT_STATUS_CODE alt_can_test_mode_enable(ALT_CAN_DEV_t *can_dev, ALT_CAN_TEST_TY
                     ALT_CAN_PROTO_CCTL_TEST_SET_MSK,
                     ALT_CAN_PROTO_CCTL_TEST_SET(ALT_CAN_PROTO_CCTL_TEST_E_TESTMOD));
 
-    uint32_t silent = ((type == ALT_CAN_TEST_SILENT || type == ALT_CAN_TEST_MIXED) 
+    uint32_t silent = ((type == ALT_CAN_TEST_SILENT || type == ALT_CAN_TEST_MIXED)
                                                     ? ALT_CAN_PROTO_CTR_SILENT_E_SILENT
                                                     : ALT_CAN_PROTO_CTR_SILENT_E_NORMAL);
-    uint32_t lback = ((type == ALT_CAN_TEST_LOOP_BACK || type == ALT_CAN_TEST_MIXED) 
+    uint32_t lback = ((type == ALT_CAN_TEST_LOOP_BACK || type == ALT_CAN_TEST_MIXED)
                                                     ? ALT_CAN_PROTO_CTR_LBACK_E_END
                                                     : ALT_CAN_PROTO_CTR_LBACK_E_DISD);
 
@@ -598,7 +598,7 @@ ALT_STATUS_CODE alt_can_test_mode_is_enabled(ALT_CAN_DEV_t *can_dev, ALT_CAN_TES
     {
         *type = ALT_CAN_TEST_MIXED;
     }
-    
+
     return ALT_E_TRUE;
 }
 
@@ -811,19 +811,19 @@ ALT_STATUS_CODE alt_can_message_put(ALT_CAN_DEV_t *can_dev,
 #ifdef LOGGING
     printf("alt_can_message_put\n");
 #endif
-    
+
     if (cmd_params == NULL)
     {
         return ALT_E_BAD_ARG;
     }
-    
+
     cmd_params->write = true;
     alt_can_if_cmd_set(can_dev, if_index, msg_obj_num, cmd_params);
 
-    //As per specs, after writing the message object number in the IF command register 
+    //As per specs, after writing the message object number in the IF command register
     //the transfer b/w interface register and message RAM must be complete in 12 CAN-CLK period.
     volatile uint32_t timeout = ALT_CAN_RESET_TMO_INIT;
-    
+
     // Wait while CAN module is reseting
     while (alt_can_message_is_busy(can_dev, if_index) && --timeout);
 
@@ -853,14 +853,14 @@ ALT_STATUS_CODE alt_can_message_get(ALT_CAN_DEV_t *can_dev,
     {
         return ALT_E_BAD_ARG;
     }
-    
+
     cmd_params->write = false;
     alt_can_if_cmd_set(can_dev, if_index, msg_obj_num, cmd_params);
 
-    //As per specs, after writing the message object number in the IF command register 
+    //As per specs, after writing the message object number in the IF command register
     //the transfer b/w interface register and message RAM must be complete in 12 CAN-CLK period.
     volatile uint32_t timeout = ALT_CAN_RESET_TMO_INIT;
-    
+
     //Wait while CAN module is reseting
     while (alt_can_message_is_busy(can_dev, if_index) && --timeout);
 
@@ -926,7 +926,7 @@ ALT_STATUS_CODE alt_can_mailbox_reset(ALT_CAN_DEV_t * can_dev,
     //Change state of mailbox
     msg_param.arbitration = true;
     msg_param.control = true;
-    
+
     status = alt_can_message_put(can_dev, if_index, msg_obj_num, &msg_param);
     return status;
 
@@ -1004,7 +1004,7 @@ ALT_STATUS_CODE alt_can_int_disable(ALT_CAN_DEV_t * can_dev, const uint8_t mask)
         | ALT_CAN_PROTO_CCTL_SIE_SET((bool)(mask & ALT_CAN_INT_GROUP_STATUS))
         | ALT_CAN_PROTO_CCTL_EIE_SET((bool)(mask & ALT_CAN_INT_GROUP_ERROR))
         | ALT_CAN_PROTO_CCTL_ILE_SET((bool)(mask & ALT_CAN_INT_GROUP_MOD_LINE));
-        
+
     alt_clrbits_word(ALT_CAN_PROTO_CSTS_ADDR(ALT_CAN_PROTO_BASE(can_dev->location)), set_mask);
 
     return ALT_E_SUCCESS;
@@ -1028,7 +1028,7 @@ ALT_STATUS_CODE alt_can_int_enable(ALT_CAN_DEV_t *can_dev, const uint8_t mask)
         | ALT_CAN_PROTO_CCTL_SIE_SET((bool)(mask & ALT_CAN_INT_GROUP_STATUS))
         | ALT_CAN_PROTO_CCTL_EIE_SET((bool)(mask & ALT_CAN_INT_GROUP_ERROR))
         | ALT_CAN_PROTO_CCTL_ILE_SET((bool)(mask & ALT_CAN_INT_GROUP_MOD_LINE));
-        
+
     alt_setbits_word(ALT_CAN_PROTO_CCTL_ADDR(ALT_CAN_PROTO_BASE(can_dev->location)), set_mask);
 
     return ALT_E_SUCCESS;
@@ -1112,18 +1112,18 @@ ALT_STATUS_CODE alt_can_mailboxes_reset(ALT_CAN_DEV_t *can_dev)
 
     uint32_t msg_obj_num;
     //Reset all message objects
-    for (msg_obj_num = 1; msg_obj_num <= ALT_CAN_MAILBOXES_COUNT; msg_obj_num++) 
+    for (msg_obj_num = 1; msg_obj_num <= ALT_CAN_MAILBOXES_COUNT; msg_obj_num++)
     {
         ALT_CAN_MAILBOX_PARAM_t * mailbox = &(can_dev->mailboxes[msg_obj_num-1]);
         alt_can_mailbox_reset(can_dev, ALT_CAN_INTERFACE_WRITE, msg_obj_num);
 
         mailbox->init_done = false;
     }
-    
+
     //Reset CAN status
     alt_write_word(ALT_CAN_PROTO_CSTS_ADDR(ALT_CAN_PROTO_BASE(can_dev->location)),
                                                     ALT_CAN_PROTO_CSTS_LEC_E_NOCHANGE);
-    
+
 
     return ALT_E_SUCCESS;
 }
@@ -1157,15 +1157,15 @@ static ALT_STATUS_CODE alt_can_next_frame_send(ALT_CAN_DEV_t *can_dev,
     //Write dataA and data to interface
     alt_write_word(ALT_CAN_MSGIF_IFDB_ADDR(ALT_CAN_MSGIF_BASE(can_dev->location), ALT_CAN_INTERFACE_WRITE), dataB);
     alt_write_word(ALT_CAN_MSGIF_IFDA_ADDR(ALT_CAN_MSGIF_BASE(can_dev->location), ALT_CAN_INTERFACE_WRITE), dataA);
-    
+
     //Configure message object
     ALT_CAN_MSG_IFMCTR_t ctrl = { 0 };
     if (mailbox->fifo_mode == ALT_CAN_FIFO_MODE_SINGLE_MSG
-     || mailbox->fifo_mode == ALT_CAN_FIFO_MODE_BUFFER_LAST) 
+     || mailbox->fifo_mode == ALT_CAN_FIFO_MODE_BUFFER_LAST)
     {
         ctrl.block_end = true;
-    } 
-    else 
+    }
+    else
     {
         ctrl.block_end = false;
     }
@@ -1188,13 +1188,13 @@ static ALT_STATUS_CODE alt_can_next_frame_send(ALT_CAN_DEV_t *can_dev,
     cmd_params.data_A = true;
     cmd_params.data_B = true;
     alt_can_message_put(can_dev, ALT_CAN_INTERFACE_WRITE, msg_obj_num, &cmd_params);
-    
+
     return ALT_E_SUCCESS;
 }
 
 
 //Receive frame (up to 8 bytes) from mailbox
-static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev, 
+static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev,
                                                uint32_t msg_obj_num,
                                                uint32_t *dataA,
                                                uint32_t *dataB,
@@ -1208,7 +1208,7 @@ static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev,
 
     uint32_t arb_val;
     uint32_t mctl_val;
-    
+
     //Gets Message object */
     ALT_CAN_MSG_PARAM_t cmd_params = {0};
     cmd_params.arbitration = true;
@@ -1217,13 +1217,13 @@ static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev,
     cmd_params.data_A = true;
     cmd_params.data_B = true;
     alt_can_message_get(can_dev, ALT_CAN_INTERFACE_READ, msg_obj_num, &cmd_params);
-    
+
     uint32_t mctrl_reg_val = alt_read_word(ALT_CAN_MSGIF_IFMCTR_ADDR(ALT_CAN_MSGIF_BASE(can_dev->location), ALT_CAN_INTERFACE_READ));
 
     //If new data is present read it
     if (mctrl_reg_val & ALT_CAN_MSGIF_IF1MCTR_NEWDAT_SET_MSK)
     {
-        
+
         //Read the params from the message object
         arb_val = alt_read_word(ALT_CAN_MSGIF_IFARB_ADDR(ALT_CAN_MSGIF_BASE(can_dev->location), ALT_CAN_INTERFACE_READ));
         mctl_val = alt_read_word(ALT_CAN_MSGIF_IFMCTR_ADDR(ALT_CAN_MSGIF_BASE(can_dev->location), ALT_CAN_INTERFACE_READ));
@@ -1240,10 +1240,10 @@ static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev,
         }
 
         //Check Remote Enable
-        if (mctl_val & ALT_CAN_MSGIF_IFMCTR_RMTEN_SET_MSK) 
+        if (mctl_val & ALT_CAN_MSGIF_IFMCTR_RMTEN_SET_MSK)
         {
-            
-            mailbox->remote = true; 
+
+            mailbox->remote = true;
         }
         else
         {
@@ -1285,20 +1285,20 @@ static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev,
             cmd_params_get.data_A = true;
             cmd_params_get.data_B = true;
             alt_can_message_get(can_dev, ALT_CAN_INTERFACE_READ, msg_obj_num,&cmd_params_get);
-            
+
             alt_write_word(ALT_CAN_MSGIF_IFCMR_ADDR(ALT_CAN_MSGIF_BASE(can_dev->location), ALT_CAN_INTERFACE_WRITE), 0);
-            
+
             ALT_CAN_MSG_PARAM_t cmd_params_put = {0};
             cmd_params_put.control = true;/* transfer Control Bits */
             alt_can_message_put(can_dev, ALT_CAN_INTERFACE_WRITE, msg_obj_num, &cmd_params_put);
         }
-        
+
         //Reset new data, interrupt pending and message lost bits
         alt_write_word(ALT_CAN_MSGIF_IFMCTR_ADDR(ALT_CAN_MSGIF_BASE(can_dev->location), ALT_CAN_INTERFACE_WRITE),
                        mctrl_reg_val & ~(ALT_CAN_MSGIF_IFMCTR_MSGLST_SET_MSK
-                                | ALT_CAN_MSGIF_IFMCTR_INTPND_SET_MSK 
+                                | ALT_CAN_MSGIF_IFMCTR_INTPND_SET_MSK
                                 | ALT_CAN_MSGIF_IFMCTR_NEWDAT_SET_MSK));
-        
+
         ALT_CAN_MSG_PARAM_t cmd_params = {0};
         cmd_params.control = true;
         alt_can_message_put(can_dev, ALT_CAN_INTERFACE_WRITE, msg_obj_num, &cmd_params);
@@ -1306,11 +1306,11 @@ static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev,
         {
             alt_can_mailbox_reset(can_dev, ALT_CAN_INTERFACE_WRITE, msg_obj_num);
         }
-        
+
     }
-    
+
     return ALT_E_SUCCESS;
-    
+
 }
 
 
@@ -1318,29 +1318,29 @@ static ALT_STATUS_CODE alt_can_next_frame_recv(ALT_CAN_DEV_t *can_dev,
 //Initialize mailbox for transfer with specified parameters.
 //
 ALT_STATUS_CODE alt_can_mailbox_init(ALT_CAN_DEV_t *can_dev,
-        uint32_t msg_obj_num, 
-        uint32_t id, 
+        uint32_t msg_obj_num,
+        uint32_t id,
         uint32_t id_mask,
-        ALT_CAN_TMOD_t transfer_mode, 
-        ALT_CAN_FIFO_MODE_t fifo_mode) 
+        ALT_CAN_TMOD_t transfer_mode,
+        ALT_CAN_FIFO_MODE_t fifo_mode)
 {
 #ifdef LOGGING
     printf("alt_can_mailbox_init\n");
 #endif
-    
+
     if ((msg_obj_num < 1) || (msg_obj_num > ALT_CAN_MAILBOXES_COUNT))
     {
         return ALT_E_BAD_ARG;
     }
-    
+
     ALT_STATUS_CODE status = ALT_E_SUCCESS;
     ALT_CAN_MAILBOX_PARAM_t * mailbox = &(can_dev->mailboxes[msg_obj_num-1]);
-    
+
     if (mailbox->init_done)
     {
         return ALT_E_ERROR;
     }
-    
+
     if (id <= 0)
     {
         return ALT_E_ERROR;
@@ -1369,10 +1369,10 @@ ALT_STATUS_CODE alt_can_mailbox_init(ALT_CAN_DEV_t *can_dev,
         ctrl.rx_int = true;
         ctrl.accept_mask = true;
         if (fifo_mode == ALT_CAN_FIFO_MODE_SINGLE_MSG
-         || fifo_mode == ALT_CAN_FIFO_MODE_BUFFER_LAST) 
+         || fifo_mode == ALT_CAN_FIFO_MODE_BUFFER_LAST)
         {
             ctrl.block_end = true;
-        } 
+        }
         else
         {
             ctrl.block_end = false;
@@ -1388,7 +1388,7 @@ ALT_STATUS_CODE alt_can_mailbox_init(ALT_CAN_DEV_t *can_dev,
     //Initialization was done
     mailbox->init_done = true;
     return status;
-    
+
 }
 
 
@@ -1406,7 +1406,7 @@ ALT_STATUS_CODE alt_can_mailbox_uninit(ALT_CAN_DEV_t *can_dev,
     {
         return ALT_E_BAD_ARG;
     }
-    
+
     can_dev->mailboxes[msg_obj_num-1].init_done = false;
 
     return alt_can_mailbox_reset(can_dev, ALT_CAN_INTERFACE_WRITE, msg_obj_num);
@@ -1416,7 +1416,7 @@ ALT_STATUS_CODE alt_can_mailbox_uninit(ALT_CAN_DEV_t *can_dev,
 //
 //Read one frame of the data (size of frame is filled in).
 //
-ALT_STATUS_CODE alt_can_frame_read(ALT_CAN_DEV_t *can_dev, 
+ALT_STATUS_CODE alt_can_frame_read(ALT_CAN_DEV_t *can_dev,
                                    uint32_t msg_obj_num,
                                    void * buffer,
                                    uint32_t* frame_size)
@@ -1425,7 +1425,7 @@ ALT_STATUS_CODE alt_can_frame_read(ALT_CAN_DEV_t *can_dev,
     {
         return ALT_E_BAD_ARG;
     }
-    
+
     ALT_CAN_MAILBOX_PARAM_t * mailbox = &(can_dev->mailboxes[msg_obj_num-1]);
 
     if (mailbox->transfer_mode != ALT_CAN_TMOD_RX
@@ -1435,7 +1435,7 @@ ALT_STATUS_CODE alt_can_frame_read(ALT_CAN_DEV_t *can_dev,
     }
 
     ALT_STATUS_CODE status = ALT_E_SUCCESS;
-    
+
     uint8_t *data = (uint8_t *) buffer;
     uint32_t int_status;
     uint32_t timeout;
@@ -1462,7 +1462,7 @@ ALT_STATUS_CODE alt_can_frame_read(ALT_CAN_DEV_t *can_dev,
         }
         int_status = 0;
     } while (int_status == 0 && --timeout);
-    if (timeout == 0) 
+    if (timeout == 0)
     {
         return ALT_E_TMO;
     }
@@ -1501,7 +1501,7 @@ ALT_STATUS_CODE alt_can_frame_write(ALT_CAN_DEV_t *can_dev,
     {
         return ALT_E_BAD_ARG;
     }
-    
+
     ALT_CAN_MAILBOX_PARAM_t * mailbox = &(can_dev->mailboxes[msg_obj_num-1]);
 
     if (mailbox->transfer_mode != ALT_CAN_TMOD_TX
@@ -1511,12 +1511,12 @@ ALT_STATUS_CODE alt_can_frame_write(ALT_CAN_DEV_t *can_dev,
     }
 
     ALT_STATUS_CODE status = ALT_E_SUCCESS;
-    
+
     uint8_t *data = (uint8_t *) buffer;
 
     uint32_t dataA = 0;
     uint32_t dataB = 0;
-        
+
     //Write send data to data variable
     for (int i = 0; i < mailbox->dlc; i++)
     {
@@ -1527,7 +1527,7 @@ ALT_STATUS_CODE alt_can_frame_write(ALT_CAN_DEV_t *can_dev,
     }
 
     //Send frame to bus
-    
+
     status = alt_can_next_frame_send(can_dev, msg_obj_num, dataA, dataB);
     if(status != ALT_E_SUCCESS)
     {
@@ -1569,7 +1569,7 @@ ALT_STATUS_CODE alt_can_frame_write(ALT_CAN_DEV_t *can_dev,
 // If bytes_to_read is non-zero, keep reading until all data requested
 // is obtained.
 //
-ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev, 
+ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev,
                                   uint32_t msg_obj_num,
                                   void * buffer,
                                   uint32_t bytes_to_read,
@@ -1592,7 +1592,7 @@ ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev,
     }
 
     ALT_STATUS_CODE status = ALT_E_SUCCESS;
-    
+
     uint8_t *data = (uint8_t *) buffer;
     uint32_t data_left = bytes_to_read;
     uint32_t int_status;
@@ -1605,7 +1605,7 @@ ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev,
     {
         *bytes_read = 0;
     }
-    
+
     do
     {
 
@@ -1621,7 +1621,7 @@ ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev,
             {
                 //If interrupt from unexpected mailbox reset it
                 status = alt_can_mailbox_reset(can_dev, ALT_CAN_INTERFACE_WRITE, int_status);
-                if (status != ALT_E_SUCCESS) 
+                if (status != ALT_E_SUCCESS)
                 {
                     return status;
                 }
@@ -1633,7 +1633,7 @@ ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev,
         {
             return ALT_E_TMO;
         }
-        
+
         //If it is expected interrupt then read data
         status = alt_can_next_frame_recv(can_dev, msg_obj_num, &dataA, &dataB, &frame_size);
         if(status != ALT_E_SUCCESS)
@@ -1644,7 +1644,7 @@ ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev,
         {
             *bytes_read += frame_size;
         }
-        
+
         //Write received data to buffer
         for (int i = 0; i < frame_size; i++)
         {
@@ -1690,7 +1690,7 @@ ALT_STATUS_CODE alt_can_data_write(ALT_CAN_DEV_t *can_dev,
     }
 
     ALT_STATUS_CODE status = ALT_E_SUCCESS;
-    
+
     uint8_t *data = (uint8_t *) buffer;
     uint32_t data_left = size;
     uint32_t int_status;
@@ -1713,7 +1713,7 @@ ALT_STATUS_CODE alt_can_data_write(ALT_CAN_DEV_t *can_dev,
         {
             mailbox->dlc = frame_size;
         }
-        
+
         //Write send data from buffer to data variables for write to register
         for (int i = 0; i < frame_size; i++)
         {
@@ -1750,7 +1750,7 @@ ALT_STATUS_CODE alt_can_data_write(ALT_CAN_DEV_t *can_dev,
 
         data_left -= frame_size;
         data += frame_size;
-        
+
         //Interrupt from write mailbox is success reset current mailbox
         int_status = ALT_CAN_PROTO_CIR_INTID_GET(alt_read_word(ALT_CAN_PROTO_CIR_ADDR(ALT_CAN_PROTO_BASE(can_dev->location))));
         if(int_status == msg_obj_num)
@@ -1761,7 +1761,7 @@ ALT_STATUS_CODE alt_can_data_write(ALT_CAN_DEV_t *can_dev,
         mailbox->dlc = 8;
     }
 
-    
+
     return status;
 }
 
@@ -1780,7 +1780,7 @@ ALT_STATUS_CODE alt_can_disable(ALT_CAN_DEV_t *can_dev)
     {
         return ALT_E_SUCCESS;
     }
-    
+
     // Start initialization by setting Init
     alt_setbits_word(ALT_CAN_PROTO_CCTL_ADDR(ALT_CAN_PROTO_BASE(can_dev->location)),
                                                     ALT_CAN_PROTO_CCTL_INIT_SET_MSK);

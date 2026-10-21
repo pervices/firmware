@@ -742,14 +742,14 @@ static int valid_trig_time_disable(const char *data, uint32_t *val) {
 static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?16:13), 1, val);
 }
 
 static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?17:14), 1, val);
 }
 
@@ -2924,14 +2924,14 @@ static int hdlr_cm_rx_gain_val(const char *data, char *ret) {
 #if (NUM_TX_CHANNELS > 0)
 static int hdlr_cm_chanmask_tx(const char *data, char *ret) {
     uint32_t mask;
-    
+
     if (1 != sscanf(data, "%x", &mask)) {
         return RETURN_ERROR_PARAM;
     }
-    
+
     mask &= 0xffff;
     snprintf(ret, MAX_PROP_LEN, "%x", mask);
-    
+
     return RETURN_SUCCESS;
 }
 
@@ -3387,8 +3387,8 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
         if(!pps_good) {
             pps_was_down = 1;
         }
-        
-        // Sleep until the next poll if 
+
+        // Sleep until the next poll if
         if(!pps_good || !pps_was_down) {
             nanosleep(&poll_interval, NULL);
         }
@@ -3406,7 +3406,7 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
     }
 
     PRINT(ERROR, "External PPS signal not detected, falling back to internal\n");
-    // Fall back to using an internal PPS 
+    // Fall back to using an internal PPS
     write_hps_reg_mask("sys13", 0, 0x2);
     // Set the return value to indicate the PPS fell back to internal
     snprintf(ret, MAX_PROP_LEN, "internal");
@@ -3420,8 +3420,8 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
 
         clock_gettime(CLOCK_MONOTONIC, &now);
         time_elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
-        
-        // Sleep until the next poll if 
+
+        // Sleep until the next poll if
         if(!pps_good) {
             nanosleep(&poll_interval, NULL);
         }
@@ -3893,7 +3893,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
             // read the status register
             reset = 0x3f;
             break;
-        case 1: 
+        case 1:
             PRINT(INFO,"hps pll reset\n");
         case 3:
             PRINT(INFO,"failover pll reset\n");
@@ -3953,7 +3953,7 @@ static int hdlr_fpga_board_reg_rst_req(const char *data, char *ret) {
     if(time >= MAX_RESET_WAIT) {
         PRINT(ERROR, "Timeout while waiting for FPGA reset\n");
     }
-    
+
     // write the register back to its default state
     write_hps_reg("rst_req0", 0xffffffff);
 
@@ -4515,15 +4515,15 @@ static int hdlr_fpga_user_regs(const char *data, char *ret)
 
 static int read_interboot_variable(char* data_filename, int64_t* value) {
     struct stat sb;
-    
+
     char data_path[MAX_PROP_LEN];
-    
+
     snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
-    
+
     int file_missing = stat(data_path, &sb);
-    
+
     PRINT(INFO, "Reading from %s\n", data_path);
-    
+
     if(file_missing) {
         *value = 0;
         return file_missing;
@@ -4537,19 +4537,19 @@ static int read_interboot_variable(char* data_filename, int64_t* value) {
 
 static void update_interboot_variable(char* data_filename, int64_t value) {
     struct stat sb;
-    
+
     char data_path[MAX_PROP_LEN];
-    
+
     snprintf(data_path, MAX_PROP_LEN, INTERBOOT_DATA "%s", data_filename);
-    
+
     int directory_missing = stat(INTERBOOT_DATA, &sb);
-    
+
     if(directory_missing) {
         mkdir(INTERBOOT_DATA, 0644);
     }
-    
+
     FILE *data_file = fopen( data_path, "w");
-    
+
     fprintf(data_file, "%lli", value);
     fclose(data_file);
 }
@@ -4567,7 +4567,7 @@ static int hdlr_fpga_board_rst_postinit(const char *data, char *ret) {
     uint8_t i, j, error_val, ret_val;
     char ch_type;
     char prop_path[PROP_PATH_LEN];
-    
+
     // Check for known bad FPGA state
     uint32_t read_val;
     read_hps_reg("rst_stat0",&read_val);

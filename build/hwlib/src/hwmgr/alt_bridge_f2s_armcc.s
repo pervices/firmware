@@ -38,7 +38,7 @@ alt_bridge_init_f2s_helper FUNCTION
     dsb     sy
 
 ;;;    alt_setbits_word(ALT_SDR_CTL_STATICCFG_ADDR,
-;;;                     ALT_SDR_CTL_STATICCFG_APPLYCFG_SET_MSK); 
+;;;                     ALT_SDR_CTL_STATICCFG_APPLYCFG_SET_MSK);
 
     movw    r3, #20572      ; 0x505c
     movt    r3, #65474      ; 0xffc2

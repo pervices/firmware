@@ -56,7 +56,7 @@ int execute(char *CMD){
 		sleep(10);
 		return 0;
 	}
-	
+
 	//SEND COMMAND
 	write(fd, CMD, 13);
 
@@ -79,7 +79,7 @@ int execute(char *CMD){
 		printf("ERROR: Aborting due to invalid file handler: %s\n", PATH_TATE_TIME);
 		return 1;
 	} else if (rv == 0) {
-		printf("ERROR: Timeout: No data received for: %s\n", PATH_TATE_TIME); /* Filehandler timeout occured */	
+		printf("ERROR: Timeout: No data received for: %s\n", PATH_TATE_TIME); /* Filehandler timeout occured */
 	} else {
 		for (i = 0; i < 6; i++) {
 			rfFD = read(fd, &byte, 1);
@@ -93,7 +93,7 @@ int execute(char *CMD){
 						checkBoot++;
 					}else{
 						checkBoot = 0;
-					}	
+					}
 					break;
 				case 1:
 					if (byte == 'L'){

@@ -89,7 +89,7 @@ csr_syncn_err=$(($tx_err & 0x1))
 
 declare -A ErrorArray
 declare -A ErrorArrayName
- 
+
 #RX:
 ErrorArray[0]=$csr_pcfifo_empty_err
 ErrorArray[1]=$csr_pcfifo_full_err
@@ -182,11 +182,11 @@ do
 done
 
 reset_errors=0
-if [ $error_detected -ne 0 ];  
+if [ $error_detected -ne 0 ];
 then
     echo " "
     echo " Do you want to reset the errors? 1 for Yes, 0 for No"
-    read reset_errors 
+    read reset_errors
 else
     echo " No errors detected, link should be UP."
 fi
@@ -208,7 +208,7 @@ echo "Done"
 
 
 
-######select JESD_0 
+######select JESD_0
 #####mem rw net6 0x1;
 #####
 ######Select address: rx_err0 = 0x18   rx_err1 = 0x19
@@ -220,7 +220,7 @@ echo "Done"
 ######read:
 #####mem rr res_ro30;
 #####
-######select JESD_0 
+######select JESD_0
 #####mem rw net6 0x1;  mem rw net7 0x18;  mem rw net9 0x1; mem rw net9 0x0; mem rr res_ro30;
 #####mem rw net6 0x1;  mem rw net7 0x19;  mem rw net9 0x1; mem rw net9 0x0; mem rr res_ro30;
 

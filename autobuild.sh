@@ -33,9 +33,9 @@ function check_rc() {
     local rc=$1
     local cmd_name=${2:-"Previous command"}
     if [[ $rc != 0 ]]; then
-        echo "----------------------------------------" 
-        echo "ERROR: ${cmd_name} returned non-zero exit code, exiting..." 
-        echo "----------------------------------------" 
+        echo "----------------------------------------"
+        echo "ERROR: ${cmd_name} returned non-zero exit code, exiting..."
+        echo "----------------------------------------"
         print_diagnostics
         exit $rc
     fi

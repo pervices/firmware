@@ -1,20 +1,20 @@
 /******************************************************************************
 *
 * Copyright 2014 Altera Corporation. All Rights Reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * 1. Redistributions of source code must retain the above copyright notice,
 * this list of conditions and the following disclaimer.
-* 
+*
 * 2. Redistributions in binary form must reproduce the above copyright notice,
 * this list of conditions and the following disclaimer in the documentation
 * and/or other materials provided with the distribution.
-* 
+*
 * 3. The name of the author may not be used to endorse or promote products
 * derived from this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER "AS IS" AND ANY EXPRESS OR
 * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED. IN NO
@@ -25,7 +25,7 @@
 * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 * OF SUCH DAMAGE.
-* 
+*
 ******************************************************************************/
 
 /*! \file
@@ -51,19 +51,19 @@ extern "C"
 /*! \addtogroup ALT_CAN CAN Controller API
  * This module defines an API for configuring and managing the HPS CAN controllers.
  *
- * The hardware processor system (HPS) provides two controller area network (CAN) 
+ * The hardware processor system (HPS) provides two controller area network (CAN)
  * controllers for serial communication with the Cortex™-A9 microprocessor unit
- * (MPU) subsystem host processor and the direct memory access (DMA) controller 
+ * (MPU) subsystem host processor and the direct memory access (DMA) controller
  * using the CAN protocol. The CAN controllers are instances of the Bosch®
  * D_CAN controller and compliant with ISO 11898-1.
- * 
- * The CAN controllers perform communication according to the CAN protocol version 
- * 2.0 parts A and B. All communication on the CAN bus is through message objects. 
- * The CAN controller stores message objects in its internal message RAM. The host 
- * processor cannot access the message RAM directly, instead the IF1and IF2message 
- * interface register sets provide the host processor access to the messages. Messages are 
- * passed between the message RAM and the CAN core by the message handler. The 
- * message handler is also responsible for message level responsibilities such as 
+ *
+ * The CAN controllers perform communication according to the CAN protocol version
+ * 2.0 parts A and B. All communication on the CAN bus is through message objects.
+ * The CAN controller stores message objects in its internal message RAM. The host
+ * processor cannot access the message RAM directly, instead the IF1and IF2message
+ * interface register sets provide the host processor access to the messages. Messages are
+ * passed between the message RAM and the CAN core by the message handler. The
+ * message handler is also responsible for message level responsibilities such as
  * acceptance filtering, interrupt generation, and transmission request generation.
  *
  * Features of the CAN Controller:
@@ -123,10 +123,10 @@ typedef enum ALT_CAN_FIFO_MODE_e
 /*!
  * This type defines a structure for status and parameters of specified mailbox.
  */
-typedef struct ALT_CAN_MAILBOX_PARAM_s 
+typedef struct ALT_CAN_MAILBOX_PARAM_s
 {
     uint32_t        id;             /*!< Identifier Mask */
-    uint32_t        mask;           /*!< Identifier Mask for acceptance filtering 
+    uint32_t        mask;           /*!< Identifier Mask for acceptance filtering
                                      *   of incoming messages.
                                      */
     uint32_t        dlc;            /*!< Data Length Code */
@@ -134,13 +134,13 @@ typedef struct ALT_CAN_MAILBOX_PARAM_s
     bool            init_done;      /*!< Initialization is completed for specified
                                      *   mailbox if init_done is true
                                      */
-    bool            extend;         /*!< Extended Identifier 
+    bool            extend;         /*!< Extended Identifier
                                      *   true - the 29-bit (extended)
                                      *   identifier will be used for this mailbox.
                                      *   false - the 11-bit (standard)
                                      *   identifier will be used for this Message Object.
                                      */
-    bool            remote;         /*!< Remote Enable 
+    bool            remote;         /*!< Remote Enable
                                      *   true - at the reception of a Remote Frame,
                                      *   TxRqst is set.
                                      *   false - at the reception of a Remote Frame,
@@ -240,7 +240,7 @@ typedef enum ALT_CAN_LAST_ERROR_e
     ALT_CAN_STAT_ERROR_BIT0,
                                 /*!< During the transmission of a message (or acknowledge
                                  *   bit, or active error flag, or overload flag),
-                                 *   the device wanted to send a dominant level 
+                                 *   the device wanted to send a dominant level
                                  *   (data or identifier bit logical value 0),
                                  *   but the monitored bus value was recessive.
                                  *   During Bus_Off recovery this status is set each time
@@ -256,7 +256,7 @@ typedef enum ALT_CAN_LAST_ERROR_e
                                  *   with the calculated CRC for the received data.
                                  */
     ALT_CAN_STAT_ERROR_NOCNG,
-                                /*!< Any read access to the Status Register re initializes 
+                                /*!< Any read access to the Status Register re initializes
                                  *   the LEC to 7. When the LEC shows the value 7, no CAN bus
                                  *   event was detected since the last CPU read access to the
                                  *   Status Register..
@@ -269,27 +269,27 @@ typedef enum ALT_CAN_LAST_ERROR_e
 typedef struct ALT_CAN_STATUS_s
 {
     ALT_CAN_LAST_ERROR_t    last_err_code;  /*!< The LEC field holds a code which indicates the
-                                             *   type of the last error to occur on the CAN bus. 
-                                             *   This field will be cleared to 0 when a message 
+                                             *   type of the last error to occur on the CAN bus.
+                                             *   This field will be cleared to 0 when a message
                                              *   has been transferred (reception or transmission)
                                              *   without error..
                                              */
-    bool                    tx_success;     /*!< Since this bit was last reset by a read access 
-                                             *   of the CPU, a message has been successfully 
-                                             *   (error free and acknowledged by at least one 
+    bool                    tx_success;     /*!< Since this bit was last reset by a read access
+                                             *   of the CPU, a message has been successfully
+                                             *   (error free and acknowledged by at least one
                                              *   other node) transmitted. This bit will be reset
                                              *   by reading the Status Register.
                                              */
     bool                    rx_success;     /*!< Since this bit was last reset by a read access
                                              *   of the CPU, a message has been successfully
-                                             *   received (independently of the result of 
+                                             *   received (independently of the result of
                                              *   acceptance filtering). This bit will be reset
                                              *   by reading the Status Register.
                                              */
     bool                    err_passive;    /*!< Limited error signaling and transmission
                                              *   features.
                                              */
-    bool                    warning;        /*!< At least one of the error counters in the EML 
+    bool                    warning;        /*!< At least one of the error counters in the EML
                                              *   has reached the error warning limit of 96.
                                              */
     bool                    bus_off;        /*!< The CAN module is in Bus_Off state. */
@@ -304,21 +304,21 @@ ALT_CAN_STATUS_t;
  * This type defines a structure for status of CAN instance.
  */
 typedef struct ALT_CAN_BITTIME_s {
-    uint32_t brp;         /*!< The value by which the oscillator frequency is 
+    uint32_t brp;         /*!< The value by which the oscillator frequency is
                            *   divided for generating the bit time quanta.
                            */
-                           
-    uint32_t sjw;         /*!< Synchronisation jump width in TQs. The actual interpretation 
-                           *   by the hardware of this value is such that one more than the 
+
+    uint32_t sjw;         /*!< Synchronisation jump width in TQs. The actual interpretation
+                           *   by the hardware of this value is such that one more than the
                            *   value programmed here is used.*/
-                           
+
     uint32_t tseg1;       /*!< The time segment before the sample point */
-    
+
     uint32_t tseg2;       /*!< The time segment after the sample point */
-    
-    uint32_t brpe;        /*!< By programming BRPE the Baud Rate Prescaler 
-                           *   can be extended to values up to 1023. The actual 
-                           *   interpretation by the hardware is that one more 
+
+    uint32_t brpe;        /*!< By programming BRPE the Baud Rate Prescaler
+                           *   can be extended to values up to 1023. The actual
+                           *   interpretation by the hardware is that one more
                            *   than the value programmed by BRPE (MSBs) and BRP
                            *   (LSBs) is used.
                            */
@@ -336,17 +336,17 @@ typedef struct ALT_CAN_MSG_PARAM_s
                                      *         will set) at write of IFxCMR.MONum. The Message
                                      *         Object Number will be incremented and the next
                                      *         Message Object will be transferred from Message
-                                     *         Object RAM to Interface Registers after 
+                                     *         Object RAM to Interface Registers after
                                      *         a read access of Data-Byte 7.
                                      *   Write: The first as well as each other transfer
                                      *         will be started after write access to Data- Byte7.
-                                     *         The Message Object Number will be incremented 
+                                     *         The Message Object Number will be incremented
                                      *         after successful transfer from the Interface
                                      *         Registers to the Message Object RAM..
                                      */
     bool        DMA_active;         /*!< Activation of DMA feature for subsequent internal
                                      *   IFx Register Set */
-    bool        data_B;             /*!< Access Data Bytes 4-7 
+    bool        data_B;             /*!< Access Data Bytes 4-7
                                      *   Write Direction:
                                      *   false = Data Bytes 4-7 unchanged.
                                      *   true = transfer Data Bytes 4-7 to Message Object.
@@ -354,7 +354,7 @@ typedef struct ALT_CAN_MSG_PARAM_s
                                      *   false = Data Bytes 4-7 unchanged.
                                      *   true = transfer Data Bytes 4-7 to IFxDB.
                                      */
-    bool        data_A;             /*!< Access Data Bytes 0-3 
+    bool        data_A;             /*!< Access Data Bytes 0-3
                                      *   Write Direction:
                                      *   false = Data Bytes 0-3 unchanged.
                                      *   true = transfer Data Bytes 0-3 to Message Object.
@@ -362,13 +362,13 @@ typedef struct ALT_CAN_MSG_PARAM_s
                                      *   false = Data Bytes 0-3 unchanged.
                                      *   true = transfer Data Bytes 0-3 to IFxDA.
                                      */
-    bool        tx_rqst_new_dat;    /*!< Access Transmission Request Bit and NewDat Bit 
+    bool        tx_rqst_new_dat;    /*!< Access Transmission Request Bit and NewDat Bit
                                      *   Write Direction:
                                      *   false = TxRqst and NewDat bit will be handled according
                                      *   IFxMCTR.NewDat bit and IFxMCTR.TxRqst bit.
                                      *   true = set TxRqst and NewDat in Message Object to one
                                      *   Note: If a CAN transmission is requested by setting
-                                     *   IFxCMR.TxRqst/NewDat, the TxRqst and NewDat bits in 
+                                     *   IFxCMR.TxRqst/NewDat, the TxRqst and NewDat bits in
                                      *   the Message Object will be set to one independently
                                      *   of the values in IFxMCTR.
                                      *   Read Direction:
@@ -376,15 +376,15 @@ typedef struct ALT_CAN_MSG_PARAM_s
                                      *   true = clear NewDat bit in the Message Object.
                                      *   Note: A read access to a Message Object can be combined
                                      *   with the reset of the control bits IntPnd and NewDat.
-                                     *   The values of these bits transferred to the IFxMCTR 
+                                     *   The values of these bits transferred to the IFxMCTR
                                      *   always reflect the status before resetting them.
                                      */
-    bool        clr_int_pnd;        /*!< Clear Interrupt Pending Bit 
+    bool        clr_int_pnd;        /*!< Clear Interrupt Pending Bit
                                      *   Write Direction:
                                      *   Has no influence to Message Object at write transfer.
-                                     *   Note: When writing to a Message Object, this bit is 
-                                     *   ignored and copying of IntPnd flag from IFx Control 
-                                     *   Register to Message RAM could only be controlled by 
+                                     *   Note: When writing to a Message Object, this bit is
+                                     *   ignored and copying of IntPnd flag from IFx Control
+                                     *   Register to Message RAM could only be controlled by
                                      *   IFxMTR.IntPnd bit.
                                      *   Read Direction:
                                      *   false = IntPnd bit remains unchanged.
@@ -394,37 +394,37 @@ typedef struct ALT_CAN_MSG_PARAM_s
                                      *   Write Direction:
                                      *   false = Control Bits unchanged.
                                      *   true = transfer Control Bits to Message Object.
-                                     *   Note: If IFxCMR.TxRqst/NewDat bit is set, bits 
+                                     *   Note: If IFxCMR.TxRqst/NewDat bit is set, bits
                                      *   IFxMCTR.TxRqst and IFxMCTR.NewDat will be ignored.
                                      *   Read Direction:
                                      *   false = Control Bits unchanged.
                                      *   true = transfer Control Bits to IFxMCTR Register.
                                      */
-    bool        arbitration;        /*!< Access Arbitration Bits 
+    bool        arbitration;        /*!< Access Arbitration Bits
                                      *   Write Direction:
                                      *   false = Control Bits unchanged.
                                      *   true = transfer Control Bits to Message Object.
-                                     *   Note: If IFxCMR.TxRqst/NewDat bit is set, bits 
+                                     *   Note: If IFxCMR.TxRqst/NewDat bit is set, bits
                                      *   IFxMCTR.TxRqst and IFxMCTR.NewDat will be ignored.
                                      *   Read Direction:
                                      *   false = Control Bits unchanged.
                                      *   true = transfer Control Bits to IFxMCTR Register.
                                      */
-    bool        mask;               /*!< Access mask Bits 
+    bool        mask;               /*!< Access mask Bits
                                      *   Write Direction:
                                      *   false = Mask bits unchanged.
                                      *   true = transfer Identifier Mask + MDir + MXtd
                                      *   to Message Object.
                                      *   Read Direction:
                                      *   false = Mask bits unchanged.
-                                     *   true = transfer Identifier Mask + MDir + MXtd 
+                                     *   true = transfer Identifier Mask + MDir + MXtd
                                      *   to IFxMSK Register.
                                      */
-    bool        write;              /*!< true = write transfer 
+    bool        write;              /*!< true = write transfer
                                      *   false = read transfer
                                      */
     bool        clr_auto_inc;       /*!< Clear the AutoInc bit without starting a transfer,
-                                     *   all other bits will be ignored. 
+                                     *   all other bits will be ignored.
                                      */
 }
 ALT_CAN_MSG_PARAM_t;
@@ -434,16 +434,16 @@ ALT_CAN_MSG_PARAM_t;
  */
 typedef struct ALT_CAN_MSG_MSK_s
 {
-    uint32_t  mask;                  /*!< Identifier Mask 
+    uint32_t  mask;                  /*!< Identifier Mask
                                      *   ID28 - ID0 29-bit Identifier (Extended Frame).
                                      *   ID28 - ID18 11-bit Identifier (Standard Frame).
                                      */
-    bool      direction;            /*!< Mask Message Direction 
-                                     *   true = the message direction bit (Dir) is used for 
+    bool      direction;            /*!< Mask Message Direction
+                                     *   true = the message direction bit (Dir) is used for
                                      *   acceptance filtering..
                                      */
-    bool      extended;             /*!< Mask Extended Identifier 
-                                     *   true = the extended identifier bit (IDE) is used for 
+    bool      extended;             /*!< Mask Extended Identifier
+                                     *   true = the extended identifier bit (IDE) is used for
                                      *   acceptance filtering..
                                      */
 }
@@ -454,26 +454,26 @@ ALT_CAN_MSG_MSK_t;
  */
 typedef struct ALT_CAN_MSG_ARB_s
 {
-    uint32_t  id;                   /*!< Identifier Mask 
+    uint32_t  id;                   /*!< Identifier Mask
                                      *   ID28 - ID0 29-bit Identifier (Extended Frame).
                                      *   ID28 - ID18 11-bit Identifier (Standard Frame).
                                      */
-    bool      direction;            /*!< Message Direction 
-                                     *   On TxRqst, the respective Message Object is 
-                                     *   transmitted as a Data Frame. On reception of 
-                                     *   a Remote Frame with matching identifier, 
-                                     *   the TxRqst bit of this Message Object is set 
+    bool      direction;            /*!< Message Direction
+                                     *   On TxRqst, the respective Message Object is
+                                     *   transmitted as a Data Frame. On reception of
+                                     *   a Remote Frame with matching identifier,
+                                     *   the TxRqst bit of this Message Object is set
                                      *   (if RmtEn = one)..
                                      */
-    bool      extended;             /*!< Extended Identifier 
-                                     *   true = The 29-bit (extended) Identifier will be used 
+    bool      extended;             /*!< Extended Identifier
+                                     *   true = The 29-bit (extended) Identifier will be used
                                      *   for this Message Object.
                                      *   false = The 11-bit (standard) Identifier will be used
                                      *   for this Message Object.
                                      */
     bool      valid;                /*!< Message Valid
-                                     *   The CPU must reset the MsgVal bit of all unused 
-                                     *   Messages Objects during the initialization before 
+                                     *   The CPU must reset the MsgVal bit of all unused
+                                     *   Messages Objects during the initialization before
                                      *   it resets bit Init in the CAN Control Register.
                                      *   MsgVal must also be reset if the Messages Object
                                      *   is no longer used in operation. For reconfiguration
@@ -487,21 +487,21 @@ ALT_CAN_MSG_ARB_t;
  */
 typedef struct ALT_CAN_MSG_IFMCTR_s
 {
-    uint32_t  data_len;             /*!< Data Length Code 
+    uint32_t  data_len;             /*!< Data Length Code
                                      *   0-8 Data Frame has 0-8 data bytes.
                                      *   9-15 Data Frame has 8 data bytes.
-                                     *   Note: The Data Length Code of a Message Object 
-                                     *   must be defined the same as in all the corresponding 
+                                     *   Note: The Data Length Code of a Message Object
+                                     *   must be defined the same as in all the corresponding
                                      *   objects with the same identifier at other nodes.
                                      *   When the Message Handler stores a data frame,
-                                     *   it will write the DLC to the value given by the 
+                                     *   it will write the DLC to the value given by the
                                      *   received message.
                                      */
-    bool      block_end;            /*!< End Of Block 
+    bool      block_end;            /*!< End Of Block
                                      *   Single Message Object or last Message Object
                                      *   of a FIFO Buffer Block.
                                      */
-    bool      tx_rqst;              /*!< Transmit Request 
+    bool      tx_rqst;              /*!< Transmit Request
                                      *   The transmission of this Message Object is requested
                                          and is not yet done.
                                      */
@@ -509,37 +509,37 @@ typedef struct ALT_CAN_MSG_IFMCTR_s
                                      *   At the reception of a Remote Frame, TxRqst is set.
                                      */
     bool      rx_int;               /*!< Receive Interrupt Enable
-                                     *   IntPnd will be set after a successful reception 
+                                     *   IntPnd will be set after a successful reception
                                      *   of a frame.
                                      */
-    bool      tx_int;               /*!< Transmit Interrupt Enable 
+    bool      tx_int;               /*!< Transmit Interrupt Enable
                                      *   IntPnd will be set after a successful transmission
                                      *   of a frame.
                                      */
-    bool      accept_mask;          /*!< Use Acceptance Mask 
+    bool      accept_mask;          /*!< Use Acceptance Mask
                                      *   (Msk28-0, MXtd, and MDir) for acceptance filtering,
-                                     *   formula: 
+                                     *   formula:
                                      *   ((RTRRx & MDIR) == (~DIR & MDIR))
                                      *   && ((IDERx & MXtd) == (IDE & MXtd))
-                                     *   && ((IDRx & Msk) == (ID & Msk)) 
-                                     *   Note: If the UMask bit is set to one, the Message 
-                                     *   Object's mask bits have to be programmed during 
-                                     *   initialization of the Message Object before 
+                                     *   && ((IDRx & Msk) == (ID & Msk))
+                                     *   Note: If the UMask bit is set to one, the Message
+                                     *   Object's mask bits have to be programmed during
+                                     *   initialization of the Message Object before
                                      *   MsgVal is set to one.
                                      */
     bool      int_pending;          /*!< Interrupt Pending
                                      *   This message object is the source of an interrupt.
                                      *   The Interrupt Identifier in the Interrupt Register
-                                     *   will point to this message object if there is 
+                                     *   will point to this message object if there is
                                      *   no other interrupt source with higher priority.
                                      */
     bool      msg_lost;             /*!< Message Lost
-                                     *   The Message Handler stored a new message into 
-                                     *   this object when NewDat was still set, the CPU 
+                                     *   The Message Handler stored a new message into
+                                     *   this object when NewDat was still set, the CPU
                                      *   has lost a message.
                                      */
-    bool      new_data;             /*!< New Data 
-                                     *   The Message Handler or the CPU has written 
+    bool      new_data;             /*!< New Data
+                                     *   The Message Handler or the CPU has written
                                      *   new data into the data portion of this Message Object.
                                      */
 }
@@ -551,7 +551,7 @@ ALT_CAN_MSG_IFMCTR_t;
 typedef enum ALT_CAN_INT_GROUP_e
 {
     ALT_CAN_INT_GROUP_MOD_LINE   = 1UL << 0,
-                                /*!< Error and status interrupts (if CCTRL.EIE=1 
+                                /*!< Error and status interrupts (if CCTRL.EIE=1
                                  *   and CCTRL.SIE=1) will set line CAN_INT_STATUS
                                  *   to one, signal remains one until all pending
                                  *   interrupts are processed. If MIL is disabled,
@@ -573,7 +573,7 @@ typedef enum ALT_CAN_INT_GROUP_e
                                  */
     ALT_CAN_INT_GROUP_MSG_LINE   = 1UL << 3,
                                 /*!< Message object interrupts will set CAN_INT_MO
-                                 *   to one, signal remains one until all pending 
+                                 *   to one, signal remains one until all pending
                                  *   interrupts are processed.
                                  */
     ALT_CAN_INT_GROUP_ALL        = 0xF,
@@ -1090,7 +1090,7 @@ ALT_STATUS_CODE alt_can_if_arb_get(ALT_CAN_DEV_t * can_dev, ALT_CAN_INTERFACE_t 
  * \param       ctrl
  *              Pointer to a ALT_CAN_MSGIF_IF1MCTR_t structure holding the desired
  *              CAN message parameters.
- * 
+ *
  * \retval      ALT_E_SUCCESS   Successful status.
  * \retval      ALT_E_ERROR     Details about error status code
  *
@@ -1112,7 +1112,7 @@ ALT_STATUS_CODE alt_can_if_msg_ctrl_set(ALT_CAN_DEV_t * can_dev, ALT_CAN_INTERFA
  * \param       ctrl
  *              [out] Pointer to a ALT_CAN_MSGIF_IF1MCTR_t structure holding the desired
  *              CAN message parameters.
- * 
+ *
  * \retval      ALT_E_SUCCESS   Successful status.
  * \retval      ALT_E_ERROR     Details about error status code
  *
@@ -1351,7 +1351,7 @@ ALT_STATUS_CODE alt_can_mailboxes_reset(ALT_CAN_DEV_t *can_dev);
  * \internal
  * \endinternal
  */
-ALT_STATUS_CODE alt_can_frame_read(ALT_CAN_DEV_t *can_dev, 
+ALT_STATUS_CODE alt_can_frame_read(ALT_CAN_DEV_t *can_dev,
                                    uint32_t msg_obj_num,
                                    void * buffer,
                                    uint32_t *frame_size);
@@ -1391,7 +1391,7 @@ ALT_STATUS_CODE alt_can_frame_write(ALT_CAN_DEV_t *can_dev,
  *              [out] Pointer to the memory for saving received data.
  *
  * \param       size
- *              The requested number of data bytes to read from the CAN bus. 
+ *              The requested number of data bytes to read from the CAN bus.
  *              If size is zero, the function will return as soon as one frame has been received.
  *              If size is non-zero, the function will return when all the data requested has been received.
  *
@@ -1404,7 +1404,7 @@ ALT_STATUS_CODE alt_can_frame_write(ALT_CAN_DEV_t *can_dev,
  * \internal
  * \endinternal
  */
-ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev, 
+ALT_STATUS_CODE alt_can_data_read(ALT_CAN_DEV_t *can_dev,
                                   uint32_t msg_obj_num,
                                   void * buffer,
                                   uint32_t size,

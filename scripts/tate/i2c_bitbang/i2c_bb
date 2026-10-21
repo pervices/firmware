@@ -214,7 +214,7 @@ proc i2c_stop_condition { } {
 }
 
 proc initialize_i2c_bus { } {
-    # Initialize the GPIO driver of I2C signals 
+    # Initialize the GPIO driver of I2C signals
     initialize_i2c_gpio
 }
 proc i2c_acquire_lines { } {
@@ -267,7 +267,7 @@ proc write_i2c { slave_address xfer_length internal_address write_byte_list } {
 ####################################
 # Main I2C functionality
 ####################################
-if {$::argv0 eq [info script]} {    
+if {$::argv0 eq [info script]} {
 
     # Get slave address and other required information from command line
     set xfer_info [parse_arguments $::argc $::argv]

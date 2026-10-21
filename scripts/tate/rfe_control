@@ -13,7 +13,7 @@ set ::MAX_TIMEOUT 60
 # Helper Functions  #
 #####################
 
-proc print_help { } { 
+proc print_help { } {
     puts "Enable and disable Radio Front-End boards"
     puts "Arguments:"
     puts "    rfe_control <board_number> <on|off|check> < |n(oconfirm)|timeout>"
@@ -73,7 +73,7 @@ if {$::argv0 eq [info script]} {
         set board_state [lindex $::argv 1]
         set confirm 1
         set timeout -1
-    
+
         # Check validity of inputs
         check_2inputs $board_number $board_state
     } elseif { $::argc == 3 } {
@@ -101,7 +101,7 @@ if {$::argv0 eq [info script]} {
         puts "Invalid Arguments"
         print_help
         exit
-    
+
     }
 
     set gpio_chip_label_pwr_en "bp_pwr"

@@ -143,7 +143,7 @@ typedef struct ALT_PLL_CNTR_FREQMAX_s
 } ALT_PLL_CNTR_FREQMAX_t;
 
 //
-// The following pll max frequency array statically defined must be recalculated each time 
+// The following pll max frequency array statically defined must be recalculated each time
 // when powering up, by calling alt_clk_clkmgr_init()
 //
 // for 14.1 uboot preloader, the following values are calculated dynamically.
@@ -166,7 +166,7 @@ typedef struct ALT_PLL_CNTR_FREQMAX_s
 // alt_pll_cntr_maxfreq.SDRAMPLL_C2  =  533333333
 // alt_pll_cntr_maxfreq.SDRAMPLL_C5  =  177777777
 
-// Cyclone V 
+// Cyclone V
 // alt_pll_cntr_maxfreq.MainPLL_C0   =  925000000
 // alt_pll_cntr_maxfreq.MainPLL_C1   =  370000000
 // alt_pll_cntr_maxfreq.MainPLL_C2   =  462500000
@@ -1789,7 +1789,7 @@ ALT_STATUS_CODE alt_clk_pll_cfg_get(ALT_CLK_t pll, ALT_CLK_PLL_CFG_t * pll_cfg)
 {
     ALT_STATUS_CODE        ret = ALT_E_ERROR;                  // return value
     uint32_t               temp;                               // temp variable
- 
+
     if (pll_cfg == NULL)
     {
 		ret = ALT_E_BAD_ARG;
@@ -5565,4 +5565,4 @@ ALT_STATUS_CODE alt_clk_clkmgr_uninit(void)
     ALT_STATUS_CODE ret = ALT_E_SUCCESS;
 
 	return ret;
-} 
+}

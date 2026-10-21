@@ -17,6 +17,6 @@
 
 This folder contains the common libraries and common header files that are
 likely to be shared amongst the overall Crimson Server project. Files and
-folder here shall be written as flexible as possible. Source files with 
+folder here shall be written as flexible as possible. Source files with
 accompanying header files, or just header files are allowed to be located
 within this folder.

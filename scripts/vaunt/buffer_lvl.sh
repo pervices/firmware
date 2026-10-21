@@ -34,17 +34,17 @@ readbuffer() {
 	elif [[ "$channel" == "D" ]]
 	then
 		eval bufferlevel=$(mem rr res_ro7)
-	else 
+	else
 		eval bufferlevel=$(mem rr res_ro4)
 	fi
-	
+
 }
 
 while true; do
 	readbuffer $channel;
 	buff_lvl=$bufferlevel;
 	buff_lvl=$(($buff_lvl));
-	
+
 	if [[ "$buff_lvl" -gt "$max" ]]
        	then
 		max=$buff_lvl;

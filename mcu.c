@@ -207,7 +207,7 @@ static void parse_args(int argc, char *argv[]) {
             UART_CRIMSON_RX = argv[i + 1];
             i++;
         } else if (streql(argv[i], ARG_MCU_UART_GPIO) && !last(i, argc)) {
-            
+
             UART_CRIMSON_GPIO = argv[i + 1];
             i++;
 #endif

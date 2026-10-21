@@ -23,7 +23,7 @@ elif [ $# -ge 5 ]; then
         echo "Parameters for NRNT specified but product is not NRNT"
         exit 80
     fi
-    
+
     # SPECIAL_FLAGS is a hex bitmask with an F before it (optional)
     # see firmware/hal/variant_config/tate_special_config.h for details
     if [ $# -ge 6 ]; then

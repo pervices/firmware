@@ -961,14 +961,14 @@ static int valid_trig_time_disable(const char *data, uint32_t *val) {
 static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?16:13), 1, val);
 }
 
 static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     char reg_name[8];
     snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);    
+             tx ? 6 : 9);
     return set_reg_bits(reg_name, (tx?17:14), 1, val);
 }
 
@@ -4207,7 +4207,7 @@ RX_CHANNELS
             \
         }\
         return r;                                                              \
-    }                                                                          
+    }
 TX_CHANNELS
 #undef X
 
@@ -4775,8 +4775,8 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
         if(!pps_good) {
             pps_was_down = 1;
         }
-        
-        // Sleep until the next poll if 
+
+        // Sleep until the next poll if
         if(!pps_good || !pps_was_down) {
             nanosleep(&poll_interval, NULL);
         }
@@ -4794,7 +4794,7 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
     }
 
     PRINT(ERROR, "External PPS signal not detected, falling back to internal\n");
-    // Fall back to using an internal PPS 
+    // Fall back to using an internal PPS
     write_hps_reg_mask("sys13", 0, 0x2);
     // Set the return value to indicate the PPS fell back to internal
     snprintf(ret, MAX_PROP_LEN, "internal");
@@ -4808,8 +4808,8 @@ static int hdlr_time_set_time_source(const char *data, char *ret) {
 
         clock_gettime(CLOCK_MONOTONIC, &now);
         time_elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
-        
-        // Sleep until the next poll if 
+
+        // Sleep until the next poll if
         if(!pps_good) {
             nanosleep(&poll_interval, NULL);
         }
@@ -4957,7 +4957,7 @@ static int hdlr_time_set_time_en_rf_if(const char *data, char *ret) {
             enable = 0x10000;
         }
     }
-    
+
     if (enable) {
         PRINT(VERBOSE,"enable rf_if");
         strcpy(buf, "lmx -l 4 -M 0\r");

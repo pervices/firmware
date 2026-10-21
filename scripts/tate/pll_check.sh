@@ -15,11 +15,11 @@ for CURR_ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
         if [[ ! -z $unlocked ]]; then
             echo "[PLL_CHECK][ERROR][ATTEMPT $CURR_ATTEMPT]: PLL(s) unlocked"
         else
-            # 3 LMKs, each with 2 PLLs means we're expecting to see `Locked` exactly 6 times in the response. 
+            # 3 LMKs, each with 2 PLLs means we're expecting to see `Locked` exactly 6 times in the response.
             # Anything else is unexpected and considered a failure.
             lock_count=$(echo $output | grep -o Locked | wc -l)
             if [[ $lock_count -eq 6 ]]; then
-                echo "All PLLs locked." 
+                echo "All PLLs locked."
                 FAIL=0
                 break
             else

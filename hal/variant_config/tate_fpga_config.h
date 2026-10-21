@@ -177,7 +177,7 @@
     static const char *tx_oflow_map_msb[NUM_FPGA_TX] = { "flc15", "flc17", "flc19", "flc21", "flc53", "flc55", "flc57" };
 
     static const int tx_ddr_bank[NUM_FPGA_TX] = { 0, 0, 0, 1, 1, 1, 1 };
-    
+
 #elif defined(FPGA_8R8T_1G)
 
     #define INDIVIDUAL_RESET_BIT_OFFSET_RX 4

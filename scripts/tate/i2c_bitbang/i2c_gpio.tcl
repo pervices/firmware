@@ -10,7 +10,7 @@ set ::scl_gpio_handle ""
 set ::sda_gpio_handle ""
 
 proc initialize_i2c_gpio { } {
-    set max_gpio_chips 1 
+    set max_gpio_chips 1
     set max_gpio_pins 24
     set_gpio_variables $max_gpio_chips $max_gpio_pins
 

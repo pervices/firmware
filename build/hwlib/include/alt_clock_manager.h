@@ -1427,7 +1427,7 @@ ALT_STATUS_CODE alt_clk_group_cfg_raw_set(const ALT_CLK_GROUP_RAW_CFG_t* clk_gro
  *  alt_clk_clkmgr_init() attempt to fix the pll counter max frequencies, since
  *  thses frequencies are not known in advance until preloader programmed clock manager.
  *
- * \param       None 
+ * \param       None
  *
  * \retval      ALT_E_SUCCESS       Successful status.
  * \retval      ALT_E_ERROR         Details about error status code
@@ -1438,7 +1438,7 @@ ALT_STATUS_CODE alt_clk_clkmgr_init(void);
 /*!
  *  alt_clk_clkmgr_uninit() uninit clock manager.
  *
- * \param       None 
+ * \param       None
  *
  * \retval      ALT_E_SUCCESS       Successful status.
  */

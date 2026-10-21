@@ -72,7 +72,7 @@ int _read(int file, void *ptr, size_t len)
 int _write(int file, char * ptr, unsigned len, int flag )
 {
     unsigned max_len = len;
-    
+
     /* Fails if not STDOUT */
     if(file != STDOUT_FILENO)
     {
@@ -83,11 +83,11 @@ int _write(int file, char * ptr, unsigned len, int flag )
     {
         max_len = UART_MAX_LEN-1;
     }
-    
-    snprintf(log_buf, max_len, ptr);      
-    
+
+    snprintf(log_buf, max_len, ptr);
+
     alt_log_printf(log_buf);
-   
+
     /* All printed fine */
     return len;
 }

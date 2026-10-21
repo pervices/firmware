@@ -5,10 +5,10 @@ commands. Note carefully that they are used for our own, internal, machines, and
 may not work for you. The remainder of this README provides additional
 information on how to get a compile working for you.
 
-The following commands run the compilation steps in Docker to 
+The following commands run the compilation steps in Docker to
 ensure consistent compatibility with each product.
-Compiling with Docker installed on your machine is preferred. 
-However, if you wish to compile without Docker you must install 
+Compiling with Docker installed on your machine is preferred.
+However, if you wish to compile without Docker you must install
 the appropriate toolchain and use the legacy script.
 
 On archlinux without Docker, you will need to install the "arm-linux-gnueabihf-gcc" toolchain,
@@ -52,7 +52,7 @@ may specify the specific compiler as a configure flag.
 
 
 For Crimson, we currently use the armv7l hard-float toolchain that is available here;
-https://archlinuxarm.org/wiki/Distcc_Cross-Compiling 
+https://archlinuxarm.org/wiki/Distcc_Cross-Compiling
 
 For Cyan, we should be able to use the ARMv8 toolchain from above, but this is presently untested.
 
@@ -72,7 +72,7 @@ For the internal PV machines that haven't been configured with the new toolchain
    CC="/usr/x-tools/x-tools7h/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-gcc" \
 
 And then add the CFLAGS and instructions appropriate for either Crimson or Cyan.
-   
+
 3. Compile Optimizations
 
 To further optimize the design for either Crimson or Cyan, you can also specify

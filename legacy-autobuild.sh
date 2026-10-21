@@ -278,20 +278,20 @@ elif [ "${PRODUCT}" == "TATE_NRNT" ] || [ "${PRODUCT}" == "LILY" ]; then
 fi
 
 if ! ./autogen.sh clean; then
-    echo "----------------------------------------" 
-    echo "ERROR: ./autogen clean returned non-zero exit code, exiting..." 
-    echo "----------------------------------------" 
+    echo "----------------------------------------"
+    echo "ERROR: ./autogen clean returned non-zero exit code, exiting..."
+    echo "----------------------------------------"
     print_diagnostics_short
     exit $?
-fi 
+fi
 
 if ! ./autogen.sh; then
-    echo "----------------------------------------" 
-    echo "ERROR: Autogen returned non-zero exit code, exiting..." 
-    echo "----------------------------------------" 
+    echo "----------------------------------------"
+    echo "ERROR: Autogen returned non-zero exit code, exiting..."
+    echo "----------------------------------------"
     print_diagnostics_short
     exit $?
-fi 
+fi
 
 if ! ./configure                        \
         --prefix=/usr                   \
@@ -310,18 +310,18 @@ if ! ./configure                        \
         RX_40GHZ_FE=$RX_40GHZ_FE        \
         USE_3G_AS_1G=$USE_3G_AS_1G      \
         USER_LO=$USER_LO; then
-    echo "----------------------------------------" 
-    echo "ERROR: Configure returned non-zero exit code, exiting..." 
-    echo "----------------------------------------" 
+    echo "----------------------------------------"
+    echo "ERROR: Configure returned non-zero exit code, exiting..."
+    echo "----------------------------------------"
     print_diagnostics_short
     exit $?
-fi 
+fi
 
 
 if ! make -j$(nproc); then
-    echo "----------------------------------------" 
-    echo "ERROR: Make returned non-zero exit code, exiting..." 
-    echo "----------------------------------------" 
+    echo "----------------------------------------"
+    echo "ERROR: Make returned non-zero exit code, exiting..."
+    echo "----------------------------------------"
     print_diagnostics_short
     exit $?
 fi

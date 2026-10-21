@@ -368,7 +368,7 @@ int init_property(uint8_t options) {
     set_uart_debug_opt(options);
     set_mem_debug_opt(options);
 
-    // XXX 
+    // XXX
     uart_synth_comm_fd = -1;
 
     for(int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
@@ -728,7 +728,7 @@ int property_good(char *path) {
     // returns 1 if property is good else returns 0
     char property_read[5];
     char fullpath[200] = STATE_DIR "/";
-    
+
     snprintf(&fullpath[0], 200, path);
     // need to write to the property to force an update
     set_property(&fullpath[0],"0");

@@ -18,53 +18,53 @@ if { $argc != 1 } {
 switch $board_name {
 	"time" {
 		set pin_values "0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe0" {                                   
+	}
+	"rfe0" {
 		set pin_values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe1" {                                   
+	}
+	"rfe1" {
 		set pin_values "0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe2" {                                   
+	}
+	"rfe2" {
 		set pin_values "0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe3" {                                   
+	}
+	"rfe3" {
 		set pin_values "0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe4" {                                   
+	}
+	"rfe4" {
 		set pin_values "0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe5" {                                   
+	}
+	"rfe5" {
 		set pin_values "0 0 0 0 1 0 1 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe6" {                                   
+	}
+	"rfe6" {
 		set pin_values "0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe7" {                                   
+	}
+	"rfe7" {
 		set pin_values "0 0 0 0 1 1 1 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe8" {                                   
+	}
+	"rfe8" {
 		set pin_values "0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe9" {                                   
+	}
+	"rfe9" {
 		set pin_values "0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe10" {                                  
+	}
+	"rfe10" {
 		set pin_values "0 0 0 1 0 1 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe11" {                                  
+	}
+	"rfe11" {
 		set pin_values "0 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe12" {                                  
+	}
+	"rfe12" {
 		set pin_values "0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe13" {                                  
+	}
+	"rfe13" {
 		set pin_values "0 0 0 1 1 0 1 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe14" {                                  
+	}
+	"rfe14" {
 		set pin_values "0 0 0 1 0 1 1 0 0 0 0 0 0 0 0 0"
-	}                                          
-	"rfe15" {                                  
+	}
+	"rfe15" {
 		set pin_values "0 0 0 1 1 1 1 0 0 0 0 0 0 0 0 0"
 	}
 }

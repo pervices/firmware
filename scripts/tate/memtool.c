@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     if (argc == 2) {
         address = strtoul(argv[1], NULL, 0);
         operation = READ;
-        
+
     } else if (argc == 3) {
         address = strtoul(argv[1], NULL, 0);
         write_data = strtoul(argv[2], NULL, 0);
