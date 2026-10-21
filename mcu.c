@@ -185,6 +185,26 @@ static void parse_args(int argc, char *argv[]) {
             exit(0);
             return;
         }
+        // Specify the verbosity of print messages
+        else if (strcmp(argv[i], "-d") == 0) {
+            // Default to 1 if the option value was unspecified
+            verbose = 1;
+
+            if (i + 1 < argc) {
+                char *end;
+                // Extract the value
+                long val = strtol(argv[i + 1], &end, 10);
+                // If a valid value was extracted
+                if (end != argv[i + 1] && *end == '\0') {
+                    // Set the logging level
+                    verbose = (int)val;
+                    // Skip the option argument for the next pass since we consumed it here
+                    i++;
+                } else {
+                    // No option value was provided, leave as default
+                }
+            }
+        }
         // if argument to silent the output
         else if (streql(argv[i], ARG_MCU_SILENT)) {
             silent = TRUE;
