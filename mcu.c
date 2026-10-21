@@ -121,6 +121,8 @@ static enum TARGET_DEV target_dev;
 
 static int uart_target_fd;
 
+extern int verbose;
+
 static int contains(const char *str, char letter, int size) {
     int cnt = 0;
     for (int i = 0; i < size; i++) {
@@ -246,6 +248,11 @@ static void parse_args(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
+
+    // Set the logging level used by PRINT() to the lowest to avoid DEBUG and VERBOSE prints deeper in the program
+    // stdout (used by printf) should only be used by the help message and the board's reply
+    // Avoid using the macro PRINT() for anything other than error messages
+    verbose = 0;
 
     parse_args(argc, argv);
     #ifdef DEBUG_OUTPUTS
