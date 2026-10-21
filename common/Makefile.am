@@ -6,6 +6,5 @@ libcommon_la_SOURCES = \
 	common.c \
 	common.h \
 	hps.h \
-	ied.h \
 	minmax.h \
 	socal.h
