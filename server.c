@@ -330,7 +330,7 @@ void service_tcp_requests(int tcp_listener_fd, int* tcp_connected_fds) {
     if(new_connected_i == -1) {
         if(!max_connections_exceeded_printed) {
             max_connections_exceeded_printed = 1;
-            PRINT(ERROR, "The TCP connection limit of %lu has been reached, no more can be created\n");
+            PRINT(ERROR, "The TCP connection limit has been reached, no more can be created\n");
         }
     // Accept new socket if the array has space
     } else {
