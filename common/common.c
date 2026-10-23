@@ -53,8 +53,16 @@ void PRINT_WRAPPER(print_t priority, const char *format, ...) {
     }
 
     if (NULL != o) {
+        // Flush before and after messages to stderr to preserve ordering
+        // Do not flush on stdout to help performance
+        if(o == stderr) {
+            fflush(o);
+        }
         vfprintf(o, format, args);
-        fflush(o);
+        // The flush after printing to stderr is probably not needed since stderr is not buffered but include it just in case
+        if(o == stderr) {
+            fflush(o);
+        }
     }
 
     va_end(args);
