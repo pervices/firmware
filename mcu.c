@@ -267,6 +267,10 @@ static void parse_args(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
 
+    // This program writes its results with printf; print synchronously so
+    // PRINT output can't be reordered relative to them
+    print_lazy_disable();
+
     parse_args(argc, argv);
     #ifdef DEBUG_OUTPUTS
         dump_args();

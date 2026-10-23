@@ -22,6 +22,10 @@ int main(int argc, char *argv[]) {
     uint32_t rval;              // value that is read
     uint32_t mask = 0xffffffff; // default mask if not specified
 
+    // This program writes its results with printf; print synchronously so
+    // PRINT output can't be reordered relative to them
+    print_lazy_disable();
+
     int r = mmap_init();
     if (EXIT_SUCCESS != r) {
         PRINT(ERROR, "mmap_init failed\n");

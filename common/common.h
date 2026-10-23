@@ -117,20 +117,47 @@ typedef enum { FALSE, TRUE } boolean;
 
 typedef enum { ERROR, INFO, DEBUG, VERBOSE, DUMP } print_t;
 
+// Print verbosity, set by the -d option. 0 = default, >= 1 adds VERBOSE, >= 2 adds DEBUG
+extern int verbose;
+
+// Returns non-zero if a message of this priority is printed at the current verbosity
+// Inline so PRINT can skip formatting and the timestamp for suppressed messages
+static inline int print_enabled(print_t priority) {
+    switch (priority) {
+    case VERBOSE:
+        return verbose >= 1;
+    case DEBUG:
+        return verbose >= 2;
+    default:
+        return 1;
+    }
+}
+
 // printf wrapper
+// ERROR messages have been written to stderr when this returns.
+// Other messages are queued and written by a background logger thread. Messages
+// from one thread are written in the order that thread printed them.
 void PRINT_WRAPPER(print_t priority, const char *format, ...);
+
+// Turns lazy printing off for the rest of the process; every PRINT after this is
+// written before it returns. Call it before the first PRINT in programs that mix
+// PRINT with printf, so the two can't be reordered.
+void print_lazy_disable(void);
 
 #define PRINT(prio, fmt, args...)                                              \
     do {                                                                       \
-        struct timespec _ts;                                                   \
-        clock_gettime(CLOCK_REALTIME, &_ts);                                   \
-        if (ERROR == prio) {                                                   \
-            PRINT_WRAPPER(prio, "[%6ld.%03ld] %s: %s(): " fmt,                 \
-                          (long)_ts.tv_sec, _ts.tv_nsec / 1000000UL, #prio,    \
-                          __func__, ##args);                                   \
-        } else {                                                               \
-            PRINT_WRAPPER(prio, "[%6ld.%03ld] %s: " fmt, (long)_ts.tv_sec,     \
-                          _ts.tv_nsec / 1000000UL, #prio, ##args);             \
+        if (print_enabled(prio)) {                                             \
+            struct timespec _ts;                                               \
+            clock_gettime(CLOCK_REALTIME, &_ts);                               \
+            if (ERROR == prio) {                                               \
+                PRINT_WRAPPER(prio, "[%6ld.%03ld] %s: %s(): " fmt,             \
+                              (long)_ts.tv_sec, _ts.tv_nsec / 1000000UL,       \
+                              #prio, __func__, ##args);                        \
+            } else {                                                           \
+                PRINT_WRAPPER(prio, "[%6ld.%03ld] %s: " fmt,                   \
+                              (long)_ts.tv_sec, _ts.tv_nsec / 1000000UL,       \
+                              #prio, ##args);                                  \
+            }                                                                  \
         }                                                                      \
     } while (0)
 
