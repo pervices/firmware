@@ -44,7 +44,7 @@ int init_udp_comm(int *fd, in_port_t port) {
         .sockfd = -1,
     };
 
-    PRINT(VERBOSE, "Calling establish_udp_connection()\n");
+    PRINT(DEBUG, "Calling establish_udp_connection()\n");
 
     ret = establish_udp_connection(&mydev, port);
     if (ret < 0) {
@@ -130,11 +130,11 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
         return RETURN_ERROR_INSUFFICIENT_RESOURCES;
     }
 
-    PRINT(VERBOSE, "Found file descriptor %i\n", *fd);
+    PRINT(DEBUG, "Found file descriptor %i\n", *fd);
     used_uart_devices[*fd] = USED_DEVICE;
 
     // Allocate space for uart device
-    PRINT(VERBOSE, "Opening %s as %d\n", dev, *fd);
+    PRINT(DEBUG, "Opening %s as %d\n", dev, *fd);
 
     uart_devices[*fd] = open(dev, O_RDWR | O_NOCTTY | O_SYNC);
     if (uart_devices[*fd] < 0) {
@@ -171,7 +171,7 @@ int init_uart_comm(int *fd, const char *dev, uint16_t options) {
         abort();
     }
 
-    PRINT(VERBOSE, "Configuring UART\n");
+    PRINT(DEBUG, "Configuring UART\n");
 
     set_uart_interface_attribs(mydev, B115200,
                                0); // set speed to 115,200 bps, 8n1 (no parity)
@@ -184,7 +184,7 @@ int close_uart_comm(int fd) {
     if (fd < 0)
         return RETURN_ERROR_PARAM;
 
-    PRINT(VERBOSE, "Closing uart network %s()\n", __func__);
+    PRINT(DEBUG, "Closing uart network %s()\n", __func__);
 
     int mydev = uart_devices[fd];
 
