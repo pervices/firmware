@@ -181,8 +181,6 @@ static int get_commit_counter() {
 #define MAX_AUTOCAL_ATTEMPTS 5
 #define MAX_RESET_WAIT 5000 // * 100us = 0.5s
 
-// set to 1 for DEBUG PRINTS related to EEPROM
-#define DEBUG_PRINT_EEPROM 0
 
 #if defined(AVERY)
     #define MAX_RF_FREQ    40650000000ULL
@@ -1091,7 +1089,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
                                                                                \
             /* disable DSP cores */                                            \
             read_hps_reg("tx" STR(ch) "4", &old_val);                          \
-            PRINT(VERBOSE, "%s(): TX[%c] RESET\n", __func__,                   \
+            PRINT(DEBUG, "%s(): TX[%c] RESET\n", __func__,                   \
                   toupper(CHR(ch)));                                           \
             write_hps_reg("tx" STR(ch) "4", old_val | 0x2);                    \
                                                                                \
@@ -4109,7 +4107,8 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // check that EEPROM is programmed properly
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 0);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
+    PRINT(DEBUG, "EEPROM read cmd: %s\n", cmd);
+
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcpy(ret, "ERROR: EEPROM read failed");
@@ -4122,7 +4121,8 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read  0 = 0x%x\n", readreg);}
+    PRINT(DEBUG, "we read  0 = 0x%x\n", readreg);
+
     if (readreg != 0xaa ) {
         PRINT(ERROR, "EEPROM not programmed or does not exist");
         strcpy(ret, "ERROR: EEPROM not programmed or does not exist");
@@ -4131,7 +4131,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // check product
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 1);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
+    PRINT(DEBUG, "Product check cmd: %s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcpy(ret, "ERROR: EEPROM read failed");
@@ -4144,7 +4144,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read 1 = 0x%x\n", readreg);}
+    PRINT(DEBUG, "we read 1 = 0x%x\n", readreg);
     switch(readreg) {
     case 1:
         strcpy(ret, "Crimson ");
@@ -4158,7 +4158,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // check board type
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 2);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
+    PRINT(DEBUG, "Board type check cmd: %s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcat(ret, " ERROR: EEPROM read failed");
@@ -4171,7 +4171,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read 1 = 0x%x\n", readreg);}
+    PRINT(DEBUG, "we read 1 = 0x%x\n", readreg);
     switch(readreg) {
         case 1:
             strcat(ret, "Time ");
@@ -4197,7 +4197,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
 
     // Check revision register
     snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, 3);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
+    PRINT(DEBUG, "Revision check cmd: %s\n", cmd);
     if ((fp = popen(cmd, "r")) == NULL) {
         PRINT(ERROR, "Error opening pipe!\n");
         strcat(ret, " ERROR: EEPROM read failed");
@@ -4210,7 +4210,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
         return RETURN_ERROR;
     }
     sscanf(buf, "0x%x", &readreg);
-    if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "we read 1 = 0x%x\n", readreg);}
+    PRINT(DEBUG, "we read 1 = 0x%x\n", readreg);
     snprintf(buf, MAX_PROP_LEN, "RTM %u - ", readreg);
     strcat(ret, buf);
 
@@ -4218,7 +4218,7 @@ static int hdlr_fpga_about_hw_ver(const char *data, char *ret) {
     strcat(ret, "Features:");
     for (i = 0x10; i <= 0x5f; i++) {
         snprintf(cmd, MAX_PROP_LEN, "%s%x", base_cmd, i);
-        if (DEBUG_PRINT_EEPROM) {PRINT(INFO, "%s\n", cmd);}
+        PRINT(DEBUG, "Feature check cmd: %s\n", cmd);
         if ((fp = popen(cmd, "r")) == NULL) {
             PRINT(ERROR, "Error opening pipe!\n");
             strcat(ret, " ERROR: EEPROM read failed");
@@ -4522,7 +4522,7 @@ static int read_interboot_variable(char* data_filename, int64_t* value) {
 
     int file_missing = stat(data_path, &sb);
 
-    PRINT(INFO, "Reading from %s\n", data_path);
+    PRINT(DEBUG, "Reading from %s\n", data_path);
 
     if(file_missing) {
         *value = 0;
@@ -5145,11 +5145,9 @@ int resolve_symbolic_property_name(const char *prop, char *path, size_t n) {
         path[delta] = '\0';
     }
 
-    //    if ( 0 != strcmp( path, prop ) ) {
-    //        PRINT( INFO, "%s(): resolved symbolic link: '%s' =>
-    // '%s'\n",
-    // __func__, prop, path );
-    //    }
+    if ( 0 != strcmp( path, prop ) ) {
+        PRINT(DEBUG, "%s(): resolved symbolic link: '%s' => '%s'\n", __func__, prop, path);
+    }
 
     return RETURN_SUCCESS;
 }
