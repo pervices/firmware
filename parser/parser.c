@@ -33,7 +33,7 @@ int parse_cmd(cmd_t *cmd, uint8_t *data) {
     // Clears the cmd buffer
     memset(cmd, 0, sizeof(*cmd));
 
-    PRINT(INFO, "parse(%s)\n", saveptr);
+    PRINT(DEBUG, "parse(%s)\n", saveptr);
 
     if (!data || !cmd)
         return RETURN_ERROR_PARAM;
