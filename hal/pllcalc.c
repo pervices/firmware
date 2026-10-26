@@ -225,9 +225,10 @@ double setFreq(uint64_t *reqFreq, pllparam_t *pll) {
               ", D: %" PRIu16 ", x2en: %" PRIu8 ", VCO: %Lf.\n",
               pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
 #else
-        printf("BAD PLL SETTINGS: PLL1: N: %" PRIu32 ", R: %" PRIu16
-               ", D: %" PRIu16 ", x2en: %" PRIu8 ", VCO: %Lf.\n",
-               pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
+        PRINT(ERROR,
+              "BAD PLL SETTINGS: PLL1: N: %" PRIu32 ", R: %" PRIu16
+              ", D: %" PRIu16 ", x2en: %" PRIu8 ", VCO: %Lf.\n",
+              pll->N, pll->R, pll->d, pll->x2en, pll->vcoFreq);
 #endif
     }
 
@@ -244,7 +245,7 @@ uint8_t pll_CheckParams(pllparam_t *pll, uint8_t is_pll1) {
     if (!is_pll1) {//currently only PLL1 is supported for ADF5355
         return 0;
     }
-        
+
     // checks for all PLLs
     if ((pll->N > pll->n_max) || (pll->N < pll->n_min) ||                         // N is valid
         (pll->R > pll->r_max) || (pll->R < pll->r_min) ||                         // R is valid
