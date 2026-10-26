@@ -2252,7 +2252,7 @@ int check_time_pll(int ch) {
             while(tx_first_pwr[INT(ch)] && PRODUCT_ID != LILY_ID) {\
                 hdlr_tx_##ch##_status_lna("1", buf);                                \
                 if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {                           \
-                    PRINT(INFO, "LNA is good\n");                                   \
+                    PRINT(DEBUG, "LNA is good\n");                                   \
                     break;                                                          \
                 } else if(strncmp(buf, "error: LNA monitoring not supported\n", 25) == 0){   \
                    break;                                                           \
@@ -2620,7 +2620,7 @@ TX_CHANNELS
             }                                                                  \
             atten = LMH6401_MAX_GAIN - gain;                                   \
             /*Variable amplifer takes attenuation value instead of a gain*/ \
-            PRINT(INFO, "Setting variable amplifier to: %i\n", gain);\
+            PRINT(DEBUG, "Setting variable amplifier to: %i\n", gain);\
             snprintf(buf, MAX_PROP_LEN, "vga -a %i\r", atten);\
             ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
             snprintf(ret, MAX_PROP_LEN, "%i", gain);\
@@ -2631,7 +2631,7 @@ TX_CHANNELS
                 if(gain > LTC5586_MAX_GAIN - LTC5586_MIN_GAIN) gain = LTC5586_MAX_GAIN - LTC5586_MIN_GAIN;\
                 else if (gain < 0) gain = 0;\
                 \
-                PRINT(INFO, "Setting mixer amplifier to: %i\n", gain);\
+                PRINT(DEBUG, "Setting mixer amplifier to: %i\n", gain);\
                 snprintf(buf, MAX_PROP_LEN, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
                 snprintf(ret, MAX_PROP_LEN, "%i", gain);\
@@ -2652,11 +2652,11 @@ TX_CHANNELS
                 }                                                               \
                 atten = LMH6401_MAX_GAIN - vga_gain;                            \
                 /*Variable amplifer takes attenuation value instead of a gain*/ \
-                PRINT(INFO, "Setting variable amplifier to: %i\n", vga_gain);\
+                PRINT(DEBUG, "Setting variable amplifier to: %i\n", vga_gain);\
                 snprintf(buf, MAX_PROP_LEN, "vga -a %i\r", atten);                             \
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));\
                 \
-                PRINT(INFO, "Setting mixer amplifier to: %i\n", gain);\
+                PRINT(DEBUG, "Setting mixer amplifier to: %i\n", gain);\
                 snprintf(buf, MAX_PROP_LEN, "rf -g %i\r", gain + LTC5586_MIN_GAIN);\
                 ping_rx(uart_rx_fd[INT_RX(ch)], (uint8_t *)buf, strlen(buf), INT(ch));         \
                 snprintf(ret, MAX_PROP_LEN, "%i", gain+vga_gain);                              \
@@ -3740,7 +3740,7 @@ TX_CHANNELS
         while(1){\
             hdlr_rx_##ch##_status_lna("1", buf);\
             if(strncmp(buf, "LNA_RDY: 1", 10) == 0) {\
-                PRINT(INFO, "LNA is good\n");\
+                PRINT(DEBUG, "LNA is good\n");\
                 return RETURN_SUCCESS;\
             } else if(num_lna_attempts >= retries){\
                 PRINT(ERROR, "Failed to start lna after %i attempts\n", retries);\
@@ -3968,7 +3968,7 @@ TX_CHANNELS
                 read_hps_reg("res_ro30", &rx_err_VAL);                         \
                 /*Checking for errors*/\
                 if (rx_err_VAL == 0 ){                                         \
-                    PRINT(INFO, "rx_err%i has no errors\n",j);                 \
+                    PRINT(DEBUG, "rx_err%i has no errors\n",j);                 \
                 } else {                                                       \
                     /* note legacy FPGA will report value 0xDEADBEEF */        \
                     flag_ok = false;                                           \
@@ -5130,7 +5130,7 @@ static int hdlr_time_source_sync(const char *data, char *ret) {
 // 10 MHz clock
 static int hdlr_time_source_ref(const char *data, char *ret) {
     if (strcmp(data, "external") == 0) {
-        PRINT(INFO, "Setting clock reference source to external\n");
+        PRINT(DEBUG, "Setting clock reference source to external\n");
         strcpy(buf, "clk -t 1\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         // Leave the property as what is was set to. Included for clarity, should be redundant
@@ -5138,7 +5138,7 @@ static int hdlr_time_source_ref(const char *data, char *ret) {
     } else if (strcmp(data, "internal") == 0) {
         // ensure 10MHz reference is set
         set_property("time/source/freq_mhz", "10");
-        PRINT(INFO, "Setting clock reference source to internal\n");
+        PRINT(DEBUG, "Setting clock reference source to internal\n");
         strcpy(buf, "clk -t 0\r");
         ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
         // Leave the property as what is was set to. Included for clarity, should be redundant
@@ -5212,10 +5212,10 @@ static int hdlr_time_source_freq(const char *data, char *ret) {
 static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
     if ( (strcmp(data, "pulsed") == 0) || (strcmp(data, "0") == 0) ) {
         if(current_sysref_mode == pulsed) {
-            PRINT(INFO, "SYSREF MODE 'pulsed' already active.\n");
+            PRINT(DEBUG, "SYSREF MODE 'pulsed' already active.\n");
             return RETURN_SUCCESS;
         } else {
-            PRINT(INFO, "SYSREF MODE 'pulsed' selected.\n");
+            PRINT(DEBUG, "SYSREF MODE 'pulsed' selected.\n");
             strcpy(buf, "sync -c 0\r");
             current_sysref_mode = pulsed;
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
@@ -5224,10 +5224,10 @@ static int hdlr_time_sync_sysref_mode(const char *data, char *ret) {
         }
     } else if ( (strcmp(data, "continuous") == 0) || (strcmp(data, "1") == 0) )  {
         if(current_sysref_mode == continuous) {
-            PRINT(INFO, "SYSREF MODE 'continuous' already active.\n");
+            PRINT(DEBUG, "SYSREF MODE 'continuous' already active.\n");
             return RETURN_SUCCESS;
         } else {
-            PRINT(INFO, "SYSREF MODE 'continuous' selected.\n");
+            PRINT(DEBUG, "SYSREF MODE 'continuous' selected.\n");
             strcpy(buf, "sync -c 1\r");
             current_sysref_mode = continuous;
             ping(uart_synth_fd, (uint8_t *)buf, strlen(buf));
