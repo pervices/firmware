@@ -148,7 +148,7 @@ int write_hps_reg(const char *reg, uint32_t data) {
     if (!reg)
         return RETURN_ERROR_PARAM;
 
-    //PRINT(VERBOSE, "%s(): %s: 0x%08x\n", __func__, reg, data);
+    PRINT(DEBUG, "%s(): %s: 0x%08x\n", __func__, reg, data);
 
     const reg_t *temp = get_reg_from_name(reg);
     if (temp) {
