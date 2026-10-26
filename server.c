@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
 
     set_led_state(LED_STATE_INIT);
 
-    PRINT(INFO, "Started LEDs\n");
+    PRINT(DEBUG, "Started LEDs\n");
 
     // Check for an argument for debug mode
     if (argc >= 2) {
@@ -212,14 +212,14 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    PRINT(INFO, "Network init done\n");
+    PRINT(VERBOSE, "Network init done\n");
 
     // Initialize the properties, which is implemented as a Linux file structure
     const int t0 = time_it();
     init_property(options);
     const int t1 = time_it();
 
-    PRINT(INFO, "boot time %d\n", t1 - t0);
+    PRINT(VERBOSE, "boot time %d\n", t1 - t0);
 
 #if defined(VAUNT) || defined(AVERY)
     // Perform autocalibration of the frequency synthesizers
