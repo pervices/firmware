@@ -307,8 +307,8 @@ static int read_uart(int uartfd) {
     }
     const long t1 = time_it();
 
-    // This print is very useful when debugging, but is normally comented out because it fills up the journal
-    PRINT(INFO, "read uart %ld : %s\n", t1 - t0, uart_ret_buf);
+    // Print the time the UART message took and the reply
+    PRINT(DEBUG, "read uart %ld : %s\n", t1 - t0, uart_ret_buf);
     return RETURN_SUCCESS;
 }
 
@@ -468,7 +468,7 @@ static int read_interboot_variable(char* data_filename, int64_t* value) {
 
     int file_missing = stat(data_path, &sb);
 
-    PRINT(INFO, "Reading from %s\n", data_path);
+    PRINT(DEBUG, "Reading from %s\n", data_path);
 
     if(file_missing) {
         *value = 0;
@@ -3253,7 +3253,7 @@ TX_CHANNELS
     static int hdlr_rx_##ch##_iq_gain_correction(const char *data, char *ret) {      \
            double iq_gain_error = 0;                                           \
            sscanf(data, "%lf", &iq_gain_error);                                \
-           PRINT(INFO,"data as entered %lf\n", iq_gain_error);\
+           PRINT(DEBUG,"data as entered %lf\n", iq_gain_error);\
            /* Gain is expected to be between -0.5 .. +0.5dB */                 \
            if ( iq_gain_error >= 0.5 ){                                        \
                iq_gain_error = 0.5;                                             \
@@ -3261,11 +3261,11 @@ TX_CHANNELS
            if ( iq_gain_error <= -0.5 ){                                       \
                iq_gain_error = -0.5;                                            \
            }                                                                   \
-           PRINT(INFO,"data after limit check: %lf\n", iq_gain_error);\
-           PRINT(INFO,"Flag 0\n");                                              \
+           PRINT(DEBUG,"data after limit check: %lf\n", iq_gain_error);\
+           PRINT(DEBUG,"Flag 0\n");                                              \
            double step_size = 0.015625;                                          \
             double iq_gain_correction = (iq_gain_error/step_size);                \
-            PRINT(INFO,"intermediate conversion: %lf\n",iq_gain_correction);               \
+            PRINT(DEBUG, "intermediate conversion: %lf\n",iq_gain_correction);               \
             uint8_t iq_gain_factor = 0x20;                                                 \
             if ( iq_gain_correction >= 0) {                                                \
                 iq_gain_factor += (uint8_t) iq_gain_correction;                            \
@@ -3276,7 +3276,7 @@ TX_CHANNELS
             if(iq_gain_error == 0.5){                                                       \
                 iq_gain_factor -= 0x01;                                                     \
             }                                                                               \
-            PRINT(INFO,"data after float to hex conversion: %x\n",iq_gain_factor);          \
+            PRINT(DEBUG, "data after float to hex conversion: %x\n",iq_gain_factor);          \
           sprintf(ret,"%f",(uint8_t) iq_gain_correction * step_size);                      \
           strcpy(buf, "iq -g ");                                                           \
           sprintf(buf + strlen(buf), "%x", iq_gain_factor);                                \
@@ -3288,7 +3288,7 @@ TX_CHANNELS
         double iq_phase_error = 0;                                                          \
         /*input range: -2.5 to 2.5, output range:0x0000 to 0x01FF, offset: 0x100, */        \
         sscanf(data,"%lf",&iq_phase_error);                                                 \
-        PRINT(INFO,"data as entered %lf\n",iq_phase_error);                                 \
+        PRINT(DEBUG,"data as entered %lf\n",iq_phase_error);                                 \
         if (iq_phase_error >= 2.5){                                                         \
             iq_phase_error = 2.5;                                                           \
         }                                                                                   \
@@ -3296,9 +3296,9 @@ TX_CHANNELS
             iq_phase_error = -2.5;                                                          \
         }                                                                                   \
         double inv_step_size = 102.4;                                                       \
-        PRINT(INFO, "data after limit check: %lf \n",iq_phase_error);                       \
+        PRINT(DEBUG, "data after limit check: %lf \n",iq_phase_error);                       \
         double iq_phase_correction = (iq_phase_error*inv_step_size);                        \
-        PRINT(INFO,"intermediate conversion: %lf\n",iq_phase_correction);                   \
+        PRINT(DEBUG, "intermediate conversion: %lf\n",iq_phase_correction);                   \
         uint32_t iq_phase_factor = 0x100;                                                    \
         if(iq_phase_correction >= 0){                                                       \
             iq_phase_factor += (uint32_t) iq_phase_correction;                               \
@@ -3320,7 +3320,7 @@ TX_CHANNELS
         double iq_dcoffset_i = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
         sscanf(data,"%lf",&iq_dcoffset_i);                                                 \
-        PRINT(INFO,"data as entered %lf\n",iq_dcoffset_i);                                 \
+        PRINT(DEBUG, "data as entered %lf\n",iq_dcoffset_i);                                 \
         if (iq_dcoffset_i >= 200){                                                         \
             iq_dcoffset_i = 200;                                                           \
         }                                                                                   \
@@ -3328,9 +3328,9 @@ TX_CHANNELS
             iq_dcoffset_i = -200;                                                          \
         }                                                                                   \
         double step_size = 1.5625;                                                       \
-        PRINT(INFO, "data after limit check: %lf \n",iq_dcoffset_i);                       \
+        PRINT(DEBUG, "data after limit check: %lf \n",iq_dcoffset_i);                       \
         double iq_dcoi_correction = (iq_dcoffset_i/step_size);                        \
-        PRINT(INFO,"intermediate conversion: %lf\n",iq_dcoi_correction);              \
+        PRINT(DEBUG, "intermediate conversion: %lf\n",iq_dcoi_correction);              \
         uint8_t iq_dcoi_factor = 0x80;                                                    \
         if(iq_dcoi_correction >= 0){                                                       \
             iq_dcoi_factor += (uint8_t) iq_dcoi_correction;                               \
@@ -3353,7 +3353,7 @@ TX_CHANNELS
         double iq_dcoffset_q = 0;                                                          \
         /*input range: -200 to 200, output range:0x0000 to 0x00FF, offset: 0x80, */        \
         sscanf(data,"%lf",&iq_dcoffset_q);                                                 \
-        PRINT(INFO,"data as entered %lf\n",iq_dcoffset_q);                                 \
+        PRINT(DEBUG, "data as entered %lf\n",iq_dcoffset_q);                                 \
         if (iq_dcoffset_q >= 200){                                                         \
             iq_dcoffset_q = 200;                                                           \
         }                                                                                   \
@@ -3361,9 +3361,9 @@ TX_CHANNELS
             iq_dcoffset_q = -200;                                                          \
         }                                                                                   \
         double step_size = 1.5625;                                                       \
-        PRINT(INFO, "data after limit check: %lf \n",iq_dcoffset_q);                       \
+        PRINT(DEBUG, "data after limit check: %lf \n",iq_dcoffset_q);                       \
         double iq_dcoq_correction = (iq_dcoffset_q/step_size);                        \
-        PRINT(INFO,"intermediate conversion: %lf\n",iq_dcoq_correction);              \
+        PRINT(DEBUG,"intermediate conversion: %lf\n",iq_dcoq_correction);              \
         uint8_t iq_dcoq_factor = 0x80;                                                    \
         if(iq_dcoq_correction >= 0){                                                       \
             iq_dcoq_factor += (uint8_t) iq_dcoq_correction;                               \
@@ -3374,7 +3374,7 @@ TX_CHANNELS
         if(iq_dcoffset_q == 200){                                                          \
             iq_dcoq_factor -= 0x01;                                                        \
         }                                                                                   \
-        PRINT(INFO,"data after float to hex conversion: %x\n",iq_dcoq_factor);             \
+        PRINT(DEBUG, "data after float to hex conversion: %x\n",iq_dcoq_factor);             \
         sprintf(ret,"%d",(uint8_t) iq_dcoq_correction);                                     \
         strcpy(buf, "iq -C ");                                                              \
         sprintf(buf + strlen(buf), "%x", iq_dcoq_factor);                                  \
@@ -3386,14 +3386,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG, "data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -z ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3404,14 +3404,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG, "data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -y ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3422,14 +3422,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG, "data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -Z ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3440,14 +3440,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG,"data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG,"data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -Y ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3458,14 +3458,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG, "data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -x ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3476,14 +3476,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG, "data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -w ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3494,14 +3494,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG, "data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -X ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3512,14 +3512,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t harmonic_distortion;                                               \
             sscanf(data,"%hhu",&harmonic_distortion);                                      \
-            PRINT(INFO,"data as entered %d \n",harmonic_distortion);                    \
+            PRINT(DEBUG, "data as entered %d \n",harmonic_distortion);                    \
             if(harmonic_distortion >= 255){                                            \
                 harmonic_distortion = 255;                                             \
             }                                                                          \
             if(harmonic_distortion <= 0){                                              \
                 harmonic_distortion = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",harmonic_distortion);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",harmonic_distortion);       \
             strcpy(buf, "iq -W ");                                                     \
             sprintf(buf+ strlen(buf),"%x",harmonic_distortion);                             \
             strcat(buf, "\r");                                                         \
@@ -3530,14 +3530,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
-            PRINT(INFO,"data as entered %d \n",im_input);                    \
+            PRINT(DEBUG, "data as entered %d \n",im_input);                    \
             if(im_input >= 255){                                            \
                 im_input = 255;                                             \
             }                                                                          \
             if(im_input <= 0){                                              \
                 im_input = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",im_input);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",im_input);       \
             strcpy(buf, "iq -h ");                                                     \
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
@@ -3548,14 +3548,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
-            PRINT(INFO,"data as entered %d \n",im_input);                    \
+            PRINT(DEBUG, "data as entered %d \n",im_input);                    \
             if(im_input >= 255){                                            \
                 im_input = 255;                                             \
             }                                                                          \
             if(im_input <= 0){                                              \
                 im_input = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",im_input);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",im_input);       \
             strcpy(buf, "iq -H ");                                                     \
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
@@ -3566,14 +3566,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
-            PRINT(INFO,"data as entered %d \n",im_input);                    \
+            PRINT(DEBUG, "data as entered %d \n",im_input);                    \
             if(im_input >= 255){                                            \
                 im_input = 255;                                             \
             }                                                                          \
             if(im_input <= 0){                                              \
                 im_input = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",im_input);  \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",im_input);  \
             strcpy(buf, "iq -k ");                                                     \
             sprintf(buf + strlen(buf),"%x",im_input);                       \
             strcat(buf, "\r");                                                         \
@@ -3584,14 +3584,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
-            PRINT(INFO,"data as entered %d \n",im_input);                    \
+            PRINT(DEBUG, "data as entered %d \n",im_input);                    \
             if(im_input >= 255){                                            \
                 im_input = 255;                                             \
             }                                                                          \
             if(im_input <= 0){                                              \
                 im_input = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",im_input);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",im_input);       \
             strcpy(buf, "iq -l ");                                                     \
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
@@ -3602,14 +3602,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
-            PRINT(INFO,"data as entered %d \n",im_input);                    \
+            PRINT(DEBUG, "data as entered %d \n",im_input);                    \
             if(im_input >= 255){                                            \
                 im_input = 255;                                             \
             }                                                                          \
             if(im_input <= 0){                                              \
                 im_input = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",im_input);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",im_input);       \
             strcpy(buf, "iq -K ");                                                     \
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
@@ -3620,14 +3620,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t im_input;                                               \
             sscanf(data,"%hhu",&im_input);                                      \
-            PRINT(INFO,"data as entered %d \n",im_input);                    \
+            PRINT(DEBUG, "data as entered %d \n",im_input);                    \
             if(im_input >= 255){                                            \
                 im_input = 255;                                             \
             }                                                                          \
             if(im_input <= 0){                                              \
                 im_input = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",im_input);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",im_input);       \
             strcpy(buf, "iq -L ");                                                     \
             sprintf(buf+ strlen(buf),"%x",im_input);                             \
             strcat(buf, "\r");                                                         \
@@ -3638,14 +3638,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t cc_adj;                                               \
             sscanf(data,"%hhu",&cc_adj);                                      \
-            PRINT(INFO,"data as entered %d \n",cc_adj);                    \
+            PRINT(DEBUG, "data as entered %d \n",cc_adj);                    \
             if(cc_adj >= 3){                                            \
                 cc_adj = 3;                                             \
             }                                                                          \
             if(cc_adj <= 0){                                              \
                 cc_adj = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",cc_adj);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",cc_adj);       \
             strcpy(buf, "iq -m ");                                                     \
             sprintf(buf+ strlen(buf),"%x",cc_adj);                             \
             strcat(buf, "\r");                                                         \
@@ -3656,14 +3656,14 @@ TX_CHANNELS
                                                                                     \
             uint8_t ic_adj;                                               \
             sscanf(data,"%hhu",&ic_adj);                                      \
-            PRINT(INFO,"data as entered %d \n",ic_adj);                    \
+            PRINT(DEBUG, "data as entered %d \n",ic_adj);                    \
             if(ic_adj >= 7){                                            \
                 ic_adj = 7;                                             \
             }                                                                          \
             if(ic_adj <= 0){                                              \
                 ic_adj = 0;                                              \
             }                                                                          \
-            PRINT(INFO,"data after int to hex conversion: %x\n",ic_adj);       \
+            PRINT(DEBUG, "data after int to hex conversion: %x\n",ic_adj);       \
             strcpy(buf, "iq -n ");                                                     \
             sprintf(buf+ strlen(buf),"%x",ic_adj);                             \
             strcat(buf, "\r");                                                         \
