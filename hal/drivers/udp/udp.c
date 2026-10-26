@@ -72,11 +72,11 @@ int establish_udp_connection(udp_dev_t *udp, in_port_t port) {
 // send data back
 // the sender's IP address is populated in slen on recvfrom()
 int send_udp(udp_dev_t *udp, uint8_t *data, uint16_t size) {
-    PRINT(VERBOSE, "Sending: ");
+    PRINT(DEBUG, "Sending: ");
     int i;
     for (i = 0; i < size; i++)
-        PRINT(VERBOSE, "%c", data[i]);
-    PRINT(VERBOSE, "\n");
+        PRINT(DEBUG, "%c", data[i]);
+    PRINT(DEBUG, "\n");
 
     if (sendto(udp->sockfd, (void *)(data), size, 0,
                (struct sockaddr *)&(udp->si), udp->slen) < 0) {
@@ -103,11 +103,11 @@ int recv_udp(udp_dev_t *udp, uint8_t *data, uint16_t *size, uint16_t max_size) {
             PRINT(ERROR, "%s(): ERROR, %s\n", __func__, strerror(errno));
         return RETURN_ERROR_COMM_NO_DATA;
     } else {
-        PRINT(VERBOSE, "Receiving: ");
+        PRINT(DEBUG, "Receiving: ");
         int i;
         for (i = 0; i < bytes; i++)
             PRINT(VERBOSE, "%c", data[i]);
-        PRINT(VERBOSE, "\n");
+        PRINT(DEBUG, "\n");
 
         *size = (uint8_t)bytes;
         return RETURN_SUCCESS;
@@ -115,6 +115,6 @@ int recv_udp(udp_dev_t *udp, uint8_t *data, uint16_t *size, uint16_t max_size) {
 }
 
 int severe_udp_connection(udp_dev_t *udp) {
-    PRINT(VERBOSE, "Severing udp connection\n");
+    PRINT(DEBUG, "Severing udp connection\n");
     return close(udp->sockfd);
 }
