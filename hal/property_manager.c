@@ -48,8 +48,6 @@
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
-//#define PROPERTY_MANAGER_DEBUG
-
 #if !(defined(VAUNT) || defined(AVERY) || defined(TATE_NRNT) || defined(LILY))
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
@@ -92,7 +90,7 @@ static void write_to_file(const char *path, const char *data) {
     fprintf(fd, "%s", data);
     fclose(fd);
 
-    // PRINT(VERBOSE, "wrote to file: %s (%s)\n", path, data);
+    PRINT(DEBUG, "wrote to file: %s (%s)\n", path, data);
 }
 
 // Helper function to read to property
@@ -127,7 +125,7 @@ static void read_from_file(const char *path, char *data, size_t max_len) {
     }
     data[pos] = '\0';
 
-    // PRINT(VERBOSE, "read from file: %s (%s)\n", path, data);
+    PRINT(DEBUG, "read from file: %s (%s)\n", path, data);
 }
 
 /**
@@ -341,7 +339,7 @@ static void build_tree(void) {
         }
     }
 
-    PRINT(INFO, "\tXXX: Changing groups for all properties and their directories, and setting directory permissions\n");
+    PRINT(DEBUG, "\tXXX: Changing groups for all properties and their directories, and setting directory permissions\n");
     change_group_and_dir_perms_for_all();
 
     // Restore umask
@@ -427,14 +425,14 @@ int init_property(uint8_t options) {
     #error "You must specify either ( VAUNT | AVERY | TATE_NRNT | LILY ) when compiling this project."
 #endif
 
-    PRINT(INFO, "Configuring Time Board. Using UART: %s\n", UART_SYNTH);
-    PRINT(INFO, "%d\n", uart_synth_comm_fd);
-    PRINT(INFO, "TX FDS\n");
+    PRINT(DEBUG, "Configuring Time Board. Using UART: %s\n", UART_SYNTH);
+    PRINT(DEBUG, "%d\n", uart_synth_comm_fd);
+    PRINT(DEBUG, "TX FDS\n");
     for (int i = 0; i < ARRAY_SIZE(uart_tx_comm_fd); i++)
-        PRINT(INFO, "%d\n", uart_tx_comm_fd[i]);
-    PRINT(INFO, "RX FDS\n");
+        PRINT(DEBUG, "%d\n", uart_tx_comm_fd[i]);
+    PRINT(DEBUG, "RX FDS\n");
     for (int i = 0; i < ARRAY_SIZE(uart_rx_comm_fd); i++)
-        PRINT(INFO, "%d\n", uart_rx_comm_fd[i]);
+        PRINT(DEBUG, "%d\n", uart_rx_comm_fd[i]);
 
     PRINT(VERBOSE, "init_uart_comm(): UART connections up\n");
     PRINT(VERBOSE, "Initializing Inotify\n");
@@ -491,8 +489,7 @@ void check_property_inotifies(void) {
         // check if prop exists, prop will not exist if concurrent modifications
         // were made to the file while in this loop
         if ((event->mask & IN_CLOSE_WRITE) && prop) {
-            // PRINT( VERBOSE,"Property located at %s has been modified,
-            // executing handler\n", prop -> path);
+            PRINT(DEBUG, "Property located at %s has been modified, executing handler\n", prop -> path);
 
             // read the change from the file
             read_from_file(get_abs_path(prop, path, MAX_PATH_LEN), prop_data, MAX_PROP_LEN);
@@ -505,6 +502,7 @@ void check_property_inotifies(void) {
             prop->handler(prop_data, prop_ret);
             const int t1 = time_it();
 
+            // Report changes to property values
             PRINT(INFO, "%s :: %s -> %s :: %d\n", path, prop_data, prop_ret, t1 - t0);
 
             if (prop->permissions == RO) {
@@ -518,7 +516,7 @@ void check_property_inotifies(void) {
                 if (inotify_rm_watch(inotify_fd, prop->wd) < 0) {
                     PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 }
-                //PRINT(VERBOSE, "Removed inotify, wd: %i\n", prop->wd);
+                PRINT(DEBUG, "Removed inotify, wd: %i\n", prop->wd);
 
                 // write output of handler to property
                 write_to_file(get_abs_path(prop, path, MAX_PATH_LEN), prop_ret);
@@ -529,7 +527,7 @@ void check_property_inotifies(void) {
                 if (prop->wd < 0) {
                     PRINT(ERROR, "%s(), %s\n", __func__, strerror(errno));
                 }
-                //PRINT(VERBOSE, "Re-added to inotify, wd: %i\n", prop->wd);
+                PRINT(DEBUG, "Re-added to inotify, wd: %i\n", prop->wd);
             }
         }
 
@@ -640,8 +638,6 @@ int get_property(const char *prop, char *data, size_t max_len) {
 
 int get_channel_for_path(const char *path) {
 
-    // PRINT( VERBOSE,"%s(): %s\n", __func__, NULL == path ? "(null)" : path );
-
     if (NULL == path) {
         PRINT(ERROR, "No channel corresponding to path: %s\n", path);
         return -1;
@@ -656,9 +652,6 @@ int get_channel_for_path(const char *path) {
         // rx or tx)
         return -1;
     }
-
-    // PRINT( VERBOSE,"%s(): %s => %d\n", __func__, NULL == path ? "(null)" :
-    // path, path[ 3 ] - 'a' );
 
     return path[3] - 'a';
 }
@@ -693,10 +686,9 @@ int set_property(const char *prop, const char *data) {
         return RETURN_ERROR_SET_PROP;
     }
 
-#ifdef PROPERTY_MANAGER_DEBUG
-    PRINT(INFO, "pwr_en: %i\n", temp->pwr_en);
-    PRINT(INFO, "Setting: %s\n", temp->path);
-#endif
+    PRINT(DEBUG, "pwr_en: %i\n", temp->pwr_en);
+    PRINT(DEBUG, "Setting: %s\n", temp->path);
+
     if(temp->pwr_en == UP) {
         // enable (turns on and initializes) channel if it has not been enabled yet
         // (enabling the channel later will erase the current channels, so enable
