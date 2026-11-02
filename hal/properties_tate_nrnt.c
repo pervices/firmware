@@ -7073,13 +7073,13 @@ GPIO_PINS
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,             RW, "poke", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/status"            , hdlr_rx_##_c##_jesd_status,            WOR, "poke", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/jesd/reset"             , hdlr_rx_##_c##_jesd_reset,             RW, "0", SP, #_c)\
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             RW, "0", SP, #_c)\
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/error"             , hdlr_rx_##_c##_jesd_error,             WOR, "0", SP, #_c)\
     /* rfe_rate rate is SP since this must be run before _pwr, the board must be on first */\
     DEFINE_FILE_PROP_P("rx/" #_c "/about/rfe_rate"         , hdlr_rx_##_c##_about_rfe_rate,         RW, "1", SP, #_c)\
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                    , hdlr_rx_##_c##_pwr,                     RW, "1", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,         RW, "poke", SP, #_c)      \
+    DEFINE_FILE_PROP_P("rx/" #_c "/jesd/pll_locked"          , hdlr_rx_##_c##_jesd_pll_locked,        WOR, "poke", SP, #_c)      \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/id"                 , hdlr_rx_##_c##_about_id,                RW, "001", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/eeprom"             , hdlr_rx_##_c##_about_eeprom,            RW, "001", RP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/about/serial"             , hdlr_rx_##_c##_about_serial,            RW, "001", RP, #_c)       \
@@ -7128,7 +7128,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_im3qy"           , hdlr_rx_##_c##_iq_im3_qy,               RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_ip3cc"           , hdlr_rx_##_c##_iq_ip3cc,                RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/iq/iq_ip3ic"           , hdlr_rx_##_c##_iq_ip3ic,                RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,             RW, "0", RP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/status/rfpll_lock"        , hdlr_rx_##_c##_status_rfld,            WOR, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/adc_alarm"         , hdlr_rx_##_c##_status_adcalarm,         RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/status/lna"               , hdlr_rx_##_c##_status_lna,              RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/board/dump"               , hdlr_rx_##_c##_rf_board_dump,           RW, "0", RP, #_c)         \
