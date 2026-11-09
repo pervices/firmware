@@ -715,17 +715,6 @@ static int valid_edge_sample_num(const char *data, uint64_t *val) {
     }
 }
 
-static int valid_time_gate_logic(const char *data, uint32_t *val) {
-    int r;
-    r = sscanf(data, "%" PRIu32, val);
-    if (1 == r && (*val == 0 || *val == 1)) {
-        return RETURN_SUCCESS;
-    } else {
-        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
-        return RETURN_ERROR_PARAM;
-    }
-}
-
 static int valid_trig_time_disable(const char *data, uint32_t *val) {
     int r;
     r = sscanf(data, "%" PRIu32, val);
@@ -735,13 +724,6 @@ static int valid_trig_time_disable(const char *data, uint32_t *val) {
         PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
         return RETURN_ERROR_PARAM;
     }
-}
-
-static int set_trig_time_gate_logic(bool tx, const char *chan, uint32_t val) {
-    char reg_name[8];
-    snprintf(reg_name, sizeof(reg_name), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 6 : 9);
-    return set_reg_bits(reg_name, (tx?16:13), 1, val);
 }
 
 static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
@@ -837,13 +819,21 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
-        uint32_t val;                                                              \
-        int r = valid_time_gate_logic(data, &val);\
-        if(r == RETURN_SUCCESS) {\
-            return set_trig_time_gate_logic(false, #ch, val);\
-        } else {\
-            return r;\
+        /* The registers this function wrote to were not connected in the FPGA */\
+        /* and the original purpose of this function is undocumented */\
+        /* Convert -ENOSYS (function not implemented) to string with and without newlines*/\
+        char enosys[16];\
+        snprintf(enosys, sizeof(enosys), "%d", -ENOSYS);\
+        char enosys_nl[16];\
+        snprintf(enosys_nl, sizeof(enosys_nl), "%d", -ENOSYS);\
+        /* Print a warning unless -ENOSYS or -ENOSYS\n is requested */\
+        /* Since it indicates the caller is already aware it idoesn't exist anymore*/\
+        /* This feature was removed/never implemented a long time ago*/\
+        if (! (strcmp(data, enosys) == 0 || strcmp(data, enosys_nl) == 0) ) {\
+            PRINT(ERROR, "trigger/time_gate_logic is not implemented\n");\
         }\
+        snprintf(ret, MAX_PROP_LEN, "%s", enosys_nl);\
+        return RETURN_SUCCESS;\
     }                                                                                 \
                                                                                       \
     /* Number of samples provessed during the last trigger */\
@@ -1788,13 +1778,21 @@ int check_rf_pll(int chan_mask, int uart_fd) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_time_gate_logic(const char *data, char *ret) {   \
-        uint32_t val;                                                              \
-        int r = valid_time_gate_logic(data, &val);\
-        if(r == RETURN_SUCCESS) {\
-            return set_trig_time_gate_logic(true, #ch, val);\
-        } else {\
-            return r;\
+        /* The registers this function wrote to were not connected in the FPGA */\
+        /* and the original purpose of this function is undocumented */\
+        /* Convert -ENOSYS (function not implemented) to string with and without newlines*/\
+        char enosys[16];\
+        snprintf(enosys, sizeof(enosys), "%d", -ENOSYS);\
+        char enosys_nl[16];\
+        snprintf(enosys_nl, sizeof(enosys_nl), "%d", -ENOSYS);\
+        /* Print a warning unless -ENOSYS or -ENOSYS\n is requested */\
+        /* Since it indicates the caller is already aware it idoesn't exist anymore*/\
+        /* This feature was removed/never implemented a long time ago*/\
+        if (! (strcmp(data, enosys) == 0 || strcmp(data, enosys_nl) == 0) ) {\
+            PRINT(ERROR, "trigger/time_gate_logic is not implemented\n");\
         }\
+        snprintf(ret, MAX_PROP_LEN, "%s", enosys_nl);\
+        return RETURN_SUCCESS;\
     }                                                                           \
                                                                                 \
     /* Number of samples provessed during the last trigger */\
@@ -4726,7 +4724,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "positive", SP, #_c)  \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"     , hdlr_rx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "-38", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"   , hdlr_rx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
@@ -4789,7 +4787,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "positive", SP, #_c)  \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "-38", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sample_counter"   , hdlr_tx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
