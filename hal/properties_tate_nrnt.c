@@ -104,10 +104,23 @@
 // Tick rate of Cyan's internal clock
 #define TICK_RATE 250000000
 
+
+// The value the number of samples in edge trigger mode must be a multiple of.
+// It is a multiple of the number of samples per cycle.
+// Technically 2 could be used for tx 1G when the dsp is not bypassed (tx<ch>2 bit 0)
+// but that would make edge_sample_num and rate dependent on each other.
+#define EDGE_TRIGGER_MULTIPLE_1G 4
+// TODO: fix the values for 3G.
+// As of FPGA 6a18941e1 these are the expected values, but there are not working
+#define EDGE_TRIGGER_MULTIPLE_3G_RX 10
+#define EDGE_TRIGGER_MULTIPLE_3G_TX 8
+
 // Minum number of samples per edge trigger
-// TMP: copying from properties.h to create a commit that only applies the new values to Vaunt
-// TODO: correct for Tate
-#define MIN_EDGE_SAMPLE_NUM 4
+// An intermediate step in the FPGA involves subtracting EDGE_TRIGGER_MULTIPLE
+// from the target so an extra EDGE_TRIGGER_MULTIPLE must be added
+#define MIN_EDGE_SAMPLE_NUM_1G (2* EDGE_TRIGGER_MULTIPLE_1G)
+#define MIN_EDGE_SAMPLE_NUM_3G_RX (2* EDGE_TRIGGER_MULTIPLE_3G_RX)
+#define MIN_EDGE_SAMPLE_NUM_3G_TX (2* EDGE_TRIGGER_MULTIPLE_3G_TX)
 
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
@@ -850,38 +863,70 @@ static int set_edge_backoff(bool tx, const char *chan, uint32_t backoff) {
     return set_reg_bits(regname, 0, -1, backoff);
 }
 
-static int set_edge_sample_num(bool tx, const char *chan, uint64_t num) {
+/*
+ * Sets the number of samples to stream per trigger edge.
+ *
+ * *num is the requested number of samples.
+ * Except for *num = 0 which indicates to stream forever
+ * *num is adjusted for what the FPGA supports
+ */
+static int set_edge_sample_num(bool tx, const char *chan, uint64_t *num) {
 
-    uint32_t val_msw;
-    uint32_t val_lsw;
+    // Set the rules for the edge sample num for the unit
+    uint64_t edge_trigger_multiple;
+    uint64_t min_edge_sample_num;
+
+#if RF_SAMPLE_RATE == 1000
+    edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_1G;
+    min_edge_sample_num = MIN_EDGE_SAMPLE_NUM_1G;
+#elif RF_SAMPLE_RATE == 3000
+    if(tx) {
+        edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_3G_TX;
+        min_edge_sample_num = EDGE_TRIGGER_MULTIPLE_3G_TX;
+    } else /* if (rx)*/ {
+        edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_3G_RX;
+        min_edge_sample_num = EDGE_TRIGGER_MULTIPLE_3G_RX;
+    }
+#else
+    #error Invalid sample rate. Must be: 1000, 3000
+#endif
+
+    // Largest multiple of EDGE_TRIGGER_MULTIPLE that fits in 64 bits
+    const uint64_t edge_max_samples = UINT64_MAX - (UINT64_MAX % edge_trigger_multiple);
 
     char regname_msw[8];
     char regname_lsw[8];
 
-    if(tx) {
-        snprintf(regname_msw, sizeof(regname_msw), tx_nsamp_msw_map[(*chan)-'a']);
-        snprintf(regname_lsw, sizeof(regname_lsw), tx_nsamp_lsw_map[(*chan)-'a']);
+    if (tx) {
+        snprintf(regname_msw, sizeof(regname_msw), "%s", tx_nsamp_msw_map[(*chan) - 'a']);
+        snprintf(regname_lsw, sizeof(regname_lsw), "%s", tx_nsamp_lsw_map[(*chan) - 'a']);
     } else {
-        snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 7 : 10);
-        snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
-             tx ? 8 : 11);
+        snprintf(regname_msw, sizeof(regname_msw), "rx%s10", chan);
+        snprintf(regname_lsw, sizeof(regname_lsw), "rx%s11", chan);
     }
 
-    if(num != 0) {
-        // Maps from the number of samples the user requested to the value to write to the register
-        const uint64_t minus_one = num - 1;
-        const uint64_t val = minus_one - (minus_one % 4) + 8;
+    // num == 0 means stream forever, do not modify it
+    if (*num != 0) {
+        if (*num < min_edge_sample_num) {
+            *num = min_edge_sample_num;
+        }
+        if (*num > edge_max_samples) {
+            // Clamp to edge_max_samples to avoid an overflow during rounding
+            *num = edge_max_samples;
+        }
 
-        val_msw = val >> 32;
-        val_lsw = val & 0xffffffff;
-    } else {
-        val_msw = 0;
-        val_lsw = 0;
+        // Round up to the next valid number of samples
+        *num = (*num + edge_trigger_multiple - 1) / edge_trigger_multiple * edge_trigger_multiple;
+
     }
+
+    const uint32_t val_msw = (uint32_t)(*num >> 32);
+    const uint32_t val_lsw = (uint32_t)(*num & 0xffffffff);
 
     return set_reg_bits(regname_msw, 0, -1, val_msw) ||
            set_reg_bits(regname_lsw, 0, -1, val_lsw);
+
+    #undef edge_max_samples
 }
 
 static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
@@ -929,11 +974,10 @@ static int valid_edge_backoff(const char *data, uint32_t *val) {
     }
 }
 
+// Parses the number of samples per edge requested
+// Validates if parsing was successfull. Does not verify the value.
 static int valid_edge_sample_num(const char *data, uint64_t *val) {
     if (1 == sscanf(data, "%" PRIu64, val)) {
-        if( *val < MIN_EDGE_SAMPLE_NUM && *val != 0) {
-            *val = MIN_EDGE_SAMPLE_NUM;
-        }
         return RETURN_SUCCESS;
     } else {
         PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
@@ -985,44 +1029,17 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
         return r;                                                              \
     }                                                                          \
                                                                                \
-    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data, char *ret) {\
-        int r;                                                                 \
-        uint64_t val = 0;                                                          \
-        r = valid_edge_sample_num(data, &val);\
-        if(r != RETURN_SUCCESS) return r;\
-        \
-        /* Adjustment to number of samples requested,the number written to the register and the actual number will be different */\
-        /* This adjustment will result in the correct final number */\
-        if(RF_SAMPLE_RATE == 1000) {\
-            char s_rate[100];\
-            get_property("tx/" STR(ch) "/dsp/rate", s_rate, 100);\
-            double rate = 0;\
-            sscanf(s_rate, "%lf", &rate);\
-            if( rate == 1000000000 ) {\
-                val = (uint64_t)(val/4)*4;\
-                snprintf(ret, MAX_PROP_LEN, "%lu", val);\
-                val -= 20;\
-            } else if (rate >= 500000000 ) {\
-                val = (uint64_t)(val/2)*2;\
-                snprintf(ret, MAX_PROP_LEN, "%lu", val);\
-                val -= 10;\
-            } else if (rate >= 250000000) {\
-                val = (uint64_t)(val/2)*2;\
-                snprintf(ret, MAX_PROP_LEN, "%lu", val);\
-                val -= 4; \
-            } else if (rate >= 100000000) {\
-                val = (uint64_t)(val/2)*2;\
-                snprintf(ret, MAX_PROP_LEN, "%lu", val);\
-                val -= 2;\
-            }\
-        } else if(RF_SAMPLE_RATE == 3000) {\
-            val = (uint64_t)(val/8)*8;\
-            snprintf(ret, MAX_PROP_LEN, "%lu", val);\
-            val -= 48;\
-        } else {\
-            PRINT(ERROR, "function not implemented for variants with maximum rf sample rate: %i\n", RF_SAMPLE_RATE);\
-        }\
-        r = set_edge_sample_num(true, #ch, val);        \
+    static int hdlr_tx_##ch##_trigger_edge_sample_num(const char *data,        \
+    char *ret) {                                                               \
+        uint64_t val;                                                          \
+        /* Parse data for edg_sample_num. Does not check if the number is good*/\
+        int r = valid_edge_sample_num(data, &val);                             \
+        if (r != RETURN_SUCCESS) {                                             \
+            return r;                                                          \
+        }                                                                      \
+        r = set_edge_sample_num(true, #ch, &val);                             \
+        /* Return the actual number of samples per edge */                     \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);                          \
         return r;                                                              \
     }                                                                          \
                                                                                \
@@ -1132,18 +1149,15 @@ TX_CHANNELS
                                                                                \
     static int hdlr_rx_##ch##_trigger_edge_sample_num(const char *data,        \
                                                       char *ret) {             \
-        int r;                                                                 \
-        uint64_t val = 0;                                                          \
-        r = valid_edge_sample_num(data, &val);\
-        val = (val / NSAMPS_MULTIPLE_RX) * NSAMPS_MULTIPLE_RX;\
-        val = val * DEAULT_OTW_RX / 16;\
-        uint64_t actual_nsamps = val * 16 / DEAULT_OTW_RX;\
-        snprintf(ret, MAX_PROP_LEN, "%lu", actual_nsamps);                                             \
-        if(r != RETURN_SUCCESS) return r;\
-        else {\
-            r = set_edge_sample_num(false, #ch, val);        \
-            \
-        }\
+        uint64_t val;                                                          \
+        /* Parse data for edg_sample_num. Does not check if the number is good*/\
+        int r = valid_edge_sample_num(data, &val);                             \
+        if (r != RETURN_SUCCESS) {                                             \
+            return r;                                                          \
+        }                                                                      \
+        r = set_edge_sample_num(false, #ch, &val);                             \
+        /* Return the actual number of samples per edge */                     \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);                          \
         return r;                                                              \
     }                                                                          \
                                                                                \
