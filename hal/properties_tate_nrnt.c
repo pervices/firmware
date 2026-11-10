@@ -104,6 +104,11 @@
 // Tick rate of Cyan's internal clock
 #define TICK_RATE 250000000
 
+// Minum number of samples per edge trigger
+// TMP: copying from properties.h to create a commit that only applies the new values to Vaunt
+// TODO: correct for Tate
+#define MIN_EDGE_SAMPLE_NUM 4
+
 #define IPVER_IPV4 0
 #define IPVER_IPV6 1
 
