@@ -134,4 +134,18 @@ void PRINT_WRAPPER(print_t priority, const char *format, ...);
         }                                                                      \
     } while (0)
 
+// The server API version is formatted as yyyymmdd of roughly when it was worked on.
+// It is used by UHD to check if the server supports a feature/behavior
+// Increment it anytime the server is changed in a way UHD needs to be aware of
+#define TRIGGER_OVERHAUL_SERVER_R3_S "20261119"
+// Adding stream property to tx
+#define TRIGGER_OVERHAUL_SERVER_R2_S "20261112"
+// Added ufl_output_edge_sample_num and sma_output_edge_sample_num
+#define TRIGGER_OVERHAUL_SERVER_R1_S "20261111"
+// Added get option to Crimson trig_sel
+// Added na Cyan sma_dir
+// Implemented Cyan trig_sel (previously it was just using a copy of Crimson)
+// Fixed edge_sample_num
+#define PRE_API_VER_SERVER_S "0"
+
 #endif /* COMMON_H_ */
