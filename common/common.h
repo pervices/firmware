@@ -134,4 +134,16 @@ void PRINT_WRAPPER(print_t priority, const char *format, ...);
         }                                                                      \
     } while (0)
 
+// The server API version is formatted as yyyymmdd of roughly when it was worked on.
+// It is used by UHD to check if the server supports a feature/behavior
+// Increment it anytime the server is changed in a way UHD needs to be aware of
+#define SERVER_API_VER_S = "20261112"
+// API changelog
+// 20261112:
+//     Added get option to Crimson trig_sel
+//     Added na Cyan sma_dir
+//     Implemented Cyan trig_sel (previously it was just using a copy of Crimson)
+//     Fixed edge_sample_num for Crimson and Cyan 1G
+// TODO: fix edge_sample_num for 3G before release
+
 #endif /* COMMON_H_ */
