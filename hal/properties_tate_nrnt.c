@@ -772,8 +772,6 @@ static int hdlr_load_config(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-static int set_sma_dir(bool in) { return set_reg_bits("sys2", 4, 1, in); }
-
 static int set_sma_pol(bool positive) {
     return set_reg_bits("sys2", 6, 1, positive);
 }
@@ -831,16 +829,71 @@ static int valid_trigger_pol(const char *data, bool *positive) {
     return RETURN_SUCCESS;
 }
 
+// Bit mappings for trig_sel settings/operations
+
+// The bit used to indicate a get was requested
+#define TRIGGER_SEL_GET        (1u << 31)
+// bit 2: enable outputting to the sma
+#define TRIGGER_SEL_SMA_OUTPUT 0x4u
+// enable (listening/outputting depending on ufl_dir) from/to the ufl
+#define TRIGGER_SEL_UFL_ENABLE 0x2u
+//enable listening to the sma
+#define TRIGGER_SEL_SMA_INPUT  0x1u
+// A mask of all options we can set the trigger to
+#define TRIGGER_SEL_OPTION_MASK \
+    (TRIGGER_SEL_SMA_OUTPUT | TRIGGER_SEL_UFL_ENABLE | TRIGGER_SEL_SMA_INPUT)
+// A mask of all options we know mean something
+// Includes all options we can set the trigger to, plus request modifiers such as get
+#define TRIGGER_SEL_KNOWN_BITS (TRIGGER_SEL_OPTION_MASK | TRIGGER_SEL_GET)
+
 static int valid_trigger_sel(const char *data, uint32_t *sel) {
     int r;
 
     r = sscanf(data, "%" PRIu32, sel);
-    if (1 != r || *sel >= 4) {
-        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+    if (1 != r ) {
+        PRINT(ERROR, "Failed to parse argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+
+    const uint32_t unknown_bits = *sel & ~(uint32_t)TRIGGER_SEL_KNOWN_BITS;
+    if( unknown_bits != 0 ) {
+        PRINT(ERROR, "Unrecognized trig_sel bits: 0x%" PRIx32 "\n"
+                "The request will be masked with 0x%" PRIx32 ".\n",
+                *sel, TRIGGER_SEL_KNOWN_BITS);
+        // Apply a mask of known bits
+        *sel = *sel & TRIGGER_SEL_KNOWN_BITS;
+    }
+
+    // If a get is requested and other options specified
+    if(*sel & TRIGGER_SEL_GET && *sel & TRIGGER_SEL_OPTION_MASK) {
+        PRINT(ERROR, "A get was requested at the same time as other flags.\n"
+                "Only the get will be applied. All others with be ignored\n");
+        *sel = *sel & TRIGGER_SEL_GET;
+    }
+
+    // Check if sma input and out are reuested at the same time.
+    // On Cyan we support sma input on some channel while others are set to input
+    // and sma set one way but ufl set the other,
+    // but not sma input and output at the same time.
+    if ((*sel & TRIGGER_SEL_SMA_INPUT) && (*sel & TRIGGER_SEL_SMA_OUTPUT)) {
+        PRINT(ERROR, "trig_sel cannot listen to the SMA input and drive the SMA "
+              "output at the same time: 0x%" PRIx32 "\n", *sel);
         return RETURN_ERROR_PARAM;
     }
 
     return RETURN_SUCCESS;
+}
+
+static uint32_t get_trigger_sel(bool tx, const char *chan) {
+    const char* reg = tx ? tx_trig_map[(*chan)-'a'] : rx_trig_map[(*chan)-'a'];
+
+    uint32_t val = 0;
+    read_hps_reg(reg, &val);
+
+    val = val >> 10;
+    val = val & TRIGGER_SEL_OPTION_MASK;
+
+    return val;
 }
 
 static int valid_trigger_dir(const char *data, bool *in) {
@@ -938,10 +991,10 @@ static int set_trigger_ufl_dir(bool tx, const char *chan, bool in) {
 
 static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
     if(tx) {
-        return set_reg_bits(tx_trig_map[(*chan)-'a'], 10, 0b11, sel);
+        return set_reg_bits(tx_trig_map[(*chan)-'a'], 10, TRIGGER_SEL_OPTION_MASK, sel);
     }
     else {
-        return set_reg_bits(rx_trig_map[(*chan)-'a'], 10, 0b11, sel);
+        return set_reg_bits(rx_trig_map[(*chan)-'a'], 10, TRIGGER_SEL_OPTION_MASK, sel);
     }
 }
 
@@ -1044,15 +1097,20 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        int r;                                                                 \
-        uint32_t val = 0;                                                          \
+        /* NOTE: the values have different meanings between Vaunt and Tate */\
+        /* See valid_trigger_sel for the explaination for this device */\
+        int r;\
+        uint32_t val = 0;\
         r = valid_trigger_sel(data, &val);\
-        if(r != RETURN_SUCCESS) return r;\
-        else {\
-            r = set_trigger_sel(true, #ch, val);        \
-            \
+        /* If the request is invalid or get is requested get the current value */\
+        if(r != RETURN_SUCCESS || val & TRIGGER_SEL_GET) {\
+            /* If parsing failed get the existing value */\
+            val = get_trigger_sel(true, #ch);\
+        } else {\
+            r = set_trigger_sel(true, #ch, val);\
         }\
-        return r;                                                              \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu32 "\n", val);\
+        return r;\
     }                                                                          \
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
@@ -1162,15 +1220,20 @@ TX_CHANNELS
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_trig_sel(const char *data, char *ret) {  \
-        int r;                                                                 \
-        uint32_t val = 0;                                                          \
+        /* NOTE: the values have different meanings between Vaunt and Tate */\
+        /* See valid_trigger_sel for the explaination for this device */\
+        int r;\
+        uint32_t val = 0;\
         r = valid_trigger_sel(data, &val);\
-        if(r != RETURN_SUCCESS) return r;\
-        else {\
-            r = set_trigger_sel(false, #ch, val);        \
-            \
+        /* If the request is invalid or get is requested get the current value */\
+        if(r != RETURN_SUCCESS || val & TRIGGER_SEL_GET) {\
+            /* If parsing failed get the existing value */\
+            val = get_trigger_sel(false, #ch);\
+        } else {\
+            r = set_trigger_sel(false, #ch, val);\
         }\
-        return r;                                                              \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu32 "\n", val);\
+        return r;\
     }                                                                          \
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_dir(const char *data, char *ret) {   \
@@ -5969,16 +6032,20 @@ static int hdlr_fpga_about_serial(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
-// Does nothing on Cyan since there are seperate input and output pins
+// Cyan has separate pins for input or output
+// trig_sel is used to set whether to use the input and/or output sma
 static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
-    int r;
-    bool val = 0;
-    r = valid_trigger_dir(data, &val);
-    if(r != RETURN_SUCCESS) return r;
-    else {
-        r = set_sma_dir(val);
+    if (strcmp(data, "na") == 0 || strcmp(data, "na\n") == 0) {
+        snprintf(ret, MAX_PROP_LEN, "na\n");
+        return RETURN_SUCCESS;
     }
-    return r;
+    PRINT(ERROR,
+            "This device has separate SMA trigger input and output pins.\n"
+            "Only \"na\" (not applicable) is accepted, got '%s'\n",
+            "bit 0 of <rx/tx>/trigger/trig_sel enables listening to the sma input.\n"
+            "bit 2 of <rx/tx>/trigger/trig_sel enables outputting to the sma input.\n",
+            data);
+    return RETURN_ERROR_PARAM;
 }
 
 static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
@@ -7187,7 +7254,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("fpga/link/sfp_reset"                 , hdlr_fpga_link_sfp_reset,               RW, "2", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/clear_tx_ports"                 , hdlr_fpga_clear_regs,          RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "in", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "na", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "positive", SP, NAC)          \
     DEFINE_FILE_PROP_P("fpga/trigger/sma_override"           , hdlr_fpga_trigger_sma_override,         RW, "0", SP, NAC)                 \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
