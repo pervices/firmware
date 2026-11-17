@@ -137,7 +137,7 @@ void PRINT_WRAPPER(print_t priority, const char *format, ...);
 // The server API version is formatted as yyyymmdd of roughly when it was worked on.
 // It is used by UHD to check if the server supports a feature/behavior
 // Increment it anytime the server is changed in a way UHD needs to be aware of
-#define SERVER_API_VER_S = "20261112"
+#define SERVER_API_VER_S "20261112"
 // API changelog
 // 20261112:
 //     Added get option to Crimson trig_sel
