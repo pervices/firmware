@@ -100,6 +100,7 @@ int link_rate_divisor = 1;
 // Minum number of samples per edge trigger
 // An intermediate step in the FPGA involves subtracting EDGE_TRIGGER_MULTIPLE
 // from the target so an extra EDGE_TRIGGER_MULTIPLE must be added
+// This is the minimum regular value. 0 is a special case and means forever
 #define MIN_EDGE_SAMPLE_NUM (2 * EDGE_TRIGGER_MULTIPLE)
 
 double get_base_sample_rate() {
@@ -541,6 +542,32 @@ static int hdlr_load_config(const char *data, char *ret) {
 
 static int set_sma_dir(bool in) { return set_reg_bits("sys2", 4, 1, in); }
 
+/*
+ * Adjust the Tx output pulse duration through the SMATrigOutEdgeDurSmpCnt register
+ */
+static int set_sma_output_edge_sample_num(uint64_t *num) {
+    // Largest multiple of EDGE_TRIGGER_MULTIPLE that fits in 64 bits
+    #define EDGE_MAX_SAMPLES (UINT64_MAX - (UINT64_MAX % EDGE_TRIGGER_MULTIPLE))
+
+    // Clamp value to be within limits
+    if (*num < MIN_EDGE_SAMPLE_NUM && *num != 0) {
+        *num = MIN_EDGE_SAMPLE_NUM;
+    }
+    if (*num > EDGE_MAX_SAMPLES) {
+        *num = EDGE_MAX_SAMPLES;
+    }
+    // Round up to the next valid number of samples
+    *num = (*num + EDGE_TRIGGER_MULTIPLE - 1) / EDGE_TRIGGER_MULTIPLE * EDGE_TRIGGER_MULTIPLE;
+
+    const uint32_t val_msw = (uint32_t)(*num >> 32);
+    const uint32_t val_lsw = (uint32_t)(*num & 0xffffffff);
+
+    return set_reg_bits("sys22", 0, -1, val_msw) ||
+            set_reg_bits("sys23", 0, -1, val_lsw);
+
+    #undef EDGE_MAX_SAMPLES
+}
+
 static int set_sma_pol(bool positive) {
     return set_reg_bits("sys2", 6, 1, positive);
 }
@@ -598,6 +625,17 @@ static int valid_trigger_mode(const char *data, bool *edge) {
     }
 
     return RETURN_SUCCESS;
+}
+
+// Parses the requested output pulse length.
+// Confirms parsing was successful but does not verify the value.
+static int valid_output_pulse_length(const char *data, uint64_t *val) {
+    if (1 == sscanf(data, "%" PRIu64, val)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
 }
 
 static int valid_trigger_pol(const char *data, bool *positive) {
@@ -682,6 +720,17 @@ static int valid_trigger_dir(const char *data, bool *in) {
     return RETURN_SUCCESS;
 }
 
+// Parse the duration of the output trigger pulse requested
+// Validates if parsing was successful. Does not verify the value.
+static int valid_trigger_output_edge_sample_num(const char *data, uint64_t *val) {
+    if (1 == sscanf(data, "%" PRIu64, val)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
 static int set_edge_backoff(bool tx, const char *chan, uint32_t backoff) {
     char regname[8];
     snprintf(regname, sizeof(regname), "%s%s%u", tx ? "tx" : "rx", chan,
@@ -711,7 +760,7 @@ static int set_edge_sample_num(bool tx, const char *chan, uint64_t *num) {
 
     // num == 0 means stream forever, do not modify it
     if (*num != 0) {
-        if (*num < MIN_EDGE_SAMPLE_NUM) {
+        if (*num < MIN_EDGE_SAMPLE_NUM && *num != 0) {
             *num = MIN_EDGE_SAMPLE_NUM;
         }
         if (*num > EDGE_MAX_SAMPLES) {
@@ -754,6 +803,40 @@ static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
              tx ? 6 : 9);
     shift = sma ? 0 : 4;
     return set_reg_bits(reg_name, shift, 1, edge);
+}
+
+/*
+ * Adjust the U.FI output pulse duration through the UFlTrigOutEdgeDurSmpCnt register.
+ */
+static int set_trigger_output_pulse_length(bool tx, const char *chan, uint64_t *num) {
+    // Largest multiple of EDGE_TRIGGER_MULTIPLE that fits in 64 bits
+    #define EDGE_MAX_SAMPLES (UINT64_MAX - (UINT64_MAX % EDGE_TRIGGER_MULTIPLE))
+
+    char regname_msw[8];
+    char regname_lsw[8];
+
+    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 21 : 16);
+    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 22 : 17);
+
+    // Clamp value to be within limits
+    if (*num < MIN_EDGE_SAMPLE_NUM && *num != 0) {
+        *num = MIN_EDGE_SAMPLE_NUM;
+    }
+    if (*num > EDGE_MAX_SAMPLES) {
+        *num = EDGE_MAX_SAMPLES;
+    }
+    // Round up to the next valid number of samples
+    *num = (*num + EDGE_TRIGGER_MULTIPLE - 1) / EDGE_TRIGGER_MULTIPLE * EDGE_TRIGGER_MULTIPLE;
+
+    const uint32_t val_msw = (uint32_t)(*num >> 32);
+    const uint32_t val_lsw = (uint32_t)(*num & 0xffffffff);
+
+    return set_reg_bits(regname_msw, 0, -1, val_msw) ||
+           set_reg_bits(regname_lsw, 0, -1, val_lsw);
+
+    #undef EDGE_MAX_SAMPLES
 }
 
 static int set_trigger_ufl_pol(bool tx, const char *chan, bool positive) {
@@ -872,7 +955,25 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
         } else {\
             return r;\
         }\
-    }                                                                          \
+    }                                                                           \
+                                                                                \
+    /*                                                                          \
+     * Adjust the U.FI output pulse duration.                                   \
+     * If the trigger is in level mode or input, this is ignored.               \
+     */                                                                         \
+    static int hdlr_rx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
+        uint64_t val;                                                                           \
+        /* Parse data for ufl_output_edge_sample_num. Does not verify number is good */            \
+        int r = valid_output_pulse_length(data, &val);                                          \
+        if (r != RETURN_SUCCESS) {                                                              \
+            return r;                                                                           \
+        }                                                                                       \
+        /* Return the actual number of samples per edge */                                      \
+        r = set_trigger_output_pulse_length(false, #ch, &val);                                  \
+        /* Return the actual number of samples per edge */                                      \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);                                           \
+        return r;                                                                               \
+    }                                                                                           \
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         bool val;                                                              \
@@ -1830,6 +1931,24 @@ int check_rf_pll(int chan_mask, int uart_fd) {
             return r;\
         }\
     }                                                                          \
+                                                                                \
+    /*                                                                          \
+     * Adjust the U.FI output pulse duration.                                   \
+     * If the trigger is in level mode or input, this is ignored.               \
+     */                                                                         \
+    static int hdlr_tx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
+        uint64_t val;                                                                           \
+        /* Parse data for ufl_output_edge_sample_num. Does not verify number is good */            \
+        int r = valid_output_pulse_length(data, &val);                                          \
+        if (r != RETURN_SUCCESS) {                                                              \
+            return r;                                                                           \
+        }                                                                                       \
+        /* Return the actual number of samples per edge */                                      \
+        r = set_trigger_output_pulse_length(true, #ch, &val);                                   \
+        /* Return the actual number of samples per edge */                                      \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);                                           \
+        return r;                                                                               \
+    }                                                                                           \
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         bool val;                                                              \
@@ -4121,6 +4240,22 @@ static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
     }
 }
 
+/*
+ * Global setting for Tx output pulse duration.
+ * Ignored if trigger in in level mode or input.
+ */
+static int hdlr_fpga_trigger_sma_output_edge_sample_num(const char *data, char *ret) {
+    uint64_t val;
+    // Parse data for tx output pulse duration. Does not verify the number is actually good.
+    int r = valid_trigger_output_edge_sample_num(data, &val);
+    if (r != RETURN_SUCCESS) {
+        return r;
+    }
+    r = set_sma_output_edge_sample_num(&val);
+    snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);
+    return r;
+}
+
 static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {
     bool val;
     int r = valid_trigger_pol(data, &val);
@@ -4799,17 +4934,18 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 
 #define DEFINE_RX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("rx_" #_c, "rx/" #_c)                                                                         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/common_lo"        , hdlr_rx_##_c##_rf_common_lo,            RW, "0", RP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"         , hdlr_rx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"         , hdlr_rx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"     , hdlr_rx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_sample_num"  , hdlr_rx_##_c##_trigger_edge_sample_num, RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_mode"         , hdlr_rx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"          , hdlr_rx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"          , hdlr_rx_##_c##_trigger_ufl_pol,         RW, "positive", SP, #_c)  \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"     , hdlr_rx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"  , hdlr_rx_##_c##_trigger_time_gate_logic, RW, "-38", SP, #_c)         \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"   , hdlr_rx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/common_lo"               , hdlr_rx_##_c##_rf_common_lo,                      RW, "0", RP, #_c)           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sma_mode"                , hdlr_rx_##_c##_trigger_sma_mode,                  RW, "level", SP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/trig_sel"                , hdlr_rx_##_c##_trigger_trig_sel,                  RW, "0", SP, #_c)           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"            , hdlr_rx_##_c##_trigger_edge_backoff,              RW, "0", SP, #_c)           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_sample_num"         , hdlr_rx_##_c##_trigger_edge_sample_num,           RW, "0", SP, #_c)           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_mode"                , hdlr_rx_##_c##_trigger_ufl_mode,                  RW, "level", SP, #_c)       \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_output_edge_sample_num" , hdlr_rx_##_c##_trigger_ufl_output_edge_sample_num,   RW, "0", SP, #_c)           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"                 , hdlr_rx_##_c##_trigger_ufl_dir,                   RW, "out", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"                 , hdlr_rx_##_c##_trigger_ufl_pol,                   RW, "positive", SP, #_c)    \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"            , hdlr_rx_##_c##_trigger_time_disable,              RW, "0", SP, #_c)           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"         , hdlr_rx_##_c##_trigger_time_gate_logic,           RW, "-38", SP, #_c)         \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"          , hdlr_rx_##_c##_trigger_sample_counter,            RW, "0", SP, #_c)           \
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
@@ -4861,13 +4997,14 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
 
 #define DEFINE_TX_CHANNEL(_c)                                                                                         \
     DEFINE_SYMLINK_PROP("tx_" #_c, "tx/" #_c)                                                                         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/common_lo"        , hdlr_tx_##_c##_rf_common_lo,            RW, "0", TP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_backoff"     , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_sample_num"  , hdlr_tx_##_c##_trigger_edge_sample_num, RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_dir"          , hdlr_tx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)       \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_mode"         , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/rf/freq/common_lo"               , hdlr_tx_##_c##_rf_common_lo,            RW, "0", TP, #_c)             \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"                , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"                , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)             \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_backoff"            , hdlr_tx_##_c##_trigger_edge_backoff,    RW, "0", SP, #_c)             \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_sample_num"         , hdlr_tx_##_c##_trigger_edge_sample_num, RW, "0", SP, #_c)             \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_dir"                 , hdlr_tx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)           \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_mode"                , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)         \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_output_edge_sample_num" , hdlr_tx_##_c##_trigger_ufl_output_edge_sample_num,   RW, "0", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "positive", SP, #_c)  \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
@@ -4968,10 +5105,11 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("fpga/board/reg_rst_status"           , hdlr_fpga_board_reg_rst_status,         RW, "0", SP, NAC)
 
 #define DEFINE_FPGA()                                                                                                         \
-    DEFINE_FILE_PROP_P("fpga/user/regs"                      , hdlr_fpga_user_regs,                    RW, "0.0", SP, NAC)               \
-    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                , hdlr_fpga_trigger_sma_dir,              RW, "in", SP, NAC)                \
-    DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                , hdlr_fpga_trigger_sma_pol,              RW, "positive", SP, NAC)          \
-    DEFINE_FILE_PROP_P("fpga/trigger/sma_override"           , hdlr_fpga_trigger_sma_override,         RW, "0", SP, NAC)                 \
+    DEFINE_FILE_PROP_P("fpga/user/regs"                         , hdlr_fpga_user_regs,                          RW, "0.0", SP, NAC)             \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_dir"                   , hdlr_fpga_trigger_sma_dir,                    RW, "in", SP, NAC)              \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_output_edge_sample_num", hdlr_fpga_trigger_sma_output_edge_sample_num, RW, "0", SP, NAC)               \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_pol"                   , hdlr_fpga_trigger_sma_pol,                    RW, "positive", SP, NAC)        \
+    DEFINE_FILE_PROP_P("fpga/trigger/sma_override"              , hdlr_fpga_trigger_sma_override,               RW, "0", SP, NAC)               \
     DEFINE_FILE_PROP_P("fpga/about/fw_ver"                   , hdlr_fpga_about_fw_ver,                 RW, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/sw_ver"                   , hdlr_invalid,                           RO, VERSION, SP, NAC)             \
     DEFINE_FILE_PROP_P("fpga/about/server_ver"               , hdlr_server_about_fw_ver,               RW, "", SP, NAC)                  \
