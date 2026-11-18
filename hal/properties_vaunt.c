@@ -960,9 +960,9 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
      * Adjust the U.FI output pulse duration.                                   \
      * If the trigger is in level mode or input, this is ignored.               \
      */                                                                         \
-    static int hdlr_rx_##ch##_trigger_ufl_output_pulse_length(const char *data, char *ret) {    \
+    static int hdlr_rx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
         uint64_t val;                                                                           \
-        /* Parse data for ufl_output_pulse_length. Does not verify number is good */            \
+        /* Parse data for ufl_output_edge_sample_num. Does not verify number is good */            \
         int r = valid_output_pulse_length(data, &val);                                          \
         if (r != RETURN_SUCCESS) {                                                              \
             return r;                                                                           \
@@ -1935,9 +1935,9 @@ int check_rf_pll(int chan_mask, int uart_fd) {
      * Adjust the U.FI output pulse duration.                                   \
      * If the trigger is in level mode or input, this is ignored.               \
      */                                                                         \
-    static int hdlr_tx_##ch##_trigger_ufl_output_pulse_length(const char *data, char *ret) {    \
+    static int hdlr_tx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
         uint64_t val;                                                                           \
-        /* Parse data for ufl_output_pulse_length. Does not verify number is good */            \
+        /* Parse data for ufl_output_edge_sample_num. Does not verify number is good */            \
         int r = valid_output_pulse_length(data, &val);                                          \
         if (r != RETURN_SUCCESS) {                                                              \
             return r;                                                                           \
@@ -4939,7 +4939,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_backoff"            , hdlr_rx_##_c##_trigger_edge_backoff,              RW, "0", SP, #_c)           \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/edge_sample_num"         , hdlr_rx_##_c##_trigger_edge_sample_num,           RW, "0", SP, #_c)           \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_mode"                , hdlr_rx_##_c##_trigger_ufl_mode,                  RW, "level", SP, #_c)       \
-    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_output_pulse_length" , hdlr_rx_##_c##_trigger_ufl_output_pulse_length,   RW, "0", SP, #_c)           \
+    DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_output_edge_sample_num" , hdlr_rx_##_c##_trigger_ufl_output_edge_sample_num,   RW, "0", SP, #_c)           \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_dir"                 , hdlr_rx_##_c##_trigger_ufl_dir,                   RW, "out", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/ufl_pol"                 , hdlr_rx_##_c##_trigger_ufl_pol,                   RW, "positive", SP, #_c)    \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_disable"            , hdlr_rx_##_c##_trigger_time_disable,              RW, "0", SP, #_c)           \
@@ -5003,7 +5003,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/edge_sample_num"         , hdlr_tx_##_c##_trigger_edge_sample_num, RW, "0", SP, #_c)             \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_dir"                 , hdlr_tx_##_c##_trigger_ufl_dir,         RW, "out", SP, #_c)           \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_mode"                , hdlr_tx_##_c##_trigger_ufl_mode,        RW, "level", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_output_pulse_length" , hdlr_tx_##_c##_trigger_ufl_output_pulse_length,   RW, "0", SP, #_c)   \
+    DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_output_edge_sample_num" , hdlr_tx_##_c##_trigger_ufl_output_edge_sample_num,   RW, "0", SP, #_c)   \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/ufl_pol"          , hdlr_tx_##_c##_trigger_ufl_pol,         RW, "positive", SP, #_c)  \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/gating"           , hdlr_tx_##_c##_trigger_gating,          RW, "output", SP, #_c)    \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_disable"     , hdlr_tx_##_c##_trigger_time_disable,    RW, "0", SP, #_c)         \
