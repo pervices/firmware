@@ -2120,7 +2120,11 @@ int check_time_pll(int ch) {
     /*resets dsp (including buffer)*/\
     static int hdlr_tx_##ch##_dsp_rstreq(const char *data, char *ret) {        \
         uint32_t old_val = 0;                                                      \
-        /* Puts dsp in reset to clear uflow/oflow count, then takes it out of reset*/\
+        /* Enable the channel */\
+        /* Enabling the channel has been added here for legacy programs that use */\
+        /* rstreq to enable the channel instead of stream */\
+        write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x100, 0x100);\
+        /* Put dsp in reset to clear uflow/oflow count, then take it out of reset*/\
         /* Delays present because it must be in reset for an amount of time*/\
         /* Resets twice because resets don't work properly and need to be cleared*/\
         read_hps_reg(tx_reg4_map[INT(ch)], &old_val);                           \
@@ -2550,7 +2554,44 @@ int check_time_pll(int ch) {
                                                                                \
         return RETURN_SUCCESS;                                                 \
     }                                                                          \
-                                                                               \
+    \
+    /* Enables or disables tx. */\
+    /* 1 to enable, 0 to disable. All other values are reserved and are treated as disable */\
+    /* Note that when putting the dsp into reset the buffer level will be stale and give the pre reset value */\
+    /* rstreq also enables stream (which is how all programs before this was added enable streaming) */\
+    static int hdlr_tx_##ch##_stream(const char *data, char *ret) {\
+        uint8_t stream;\
+        uint8_t enable_stream;\
+        int scan_r = sscanf(data, "%" SCNu8 "", &stream);\
+        \
+        if(scan_r == 1) {\
+            if(stream == 1) {\
+                enable_stream = 1;\
+            } else if (stream == 0) {\
+                enable_stream = 0;\
+            } else {\
+                PRINT(ERROR, "Reserved value requested: %" SCNu8 ". Disabling stream.\n");\
+                enable_stream = 0;\
+            }\
+        } else {\
+            PRINT(ERROR, "Unable to parse request: \"%s\". Disabling stream.\n");\
+            enable_stream = 0;\
+        }\
+        if(enable_stream) {\
+            /* Set bit 8 high to enable the channel */\
+            /* Set bit 2 low to take the channel out of reset */\
+            write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x100, 0x102);\
+            snprintf(ret, MAX_PROP_LEN, "1\n");\
+            return RETURN_SUCCESS;\
+        } else {\
+            /* Set bit 8 low to disable the channel */\
+            /* Set bit 2 low to take the channel out of reset */\
+            write_hps_reg_mask(tx_reg4_map[INT(ch)], 0x002, 0x102);\
+            snprintf(ret, MAX_PROP_LEN, "0\n");\
+            return RETURN_SUCCESS;\
+        }\
+    }\
+    \
     static int hdlr_tx_##ch##_jesd_status(const char *data, char *ret) {       \
         if(tx_power[INT(ch)] == PWR_ON || tx_power[INT(ch)] == PWR_HALF_ON) {\
             strcpy(buf, "status -g\r");                                            \
@@ -7292,6 +7333,7 @@ GPIO_PINS
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/reset"             , hdlr_tx_##_c##_jesd_reset,              RW, "0", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/dsp/rstreq"               , hdlr_tx_##_c##_dsp_rstreq,              WO, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                    , hdlr_tx_##_c##_pwr,                     RW, "1", SP, #_c)     \
+    DEFINE_FILE_PROP_P("tx/" #_c "/stream"                   , hdlr_tx_##_c##_stream,                  RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/jesd/pll_locked"          , hdlr_tx_##_c##_jesd_pll_locked,         RW, "poke", SP, #_c)      \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sma_mode"         , hdlr_tx_##_c##_trigger_sma_mode,        RW, "level", SP, #_c)     \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/trig_sel"         , hdlr_tx_##_c##_trigger_trig_sel,        RW, "0", SP, #_c)         \
