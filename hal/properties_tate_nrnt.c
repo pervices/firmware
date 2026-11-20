@@ -772,6 +772,56 @@ static int hdlr_load_config(const char *data, char *ret) {
     return RETURN_SUCCESS;
 }
 
+/*
+ * Sets the number of samples to stream per trigger edge.
+ *
+ * *num is the requested number of samples.
+ * Except for *num = 0 which indicates to stream forever
+ * *num is adjusted for what the FPGA supports
+ */
+static int set_sma_output_edge_sample_num(uint64_t *num) {
+
+    // Set the rules for the edge sample num for the unit
+    uint64_t edge_trigger_multiple;
+    uint64_t min_edge_sample_num;
+
+#if RF_SAMPLE_RATE == 1000
+    edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_1G;
+    min_edge_sample_num = MIN_EDGE_SAMPLE_NUM_1G;
+#elif RF_SAMPLE_RATE == 3000
+    if(tx) {
+        edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_3G_TX;
+        min_edge_sample_num = EDGE_TRIGGER_MULTIPLE_3G_TX;
+    } else /* if (rx)*/ {
+        edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_3G_RX;
+        min_edge_sample_num = EDGE_TRIGGER_MULTIPLE_3G_RX;
+    }
+#else
+    #error Invalid sample rate. Must be: 1000, 3000
+#endif
+
+    // Largest multiple of EDGE_TRIGGER_MULTIPLE that fits in 64 bits
+    #define EDGE_MAX_SAMPLES (UINT64_MAX - (UINT64_MAX % edge_trigger_multiple))
+
+    // Clamp value to be within limits
+    if (*num < min_edge_sample_num && *num != 0) {
+        *num = min_edge_sample_num;
+    }
+    if (*num > EDGE_MAX_SAMPLES) {
+        *num = min_edge_sample_num;
+    }
+    // Round up to the next valid number of samples
+    *num = (*num + edge_trigger_multiple - 1) / edge_trigger_multiple * edge_trigger_multiple;
+
+    const uint32_t val_msw = (uint32_t)(*num >> 32);
+    const uint32_t val_lsw = (uint32_t)(*num & 0xffffffff);
+
+    return set_reg_bits("sys22", 0, -1, val_msw) ||
+            set_reg_bits("sys23", 0, -1, val_lsw);
+
+    #undef EDGE_MAX_SAMPLES
+}
+
 static int set_sma_pol(bool positive) {
     return set_reg_bits("sys2", 6, 1, positive);
 }
@@ -814,6 +864,17 @@ static int set_sma_pol(bool positive) {
 
         return RETURN_SUCCESS;
     }
+
+// Parses the requested output pulse length.
+// Confirms parsing was successful but does not verify the value.
+static int valid_output_pulse_length(const char *data, uint64_t *val) {
+    if (1 == sscanf(data, "%" PRIu64, val)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
 
 static int valid_trigger_pol(const char *data, bool *positive) {
 
@@ -909,6 +970,17 @@ static int valid_trigger_dir(const char *data, bool *in) {
     return RETURN_SUCCESS;
 }
 
+// Parse the duration of the output trigger pulse requested
+// Validates if parsing was successful. Does not verify the value.
+static int valid_trigger_output_edge_sample_num(const char *data, uint64_t *val) {
+    if (1 == sscanf(data, "%" PRIu64, val)) {
+        return RETURN_SUCCESS;
+    } else {
+        PRINT(ERROR, "Invalid argument: '%s'\n", data ? data : "(null)");
+        return RETURN_ERROR_PARAM;
+    }
+}
+
 static int set_edge_backoff(bool tx, const char *chan, uint32_t backoff) {
     char regname[8];
     snprintf(regname, sizeof(regname), "%s%s%u", tx ? "tx" : "rx", chan,
@@ -996,6 +1068,60 @@ static int set_trigger_sel(bool tx, const char *chan, uint32_t sel) {
     else {
         return set_reg_bits(rx_trig_map[(*chan)-'a'], 10, TRIGGER_SEL_OPTION_MASK, sel);
     }
+}
+
+/*
+ * Adjust the U.FI output pulse duration through the UFlTrigOutEdgeDurSmpCnt register.
+ */
+static int set_trigger_output_pulse_length(bool tx, const char *chan, uint64_t *num) {
+
+    // Set the rules for the edge sample num for the unit
+    uint64_t edge_trigger_multiple;
+    uint64_t min_edge_sample_num;
+
+#if RF_SAMPLE_RATE == 1000
+    edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_1G;
+    min_edge_sample_num = MIN_EDGE_SAMPLE_NUM_1G;
+#elif RF_SAMPLE_RATE == 3000
+    if(tx) {
+        edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_3G_TX;
+        min_edge_sample_num = EDGE_TRIGGER_MULTIPLE_3G_TX;
+    } else /* if (rx)*/ {
+        edge_trigger_multiple = EDGE_TRIGGER_MULTIPLE_3G_RX;
+        min_edge_sample_num = EDGE_TRIGGER_MULTIPLE_3G_RX;
+    }
+#else
+    #error Invalid sample rate. Must be: 1000, 3000
+#endif
+
+    // Largest multiple of EDGE_TRIGGER_MULTIPLE that fits in 64 bits
+    #define EDGE_MAX_SAMPLES (UINT64_MAX - (UINT64_MAX % edge_trigger_multiple))
+
+    char regname_msw[8];
+    char regname_lsw[8];
+
+    snprintf(regname_msw, sizeof(regname_msw), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 21 : 16);
+    snprintf(regname_lsw, sizeof(regname_lsw), "%s%s%u", tx ? "tx" : "rx", chan,
+             tx ? 22 : 17);
+
+    // Clamp value to be within limits
+    if (*num < min_edge_sample_num && *num != 0) {
+        *num = min_edge_sample_num;
+    }
+    if (*num > EDGE_MAX_SAMPLES) {
+        *num = EDGE_MAX_SAMPLES;
+    }
+    // Round up to the next valid number of samples
+    *num = (*num + edge_trigger_multiple - 1) / edge_trigger_multiple * edge_trigger_multiple;
+
+    const uint32_t val_msw = (uint32_t)(*num >> 32);
+    const uint32_t val_lsw = (uint32_t)(*num & 0xffffffff);
+
+    return set_reg_bits(regname_msw, 0, -1, val_msw) ||
+           set_reg_bits(regname_lsw, 0, -1, val_lsw);
+
+    #undef EDGE_MAX_SAMPLES
 }
 
 static int set_trigger_mode(bool sma, bool tx, const char *chan, bool edge) {
@@ -1136,6 +1262,24 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
         }\
         return r;                                                              \
     }                                                                          \
+    \
+    /*                                                                          \
+     * Adjust the U.FI output pulse duration in samples.                        \
+     * If the trigger is in level mode or input, this is ignored.               \
+     */                                                                         \
+    static int hdlr_tx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
+        uint64_t val;                                                                           \
+        /* Parse data for ufl_output_edge_sample_num. Does not verify number is good */            \
+        int r = valid_output_pulse_length(data, &val);                                          \
+        if (r != RETURN_SUCCESS) {                                                              \
+            return r;                                                                           \
+        }                                                                                       \
+        /* Return the actual number of samples per edge */                                      \
+        r = set_trigger_output_pulse_length(true, #ch, &val);                                   \
+        /* Return the actual number of samples per edge */                                      \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);                                           \
+        return r;                                                                               \
+    }                                                                                           \
                                                                                \
     static int hdlr_tx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         int r;                                                                 \
@@ -1259,6 +1403,24 @@ TX_CHANNELS
         }\
         return r;                                                              \
     }                                                                          \
+                                                                                \
+    /*                                                                          \
+     * Adjust the U.FI output pulse duration in samples.                        \
+     * If the trigger is in level mode or input, this is ignored.               \
+     */                                                                         \
+    static int hdlr_rx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
+        uint64_t val;                                                                           \
+        /* Parse data for ufl_output_edge_sample_num. Does not verify number is good */            \
+        int r = valid_output_pulse_length(data, &val);                                          \
+        if (r != RETURN_SUCCESS) {                                                              \
+            return r;                                                                           \
+        }                                                                                       \
+        /* Return the actual number of samples per edge */                                      \
+        r = set_trigger_output_pulse_length(false, #ch, &val);                                  \
+        /* Return the actual number of samples per edge */                                      \
+        snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);                                           \
+        return r;                                                                               \
+    }                                                                                           \
                                                                                \
     static int hdlr_rx_##ch##_trigger_ufl_pol(const char *data, char *ret) {   \
         int r;                                                                 \
@@ -6046,6 +6208,24 @@ static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
             "bit 2 of <rx/tx>/trigger/trig_sel enables outputting to the sma input.\n",
             data);
     return RETURN_ERROR_PARAM;
+}
+
+/*
+ * Global setting for Tx output pulse duration in samples.
+ * Ignored if trigger in in level mode or input.
+ * Each channel calculates if it's output should be active independantly (with their respective rates)
+ * then the final result is from ORing them together.
+ */
+static int hdlr_fpga_trigger_sma_output_edge_sample_num(const char *data, char *ret) {
+    uint64_t val;
+    // Parse data for tx output pulse duration. Does not verify the number is actually good.
+    int r = valid_trigger_output_edge_sample_num(data, &val);
+    if (r != RETURN_SUCCESS) {
+        return r;
+    }
+    r = set_sma_output_edge_sample_num(&val);
+    snprintf(ret, MAX_PROP_LEN, "%" PRIu64, val);
+    return r;
 }
 
 static int hdlr_fpga_trigger_sma_pol(const char *data, char *ret) {

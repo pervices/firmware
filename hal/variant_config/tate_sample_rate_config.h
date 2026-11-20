@@ -92,7 +92,7 @@
     // Maximum length of VITA for rx
     #define RX_MAX_PAYLOAD 8900
 
-    #define SERVER_API_VER TRIGGER_OVERHAUL_SERVER_R1_S
+    #define SERVER_API_VER TRIGGER_OVERHAUL_SERVER_R2_S
 
 #elif defined(TATE_NRNT) && defined(S3000)
 
@@ -167,7 +167,7 @@
     // Maximum length of VITA for rx
     #define RX_MAX_PAYLOAD 8872
 
-    // TODO: update to TRIGGER_OVERHAUL_SERVER_R1_S once edge_sample_num is working on 3G
+    // TODO: update to TRIGGER_OVERHAUL_SERVER_R2_S once edge_sample_num is working on 3G
     #define SERVER_API_VER PRE_API_VER_SERVER_S
 
 #else
