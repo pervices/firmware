@@ -958,7 +958,7 @@ static int set_trig_time_disable(bool tx, const char *chan, uint32_t val) {
     }                                                                           \
                                                                                 \
     /*                                                                          \
-     * Adjust the U.FI output pulse duration.                                   \
+     * Adjust the U.FI output pulse duration in samples.                        \
      * If the trigger is in level mode or input, this is ignored.               \
      */                                                                         \
     static int hdlr_rx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
@@ -1974,7 +1974,7 @@ int check_rf_pll(int chan_mask, int uart_fd) {
     }                                                                          \
                                                                                 \
     /*                                                                          \
-     * Adjust the U.FI output pulse duration.                                   \
+     * Adjust the U.FI output pulse duration in samples.                        \
      * If the trigger is in level mode or input, this is ignored.               \
      */                                                                         \
     static int hdlr_tx_##ch##_trigger_ufl_output_edge_sample_num(const char *data, char *ret) {    \
@@ -4282,8 +4282,10 @@ static int hdlr_fpga_trigger_sma_dir(const char *data, char *ret) {
 }
 
 /*
- * Global setting for Tx output pulse duration.
+ * Global setting for Tx output pulse duration in samples.
  * Ignored if trigger in in level mode or input.
+ * Each channel calculates if it's output should be active independantly (with their respective rates)
+ * then the final result is from ORing them together.
  */
 static int hdlr_fpga_trigger_sma_output_edge_sample_num(const char *data, char *ret) {
     uint64_t val;
