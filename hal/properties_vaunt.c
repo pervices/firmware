@@ -4990,6 +4990,7 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/time_gate_logic"         , hdlr_rx_##_c##_trigger_time_gate_logic,           RW, "-38", SP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/trigger/sample_counter"          , hdlr_rx_##_c##_trigger_sample_counter,            RW, "0", SP, #_c)           \
     DEFINE_FILE_PROP_P("rx/" #_c "/pwr"                      , hdlr_rx_##_c##_pwr,                     RW, "0", SP, #_c)         \
+    /* TODO: only RP if enable requested */\
     DEFINE_FILE_PROP_P("rx/" #_c "/stream"                   , hdlr_rx_##_c##_stream,                  RW, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/sync"                     , hdlr_rx_sync,                           WO, "0", RP, #_c)         \
     DEFINE_FILE_PROP_P("rx/" #_c "/rf/freq/val"              , hdlr_rx_##_c##_rf_freq_val,             RW, "0", RP, #_c)         \
@@ -5054,7 +5055,8 @@ static int hdlr_max_sample_rate(const char *data, char *ret) {
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/time_gate_logic"  , hdlr_tx_##_c##_trigger_time_gate_logic, RW, "-38", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/trigger/sample_counter"   , hdlr_tx_##_c##_trigger_sample_counter,  RW, "0", SP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/pwr"                      , hdlr_tx_##_c##_pwr,                     RW, "0", SP, #_c)         \
-    DEFINE_FILE_PROP_P("tx/" #_c "/stream"                   , hdlr_tx_##_c##_stream,                  RW, "0", RP, #_c)         \
+    /* TODO: only TP if enable requested */\
+    DEFINE_FILE_PROP_P("tx/" #_c "/stream"                   , hdlr_tx_##_c##_stream,                  RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/sync"                     , hdlr_tx_sync,                           WO, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_en"         , hdlr_tx_##_c##_rf_dac_dither_en,        RW, "0", TP, #_c)         \
     DEFINE_FILE_PROP_P("tx/" #_c "/rf/dac/dither_mixer_en"   , hdlr_tx_##_c##_rf_dac_dither_mixer_en,  RW, "0", TP, #_c)         \
